@@ -10,6 +10,7 @@
 // 3. Provider (ex: Resend Inbound) : webhook URL = https://<APP>/api/email/inbound
 //    Header custom : X-Webhook-Secret = <secret>
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -58,9 +59,10 @@ function extractEmail(value: unknown): string | null {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const secret = process.env.INBOUND_EMAIL_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: "Webhook non configuré" }, { status: 503 });
+    return NextResponse.json({ error: t("webhook_non_configure") }, { status: 503 });
   }
   const provided = req.headers.get("x-webhook-secret") ?? req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ?? "";
   if (provided !== secret) {
@@ -71,7 +73,7 @@ export async function POST(req: Request) {
 
   const fromEmail = extractEmail(body.from ?? body.From ?? body.sender ?? body.fromEmail);
   if (!fromEmail) {
-    return NextResponse.json({ error: "Expéditeur introuvable" }, { status: 400 });
+    return NextResponse.json({ error: t("expediteur_introuvable") }, { status: 400 });
   }
 
   const client = await prisma.client.findUnique({ where: { email: fromEmail } });

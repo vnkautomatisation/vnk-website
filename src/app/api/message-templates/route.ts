@@ -1,6 +1,7 @@
 // GET /api/message-templates — liste des templates (admin)
 // POST /api/message-templates — creer un template
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -18,7 +19,7 @@ const attachmentSchema = z.object({
 });
 
 const createSchema = z.object({
-  shortcut: z.string().min(1).max(40).regex(/^[a-z0-9_-]+$/i, "Lettres, chiffres, _ et - uniquement"),
+  shortcut: z.string().min(1).max(40).regex(/^[a-z0-9_-]+$/i, "lettres_chiffres_et_uniquement"),
   title: z.string().min(1).max(120),
   body: z.string().min(1).max(20000),
   category: z.string().max(40).optional(),
@@ -46,6 +47,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -55,7 +57,7 @@ export async function POST(req: Request) {
   }
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
 
   try {
     const tpl = await prisma.messageTemplate.create({
@@ -82,7 +84,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ success: true, template: tpl });
   } catch (err) {
     if (err instanceof Error && err.message.includes("Unique")) {
-      return NextResponse.json({ error: "Ce raccourci existe déjà" }, { status: 409 });
+      return NextResponse.json({ error: t("ce_raccourci_existe_deja") }, { status: 409 });
     }
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }

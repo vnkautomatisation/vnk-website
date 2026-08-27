@@ -1,6 +1,7 @@
 // GET /api/documents — liste documents (admin: tous, client: les siens)
 // POST /api/documents — upload (admin) — fichier en data URL ou metadata seule (pour fileUrl externe)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -26,7 +27,7 @@ const createSchema = z.object({
   fileUrl: z.string().optional(),
   fileType: z.string().max(60).optional(),
   fileSize: z.number().int().nonnegative().optional(),
-}).refine((d) => d.fileData || d.fileUrl, { message: "Fichier ou URL requis" });
+}).refine((d) => d.fileData || d.fileUrl, { message: "fichier_ou_url_requis" });
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -56,6 +57,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -67,7 +69,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message ?? "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   // Si upload : valide la taille + extrait mimeType

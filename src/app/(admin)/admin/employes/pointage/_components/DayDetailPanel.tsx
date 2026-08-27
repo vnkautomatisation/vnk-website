@@ -35,7 +35,7 @@ export function DayDetailPanel({
             <div className="flex items-center gap-3">
               <Clock className="h-5 w-5" />
               <div>
-                <p className="text-base">Détails de la journée</p>
+                <p className="text-base">{t("details_journee")}</p>
                 <p className="text-xs text-white/70 font-normal">{adminName} · {dateLabel}</p>
               </div>
             </div>
@@ -44,8 +44,8 @@ export function DayDetailPanel({
       </div>
       <div className="p-5 space-y-4">
         <div className="grid grid-cols-2 gap-2">
-          <StatBox label="Travail effectif" value={fmtDuration(workMin)} accent="emerald" />
-          <StatBox label="Pauses" value={fmtDuration(breakMin)} accent="blue" />
+          <StatBox label={t("travail_effectif")} value={fmtDuration(workMin)} accent="emerald" />
+          <StatBox label={t("pauses")} value={fmtDuration(breakMin)} accent="blue" />
         </div>
         <div>
           <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2">
@@ -63,7 +63,7 @@ export function DayDetailPanel({
                         {fmtTime(e.clockIn)}
                         {e.clockOut
                           ? ` → ${fmtTime(e.clockOut)}`
-                          : " · en cours"}
+                          : t("cours_suffixe")}
                       </span>
                       <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, e.category)}</Badge>
                       {isMerged && <MergedBadge count={mergedCount} gapMin={gapMin} coherent={grossIsCoherent} small />}
@@ -77,12 +77,12 @@ export function DayDetailPanel({
                       {e.approvedAt && <ApprovedBadge />}
                       {e.submittedAt && !e.approvedAt && (
                         <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
-                          En attente
+                          {t("attente")}
                         </Badge>
                       )}
                       {!e.submittedAt && !e.approvedAt && e.clockOut && (
                         <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
-                          Brouillon (non soumis)
+                          {t("brouillon_non_soumis")}
                         </Badge>
                       )}
                     </div>
@@ -92,12 +92,12 @@ export function DayDetailPanel({
                       </p>
                     )}
                   </div>
-                  {/* Worked time, not the bracket: pauses and merges differ. */}
+
                   <span className="font-mono tabular-nums font-bold shrink-0">
                     {e.clockOut ? fmtDuration(e.durationMin) : "—"}
                   </span>
                   {!e.payStubId && (
-                    <ActionTooltip label="Modifier (admin override)">
+                    <ActionTooltip label={t("modifier_admin_override")}>
                       <Button
                         size="icon"
                         variant="ghost"

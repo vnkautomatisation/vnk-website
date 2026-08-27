@@ -19,16 +19,17 @@ import { updateSettingsAction } from "@/app/actions/settings";
 
 type LogoSlot = "primary" | "dark" | "favicon" | "login" | "email" | "pdf";
 
-const LOGO_SLOTS: { key: LogoSlot; label: string; description: string; previewBg: string; recommended: string }[] = [
-  { key: "primary", label: "Logo principal", description: "Header clair · pages publiques", previewBg: "#ffffff", recommended: "PNG ou SVG · 240×60 px" },
-  { key: "dark", label: "Logo blanc / inversé", description: "Header sombre · footer", previewBg: "#0F2D52", recommended: "PNG ou SVG transparent · 240×60 px" },
-  { key: "login", label: "Écran de connexion", description: "Affiché sur /admin/login et /portail/login", previewBg: "#f8fafc", recommended: "PNG ou SVG · jusqu'à 320×80 px" },
-  { key: "email", label: "Entête courriel", description: "Templates emails transactionnels", previewBg: "#ffffff", recommended: "PNG · 600×120 px max" },
-  { key: "pdf", label: "Entête PDF", description: "Factures, devis, contrats", previewBg: "#ffffff", recommended: "PNG · 800×200 px max" },
-  { key: "favicon", label: "Favicon", description: "Onglet navigateur · raccourcis", previewBg: "#f8fafc", recommended: "PNG carré 512×512 px ou ICO" },
+const LOGO_SLOTS: { key: LogoSlot; labelKey: string; descriptionKey: string; previewBg: string; recommendedKey: string }[] = [
+  { key: "primary", labelKey: "logo_principal", descriptionKey: "header_clair_pages_publiques", previewBg: "#ffffff", recommendedKey: "png_svg_240_60" },
+  { key: "dark", labelKey: "logo_blanc_inverse", descriptionKey: "header_sombre_footer", previewBg: "#0F2D52", recommendedKey: "png_svg_transparent_240_60" },
+  { key: "login", labelKey: "ecran_connexion", descriptionKey: "affiche_admin_login_portail_login", previewBg: "#f8fafc", recommendedKey: "png_svg_jusqu_320_80" },
+  { key: "email", labelKey: "entete_courriel", descriptionKey: "templates_emails_transactionnels", previewBg: "#ffffff", recommendedKey: "png_600_120_max" },
+  { key: "pdf", labelKey: "entete_pdf", descriptionKey: "factures_devis_contrats", previewBg: "#ffffff", recommendedKey: "png_800_200_max" },
+  { key: "favicon", labelKey: "favicon", descriptionKey: "onglet_navigateur_raccourcis", previewBg: "#f8fafc", recommendedKey: "png_carre_512_512_ico" },
 ];
 
 export function BrandingView({ initial }: { initial: Record<string, string | null> }) {
+  const t = useTranslations("admin.branding");
   const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -41,18 +42,18 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
     pdf: initial.logo_pdf ?? null,
   }));
 
-  // Couleurs
+
   const [primaryColor, setPrimaryColor] = useState(initial.color_primary ?? "#0F2D52");
   const [secondaryColor, setSecondaryColor] = useState(initial.color_secondary ?? "#1A5FB4");
   const [accentColor, setAccentColor] = useState(initial.color_accent ?? "#E5A50A");
   const [successColor, setSuccessColor] = useState(initial.color_success ?? "#26A269");
   const [errorColor, setErrorColor] = useState(initial.color_error ?? "#C01C28");
 
-  // Polices
-  const [fontHeading, setFontHeading] = useState(initial.font_heading ?? "Inter");
-  const [fontBody, setFontBody] = useState(initial.font_body ?? "Inter");
 
-  // CSS custom
+  const [fontHeading, setFontHeading] = useState(initial.font_heading ?? t("inter"));
+  const [fontBody, setFontBody] = useState(initial.font_body ?? t("inter"));
+
+
   const [customCss, setCustomCss] = useState(initial.custom_css ?? "");
 
   const [colorsDirty, setColorsDirty] = useState(false);
@@ -78,11 +79,11 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
         ],
       });
       if (result.success) {
-        toast.success("Charte graphique enregistrée");
+        toast.success(t("charte_graphique_enregistree"));
         setColorsDirty(false);
         router.refresh();
       } else {
-        toast.error(result.error || "Erreur");
+        toast.error(result.error || t("erreur"));
       }
     });
   };
@@ -98,7 +99,7 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex items-start gap-4">
         <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}>
           <ChevronLeft className="h-5 w-5" />
@@ -107,18 +108,18 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
           <Palette className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Charte graphique</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("charte_graphique")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Logos, palette de couleurs et typographie — appliqués partout sur le portail
+            {t("logos_palette_couleurs_typographie_appliques")}
           </p>
         </div>
       </div>
 
-      {/* LOGOS */}
+
       <section>
         <div className="flex items-center gap-2 mb-3">
           <ImageIcon className="h-4 w-4 text-[#0F2D52]" />
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">Logos</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t("logos")}</h2>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
           {LOGO_SLOTS.map((slot) => (
@@ -133,99 +134,99 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
         </div>
       </section>
 
-      {/* COULEURS */}
+
       <section>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
             <Palette className="h-4 w-4 text-[#0F2D52]" />
-            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">Palette de couleurs</h2>
+            <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t("palette_couleurs")}</h2>
           </div>
           {colorsDirty && (
-            <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">Modifications non enregistrées</Badge>
+            <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">{t("modifications_non_enregistrees")}</Badge>
           )}
         </div>
         <Card>
           <CardContent className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              <ColorPicker label="Primaire" value={primaryColor} onChange={(v) => handleColorChange(setPrimaryColor, v)} />
-              <ColorPicker label="Secondaire" value={secondaryColor} onChange={(v) => handleColorChange(setSecondaryColor, v)} />
-              <ColorPicker label="Accent" value={accentColor} onChange={(v) => handleColorChange(setAccentColor, v)} />
-              <ColorPicker label="Succès" value={successColor} onChange={(v) => handleColorChange(setSuccessColor, v)} />
-              <ColorPicker label="Erreur" value={errorColor} onChange={(v) => handleColorChange(setErrorColor, v)} />
+              <ColorPicker label={t("primaire")} value={primaryColor} onChange={(v) => handleColorChange(setPrimaryColor, v)} />
+              <ColorPicker label={t("secondaire")} value={secondaryColor} onChange={(v) => handleColorChange(setSecondaryColor, v)} />
+              <ColorPicker label={t("accent")} value={accentColor} onChange={(v) => handleColorChange(setAccentColor, v)} />
+              <ColorPicker label={t("succes")} value={successColor} onChange={(v) => handleColorChange(setSuccessColor, v)} />
+              <ColorPicker label={t("erreur")} value={errorColor} onChange={(v) => handleColorChange(setErrorColor, v)} />
             </div>
 
-            {/* Preview */}
+
             <div className="mt-5 rounded-lg border overflow-hidden">
               <div className="px-3 py-1.5 bg-muted/40 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
-                Aperçu
+                {t("apercu")}
               </div>
               <div className="p-4 flex flex-wrap items-center gap-2">
                 <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: primaryColor }}>
-                  Bouton primaire
+                  {t("bouton_primaire")}
                 </button>
                 <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: secondaryColor }}>
-                  Bouton secondaire
+                  {t("bouton_secondaire")}
                 </button>
                 <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: accentColor }}>
-                  Accent
+                  {t("accent")}
                 </button>
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: successColor }}>Succès</span>
-                <span className="px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: errorColor }}>Erreur</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: successColor }}>{t("succes")}</span>
+                <span className="px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{ backgroundColor: errorColor }}>{t("erreur")}</span>
               </div>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* POLICES */}
+
       <section>
         <div className="flex items-center gap-2 mb-3">
           <Type className="h-4 w-4 text-[#0F2D52]" />
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">Typographie</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t("typographie")}</h2>
         </div>
         <Card>
           <CardContent className="p-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Police titres</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("police_titres")}</Label>
                 <Input
                   value={fontHeading}
                   onChange={(e) => { setFontHeading(e.target.value); setColorsDirty(true); }}
-                  placeholder="Inter, Roboto, Plus Jakarta Sans..."
+                  placeholder={t("inter_roboto_plus_jakarta_sans")}
                   className="mt-1"
                 />
-                <p className="text-[10px] text-muted-foreground mt-1">Nom Google Fonts ou nom système</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t("nom_google_fonts_nom_systeme")}</p>
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Police corps de texte</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("police_corps_texte")}</Label>
                 <Input
                   value={fontBody}
                   onChange={(e) => { setFontBody(e.target.value); setColorsDirty(true); }}
-                  placeholder="Inter"
+                  placeholder={t("inter")}
                   className="mt-1"
                 />
               </div>
             </div>
             <div className="mt-4 rounded-lg border p-4 bg-muted/20">
-              <p className="text-2xl font-bold" style={{ fontFamily: fontHeading }}>VNK Automatisation</p>
+              <p className="text-2xl font-bold" style={{ fontFamily: fontHeading }}>{t("vnk_automatisation")}</p>
               <p className="text-sm text-muted-foreground mt-1" style={{ fontFamily: fontBody }}>
-                Aperçu de la typographie · le quick brown fox jumps over the lazy dog
+                {t("apercu_typographie_quick_brown_fox")}
               </p>
             </div>
           </CardContent>
         </Card>
       </section>
 
-      {/* CSS CUSTOM */}
+
       <section>
         <div className="flex items-center gap-2 mb-3">
           <FileText className="h-4 w-4 text-[#0F2D52]" />
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">CSS personnalisé (avancé)</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t("css_personnalise_avance")}</h2>
         </div>
         <Card>
           <CardContent className="p-5">
             <p className="text-xs text-muted-foreground mb-2">
-              Règles CSS appliquées globalement après la feuille de styles principale. À utiliser avec précaution.
+              {t("regles_css_appliquees_globalement_apres")}
             </p>
             <textarea
               value={customCss}
@@ -238,20 +239,20 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
         </Card>
       </section>
 
-      {/* Sticky save bar */}
+
       {colorsDirty && (
         <div className="sticky bottom-4 z-30">
           <Card className="border-amber-300 bg-amber-50">
             <CardContent className="p-3 flex items-center justify-between gap-3">
-              <p className="text-sm text-amber-900 font-medium">Modifications en attente</p>
+              <p className="text-sm text-amber-900 font-medium">{t("modifications_attente")}</p>
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" onClick={handleResetColors} disabled={pending}>
                   <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                  Valeurs par défaut
+                  {t("valeurs_defaut")}
                 </Button>
                 <Button size="sm" onClick={handleSaveColors} disabled={pending} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                   <Save className="h-3.5 w-3.5 mr-1.5" />
-                  {pending ? "..." : "Enregistrer"}
+                  {pending ? "..." : t("enregistrer")}
                 </Button>
               </div>
             </CardContent>
@@ -259,61 +260,61 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
         </div>
       )}
 
-      {/* Aperçus contextuels */}
+
       <section>
         <div className="flex items-center gap-2 mb-3">
           <ImageIcon className="h-4 w-4 text-[#0F2D52]" />
-          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">Aperçus contextuels</h2>
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t("apercus_contextuels")}</h2>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          {/* Aperçu Header */}
+
           <Card>
             <CardContent className="p-0">
               <p className="px-4 py-2 bg-muted/40 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
-                Header — site public
+                {t("header_site_public")}
               </p>
               <div className="p-4 bg-white">
                 <div className="flex items-center justify-between border-b pb-3">
                   {logos.primary ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={logos.primary} alt="" className="h-10 object-contain" />
                   ) : (
-                    <div className="h-10 flex items-center text-sm text-muted-foreground italic">Aucun logo</div>
+                    <div className="h-10 flex items-center text-sm text-muted-foreground italic">{t("aucun_logo")}</div>
                   )}
                   <div className="flex gap-4 text-sm font-medium text-gray-700">
-                    <span>Services</span>
-                    <span>À propos</span>
-                    <span>Contact</span>
+                    <span>{t("services")}</span>
+                    <span>{t("propos")}</span>
+                    <span>{t("contact")}</span>
                   </div>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Aperçu Login */}
+
           <Card>
             <CardContent className="p-0">
               <p className="px-4 py-2 bg-muted/40 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
-                Écran de connexion
+                {t("ecran_connexion")}
               </p>
               <div className="p-6 bg-slate-50 flex flex-col items-center">
                 {logos.login ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img src={logos.login} alt="" className="h-12 object-contain mb-4" />
                 ) : logos.primary ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img src={logos.primary} alt="" className="h-10 object-contain mb-4" />
                 ) : (
-                  <div className="h-12 flex items-center text-sm text-muted-foreground italic mb-4">Aucun logo</div>
+                  <div className="h-12 flex items-center text-sm text-muted-foreground italic mb-4">{t("aucun_logo")}</div>
                 )}
                 <button className="px-6 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: primaryColor }}>
-                  Se connecter
+                  {t("se_connecter")}
                 </button>
               </div>
             </CardContent>
           </Card>
 
-          {/* Aperçu Email */}
+
           <Card>
             <CardContent className="p-0">
               <p className="px-4 py-2 bg-muted/40 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
@@ -322,43 +323,42 @@ export function BrandingView({ initial }: { initial: Record<string, string | nul
               <div className="bg-white">
                 <div className="p-4 border-b" style={{ backgroundColor: primaryColor }}>
                   {logos.email ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={logos.email} alt="" className="h-8 object-contain" />
                   ) : logos.dark ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={logos.dark} alt="" className="h-8 object-contain" />
                   ) : (
-                    <p className="text-white font-bold">VNK Automatisation</p>
+                    <p className="text-white font-bold">{t("vnk_automatisation")}</p>
                   )}
                 </div>
                 <div className="p-4 text-sm">
-                  <p>Bonjour,</p>
-                  <p className="mt-2 text-muted-foreground">Aperçu d&apos;un courriel transactionnel...</p>
+                  <p>{t("bonjour")}</p>
+                  <p className="mt-2 text-muted-foreground">{t("apercu_apos_courriel_transactionnel")}</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          {/* Aperçu PDF */}
+
           <Card>
             <CardContent className="p-0">
               <p className="px-4 py-2 bg-muted/40 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
-                <FileText className="h-3 w-3 inline mr-1" />Entête PDF (facture, devis)
-              </p>
+                <FileText className="h-3 w-3 inline mr-1" />{t("branding_view_entete_pdf_facture_devis")}</p>
               <div className="p-5 bg-white">
                 <div className="flex items-start justify-between border-b-2 pb-3" style={{ borderColor: primaryColor }}>
                   {logos.pdf ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={logos.pdf} alt="" className="h-12 object-contain" />
                   ) : logos.primary ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={logos.primary} alt="" className="h-12 object-contain" />
                   ) : (
-                    <div className="h-12 flex items-center text-sm text-muted-foreground italic">Aucun logo</div>
+                    <div className="h-12 flex items-center text-sm text-muted-foreground italic">{t("aucun_logo")}</div>
                   )}
                   <div className="text-right text-xs">
                     <p className="font-bold text-base" style={{ color: primaryColor }}>FACTURE</p>
-                    <p className="text-muted-foreground">FAC-2026-001</p>
+                    <p className="text-muted-foreground">{t("fac_2026_001")}</p>
                   </div>
                 </div>
               </div>
@@ -397,11 +397,12 @@ function ColorPicker({ label, value, onChange }: { label: string; value: string;
 function LogoSlotCard({
   slot, currentValue, onUploaded, onDeleted,
 }: {
-  slot: { key: LogoSlot; label: string; description: string; previewBg: string; recommended: string };
+  slot: { key: LogoSlot; labelKey: string; descriptionKey: string; previewBg: string; recommendedKey: string };
   currentValue: string | null;
   onUploaded: (v: string) => void;
   onDeleted: () => void;
 }) {
+  const t = useTranslations("admin.branding");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -414,13 +415,13 @@ function LogoSlotCard({
       const res = await fetch("/api/admin/branding", { method: "POST", body: fd });
       const json = await res.json();
       if (res.ok) {
-        toast.success(`Logo ${slot.label.toLowerCase()} téléversé`);
+        toast.success(t("logo_televerse", { slot: t(slot.labelKey).toLowerCase() }));
         onUploaded(json.value);
       } else {
-        toast.error(json.error || "Erreur");
+        toast.error(json.error || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setUploading(false);
     }
@@ -429,10 +430,10 @@ function LogoSlotCard({
   const handleDelete = async () => {
     const res = await fetch(`/api/admin/branding?slot=${slot.key}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Logo retiré");
+      toast.success(t("logo_retire"));
       onDeleted();
     } else {
-      toast.error("Erreur");
+      toast.error(t("erreur"));
     }
   };
 
@@ -441,24 +442,24 @@ function LogoSlotCard({
       <CardContent className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <div>
-            <p className="font-semibold text-sm">{slot.label}</p>
-            <p className="text-[10px] text-muted-foreground">{slot.description}</p>
+            <p className="font-semibold text-sm">{t(slot.labelKey)}</p>
+            <p className="text-[10px] text-muted-foreground">{t(slot.descriptionKey)}</p>
           </div>
           {currentValue && (
-            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={handleDelete} title="Retirer">
+            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-600 hover:text-red-700" onClick={handleDelete} title={t("retirer")}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
           )}
         </div>
 
-        {/* Preview */}
+
         <div
           className="rounded-md border h-24 flex items-center justify-center mb-2 overflow-hidden"
           style={{ backgroundColor: slot.previewBg }}
         >
           {currentValue ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={currentValue} alt={slot.label} className="max-h-20 max-w-full object-contain" />
+
+            <img src={currentValue} alt={t(slot.labelKey)} className="max-h-20 max-w-full object-contain" />
           ) : (
             <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
           )}
@@ -483,9 +484,9 @@ function LogoSlotCard({
           disabled={uploading}
         >
           <Upload className="h-3.5 w-3.5 mr-1.5" />
-          {uploading ? "Téléversement..." : currentValue ? "Remplacer" : "Téléverser"}
+          {uploading ? t("televersement_cours") : currentValue ? t("remplacer") : t("televerser")}
         </Button>
-        <p className="text-[9px] text-muted-foreground mt-1.5 text-center">{slot.recommended}</p>
+        <p className="text-[9px] text-muted-foreground mt-1.5 text-center">{t(slot.recommendedKey)}</p>
       </CardContent>
     </Card>
   );

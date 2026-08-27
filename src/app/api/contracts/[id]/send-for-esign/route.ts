@@ -3,6 +3,7 @@
 // (alternative au canvas interne, pour les contrats > 1000 $ ou
 // pour clients qui exigent une preuve de signature renforcée).
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,7 @@ import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -22,7 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   if (!(await isDropboxSignAvailable())) {
     return NextResponse.json(
-      { error: "Dropbox Sign non configuré. Allez dans Profil > Intégrations." },
+      { error: t("dropbox_sign_non_configure_allez_dans_profil") },
       { status: 400 }
     );
   }
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       headers: { cookie: req.headers.get("cookie") ?? "" },
     });
     if (!pdfRes.ok) {
-      return NextResponse.json({ error: "Impossible de générer le PDF du contrat" }, { status: 500 });
+      return NextResponse.json({ error: t("impossible_de_generer_le_pdf_du_contrat") }, { status: 500 });
     }
     const pdfBuf = Buffer.from(await pdfRes.arrayBuffer());
     const fileBase64 = pdfBuf.toString("base64");
@@ -51,7 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const result = await sendSignatureRequest({
       title: `Contrat ${contract.contractNumber}`,
       subject: `Signature du contrat ${contract.contractNumber}`,
-      message: "Veuillez réviser et signer ce contrat. Une copie signée vous sera retournée automatiquement.",
+      message: t("veuillez_reviser_et_signer_ce_contrat_une"),
       signers: [{ email: contract.client.email, name: contract.client.fullName }],
       fileBase64,
       fileName: `contrat-${contract.contractNumber}.pdf`,

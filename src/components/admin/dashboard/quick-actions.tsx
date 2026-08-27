@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   UserPlus,
   FileText,
@@ -10,14 +11,15 @@ import {
 import { Button } from "@/components/ui/button";
 
 const ACTIONS = [
-  { key: "client", label: "Client", icon: UserPlus },
-  { key: "devis", label: "Devis", icon: FileText },
-  { key: "facture", label: "Facture", icon: Receipt },
-  { key: "mandat", label: "Mandat", icon: Briefcase },
-  { key: "rdv", label: "Rendez-vous", icon: Calendar },
+  { key: "client", labelKey: "qa_client", icon: UserPlus },
+  { key: "devis", labelKey: "qa_devis", icon: FileText },
+  { key: "facture", labelKey: "qa_facture", icon: Receipt },
+  { key: "mandat", labelKey: "qa_mandat", icon: Briefcase },
+  { key: "rdv", labelKey: "qa_rdv", icon: Calendar },
 ] as const;
 
 export function QuickActions() {
+  const t = useTranslations("admin.ui");
   // Les modales seront branchees dans les phases suivantes
   const [, setActiveModal] = useState<string | null>(null);
 
@@ -34,7 +36,7 @@ export function QuickActions() {
             className="gap-1.5"
           >
             <Icon className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">+</span> {a.label}
+            <span className="hidden sm:inline">+</span> {t(a.labelKey)}
           </Button>
         );
       })}

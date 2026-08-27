@@ -2,6 +2,7 @@
 // Genere une lettre PDF de confirmation pour un conge approuve.
 // Auth : auteur de la demande OU reviewer (assertCanReviewLeave).
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -45,7 +47,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   if (leave.status !== "approved") {
-    return NextResponse.json({ error: "Seuls les congés approuvés peuvent générer une lettre." }, { status: 400 });
+    return NextResponse.json({ error: t("seuls_les_conges_approuves_peuvent_generer_une") }, { status: 400 });
   }
 
   const pdf = await generateLeaveLetterPdf({

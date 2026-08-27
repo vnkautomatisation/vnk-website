@@ -80,7 +80,7 @@ import { formatPreviewMarkdown } from "@/lib/document-templates/preview-helpers"
 import { cn } from "@/lib/utils";
 import {
   CONTRACT_TYPES,
-  getContractTypeLabel,
+  getContractTypeKey,
   normalizeContractType,
 } from "@/lib/document-templates/contract-types";
 
@@ -135,18 +135,19 @@ interface Props {
 }
 
 // ---------- Helpers -----------------------------------------------
-function labelForContractType(value: string | null | undefined): string {
+function labelForContractType(value: string | null | undefined, autre: string, t: (k: string) => string): string {
   if (!value) return "";
-  if (value === "autre") return "Autre";
-  return getContractTypeLabel(value);
+  if (value === "autre") return autre;
+  const key = getContractTypeKey(value);
+  return key ? t(key) : value;
 }
 
 const STEPS = [
-  { id: 1, label: "Employe", icon: Briefcase },
-  { id: 2, label: "Template", icon: FileText },
-  { id: 3, label: "Details", icon: Coins },
-  { id: 4, label: "Apercu", icon: Eye },
-  { id: 5, label: "Action", icon: Sparkles },
+  { id: 1, labelKey: "employe", icon: Briefcase },
+  { id: 2, labelKey: "template", icon: FileText },
+  { id: 3, labelKey: "details", icon: Coins },
+  { id: 4, labelKey: "apercu", icon: Eye },
+  { id: 5, labelKey: "action", icon: Sparkles },
 ] as const;
 
 function initials(name: string | null | undefined, email: string): string {
@@ -207,14 +208,15 @@ export function ContractWizard({
   templates,
   onCreate,
 }: Props) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
-  // ---- Wizard state ---------------------------------------------
+
   const [step, setStep] = useState(1);
   const [employee, setEmployee] = useState<Employee | null>(null);
   const [template, setTemplate] = useState<ContractTemplate | null>(null);
   const [expertMode, setExpertMode] = useState(false);
 
-  // Step 3 : details (tous auto-remplis, "unlocks" individuels)
+
   const [title, setTitle] = useState("");
   const [contractType, setContractType] = useState<string>("permanent_full_time");
   const [startDate, setStartDate] = useState(todayISO());
@@ -223,12 +225,12 @@ export function ContractWizard({
   const [salaryAnnual, setSalaryAnnual] = useState("");
   const [hourlyRate, setHourlyRate] = useState("");
   const [hoursPerWeek, setHoursPerWeek] = useState("40");
-  // Quel champ pilote l'autre lors d'un changement d'heures/sem :
-  // - "annual" : taux horaire recalculé depuis salaire annuel (défaut)
-  // - "hourly" : salaire annuel recalculé depuis taux horaire
+
+
+
   const [salaryDriver, setSalaryDriver] = useState<"annual" | "hourly">("annual");
 
-  // Helpers auto-calcul bidirectionnel (52 semaines/an conformément à pratique RH QC)
+
   const calcHourly = (annualStr: string, hoursStr: string): string => {
     const a = parseFloat(annualStr.replace(",", "."));
     const h = parseFloat(hoursStr.replace(",", "."));
@@ -242,7 +244,7 @@ export function ContractWizard({
     return (r * 52 * h).toFixed(2);
   };
 
-  // Wrappers exposés au panneau du wizard : changement d'un champ → recalcule l'autre
+
   const handleSalaryAnnualChange = (v: string) => {
     setSalaryAnnual(v);
     setSalaryDriver("annual");
@@ -260,7 +262,7 @@ export function ContractWizard({
   const handleHoursPerWeekChange = (v: string) => {
     setHoursPerWeek(v);
     markCustomized("hoursPerWeek");
-    // Recalcule le champ "dérivé" selon le pilote actuel
+
     if (salaryDriver === "annual") {
       const newHourly = calcHourly(salaryAnnual, v);
       if (newHourly) setHourlyRate(newHourly);
@@ -273,7 +275,7 @@ export function ContractWizard({
   const [signingBonus, setSigningBonus] = useState("");
   const [internalNotes, setInternalNotes] = useState("");
 
-  // Track which fields RH a personalises (UI badge "Personnalise")
+
   const [customizedFields, setCustomizedFields] = useState<Set<string>>(new Set());
   const markCustomized = (field: string) =>
     setCustomizedFields((prev) => {
@@ -283,19 +285,19 @@ export function ContractWizard({
       return next;
     });
 
-  // Step 4 : PDF preview + edition optionnelle du markdown
+
   const [customBody, setCustomBody] = useState<string | null>(null);
   const [editorSheetOpen, setEditorSheetOpen] = useState(false);
   const [editorDraft, setEditorDraft] = useState<string>("");
 
-  // Step 5
+
   const [submitting, setSubmitting] = useState(false);
 
-  // ---- Search filters -------------------------------------------
+
   const [empSearch, setEmpSearch] = useState("");
   const [tplSearch, setTplSearch] = useState("");
 
-  // ---- Reset on open --------------------------------------------
+
   useEffect(() => {
     if (open) {
       setStep(1);
@@ -323,12 +325,12 @@ export function ContractWizard({
     }
   }, [open]);
 
-  // ---- Auto-fill details when entering step 3 --------------------
-  // Pas de "prev ||" pour les valeurs auto : on les rafraichit a chaque entree
-  // SAUF si l'utilisateur a personnalise le champ explicitement.
+
+
+
   useEffect(() => {
     if (!template || !employee || step !== 3) return;
-    const positionLabel = employee.position ?? "Employe";
+    const positionLabel = employee.position ?? t("employe");
 
     if (!customizedFields.has("title")) {
       setTitle(`Contrat de travail - ${positionLabel}`);
@@ -358,19 +360,19 @@ export function ContractWizard({
     if (!customizedFields.has("vacationPct")) {
       setVacationPct(template.defaultVacationPct != null ? String(template.defaultVacationPct) : "4");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [template, employee, step]);
 
-  // ---- Probation auto-update when startDate changes -------------
+
   useEffect(() => {
     if (!startDate) return;
     if (!customizedFields.has("probationEndDate")) {
       setProbationEndDate(addDaysISO(startDate, 90));
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [startDate]);
 
-  // ---- Filtered lists -------------------------------------------
+
   const filteredEmployees = useMemo(() => {
     const q = empSearch.trim().toLowerCase();
     if (!q) return employees;
@@ -404,7 +406,7 @@ export function ContractWizard({
     return { recommendedTemplates: recos, otherTemplates: others };
   }, [templates, employee, tplSearch]);
 
-  // ---- Step navigation guards -----------------------------------
+
   const canNext = useMemo(() => {
     if (step === 1) return !!employee;
     if (step === 2) return !!template;
@@ -423,14 +425,14 @@ export function ContractWizard({
     return true;
   }, [step, employee, template, title, startDate, contractType, endDate]);
 
-  // ---- Effective body (custom override OU template original) ----
+
   const effectiveBody = customBody ?? template?.bodyMarkdown ?? "";
 
-  // ---- Extra context envoye au preview PDF ----------------------
+
   const extraContext = useMemo<Record<string, string>>(() => {
     return {
       "contract.title": title,
-      "contract.type": labelForContractType(contractType) || contractType,
+      "contract.type": labelForContractType(contractType, t("autre"), t) || contractType,
       "contract.startDate": startDate,
       "contract.endDate": endDate,
       "contract.probationEndDate": probationEndDate,
@@ -453,14 +455,14 @@ export function ContractWizard({
     signingBonus,
   ]);
 
-  // ---- Submit ---------------------------------------------------
+
   const submit = async (sendForSignature: boolean) => {
     if (!employee || !template) {
-      toast.error("Employe et template requis");
+      toast.error(t("employe_template_requis"));
       return;
     }
     if (!title.trim() || !startDate) {
-      toast.error("Titre et date de debut requis");
+      toast.error(t("titre_date_debut_requis"));
       return;
     }
     setSubmitting(true);
@@ -482,14 +484,14 @@ export function ContractWizard({
       });
       onClose();
     } catch (err) {
-      // eslint-disable-next-line no-console
+
       console.error(err);
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ---- Open markdown editor sheet ------------------------------
+
   const openEditor = () => {
     setEditorDraft(effectiveBody);
     setEditorSheetOpen(true);
@@ -497,31 +499,31 @@ export function ContractWizard({
   const saveEditor = () => {
     setCustomBody(editorDraft);
     setEditorSheetOpen(false);
-    toast.success("Contenu personnalise enregistre");
+    toast.success(t("contenu_personnalise_enregistre"));
   };
   const resetCustomBody = () => {
     setCustomBody(null);
-    toast.info("Contenu remis a la version du template");
+    toast.info(t("contenu_remis_version_template"));
   };
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-3xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
-        {/* ===== Header navy ===== */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
                   <FileSignature className="h-4 w-4 shrink-0" />
-                  Nouveau contrat
+                  {t("nouveau_contrat")}
                 </DialogTitle>
                 <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
-                  Assistant en {STEPS.length} etapes : selection, personnalisation et signature.
+                  {t("assistant_etapes_selection_personnalisation_signature", { count: STEPS.length })}
                 </DialogDescription>
               </div>
               {step === 3 && (
-                <ActionTooltip label="Mode expert : deploie automatiquement toutes les sections d'ajustement.">
+                <ActionTooltip label={t("mode_expert_deploie_automatiquement_toutes")}>
                   <button
                     type="button"
                     onClick={() => setExpertMode((v) => !v)}
@@ -533,14 +535,14 @@ export function ContractWizard({
                     )}
                   >
                     <Settings2 className="h-3 w-3" />
-                    {expertMode ? "Mode expert ON" : "Mode expert"}
+                    {expertMode ? t("mode_expert_on") : t("mode_expert")}
                   </button>
                 </ActionTooltip>
               )}
             </div>
           </DialogHeader>
 
-          {/* Stepper */}
+
           <div className="mt-3 flex items-center gap-1 sm:gap-2">
             {STEPS.map((s, idx) => {
               const isActive = step === s.id;
@@ -564,7 +566,7 @@ export function ContractWizard({
                       <Icon className="h-3 w-3" />
                     )}
                     <span className="hidden sm:inline">
-                      {s.id}. {s.label}
+                      {s.id}. {t(s.labelKey)}
                     </span>
                     <span className="sm:hidden">{s.id}</span>
                   </div>
@@ -582,7 +584,7 @@ export function ContractWizard({
           </div>
         </div>
 
-        {/* ===== Body ===== */}
+
         <div className="p-4 sm:p-5 overflow-y-auto flex-1 space-y-4 sm:space-y-5">
           {step === 1 && (
             <StepEmployee
@@ -679,7 +681,7 @@ export function ContractWizard({
           )}
         </div>
 
-        {/* ===== Footer ===== */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             variant="ghost"
@@ -696,7 +698,7 @@ export function ContractWizard({
               disabled={submitting}
             >
               <ChevronLeft className="h-3.5 w-3.5 mr-1.5" />
-              Precedent
+              {t("precedent")}
             </Button>
           )}
           {step < 5 && (
@@ -740,32 +742,25 @@ export function ContractWizard({
         </DialogFooter>
       </DialogContent>
 
-      {/* ===== Sheet : edition markdown du contrat ===== */}
+
       <Sheet open={editorSheetOpen} onOpenChange={setEditorSheetOpen}>
         <SheetContent side="right" className="w-full sm:max-w-2xl flex flex-col gap-0 p-0">
           <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4">
             <SheetHeader>
               <SheetTitle className="text-white text-sm sm:text-base flex items-center gap-2 pr-8">
                 <Edit3 className="h-4 w-4 shrink-0" />
-                <span className="truncate">Modifier le contenu du contrat</span>
+                <span className="truncate">{t("modifier_contenu_contrat")}</span>
               </SheetTitle>
-              <SheetDescription className="text-white/80 text-[11px] sm:text-xs">
-                Modifications appliquees uniquement a ce contrat. Le template d'origine
-                reste inchange.
-              </SheetDescription>
+              <SheetDescription className="text-white/80 text-[11px] sm:text-xs">{t("contract_wizard_modifications_appliquees_uniquement_a_ce_contrat_le")}</SheetDescription>
             </SheetHeader>
           </div>
           <div className="p-4 sm:p-5 flex-1 overflow-y-auto">
-            <p className="text-[11px] text-muted-foreground italic mb-2">
-              Les champs dynamiques (ex. Nom complet, Date d&apos;embauche) sont
-              affiches comme pastilles bleues et seront remplaces par les valeurs
-              reelles dans le PDF.
-            </p>
+            <p className="text-[11px] text-muted-foreground italic mb-2">{t("contract_wizard_les_champs_dynamiques_ex_nom_complet_date")}</p>
             <TemplateRichEditor
               value={editorDraft}
               onChange={setEditorDraft}
               minHeight="420px"
-              placeholder="Commencez a rediger le contrat…"
+              placeholder={t("commencez_rediger_contrat")}
             />
           </div>
           <div className="border-t bg-muted/30 px-3 sm:px-5 py-2 sm:py-3 flex flex-wrap justify-end gap-2 [&>button]:flex-1 sm:[&>button]:flex-initial">
@@ -777,7 +772,7 @@ export function ContractWizard({
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-              Appliquer les modifications
+              {t("appliquer_modifications")}
             </Button>
           </div>
         </SheetContent>
@@ -802,21 +797,22 @@ function StepEmployee({
   onSearch: (v: string) => void;
   onSelect: (e: Employee) => void;
 }) {
+  const t = useTranslations("admin.contracts");
   return (
-    <FormSection icon={Briefcase} title="Choisir l'employe" description="Selectionnez l'employe pour lequel generer le contrat.">
+    <FormSection icon={Briefcase} title={t("choisir_employe")} description={t("selectionnez_employe_lequel_generer_contrat")}>
       <div className="relative">
         <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="Rechercher par nom, poste, departement..."
+          placeholder={t("rechercher_nom_poste_departement")}
           className="h-9 text-sm pl-7"
         />
       </div>
 
       {employees.length === 0 ? (
         <p className="text-xs text-muted-foreground text-center py-6">
-          Aucun employe trouve.
+          {t("aucun_employe_trouve")}
         </p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[420px] overflow-y-auto pr-1">
@@ -845,7 +841,7 @@ function StepEmployee({
                     {e.fullName ?? e.email}
                   </p>
                   <p className="text-[11px] text-muted-foreground truncate">
-                    {e.position ?? "Poste non defini"}
+                    {e.position ?? t("poste_non_defini")}
                     {e.department ? ` - ${e.department}` : ""}
                   </p>
                   {e.team && (
@@ -884,8 +880,9 @@ function StepTemplate({
   onSearch: (v: string) => void;
   onSelect: (t: ContractTemplate) => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const hasRecommended = recommended.length > 0;
-  const positionLabel = employee.position ?? "ce poste";
+  const positionLabel = employee.position ?? t("poste");
 
   return (
     <div className="space-y-4">
@@ -894,7 +891,7 @@ function StepTemplate({
         <Input
           value={search}
           onChange={(e) => onSearch(e.target.value)}
-          placeholder="Rechercher un template..."
+          placeholder={t("rechercher_template")}
           className="h-9 text-sm pl-7"
         />
       </div>
@@ -903,7 +900,7 @@ function StepTemplate({
         <FormSection
           icon={Sparkles}
           title={`Recommandes pour ${positionLabel}`}
-          description="Templates dont le ciblage correspond au poste ou departement de l'employe."
+          description={t("templates_dont_ciblage_correspond_poste")}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {recommended.map((t) => (
@@ -921,12 +918,10 @@ function StepTemplate({
 
       <FormSection
         icon={Layers}
-        title={hasRecommended ? "Tous les templates" : "Templates disponibles"}
+        title={hasRecommended ? t("tous_templates") : t("templates_disponibles")}
       >
         {others.length === 0 && !hasRecommended ? (
-          <p className="text-xs text-muted-foreground text-center py-6">
-            Aucun template disponible. Creez-en un d'abord depuis l'onglet Templates.
-          </p>
+          <p className="text-xs text-muted-foreground text-center py-6">{t("contract_wizard_aucun_template_disponible_creez_en_un_d")}</p>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             {others.map((t) => (
@@ -955,8 +950,9 @@ function TemplateCardChoice({
   onSelect: () => void;
   recommended?: boolean;
 }) {
+  const t = useTranslations("admin.contracts");
   const preview = useMemo(
-    () => formatPreviewMarkdown(template.bodyMarkdown, 140),
+    () => formatPreviewMarkdown(template.bodyMarkdown, 140, t),
     [template.bodyMarkdown],
   );
 
@@ -977,7 +973,7 @@ function TemplateCardChoice({
           <div className="flex flex-wrap gap-1 mt-1">
             {template.contractType && (
               <Badge variant="outline" className="text-[10px]">
-                {labelForContractType(template.contractType) || template.contractType}
+                {labelForContractType(template.contractType, t("autre"), t) || template.contractType}
               </Badge>
             )}
             {recommended && (
@@ -986,7 +982,7 @@ function TemplateCardChoice({
                 className="text-[10px] bg-amber-50 text-amber-700 border-amber-300"
               >
                 <Sparkles className="h-2.5 w-2.5 mr-0.5" />
-                Recommande
+                {t("recommande")}
               </Badge>
             )}
           </div>
@@ -1036,6 +1032,7 @@ interface StepDetailsProps {
 }
 
 function StepDetails(props: StepDetailsProps) {
+  const t = useTranslations("admin.contracts");
   const {
     employee,
     template,
@@ -1073,8 +1070,8 @@ function StepDetails(props: StepDetailsProps) {
     _ct === "freelance" ||
     _ct === "seasonal";
 
-  // Section "Ajustements" : ouverte par defaut si mode expert OU si type
-  // necessite un endDate OU si l'utilisateur a deja personnalise un champ
+
+
   const [adjustOpen, setAdjustOpen] = useState(false);
   useEffect(() => {
     if (expertMode || needsEndDate || customizedFields.size > 0) {
@@ -1084,7 +1081,7 @@ function StepDetails(props: StepDetailsProps) {
 
   return (
     <div className="space-y-5">
-      {/* Recap context */}
+
       <div className="rounded-lg border bg-muted/20 p-3 flex items-center gap-3">
         <Avatar className="h-9 w-9">
           {employee.avatarUrl ? <AvatarImage src={employee.avatarUrl} alt="" /> : null}
@@ -1097,38 +1094,38 @@ function StepDetails(props: StepDetailsProps) {
             {employee.fullName ?? employee.email}
           </p>
           <p className="text-[11px] text-muted-foreground truncate">
-            {employee.position ?? "Poste non defini"} - {template.name}
+            {employee.position ?? t("poste_non_defini")} - {template.name}
           </p>
         </div>
       </div>
 
-      {/* ====== SECTION : Pre-rempli automatiquement ====== */}
+
       <FormSection
         icon={Sparkles}
-        title="Pre-rempli automatiquement"
-        description="Valeurs deduites du profil employe et des defauts du template. Toutes modifiables ci-dessous."
+        title={t("pre_rempli_automatiquement")}
+        description={t("valeurs_deduites_profil_employe_defauts")}
       >
         <div className="rounded-lg border border-emerald-200 bg-emerald-50/40 p-3 space-y-2">
-          <AutoRow label="Titre" value={title} customized={customizedFields.has("title")} />
+          <AutoRow label={t("titre")} value={title} customized={customizedFields.has("title")} />
           <AutoRow
-            label="Type de contrat"
-            value={labelForContractType(contractType) || contractType}
+            label={t("type_contrat")}
+            value={labelForContractType(contractType, t("autre"), t) || contractType}
             customized={customizedFields.has("contractType")}
           />
-          <AutoRow label="Date de debut" value={fmtDateFr(startDate)} customized={customizedFields.has("startDate")} />
-          <AutoRow label="Fin probation" value={fmtDateFr(probationEndDate)} customized={customizedFields.has("probationEndDate")} hint="+90 jours" />
+          <AutoRow label={t("date_debut")} value={fmtDateFr(startDate)} customized={customizedFields.has("startDate")} />
+          <AutoRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} customized={customizedFields.has("probationEndDate")} hint={t("90_jours")} />
           {salaryAnnual && (
-            <AutoRow label="Salaire annuel" value={fmtMoney(salaryAnnual)} customized={customizedFields.has("salaryAnnual")} />
+            <AutoRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} customized={customizedFields.has("salaryAnnual")} />
           )}
           {hourlyRate && (
-            <AutoRow label="Taux horaire" value={`${fmtMoney(hourlyRate)}/h`} customized={customizedFields.has("hourlyRate")} />
+            <AutoRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} customized={customizedFields.has("hourlyRate")} />
           )}
-          <AutoRow label="Heures / semaine" value={`${hoursPerWeek} h`} customized={customizedFields.has("hoursPerWeek")} />
-          <AutoRow label="Vacances" value={`${vacationPct} %`} customized={customizedFields.has("vacationPct")} />
+          <AutoRow label={t("heures_semaine")} value={`${hoursPerWeek} h`} customized={customizedFields.has("hoursPerWeek")} />
+          <AutoRow label={t("vacances")} value={`${vacationPct} %`} customized={customizedFields.has("vacationPct")} />
         </div>
       </FormSection>
 
-      {/* ====== SECTION : Ajustements ====== */}
+
       <div className="space-y-3">
         <button
           type="button"
@@ -1138,7 +1135,7 @@ function StepDetails(props: StepDetailsProps) {
           <div className="flex items-center gap-2">
             <Settings2 className="h-4 w-4 text-[#0F2D52]" />
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
-              Ajustements (optionnel)
+              {t("ajustements_optionnel")}
             </h3>
             {customizedFields.size > 0 && (
               <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-300">
@@ -1155,42 +1152,42 @@ function StepDetails(props: StepDetailsProps) {
 
         {adjustOpen && (
           <div className="space-y-5 pt-1">
-            <FormSection icon={FileText} title="Identification">
-              <Field label="Titre" required>
+            <FormSection icon={FileText} title={t("identification")}>
+              <Field label={t("titre")} required>
                 <Input
                   value={title}
                   onChange={(e) => onTitle(e.target.value)}
-                  placeholder="Contrat de travail - Technicien"
+                  placeholder={t("contrat_travail_technicien")}
                 />
               </Field>
-              <Field label="Type de contrat" required>
+              <Field label={t("type_contrat")} required>
                 <Select value={contractType} onValueChange={onContractType}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CONTRACT_TYPES.map((t) => (
-                      <SelectItem key={t.value} value={t.value}>
-                        {t.label}
+                    {CONTRACT_TYPES.map((ct) => (
+                      <SelectItem key={ct.value} value={ct.value}>
+                        {t(ct.labelKey)}
                       </SelectItem>
                     ))}
-                    <SelectItem value="autre">Autre</SelectItem>
+                    <SelectItem value="autre">{t("autre")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
             </FormSection>
 
-            <FormSection icon={CalendarClock} title="Periode">
+            <FormSection icon={CalendarClock} title={t("periode")}>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <Field label="Date de debut" required>
+                <Field label={t("date_debut")} required>
                   <DatePopover value={startDate} onChange={onStartDate} />
                 </Field>
                 {needsEndDate && (
-                  <Field label="Date de fin" required>
+                  <Field label={t("date_fin")} required>
                     <DatePopover value={endDate} onChange={onEndDate} min={startDate} />
                   </Field>
                 )}
-                <Field label="Fin periode probatoire" hint="Defaut : +90 jours">
+                <Field label={t("fin_periode_probatoire")} hint={t("defaut_90_jours")}>
                   <DatePopover
                     value={probationEndDate}
                     onChange={onProbationEndDate}
@@ -1200,9 +1197,9 @@ function StepDetails(props: StepDetailsProps) {
               </div>
             </FormSection>
 
-            <FormSection icon={Coins} title="Remuneration">
+            <FormSection icon={Coins} title={t("remuneration")}>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                <Field label="Salaire annuel ($ CAD)">
+                <Field label={t("salaire_annuel_cad")}>
                   <Input
                     type="number"
                     step="0.01"
@@ -1212,7 +1209,7 @@ function StepDetails(props: StepDetailsProps) {
                     placeholder="-"
                   />
                 </Field>
-                <Field label="Taux horaire ($)">
+                <Field label={t("taux_horaire_2")}>
                   <Input
                     type="number"
                     step="0.01"
@@ -1222,7 +1219,7 @@ function StepDetails(props: StepDetailsProps) {
                     placeholder="-"
                   />
                 </Field>
-                <Field label="Heures / sem">
+                <Field label={t("heures_sem")}>
                   <Input
                     type="number"
                     value={hoursPerWeek}
@@ -1231,7 +1228,7 @@ function StepDetails(props: StepDetailsProps) {
                     placeholder="40"
                   />
                 </Field>
-                <Field label="Vacances %">
+                <Field label={t("vacances_2")}>
                   <Input
                     type="number"
                     step="0.1"
@@ -1243,7 +1240,7 @@ function StepDetails(props: StepDetailsProps) {
                 </Field>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <Field label="Bonus a la signature ($)" hint="Discute en entrevue, optionnel">
+                <Field label={t("bonus_signature")} hint={t("discute_entrevue_optionnel")}>
                   <Input
                     type="number"
                     step="0.01"
@@ -1256,16 +1253,16 @@ function StepDetails(props: StepDetailsProps) {
               </div>
             </FormSection>
 
-            <FormSection icon={FileText} title="Notes internes (RH uniquement)">
+            <FormSection icon={FileText} title={t("notes_internes_rh_uniquement")}>
               <Field
-                label="Notes"
-                hint="Visible uniquement par les RH. N'apparait pas dans le contrat envoye a l'employe."
+                label={t("notes")}
+                hint={t("visible_uniquement_rh_n_apparait")}
               >
                 <Textarea
                   value={internalNotes}
                   onChange={(e) => onInternalNotes(e.target.value)}
                   rows={3}
-                  placeholder="Ex : Conditions particulieres discutees en entrevue, contacts references..."
+                  placeholder={t("ex_conditions_particulieres_discutees_entrevue")}
                   className="text-sm"
                 />
               </Field>
@@ -1289,6 +1286,7 @@ function AutoRow({
   customized?: boolean;
   hint?: string;
 }) {
+  const t = useTranslations("admin.contracts");
   return (
     <div className="flex items-center justify-between gap-3 text-xs">
       <div className="flex items-center gap-1.5 min-w-0">
@@ -1313,7 +1311,7 @@ function AutoRow({
               : "bg-emerald-50 text-emerald-700 border-emerald-300",
           )}
         >
-          {customized ? "Personnalise" : "Auto"}
+          {customized ? t("personnalise") : t("auto")}
         </Badge>
       </div>
     </div>
@@ -1360,19 +1358,20 @@ function StepPreview({
   onOpenEditor: () => void;
   onResetCustomBody: () => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const employeeName = employee.fullName ?? employee.email;
 
   return (
     <div className="space-y-5">
-      {/* Bouton apercu PDF en vedette */}
+
       <FormSection
         icon={Eye}
-        title="Apercu du contrat"
-        description="Genere un apercu PDF identique au document final, avec toutes les variables resolues."
+        title={t("apercu_contrat")}
+        description={t("genere_apercu_pdf_identique_document")}
         action={
           hasCustomBody ? (
             <Badge variant="outline" className="text-[10px] bg-amber-50 text-amber-700 border-amber-300">
-              Contenu personnalise
+              {t("contenu_personnalise")}
             </Badge>
           ) : null
         }
@@ -1385,7 +1384,7 @@ function StepPreview({
           extraContext={extraContext}
           metadata={{
             employeeName,
-            companyName: "VNK Automatisation Inc.",
+            companyName: t("vnk_automatisation_inc"),
           }}
           trigger={
             <Button
@@ -1409,7 +1408,7 @@ function StepPreview({
             className="text-xs"
           >
             <Edit3 className="h-3 w-3 mr-1.5" />
-            {hasCustomBody ? "Continuer l'edition" : "Modifier le contenu"}
+            {hasCustomBody ? t("continuer_edition") : t("modifier_contenu")}
           </Button>
           {hasCustomBody && (
             <Button
@@ -1425,29 +1424,29 @@ function StepPreview({
         </div>
       </FormSection>
 
-      {/* Recap lecture seule */}
-      <FormSection icon={FileText} title="Recapitulatif">
+
+      <FormSection icon={FileText} title={t("recapitulatif")}>
         <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
-          <SummaryRow label="Beneficiaire" value={employeeName} />
-          <SummaryRow label="Template" value={template.name} />
-          <SummaryRow label="Titre" value={title} />
+          <SummaryRow label={t("beneficiaire")} value={employeeName} />
+          <SummaryRow label={t("template")} value={template.name} />
+          <SummaryRow label={t("titre")} value={title} />
           <SummaryRow
-            label="Type"
-            value={labelForContractType(contractType) || contractType}
+            label={t("type")}
+            value={labelForContractType(contractType, t("autre"), t) || contractType}
           />
-          <SummaryRow label="Debut" value={fmtDateFr(startDate)} />
-          {endDate && <SummaryRow label="Fin" value={fmtDateFr(endDate)} />}
+          <SummaryRow label={t("debut")} value={fmtDateFr(startDate)} />
+          {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate)} />}
           {probationEndDate && (
-            <SummaryRow label="Fin probation" value={fmtDateFr(probationEndDate)} />
+            <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} />
           )}
           {salaryAnnual && (
-            <SummaryRow label="Salaire annuel" value={fmtMoney(salaryAnnual)} />
+            <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} />
           )}
-          {hourlyRate && <SummaryRow label="Taux horaire" value={`${fmtMoney(hourlyRate)}/h`} />}
-          {hoursPerWeek && <SummaryRow label="Heures / sem" value={`${hoursPerWeek} h`} />}
-          {vacationPct && <SummaryRow label="Vacances" value={`${vacationPct} %`} />}
+          {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} />}
+          {hoursPerWeek && <SummaryRow label={t("heures_sem")} value={`${hoursPerWeek} h`} />}
+          {vacationPct && <SummaryRow label={t("vacances")} value={`${vacationPct} %`} />}
           {signingBonus && (
-            <SummaryRow label="Bonus a la signature" value={fmtMoney(signingBonus)} />
+            <SummaryRow label={t("bonus_signature_2")} value={fmtMoney(signingBonus)} />
           )}
         </div>
       </FormSection>
@@ -1487,44 +1486,41 @@ function StepFinal({
   signingBonus: string;
   internalNotes: string;
 }) {
+  const t = useTranslations("admin.contracts");
   return (
     <FormSection
       icon={Sparkles}
-      title="Tout est pret"
-      description="Choisissez l'action finale : sauvegarder en brouillon pour relecture, ou envoyer immediatement pour signature electronique."
+      title={t("tout_pret")}
+      description={t("choisissez_action_finale_brouillon_envoyer")}
     >
       <div className="rounded-lg border bg-muted/20 p-4 space-y-2 text-sm">
-        <SummaryRow label="Beneficiaire" value={employee?.fullName ?? employee?.email ?? "-"} />
-        <SummaryRow label="Template" value={template?.name ?? "-"} />
-        <SummaryRow label="Titre" value={title} />
+        <SummaryRow label={t("beneficiaire")} value={employee?.fullName ?? employee?.email ?? "-"} />
+        <SummaryRow label={t("template")} value={template?.name ?? "-"} />
+        <SummaryRow label={t("titre")} value={title} />
         <SummaryRow
-          label="Type"
-          value={labelForContractType(contractType) || contractType}
+          label={t("type")}
+          value={labelForContractType(contractType, t("autre"), t) || contractType}
         />
-        <SummaryRow label="Debut" value={fmtDateFr(startDate)} />
-        {endDate && <SummaryRow label="Fin" value={fmtDateFr(endDate)} />}
+        <SummaryRow label={t("debut")} value={fmtDateFr(startDate)} />
+        {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate)} />}
         {probationEndDate && (
-          <SummaryRow label="Fin probation" value={fmtDateFr(probationEndDate)} />
+          <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} />
         )}
-        {salaryAnnual && <SummaryRow label="Salaire annuel" value={fmtMoney(salaryAnnual)} />}
-        {hourlyRate && <SummaryRow label="Taux horaire" value={`${fmtMoney(hourlyRate)}/h`} />}
-        {hoursPerWeek && <SummaryRow label="Heures / sem" value={`${hoursPerWeek} h`} />}
-        {vacationPct && <SummaryRow label="Vacances" value={`${vacationPct} %`} />}
-        {signingBonus && <SummaryRow label="Bonus" value={fmtMoney(signingBonus)} />}
+        {salaryAnnual && <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} />}
+        {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} />}
+        {hoursPerWeek && <SummaryRow label={t("heures_sem")} value={`${hoursPerWeek} h`} />}
+        {vacationPct && <SummaryRow label={t("vacances")} value={`${vacationPct} %`} />}
+        {signingBonus && <SummaryRow label={t("bonus")} value={fmtMoney(signingBonus)} />}
       </div>
 
       {internalNotes && (
         <div className="rounded-lg border border-amber-200 bg-amber-50/40 p-3 text-xs">
-          <p className="font-semibold text-amber-800 mb-1">Notes internes RH</p>
+          <p className="font-semibold text-amber-800 mb-1">{t("notes_internes_rh")}</p>
           <p className="whitespace-pre-wrap text-amber-900">{internalNotes}</p>
         </div>
       )}
 
-      <p className="text-[11px] text-muted-foreground">
-        En cliquant sur <strong>Envoyer pour signature</strong>, l'employe recevra une
-        notification pour signer electroniquement son contrat. Vous pourrez contresigner
-        une fois sa signature recue.
-      </p>
+      <p className="text-[11px] text-muted-foreground">{t("contract_wizard_en_cliquant_sur")}<strong>{t("envoyer_signature")}</strong>{t("contract_wizard_l_employe_recevra_une_notification_pour_signer")}</p>
     </FormSection>
   );
 }

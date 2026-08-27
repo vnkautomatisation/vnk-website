@@ -1,12 +1,16 @@
 // Wizard d'onboarding — premier login après acceptation d'invitation.
 // Guide pas-à-pas : profil → 2FA → passkey → docs légaux → terminé.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OnboardingWizard } from "./wizard";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Bienvenue chez VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("bienvenue_chez_vnk") };
+}
 
 export default async function OnboardingPage() {
   const session = await auth();

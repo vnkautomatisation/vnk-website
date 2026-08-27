@@ -6,6 +6,7 @@
 // A executer toutes les heures via Railway cron :
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/auto-close-shifts
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
@@ -14,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const STALE_HOURS = 16;
 const DEFAULT_DURATION_MIN = 8 * 60; // 8h
-const AUTO_NOTE = "[AUTO-FERME : pointage oublié, durée par défaut 8h]";
+const AUTO_NOTE_KEY = "auto_ferme_note";
 
 function authorize(req: Request): boolean {
   const expected = process.env.CRON_SECRET;
@@ -24,6 +25,7 @@ function authorize(req: Request): boolean {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -39,7 +41,7 @@ export async function POST(req: Request) {
   let closed = 0;
   for (const tc of stale) {
     const newClockOut = new Date(tc.clockIn.getTime() + DEFAULT_DURATION_MIN * 60 * 1000);
-    const notes = `${AUTO_NOTE}\n${tc.notes ?? ""}`.slice(0, 500);
+    const notes = `${t(AUTO_NOTE_KEY)}\n${tc.notes ?? ""}`.slice(0, 500);
     // Si une pause cumulee existe, on la soustrait de la duree par defaut
     const netDuration = Math.max(0, DEFAULT_DURATION_MIN - (tc.totalBreakMin ?? 0));
     await prisma.timeClock.update({
@@ -57,7 +59,7 @@ export async function POST(req: Request) {
         recipientType: "admin",
         recipientId: tc.adminId,
         type: "warning",
-        title: "Pointage auto-fermé",
+        title: t("pointage_auto_ferme"),
         body: `Votre pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} a été fermé automatiquement (durée par défaut 8h). Ajustez si vous avez travaillé plus ou moins.`,
         link: "/admin/mon-espace/pointage",
         icon: "alert-triangle",

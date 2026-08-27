@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCountryName } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -40,23 +41,23 @@ import { formatCurrency, formatDate, formatDateTime, cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 
-const TYPE_LABELS: Record<string, string> = {
-  charge: "Vente",
-  refund: "Remboursement",
-  chargeback: "Rétrofacturation",
-  chargeback_fee: "Frais de rétrofact.",
-  adjustment: "Ajustement",
-  topup: "Apport de fonds",
+const TYPE_KEYS: Record<string, string> = {
+  charge: "vente",
+  refund: "remboursement",
+  chargeback: "retrofacturation",
+  chargeback_fee: "frais_retrofact",
+  adjustment: "ajustement",
+  topup: "apport_fonds",
 };
 
-const METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte de crédit",
-  interac: "Interac",
-  cheque: "Chèque",
-  virement: "Virement bancaire",
-  comptant: "Comptant",
-  manual: "Manuel",
-  autre: "Autre",
+const METHOD_KEYS: Record<string, string> = {
+  stripe: "carte_credit",
+  interac: "interac",
+  cheque: "cheque",
+  virement: "virement_bancaire",
+  comptant: "comptant",
+  manual: "manuel",
+  autre: "autre",
 };
 
 const CARD_BRAND_LABELS: Record<string, string> = {
@@ -64,11 +65,6 @@ const CARD_BRAND_LABELS: Record<string, string> = {
   discover: "Discover", diners: "Diners", jcb: "JCB", unionpay: "UnionPay",
 };
 
-const COUNTRY_NAMES: Record<string, string> = {
-  CA: "Canada", US: "États-Unis", FR: "France", DE: "Allemagne", GB: "Royaume-Uni",
-  IT: "Italie", ES: "Espagne", BE: "Belgique", CH: "Suisse", LU: "Luxembourg",
-  CI: "Côte d'Ivoire", SN: "Sénégal", CM: "Cameroun", MA: "Maroc", TN: "Tunisie",
-};
 
 type PaymentDetail = {
   payment: {
@@ -175,19 +171,21 @@ export function PaymentDetailDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const t = useTranslations("admin.transactions");
+  const countryName = useCountryName();
   const tc = useTranslations("common");
   const [data, setData] = useState<PaymentDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [processing, setProcessing] = useState<number | null>(null);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; downloadName?: string } | null>(null);
 
-  // Édition des champs comptables inline
+
   const [editingAccounting, setEditingAccounting] = useState(false);
   const [savingAccounting, setSavingAccounting] = useState(false);
   const [editCategory, setEditCategory] = useState("");
   const [editNotes, setEditNotes] = useState("");
 
-  // Édition du type inline (Select visible)
+
   const [editingType, setEditingType] = useState(false);
   const [pendingType, setPendingType] = useState<string>("");
   const [savingType, setSavingType] = useState(false);
@@ -217,7 +215,7 @@ export function PaymentDetailDialog({
         setEditCategory(d.payment.accountingCategory ?? "");
         setEditNotes(d.payment.accountantNotes ?? "");
       })
-      .catch(() => toast.error("Impossible de charger le détail"))
+      .catch(() => toast.error(t("impossible_charger_detail")))
       .finally(() => setLoading(false));
   }, [open, paymentId]);
 
@@ -235,13 +233,13 @@ export function PaymentDetailDialog({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
-      toast.success("Comptabilité mise à jour");
+      toast.success(t("comptabilite_mise_jour"));
       setEditingAccounting(false);
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setSavingAccounting(false);
     }
@@ -258,13 +256,13 @@ export function PaymentDetailDialog({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
-      toast.success("Type modifié — vérifiez l'impact sur vos rapports comptables");
+      toast.success(t("type_modifie_verifiez_impact_rapports"));
       setEditingType(false);
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setSavingType(false);
     }
@@ -281,17 +279,17 @@ export function PaymentDetailDialog({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
-      toast.success(action === "reconcile" ? "Confirmé reçu en banque" : "Confirmation retirée");
+      toast.success(action === "reconcile" ? t("confirme_recu_banque") : t("confirmation_retiree"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     }
   };
 
   const processStripeRefund = async (refundId: number) => {
-    if (!confirm("Émettre le remboursement vers la carte du client ? L'argent sera vraiment retourné.")) return;
+    if (!confirm(t("emettre_remboursement_vers_carte_client"))) return;
     setProcessing(refundId);
     try {
       const res = await fetch(`/api/refunds/${refundId}/process-stripe`, {
@@ -300,11 +298,11 @@ export function PaymentDetailDialog({
         body: JSON.stringify({ reason: "requested_by_customer" }),
       });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Erreur");
-      toast.success("Remboursement émis vers la carte du client");
+      if (!res.ok) throw new Error(result.error || t("erreur"));
+      toast.success(t("remboursement_emis_vers_carte_client"));
       await reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setProcessing(null);
     }
@@ -335,13 +333,13 @@ export function PaymentDetailDialog({
   const hasFees = p?.processingFee != null;
   const hasCard = !!p?.cardBrand;
   const isReconciled = !!p?.reconciledAt;
-  // Types ENTRANTS : argent recu chez nous (eligibles pour confirmation banque + creation remboursement)
+
   const isInbound = p?.type === "charge" || p?.type === "topup";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[92vh] flex flex-col">
-        {/* Header */}
+
         <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 space-y-1">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
@@ -353,19 +351,19 @@ export function PaymentDetailDialog({
               <>
                 {!editingType ? (
                   <>
-                    <span>{p.type ? TYPE_LABELS[p.type] ?? p.type : "Paiement"}</span>
-                    <ActionTooltip label="Modifier le type (rare — pour corriger une catégorisation erronée)">
+                    <span>{p.type ? TYPE_KEYS[p.type] ?? p.type : t("paiement")}</span>
+                    <ActionTooltip label={t("modifier_type_rare_corriger_categorisation")}>
                       <button
                         onClick={() => { setPendingType(p.type ?? "charge"); setEditingType(true); }}
                         className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/10 hover:bg-white/20 text-white/80 text-[10px]"
-                        aria-label="Modifier le type"
+                        aria-label={t("modifier_type")}
                       >
                         <Edit3 className="h-2.5 w-2.5" />
                         {tc("edit")}
                       </button>
                     </ActionTooltip>
-                    {p.paymentMethod && <span>· {METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod}</span>}
-                    <span>· {isStripe ? "Carte" : "Manuel"}</span>
+                    {p.paymentMethod && <span>· {METHOD_KEYS[p.paymentMethod] ?? p.paymentMethod}</span>}
+                    <span>· {isStripe ? t("carte") : t("manuel")}</span>
                   </>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 w-full mt-1 bg-white/10 rounded p-1.5">
@@ -374,7 +372,7 @@ export function PaymentDetailDialog({
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        {Object.entries(TYPE_LABELS).map(([key, label]) => (
+                        {Object.entries(TYPE_KEYS).map(([key, label]) => (
                           <SelectItem key={key} value={key} className="text-xs">{label}</SelectItem>
                         ))}
                       </SelectContent>
@@ -395,7 +393,7 @@ export function PaymentDetailDialog({
                     >
                       {tc("cancel")}
                     </Button>
-                    <span className="text-[10px] text-amber-200">⚠ Impact comptable</span>
+                    <span className="text-[10px] text-amber-200">{t("impact_comptable")}</span>
                   </span>
                 )}
               </>
@@ -409,7 +407,7 @@ export function PaymentDetailDialog({
 
           {data && p && (
             <>
-              {/* Sommaire principal — 3 cartes */}
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-md border bg-card">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("amount")}</p>
@@ -426,11 +424,11 @@ export function PaymentDetailDialog({
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("status")}</p>
                   <div className="mt-1.5"><StatusBadge status={p.status} /></div>
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {p.paymentMethod ? METHOD_LABELS[p.paymentMethod] ?? p.paymentMethod : "—"}
+                    {p.paymentMethod ? METHOD_KEYS[p.paymentMethod] ?? p.paymentMethod : "—"}
                   </p>
                 </div>
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Net reçu</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("net_recu")}</p>
                   <p className="text-xl font-bold mt-1 tabular-nums text-emerald-700">
                     {hasFees && p.netAmount != null
                       ? `${Number(p.netAmount).toFixed(2)}`
@@ -439,15 +437,15 @@ export function PaymentDetailDialog({
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     {hasFees && p.processingFee != null
                       ? `après ${Number(p.processingFee).toFixed(2)} de frais`
-                      : "aucun frais"}
+                      : t("aucun_frais")}
                   </p>
                 </div>
               </div>
 
-              {/* Section Client + Facture */}
-              <Section title="Client & facture" icon={User}>
+
+              <Section title={t("client_facture")} icon={User}>
                 {p.client && (
-                  <Row label="Client" value={
+                  <Row label={t("client")} value={
                     <a
                       href={`/admin/clients?openClient=${p.client.id}`}
                       className="hover:underline inline-flex items-center gap-1"
@@ -458,13 +456,13 @@ export function PaymentDetailDialog({
                   } />
                 )}
                 {p.client?.companyName && (
-                  <Row label="Entreprise" value={<span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.client.companyName}</span>} />
+                  <Row label={t("entreprise")} value={<span className="inline-flex items-center gap-1"><Building2 className="h-3 w-3" /> {p.client.companyName}</span>} />
                 )}
                 {p.client?.email && (
-                  <Row label="Courriel" value={<a href={`mailto:${p.client.email}`} className="hover:underline">{p.client.email}</a>} />
+                  <Row label={t("courriel")} value={<a href={`mailto:${p.client.email}`} className="hover:underline">{p.client.email}</a>} />
                 )}
                 {p.invoice && (
-                  <Row label="Facture" value={
+                  <Row label={t("facture")} value={
                     <button
                       onClick={() => setPdfPreview({
                         url: `/api/invoices/${p.invoice!.id}/pdf`,
@@ -479,15 +477,15 @@ export function PaymentDetailDialog({
                 )}
               </Section>
 
-              {/* Section Dates clés */}
-              <Section title="Dates clés" icon={Calendar}>
-                <Row label="Initié" value={formatDateTime(new Date(p.createdAt))} />
-                {p.paidAt && <Row label="Payé" value={formatDateTime(new Date(p.paidAt))} />}
+
+              <Section title={t("dates_cles")} icon={Calendar}>
+                <Row label={t("initie")} value={formatDateTime(new Date(p.createdAt))} />
+                {p.paidAt && <Row label={t("paye")} value={formatDateTime(new Date(p.paidAt))} />}
                 {p.settledAt && (
                   <Row
                     label={
-                      <ActionTooltip label="Date à laquelle les fonds sont disponibles dans votre solde de la plateforme de paiement">
-                        <span className="cursor-help">Réglé</span>
+                      <ActionTooltip label={t("date_laquelle_fonds_disponibles_solde")}>
+                        <span className="cursor-help">{t("regle")}</span>
                       </ActionTooltip>
                     }
                     value={formatDate(new Date(p.settledAt))}
@@ -496,97 +494,96 @@ export function PaymentDetailDialog({
                 {p.payoutAt && (
                   <Row
                     label={
-                      <ActionTooltip label="Date à laquelle l'argent arrive sur votre compte bancaire">
-                        <span className="cursor-help">Versé en banque</span>
+                      <ActionTooltip label={t("date_laquelle_argent_arrive_compte")}>
+                        <span className="cursor-help">{t("verse_banque")}</span>
                       </ActionTooltip>
                     }
                     value={formatDate(new Date(p.payoutAt))}
                   />
                 )}
                 {!p.settledAt && !p.payoutAt && isStripe && (
-                  <p className="px-3 py-2 text-[10px] italic text-muted-foreground">Dates de règlement/versement pas encore reçues (généralement +2 à +5 jours après le paiement)</p>
+                  <p className="px-3 py-2 text-[10px] italic text-muted-foreground">{t("dates_reglement_versement_pas_encore")}</p>
                 )}
               </Section>
 
-              {/* Section Carte (si paiement par carte avec détails complets) */}
+
               {hasCard && (
-                <Section title="Identifiants carte" icon={CreditCard}>
-                  <Row label="Marque" value={CARD_BRAND_LABELS[p.cardBrand!] ?? p.cardBrand} />
-                  {p.cardLast4 && <Row label="4 derniers chiffres" value={<span className="font-mono">···{p.cardLast4}</span>} />}
-                  {p.cardCountry && <Row label="Pays émetteur" value={`${COUNTRY_NAMES[p.cardCountry] ?? p.cardCountry} (${p.cardCountry})`} />}
-                  {p.cardholderName && <Row label="Titulaire" value={p.cardholderName} />}
+                <Section title={t("identifiants_carte")} icon={CreditCard}>
+                  <Row label={t("marque")} value={CARD_BRAND_LABELS[p.cardBrand!] ?? p.cardBrand} />
+                  {p.cardLast4 && <Row label={t("4_derniers_chiffres")} value={<span className="font-mono">···{p.cardLast4}</span>} />}
+                  {p.cardCountry && <Row label={t("pays_emetteur")} value={`${countryName(p.cardCountry)} (${p.cardCountry})`} />}
+                  {p.cardholderName && <Row label={t("titulaire")} value={p.cardholderName} />}
                 </Section>
               )}
 
-              {/* Section Frais de traitement (si applicable) */}
+
               {hasFees && (
-                <Section title="Frais de traitement & net" icon={Coins}>
-                  <Row label="Montant brut" value={<span className="tabular-nums">{Number(p.amount).toFixed(2)} {p.currency.toUpperCase()}</span>} />
-                  <Row label="Frais traitement" value={<span className="tabular-nums text-red-600">−{Number(p.processingFee).toFixed(2)}</span>} />
-                  <Row label="Net reçu" value={<span className="tabular-nums font-semibold text-emerald-700">{Number(p.netAmount).toFixed(2)}</span>} />
+                <Section title={t("frais_traitement_net")} icon={Coins}>
+                  <Row label={t("montant_brut")} value={<span className="tabular-nums">{Number(p.amount).toFixed(2)} {p.currency.toUpperCase()}</span>} />
+                  <Row label={t("frais_traitement")} value={<span className="tabular-nums text-red-600">−{Number(p.processingFee).toFixed(2)}</span>} />
+                  <Row label={t("net_recu")} value={<span className="tabular-nums font-semibold text-emerald-700">{Number(p.netAmount).toFixed(2)}</span>} />
                   {p.amount && p.processingFee && (
-                    <Row label="Taux effectif" value={`${((Number(p.processingFee) / Number(p.amount)) * 100).toFixed(2)} %`} />
+                    <Row label={t("taux_effectif")} value={`${((Number(p.processingFee) / Number(p.amount)) * 100).toFixed(2)} %`} />
                   )}
                 </Section>
               )}
 
-              {/* Section Devise & change (si non-CAD avec FX) */}
+
               {hasFx && (
-                <Section title="Devise & conversion" icon={Globe}>
-                  <Row label="Devise originale" value={`${p.currency.toUpperCase()} · ${Number(p.amount).toFixed(2)}`} />
-                  <Row label="Équivalent CAD" value={<span className="tabular-nums font-semibold">{formatCurrency(Number(p.amountCad))}</span>} />
+                <Section title={t("devise_conversion")} icon={Globe}>
+                  <Row label={t("devise_originale")} value={`${p.currency.toUpperCase()} · ${Number(p.amount).toFixed(2)}`} />
+                  <Row label={t("equivalent_cad")} value={<span className="tabular-nums font-semibold">{formatCurrency(Number(p.amountCad))}</span>} />
                   {p.fxRate && (
-                    <Row label="Taux appliqué" value={<span className="tabular-nums">{Number(p.fxRate).toFixed(6)} {p.currency.toUpperCase()}/CAD</span>} />
+                    <Row label={t("taux_applique")} value={<span className="tabular-nums">{Number(p.fxRate).toFixed(6)} {p.currency.toUpperCase()}/CAD</span>} />
                   )}
                   {p.fxRateSource && p.fxRateDate && (
-                    <Row label="Source taux" value={`${p.fxRateSource === "BOC" ? "Banque du Canada" : p.fxRateSource} · ${formatDate(new Date(p.fxRateDate))}`} />
+                    <Row label={t("source_taux")} value={`${p.fxRateSource === "BOC" ? t("banque_du_canada") : p.fxRateSource} · ${formatDate(new Date(p.fxRateDate))}`} />
                   )}
                 </Section>
               )}
 
-              {/* Section Référence transaction (si paiement carte) */}
+
               {isStripe && (
-                <Section title="Références techniques" icon={ExternalLink} action={
+                <Section title={t("references_techniques")} icon={ExternalLink} action={
                   p.stripePaymentIntentId && (
-                    <ActionTooltip label="Ouvrir cette transaction sur la plateforme de paiement">
+                    <ActionTooltip label={t("ouvrir_transaction_plateforme_paiement")}>
                       <a
                         href={`https://dashboard.stripe.com/payments/${p.stripePaymentIntentId}`}
                         target="_blank"
                         rel="noreferrer"
                         className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                        aria-label="Voir détails sur la plateforme"
-                      >
-                        Voir détails plateforme <ExternalLink className="h-2.5 w-2.5" />
+                        aria-label={t("voir_details_plateforme")}
+                      >{t("payment_detail_dialog_voir_details_plateforme")}<ExternalLink className="h-2.5 w-2.5" />
                       </a>
                     </ActionTooltip>
                   )
                 }>
-                  {p.stripePaymentIntentId && <Row label="Référence paiement" value={p.stripePaymentIntentId} mono />}
-                  {p.stripeChargeId && <Row label="Référence transaction" value={p.stripeChargeId} mono />}
-                  {p.stripeBalanceTxId && <Row label="Référence solde" value={p.stripeBalanceTxId} mono />}
+                  {p.stripePaymentIntentId && <Row label={t("reference_paiement")} value={p.stripePaymentIntentId} mono />}
+                  {p.stripeChargeId && <Row label={t("reference_transaction")} value={p.stripeChargeId} mono />}
+                  {p.stripeBalanceTxId && <Row label={t("reference_solde")} value={p.stripeBalanceTxId} mono />}
                   {p.stripePayoutId && (
-                    <Row label="Référence versement" value={
-                      <ActionTooltip label="Ouvrir le détail du versement sur la plateforme de paiement">
+                    <Row label={t("reference_versement")} value={
+                      <ActionTooltip label={t("ouvrir_detail_versement_plateforme_paiement")}>
                         <a
                           href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
                           target="_blank"
                           rel="noreferrer"
                           className="font-mono text-[10px] hover:underline truncate inline-block max-w-[200px]"
-                          aria-label="Voir le versement sur la plateforme"
+                          aria-label={t("voir_versement_plateforme")}
                         >
                           {p.stripePayoutId}
                         </a>
                       </ActionTooltip>
                     } />
                   )}
-                  {p.stripeReceiptNumber && <Row label="N° reçu officiel" value={p.stripeReceiptNumber} mono />}
-                  {p.stripeReceiptEmail && <Row label="Envoyé à" value={p.stripeReceiptEmail} />}
+                  {p.stripeReceiptNumber && <Row label={t("n_recu_officiel")} value={p.stripeReceiptNumber} mono />}
+                  {p.stripeReceiptEmail && <Row label={t("envoye")} value={p.stripeReceiptEmail} />}
                 </Section>
               )}
 
-              {/* Section Workflow comptable */}
+
               <Section
-                title="Comptabilité & confirmation banque"
+                title={t("comptabilite_confirmation_banque")}
                 icon={FolderInput}
                 action={
                   !editingAccounting && (
@@ -597,15 +594,15 @@ export function PaymentDetailDialog({
                   )
                 }
               >
-                {/* Confirmation banque : pertinent uniquement pour types ENTRANTS (vente / fonds ajoutes) */}
+
                 {isInbound ? (
                   <>
                     <div className="px-3 py-2 flex items-center justify-between gap-2">
-                      <span className="text-xs text-muted-foreground">Confirmation banque</span>
+                      <span className="text-xs text-muted-foreground">{t("confirmation_banque")}</span>
                       <ActionTooltip
                         label={isReconciled
-                          ? "Cliquer pour retirer la confirmation"
-                          : "Cliquer pour marquer ce paiement comme confirmé reçu en banque"}
+                          ? t("cliquer_retirer_confirmation")
+                          : t("cliquer_marquer_paiement_comme_confirme")}
                       >
                         <button
                           onClick={toggleReconciled}
@@ -615,50 +612,50 @@ export function PaymentDetailDialog({
                               ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                               : "bg-amber-100 text-amber-700 hover:bg-amber-200"
                           )}
-                          aria-label={isReconciled ? "Retirer la confirmation" : "Confirmer reçu"}
+                          aria-label={isReconciled ? t("retirer_confirmation") : t("confirmer_recu")}
                         >
                           {isReconciled ? (
-                            <><CheckCircle2 className="h-3 w-3" /> Confirmé reçu</>
+                            <><CheckCircle2 className="h-3 w-3" /> {t("confirme_recu")}</>
                           ) : (
-                            <><Clock className="h-3 w-3" /> À vérifier</>
+                            <><Clock className="h-3 w-3" /> {t("verifier")}</>
                           )}
                         </button>
                       </ActionTooltip>
                     </div>
                     {p.reconciledAt && p.reconciledBy && (
-                      <Row label="Confirmé par" value={`${p.reconciledBy} · ${formatDate(new Date(p.reconciledAt))}`} />
+                      <Row label={t("confirme")} value={`${p.reconciledBy} · ${formatDate(new Date(p.reconciledAt))}`} />
                     )}
                   </>
                 ) : (
                   <div className="px-3 py-2 text-[10px] text-muted-foreground italic">
-                    Pas de vérification banque pour ce type ({TYPE_LABELS[p.type ?? "charge"] ?? p.type}) — il s&apos;agit d&apos;une sortie d&apos;argent ou d&apos;un frais, pas d&apos;un encaissement à vérifier.
+                    Pas de vérification banque pour ce type ({TYPE_KEYS[p.type ?? "charge"] ?? p.type}) — il s&apos;agit d&apos;une sortie d&apos;argent ou d&apos;un frais, pas d&apos;un encaissement à vérifier.
                   </div>
                 )}
                 {editingAccounting ? (
                   <>
                     <div className="px-3 py-2 space-y-1.5">
-                      <Label className="text-[10px]">Catégorie comptable</Label>
+                      <Label className="text-[10px]">{t("categorie_comptable")}</Label>
                       <Select value={editCategory || "none"} onValueChange={(v) => setEditCategory(v === "none" ? "" : v)}>
                         <SelectTrigger className="h-8 text-xs">
-                          <SelectValue placeholder="Sélectionner une catégorie" />
+                          <SelectValue placeholder={t("selectionner_categorie")} />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="none" className="text-xs">Non catégorisé</SelectItem>
-                          <SelectItem value="services_recurrents" className="text-xs">Services récurrents</SelectItem>
-                          <SelectItem value="services_unique" className="text-xs">Services uniques</SelectItem>
-                          <SelectItem value="acompte" className="text-xs">Acompte</SelectItem>
-                          <SelectItem value="solde" className="text-xs">Solde</SelectItem>
-                          <SelectItem value="frais" className="text-xs">Frais</SelectItem>
-                          <SelectItem value="autre" className="text-xs">Autre</SelectItem>
+                          <SelectItem value="none" className="text-xs">{t("non_categorise")}</SelectItem>
+                          <SelectItem value="services_recurrents" className="text-xs">{t("services_recurrents")}</SelectItem>
+                          <SelectItem value="services_unique" className="text-xs">{t("services_uniques")}</SelectItem>
+                          <SelectItem value="acompte" className="text-xs">{t("acompte")}</SelectItem>
+                          <SelectItem value="solde" className="text-xs">{t("solde")}</SelectItem>
+                          <SelectItem value="frais" className="text-xs">{t("frais")}</SelectItem>
+                          <SelectItem value="autre" className="text-xs">{t("autre")}</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
                     <div className="px-3 py-2 space-y-1.5">
-                      <Label className="text-[10px]">Notes comptable</Label>
+                      <Label className="text-[10px]">{t("notes_comptable")}</Label>
                       <Textarea
                         value={editNotes}
                         onChange={(e) => setEditNotes(e.target.value)}
-                        placeholder="Ex: référence chèque, numéro Interac, contexte..."
+                        placeholder={t("ex_reference_cheque_numero_interac")}
                         rows={2}
                         className="text-xs"
                       />
@@ -669,18 +666,18 @@ export function PaymentDetailDialog({
                       </Button>
                       <Button size="sm" className="h-7 text-xs" onClick={saveAccounting} disabled={savingAccounting}>
                         <Save className="h-3 w-3 mr-1" />
-                        {savingAccounting ? "Enregistrement…" : "Enregistrer"}
+                        {savingAccounting ? t("enregistrement") : t("enregistrer")}
                       </Button>
                     </div>
                   </>
                 ) : (
                   <>
-                    <Row label="Catégorie" value={p.accountingCategory ?? <span className="text-muted-foreground italic">non catégorisé</span>} />
-                    {p.accountantNotes && <Row label="Notes" value={<span className="text-right whitespace-pre-wrap">{p.accountantNotes}</span>} />}
+                    <Row label={t("categorie")} value={p.accountingCategory ?? <span className="text-muted-foreground italic">{t("non_categorise_2")}</span>} />
+                    {p.accountantNotes && <Row label={t("notes")} value={<span className="text-right whitespace-pre-wrap">{p.accountantNotes}</span>} />}
                   </>
                 )}
                 {p.exportedAt && (
-                  <Row label="Exporté" value={
+                  <Row label={t("exporte")} value={
                     <span className="inline-flex items-center gap-1.5">
                       <FolderInput className="h-3 w-3 text-blue-600" />
                       {p.exportFormat?.toUpperCase() ?? "CSV"} · {formatDate(new Date(p.exportedAt))}
@@ -689,13 +686,13 @@ export function PaymentDetailDialog({
                 )}
               </Section>
 
-              {/* Dispute */}
+
               {data.dispute && (
                 <div className="p-3 rounded-md bg-rose-50 border border-rose-200">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-rose-900">Litige en cours</p>
+                      <p className="text-sm font-semibold text-rose-900">{t("litige_cours")}</p>
                       <p className="text-xs text-rose-800 truncate">{data.dispute.title}</p>
                       <p className="text-[10px] text-rose-700 mt-1">
                         Ouvert le {formatDate(new Date(data.dispute.openedAt))} · Priorité {data.dispute.priority ?? "—"} · {data.dispute.status}
@@ -703,15 +700,14 @@ export function PaymentDetailDialog({
                       <a
                         href={`/admin/disputes?openDispute=${data.dispute.id}`}
                         className="text-[10px] text-rose-700 hover:underline mt-1 inline-flex items-center gap-1"
-                      >
-                        Voir le litige <ArrowRight className="h-2.5 w-2.5" />
+                      >{t("payment_detail_dialog_voir_le_litige")}<ArrowRight className="h-2.5 w-2.5" />
                       </a>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Timeline événements (seulement si > 0) */}
+
               {data.orderEvents.length > 0 && (
                 <Section title={`Timeline événements (${data.orderEvents.length})`} icon={Clock}>
                   {data.orderEvents.map((e) => (
@@ -730,7 +726,7 @@ export function PaymentDetailDialog({
                 </Section>
               )}
 
-              {/* Remboursements (seulement si > 0) */}
+
               {data.refunds.length > 0 && (
                 <Section title={`Remboursements (${data.refunds.length})`} icon={RotateCcw}>
                   {data.refunds.map((r) => (
@@ -759,7 +755,7 @@ export function PaymentDetailDialog({
                           onClick={() => processStripeRefund(r.id)}
                         >
                           <ExternalLink className="h-3 w-3 mr-1.5" />
-                          {processing === r.id ? "Traitement…" : "Émettre le remboursement"}
+                          {processing === r.id ? t("traitement") : t("emettre_remboursement")}
                         </Button>
                       )}
                     </div>
@@ -767,18 +763,18 @@ export function PaymentDetailDialog({
                 </Section>
               )}
 
-              {/* Si paiement manuel sans aucun paiement en ligne — indication */}
+
               {!isStripe && data.orderEvents.length === 0 && data.refunds.length === 0 && (
                 <div className="rounded-md border border-dashed bg-muted/30 p-3 text-xs text-muted-foreground">
                   <p className="inline-flex items-center gap-2 font-medium text-foreground mb-1">
                     <Banknote className="h-3.5 w-3.5" />
-                    Paiement manuel
+                    {t("paiement_manuel")}
                   </p>
-                  <p>Ce paiement a été saisi manuellement par l&apos;admin. Pas de paiement en ligne associé — vérifiez la réception en banque via votre relevé puis utilisez le bouton <strong>Confirmer reçu</strong> ci-dessus.</p>
+                  <p>{t("paiement_ete_saisi_manuellement_apos")} <strong>{t("confirmer_recu")}</strong> {t("ci_dessus")}</p>
                 </div>
               )}
 
-              {/* Actions footer */}
+
               <div className="flex flex-wrap gap-2 pt-2 border-t">
                 <Button
                   variant="outline"
@@ -791,7 +787,7 @@ export function PaymentDetailDialog({
                   })}
                 >
                   <FileText className="h-3.5 w-3.5 mr-1.5" />
-                  Voir le reçu VNK
+                  {t("voir_recu_vnk")}
                 </Button>
                 {p.invoice && (
                   <Button
@@ -805,7 +801,7 @@ export function PaymentDetailDialog({
                     })}
                   >
                     <Receipt className="h-3.5 w-3.5 mr-1.5" />
-                    Voir la facture
+                    {t("voir_facture")}
                   </Button>
                 )}
                 {isInbound && canRefundViaStripe && data.refunds.length === 0 && p.invoice && (
@@ -815,8 +811,7 @@ export function PaymentDetailDialog({
                     className="flex-1 min-w-[160px]"
                     onClick={() => window.location.href = `/admin/refunds?newFor=${p.client?.id}&invoice=${p.invoice?.id}`}
                   >
-                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
-                    Créer remboursement <ArrowRight className="h-3 w-3 ml-1" />
+                    <RotateCcw className="h-3.5 w-3.5 mr-1.5" />{t("payment_detail_dialog_creer_remboursement")}<ArrowRight className="h-3 w-3 ml-1" />
                   </Button>
                 )}
               </div>

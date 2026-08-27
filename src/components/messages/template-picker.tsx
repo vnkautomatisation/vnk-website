@@ -1,6 +1,7 @@
 "use client";
 // Picker de templates inline — affiche au-dessus du composer quand on tape "/"
 import { useEffect, useRef, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function TemplatePicker({
   onSelect: (tpl: Template) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.messages");
   const containerRef = useRef<HTMLDivElement>(null);
 
   const filtered = useMemo(() => {
@@ -44,7 +46,7 @@ export function TemplatePicker({
       .slice(0, 8);
   }, [templates, query]);
 
-  // Esc pour fermer
+
   useEffect(() => {
     if (!open) return;
     const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -55,16 +57,14 @@ export function TemplatePicker({
   if (!open) return null;
   if (filtered.length === 0) {
     return (
-      <div ref={containerRef} className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border bg-popover shadow-lg p-3 text-xs text-muted-foreground">
-        Aucun template trouvé pour <span className="font-mono">/{query}</span>. Crée-le dans Paramètres → Templates.
-      </div>
+      <div ref={containerRef} className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border bg-popover shadow-lg p-3 text-xs text-muted-foreground">{t("template_picker_aucun_template_trouve_pour")}<span className="font-mono">/{query}</span>{t("template_picker_cree_le_dans_parametres_templates")}</div>
     );
   }
   return (
     <div ref={containerRef} className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border bg-popover shadow-lg overflow-hidden">
       <div className="px-3 py-1.5 border-b bg-muted/40 flex items-center gap-1.5">
         <Zap className="h-3 w-3 text-[#0F2D52]" />
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Templates · ↑↓ navigue · Tab/Entrée insère · Esc</span>
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("templates_navigue_tab_entree_insere")}</span>
       </div>
       <ul className="max-h-[240px] overflow-y-auto">
         {filtered.map((t) => (

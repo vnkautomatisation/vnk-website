@@ -24,6 +24,7 @@ export function CatalogItemDialog({
   typeLabel: string;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.catalogs");
   const tc = useTranslations("common");
   const mode = item ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -70,7 +71,7 @@ export function CatalogItemDialog({
           ? await createCatalogItemAction({ type: type as CatalogType, ...payload })
           : await updateCatalogItemAction({ id: item!.id, ...payload });
       if (result.success) {
-        toast.success(mode === "create" ? "Élément créé" : "Élément mis à jour");
+        toast.success(mode === "create" ? t("element_cree") : t("element_mis_jour"));
         onSaved();
         onOpenChange(false);
       } else {
@@ -96,7 +97,7 @@ export function CatalogItemDialog({
 
         <div className="p-6 space-y-4">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nom *</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("nom")}</Label>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -106,24 +107,24 @@ export function CatalogItemDialog({
             />
             {item?.isSystem && (
               <p className="text-[10px] text-amber-700 mt-1">
-                Nom verrouillé (élément système). Couleur et description modifiables.
+                {t("nom_verrouille_element_systeme_couleur")}
               </p>
             )}
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description")}</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1 text-sm" />
           </div>
 
-          {/* Champs spécifiques aux devises */}
+
           {type === "currency" && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Symbole</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("symbole")}</Label>
                 <Input value={metaSymbol} onChange={(e) => setMetaSymbol(e.target.value)} placeholder="$" maxLength={5} className="mt-1" />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Code ISO</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("code_iso")}</Label>
                 <Input value={metaIso} onChange={(e) => setMetaIso(e.target.value.toUpperCase())} placeholder="CAD" maxLength={3} className="mt-1 font-mono" />
               </div>
             </div>
@@ -149,16 +150,16 @@ export function CatalogItemDialog({
           </div>
 
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Icône (optionnel)</Label>
-            <Input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder="Tag, Star, Globe..." className="mt-1" />
-            <p className="text-[10px] text-muted-foreground mt-1">Nom Lucide React ou emoji</p>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("icone_optionnel")}</Label>
+            <Input value={icon} onChange={(e) => setIcon(e.target.value)} placeholder={t("tag_star_globe")} className="mt-1" />
+            <p className="text-[10px] text-muted-foreground mt-1">{t("nom_lucide_ou_emoji")}</p>
           </div>
         </div>
 
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !name.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

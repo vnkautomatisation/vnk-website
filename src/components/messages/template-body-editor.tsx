@@ -6,6 +6,7 @@
 // - Paste cleanup (strip HTML)
 // - Detection variables invalides
 import { useRef, useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Bold, Italic, Underline, Strikethrough, Code, FileCode, Quote,
   List, ListOrdered, Link2, Minus, Heading1, Heading2, Heading3,
@@ -27,6 +28,7 @@ export function TemplateBodyEditor({
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useTranslations("admin.message_templates");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const [acOpen, setAcOpen] = useState(false);
   const [acQuery, setAcQuery] = useState("");
@@ -66,7 +68,7 @@ export function TemplateBodyEditor({
     });
   }, [value, onChange]);
 
-  // Insert prefix on each selected line (lists, headings, quote)
+
   const prefixLines = useCallback((prefix: string) => {
     const ta = taRef.current;
     if (!ta) return;
@@ -76,7 +78,7 @@ export function TemplateBodyEditor({
     const sel = value.slice(start, end);
     const after = value.slice(end);
     if (sel.length === 0) {
-      // Empty selection: prefix current line
+
       const lineStart = before.lastIndexOf("\n") + 1;
       const next = value.slice(0, lineStart) + prefix + value.slice(lineStart);
       onChange(next);
@@ -96,7 +98,7 @@ export function TemplateBodyEditor({
     }
   }, [value, onChange]);
 
-  // Detect "{{xxx" devant le curseur pour autocomplete
+
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
@@ -123,7 +125,7 @@ export function TemplateBodyEditor({
   }, [value]);
 
   const filteredVars = TEMPLATE_VARIABLES
-    .filter((v) => !acQuery || v.key.toLowerCase().includes(acQuery.toLowerCase()) || v.label.toLowerCase().includes(acQuery.toLowerCase()))
+    .filter((v) => !acQuery || v.key.toLowerCase().includes(acQuery.toLowerCase()) || t(v.labelKey).toLowerCase().includes(acQuery.toLowerCase()))
     .slice(0, 8);
 
   const acceptAutocomplete = useCallback((key: string) => {
@@ -161,7 +163,7 @@ export function TemplateBodyEditor({
   };
 
   const promptLink = useCallback(() => {
-    const url = prompt("URL du lien :");
+    const url = prompt(t("url_du_lien"));
     if (url) wrapSelection("[", `](${url})`);
   }, [wrapSelection]);
 
@@ -189,45 +191,45 @@ export function TemplateBodyEditor({
 
   return (
     <div className="space-y-2">
-      {/* Toolbar enrichie */}
+
       <div className="flex items-center gap-0.5 p-1 rounded-md border bg-muted/40 flex-wrap">
-        {/* Format inline */}
-        <ToolBtn icon={<Bold className="h-3.5 w-3.5" />} label="Gras" shortcut="Ctrl+B" onClick={() => wrapSelection("**")} />
-        <ToolBtn icon={<Italic className="h-3.5 w-3.5" />} label="Italique" shortcut="Ctrl+I" onClick={() => wrapSelection("*")} />
-        <ToolBtn icon={<Underline className="h-3.5 w-3.5" />} label="Souligné" shortcut="Ctrl+U" onClick={() => wrapSelection("__")} />
-        <ToolBtn icon={<Strikethrough className="h-3.5 w-3.5" />} label="Barré" onClick={() => wrapSelection("~~")} />
-        <ToolBtn icon={<Code className="h-3.5 w-3.5" />} label="Code inline" onClick={() => wrapSelection("`")} />
+
+        <ToolBtn icon={<Bold className="h-3.5 w-3.5" />} label={t("gras")} shortcut="Ctrl+B" onClick={() => wrapSelection("**")} />
+        <ToolBtn icon={<Italic className="h-3.5 w-3.5" />} label={t("italique")} shortcut="Ctrl+I" onClick={() => wrapSelection("*")} />
+        <ToolBtn icon={<Underline className="h-3.5 w-3.5" />} label={t("souligne")} shortcut="Ctrl+U" onClick={() => wrapSelection("__")} />
+        <ToolBtn icon={<Strikethrough className="h-3.5 w-3.5" />} label={t("barre")} onClick={() => wrapSelection("~~")} />
+        <ToolBtn icon={<Code className="h-3.5 w-3.5" />} label={t("code_inline")} onClick={() => wrapSelection("`")} />
         <Sep />
 
-        {/* Titres */}
-        <ToolBtn icon={<Heading1 className="h-3.5 w-3.5" />} label="Titre 1" onClick={() => prefixLines("# ")} />
-        <ToolBtn icon={<Heading2 className="h-3.5 w-3.5" />} label="Titre 2" onClick={() => prefixLines("## ")} />
-        <ToolBtn icon={<Heading3 className="h-3.5 w-3.5" />} label="Titre 3" onClick={() => prefixLines("### ")} />
+
+        <ToolBtn icon={<Heading1 className="h-3.5 w-3.5" />} label={t("titre_1")} onClick={() => prefixLines("# ")} />
+        <ToolBtn icon={<Heading2 className="h-3.5 w-3.5" />} label={t("titre_2")} onClick={() => prefixLines("## ")} />
+        <ToolBtn icon={<Heading3 className="h-3.5 w-3.5" />} label={t("titre_3")} onClick={() => prefixLines("### ")} />
         <Sep />
 
-        {/* Listes / blocs */}
-        <ToolBtn icon={<List className="h-3.5 w-3.5" />} label="Liste à puces" onClick={() => prefixLines("- ")} />
-        <ToolBtn icon={<ListOrdered className="h-3.5 w-3.5" />} label="Liste numérotée" onClick={() => prefixLines("1. ")} />
-        <ToolBtn icon={<Quote className="h-3.5 w-3.5" />} label="Citation" onClick={() => prefixLines("> ")} />
-        <ToolBtn icon={<FileCode className="h-3.5 w-3.5" />} label="Bloc de code" onClick={() => insertAtCursor("\n```\ncode\n```\n")} />
+
+        <ToolBtn icon={<List className="h-3.5 w-3.5" />} label={t("liste_puces")} onClick={() => prefixLines("- ")} />
+        <ToolBtn icon={<ListOrdered className="h-3.5 w-3.5" />} label={t("liste_numerotee")} onClick={() => prefixLines("1. ")} />
+        <ToolBtn icon={<Quote className="h-3.5 w-3.5" />} label={t("citation")} onClick={() => prefixLines("> ")} />
+        <ToolBtn icon={<FileCode className="h-3.5 w-3.5" />} label={t("bloc_code")} onClick={() => insertAtCursor("\n```\ncode\n```\n")} />
         <Sep />
 
-        {/* Lien + HR */}
-        <ToolBtn icon={<Link2 className="h-3.5 w-3.5" />} label="Lien" shortcut="Ctrl+K" onClick={promptLink} />
-        <ToolBtn icon={<Minus className="h-3.5 w-3.5" />} label="Ligne horizontale" onClick={() => insertAtCursor("\n\n---\n\n")} />
+
+        <ToolBtn icon={<Link2 className="h-3.5 w-3.5" />} label={t("lien")} shortcut="Ctrl+K" onClick={promptLink} />
+        <ToolBtn icon={<Minus className="h-3.5 w-3.5" />} label={t("ligne_horizontale")} onClick={() => insertAtCursor("\n\n---\n\n")} />
         <Sep />
 
-        {/* Variable + Conditionnel */}
+
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" title="Insérer variable"
+            <button type="button" title={t("inserer_variable")}
               className="h-7 px-2 flex items-center gap-1 rounded text-muted-foreground hover:bg-background hover:text-foreground transition-colors text-[10px] font-mono">
               <VariableIcon className="h-3 w-3" />
               {`{{}}`}
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-2 max-h-[320px] overflow-y-auto" align="start">
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-1 pb-1">Variables disponibles</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-1 pb-1">{t("variables_disponibles")}</p>
             {TEMPLATE_VARIABLES.map((v) => (
               <button
                 key={v.key}
@@ -237,7 +239,7 @@ export function TemplateBodyEditor({
               >
                 <code className="font-mono text-[10px] px-1.5 py-0.5 bg-[#0F2D52] text-white rounded shrink-0">{`{{${v.key}}}`}</code>
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium">{v.label}</p>
+                  <p className="text-xs font-medium">{t(v.labelKey)}</p>
                 </div>
                 <span className="text-[9px] text-muted-foreground shrink-0">{v.group}</span>
               </button>
@@ -247,19 +249,19 @@ export function TemplateBodyEditor({
 
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" title="Bloc conditionnel"
+            <button type="button" title={t("bloc_conditionnel")}
               className="h-7 px-2 flex items-center gap-1 rounded text-muted-foreground hover:bg-background hover:text-foreground transition-colors text-[10px]">
               <GitBranch className="h-3 w-3" />Si/Sinon
             </button>
           </PopoverTrigger>
           <PopoverContent className="w-[280px] p-2" align="start">
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-1 pb-1">Insérer un bloc conditionnel</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground px-1 pb-1">{t("inserer_bloc_conditionnel")}</p>
             <button
               type="button"
               onClick={() => insertAtCursor("\n{{#if client_company}}\nVotre entreprise : {{client_company}}\n{{/if}}\n")}
               className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
             >
-              <p className="text-xs font-medium">Si — Sinon rien</p>
+              <p className="text-xs font-medium">{t("si_sinon_rien")}</p>
               <code className="text-[10px] text-muted-foreground">{`{{#if x}}…{{/if}}`}</code>
             </button>
             <button
@@ -267,13 +269,13 @@ export function TemplateBodyEditor({
               onClick={() => insertAtCursor("\n{{#if client_company}}\nBonjour {{client_company}}\n{{else}}\nBonjour {{client_first_name}}\n{{/if}}\n")}
               className="w-full text-left px-2 py-2 rounded hover:bg-muted transition-colors"
             >
-              <p className="text-xs font-medium">Si / Sinon</p>
+              <p className="text-xs font-medium">{t("si_sinon")}</p>
               <code className="text-[10px] text-muted-foreground">{`{{#if x}}A{{else}}B{{/if}}`}</code>
             </button>
           </PopoverContent>
         </Popover>
 
-        {/* Compteur + warnings (push right) */}
+
         <div className="ml-auto flex items-center gap-2 pr-1">
           {invalidVars.length > 0 && (
             <span className="text-[10px] text-destructive flex items-center gap-1" title={`Variables inconnues : ${invalidVars.join(", ")}`}>
@@ -286,7 +288,7 @@ export function TemplateBodyEditor({
         </div>
       </div>
 
-      {/* Editor + autocomplete */}
+
       <div className="relative">
         <textarea
           ref={taRef}
@@ -318,7 +320,7 @@ export function TemplateBodyEditor({
                   >
                     <code className={cn("font-mono text-[10px] px-1.5 py-0.5 rounded shrink-0", i === acIndex ? "bg-white/15" : "bg-[#0F2D52] text-white")}>{`{{${v.key}}}`}</code>
                     <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium truncate">{v.label}</p>
+                      <p className="text-xs font-medium truncate">{t(v.labelKey)}</p>
                       <p className={cn("text-[10px] truncate", i === acIndex ? "text-white/70" : "text-muted-foreground")}>{v.example}</p>
                     </div>
                     <span className={cn("text-[9px] shrink-0", i === acIndex ? "text-white/60" : "text-muted-foreground")}>{v.group}</span>

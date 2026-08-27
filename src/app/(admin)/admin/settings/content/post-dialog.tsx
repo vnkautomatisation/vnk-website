@@ -24,6 +24,7 @@ export function PostDialog({
   post: PostRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.content");
   const tc = useTranslations("common");
   const mode = post ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -78,7 +79,7 @@ export function PostDialog({
         ? await createPostAction(payload)
         : await updatePostAction({ id: post!.id, ...payload });
       if (r.success) {
-        toast.success(mode === "create" ? "Article créé" : "Article mis à jour");
+        toast.success(mode === "create" ? t("article_cree") : t("article_mis_jour"));
         onSaved(); onOpenChange(false);
       } else {
         toast.error(r.error);
@@ -94,15 +95,15 @@ export function PostDialog({
             <FileText className="h-5 w-5" />
           </div>
           <div className="flex-1">
-            <DialogTitle className="text-white text-base">{mode === "create" ? "Nouvel article" : post?.title}</DialogTitle>
-            <p className="text-xs text-white/70">Article de blog</p>
+            <DialogTitle className="text-white text-base">{mode === "create" ? t("nouvel_article") : post?.title}</DialogTitle>
+            <p className="text-xs text-white/70">{t("article_blog")}</p>
           </div>
         </div>
 
         <div className="border-b px-6">
           <div className="flex gap-1">
             <button onClick={() => setTab("content")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === "content" ? "border-[#0F2D52] text-[#0F2D52]" : "border-transparent text-muted-foreground"}`}>
-              Contenu
+              {t("contenu_2")}
             </button>
             <button onClick={() => setTab("seo")} className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px ${tab === "seo" ? "border-[#0F2D52] text-[#0F2D52]" : "border-transparent text-muted-foreground"}`}>
               <Search className="h-3.5 w-3.5 inline mr-1" />SEO
@@ -115,63 +116,62 @@ export function PostDialog({
             <>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Titre *</Label>
-                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Pourquoi automatiser..." className="mt-1" />
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre")}</Label>
+                  <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("pourquoi_automatiser")} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Langue</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("langue")}</Label>
                   <Select value={locale} onValueChange={(v) => setLocale(v as "fr" | "en")}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="fr">Français</SelectItem>
-                      <SelectItem value="en">English</SelectItem>
+                      <SelectItem value="fr">{t("francais")}</SelectItem>
+                      <SelectItem value="en">{t("english")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="sm:col-span-2">
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Slug URL</Label>
-                  <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder="auto-généré depuis le titre" className="mt-1 font-mono text-sm" />
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("slug_url")}</Label>
+                  <Input value={slug} onChange={(e) => setSlug(e.target.value)} placeholder={t("auto_genere_depuis_titre")} className="mt-1 font-mono text-sm" />
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{tc("status")}</Label>
                   <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="draft">Brouillon</SelectItem>
-                      <SelectItem value="published">Publié</SelectItem>
-                      <SelectItem value="archived">Archivé</SelectItem>
+                      <SelectItem value="draft">{t("brouillon")}</SelectItem>
+                      <SelectItem value="published">{t("publie")}</SelectItem>
+                      <SelectItem value="archived">{t("archive")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Extrait (excerpt)</Label>
-                <Textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} maxLength={500} placeholder="Résumé court affiché dans la liste" className="mt-1 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("extrait_excerpt")}</Label>
+                <Textarea value={excerpt} onChange={(e) => setExcerpt(e.target.value)} rows={2} maxLength={500} placeholder={t("resume_court_affiche_liste")} className="mt-1 text-sm" />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Image de couverture (URL)</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("image_couverture_url")}</Label>
                 <Input value={coverImageUrl} onChange={(e) => setCoverImageUrl(e.target.value)} placeholder="https://..." className="mt-1" />
                 {coverImageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img src={coverImageUrl} alt="" className="mt-2 h-24 rounded-md border object-cover" />
                 )}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Catégorie</Label>
-                  <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Automatisation" className="mt-1" />
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("categorie")}</Label>
+                  <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t("automatisation")} className="mt-1" />
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    <TagIcon className="h-3 w-3 inline mr-1" />Tags (séparés par virgule)
-                  </Label>
-                  <Input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder="iec61131, mappview, fanuc" className="mt-1" />
+                    <TagIcon className="h-3 w-3 inline mr-1" />{t("post_dialog_tags_separes_par_virgule")}</Label>
+                  <Input value={tagsText} onChange={(e) => setTagsText(e.target.value)} placeholder={t("iec61131_mappview_fanuc")} className="mt-1" />
                 </div>
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Contenu *</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("contenu")}</Label>
                 <div className="mt-1">
                   <RichEditor value={contentHtml} onChange={setContentHtml} rows={14} />
                 </div>
@@ -182,25 +182,25 @@ export function PostDialog({
           {tab === "seo" && (
             <>
               <p className="text-xs text-muted-foreground">
-                Optimisez l&apos;affichage dans Google et les partages sur les réseaux sociaux.
+                {t("optimisez_apos_affichage_google_partages")}
               </p>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Titre SEO (balise &lt;title&gt;)</Label>
-                <Input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} maxLength={120} placeholder={title || "Hérite du titre"} className="mt-1" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre_seo_balise_lt_title")}</Label>
+                <Input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} maxLength={120} placeholder={title || t("herite_du_titre")} className="mt-1" />
                 <p className="text-[10px] text-muted-foreground mt-1">{seoTitle.length}/60 caractères recommandés</p>
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description SEO (meta description)</Label>
-                <Textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={3} maxLength={300} placeholder={excerpt || "Description courte pour les moteurs de recherche"} className="mt-1 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description_seo_meta_description")}</Label>
+                <Textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={3} maxLength={300} placeholder={excerpt || t("description_courte_moteurs_recherche")} className="mt-1 text-sm" />
                 <p className="text-[10px] text-muted-foreground mt-1">{seoDescription.length}/160 caractères recommandés</p>
               </div>
 
-              {/* Aperçu Google */}
+
               <div className="rounded-lg border p-3 bg-white">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Aperçu Google</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">{t("apercu_google")}</p>
                 <p className="text-xs text-green-700">https://vnkautomatisation.ca › blog › {slug || "..."}</p>
-                <p className="text-base text-blue-700 hover:underline cursor-pointer mt-0.5 line-clamp-1">{seoTitle || title || "Titre de l'article"}</p>
-                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{seoDescription || excerpt || "Description..."}</p>
+                <p className="text-base text-blue-700 hover:underline cursor-pointer mt-0.5 line-clamp-1">{seoTitle || title || t("titre_article")}</p>
+                <p className="text-xs text-gray-600 mt-1 line-clamp-2">{seoDescription || excerpt || t("description")}</p>
               </div>
             </>
           )}
@@ -209,7 +209,7 @@ export function PostDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !title.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

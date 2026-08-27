@@ -1,6 +1,7 @@
 // POST /api/payments/[id]/reconcile — marque un paiement comme reconcilie (rapprochement bancaire)
 // DELETE /api/payments/[id]/reconcile — annule la reconciliation (si pas encore exporte)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -69,6 +70,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -84,7 +86,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
   }
   if (payment.exportedAt) {
-    return NextResponse.json({ error: "Déjà exporté — annulation impossible" }, { status: 409 });
+    return NextResponse.json({ error: t("deja_exporte_annulation_impossible") }, { status: 409 });
   }
 
   const updated = await prisma.payment.update({

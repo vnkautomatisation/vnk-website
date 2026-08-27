@@ -30,6 +30,7 @@ import { findVariable } from "./variable-registry";
 export function formatPreviewMarkdown(
   md: string | null | undefined,
   maxChars: number = 220,
+  t?: (k: string) => string,
 ): string {
   if (!md) return "";
 
@@ -47,7 +48,7 @@ export function formatPreviewMarkdown(
     (_match, rawKey: string) => {
       const key = rawKey.trim();
       const def = findVariable(key);
-      if (def) return `[${def.label}]`;
+      if (def) return `[${t ? t(def.labelKey) : key}]`;
       // Variable inconnue : tente d'extraire un libelle lisible du
       // dernier segment (ex: `company.foobar` -> `foobar`).
       const tail = key.split(".").pop() ?? key;

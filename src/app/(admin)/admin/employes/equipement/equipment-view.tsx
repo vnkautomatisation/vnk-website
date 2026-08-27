@@ -42,15 +42,15 @@ type Equipment = {
 
 type Category = "laptop" | "phone" | "tool" | "epi" | "vehicle" | "card" | "license" | "other";
 
-const CAT_META: Record<string, { label: string; icon: LucideIcon }> = {
-  laptop: { label: "Ordinateur", icon: Laptop },
-  phone: { label: "Téléphone", icon: Smartphone },
-  tool: { label: "Outil", icon: Wrench },
-  epi: { label: "EPI", icon: HardHat },
-  vehicle: { label: "Véhicule", icon: Car },
-  card: { label: "Carte corpo", icon: CreditCard },
-  license: { label: "Licence logiciel", icon: Briefcase },
-  other: { label: "Autre", icon: Briefcase },
+const CAT_META: Record<string, { labelKey: string; icon: LucideIcon }> = {
+  laptop: { labelKey: "ordinateur", icon: Laptop },
+  phone: { labelKey: "telephone", icon: Smartphone },
+  tool: { labelKey: "outil", icon: Wrench },
+  epi: { labelKey: "epi", icon: HardHat },
+  vehicle: { labelKey: "vehicule", icon: Car },
+  card: { labelKey: "carte_corpo", icon: CreditCard },
+  license: { labelKey: "licence_logiciel", icon: Briefcase },
+  other: { labelKey: "autre", icon: Briefcase },
 };
 
 type Tab = "active" | "returned";
@@ -62,6 +62,7 @@ export function EquipmentView({
   employees: EmpLite[];
   isHr: boolean;
 }) {
+  const t = useTranslations("admin.equipment");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("active");
@@ -92,8 +93,8 @@ export function EquipmentView({
   }, [currentList, searchEmp, filterCat]);
 
   const TABS: TabItem<Tab>[] = [
-    { key: "active", label: "Actifs", icon: Package, count: activeItems.length },
-    { key: "returned", label: "Retournés", icon: PackageOpen, count: returnedItems.length },
+    { key: "active", label: t("actifs"), icon: Package, count: activeItems.length },
+    { key: "returned", label: t("retournes"), icon: PackageOpen, count: returnedItems.length },
   ];
 
   return (
@@ -102,16 +103,15 @@ export function EquipmentView({
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Package className="h-5 w-5 text-[#0F2D52]" />
-            Équipement attribué
+            {t("equipement_attribue")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Matériel d&apos;entreprise sous la responsabilité des employés. Géré par les RH.
+            {t("materiel_apos_entreprise_sous_responsabilite")}
           </p>
         </div>
         {isHr && (
           <Button onClick={() => setEditDialog({ open: true, existing: null })}>
-            <Plus className="h-4 w-4 mr-1.5" />Assigner du matériel
-          </Button>
+            <Plus className="h-4 w-4 mr-1.5" />{t("equipment_view_assigner_du_materiel")}</Button>
         )}
       </div>
 
@@ -124,16 +124,16 @@ export function EquipmentView({
             <Input
               value={searchEmp}
               onChange={(e) => setSearchEmp(e.target.value)}
-              placeholder="Rechercher employé ou matériel..."
+              placeholder={t("rechercher_employe_materiel")}
               className="h-9 text-sm pl-7"
             />
           </div>
           <Select value={filterCat} onValueChange={setFilterCat}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("type")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous les types</SelectItem>
+              <SelectItem value="all">{t("tous_types")}</SelectItem>
               {Object.entries(CAT_META).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                <SelectItem key={k} value={k}>{t(v.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -144,9 +144,9 @@ export function EquipmentView({
         <Card className="p-10 text-center text-sm text-muted-foreground">
           {currentList.length === 0
             ? tab === "active"
-              ? "Aucun équipement assigné actuellement."
-              : "Aucun équipement retourné."
-            : "Aucun résultat avec ces filtres."}
+              ? t("aucun_equipement_assigne_actuellement")
+              : t("aucun_equipement_retourne")
+            : t("aucun_resultat_filtres")}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -176,24 +176,24 @@ export function EquipmentView({
         onOpenChange={(o) => !o && setReturnDialog(null)}
         title={`Marquer comme retourné ?`}
         description={returnDialog ? `${returnDialog.name} — ${returnDialog.admin.fullName || returnDialog.admin.email}` : ""}
-        confirmLabel="Marquer retourné"
+        confirmLabel={t("marquer_retourne")}
         variant="default"
         onConfirm={async () => {
           if (!returnDialog) return;
           const r = await returnEquipmentAction({ id: returnDialog.id, condition: returnCondition });
-          if (r.success) { toast.success("Équipement retourné"); router.refresh(); }
-          else toast.error(r.error || "Erreur");
+          if (r.success) { toast.success(t("equipement_retourne")); router.refresh(); }
+          else toast.error(r.error || t("erreur"));
           setReturnDialog(null);
         }}
       >
         <div className="space-y-1.5">
-          <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">État au retour</label>
+          <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("etat_retour")}</label>
           <Select value={returnCondition} onValueChange={(v) => setReturnCondition(v as "good" | "damaged" | "lost")}>
             <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="good">Bon état</SelectItem>
-              <SelectItem value="damaged">Endommagé</SelectItem>
-              <SelectItem value="lost">Perdu</SelectItem>
+              <SelectItem value="good">{t("bon_etat")}</SelectItem>
+              <SelectItem value="damaged">{t("endommage")}</SelectItem>
+              <SelectItem value="lost">{t("perdu")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -209,8 +209,8 @@ export function EquipmentView({
         onConfirm={async () => {
           if (!deleteConfirm) return;
           const r = await deleteEquipmentAction({ id: deleteConfirm.id });
-          if (r.success) { toast.success("Équipement supprimé"); router.refresh(); }
-          else toast.error(r.error || "Erreur");
+          if (r.success) { toast.success(t("equipement_supprime")); router.refresh(); }
+          else toast.error(r.error || t("erreur"));
           setDeleteConfirm(null);
         }}
       />
@@ -227,6 +227,7 @@ function EquipmentCard({
   onReturn: () => void;
   onDelete: () => void;
 }) {
+  const t = useTranslations("admin.equipment");
   const tc = useTranslations("common");
   const meta = CAT_META[eq.category] ?? CAT_META.other;
   const Icon = meta.icon;
@@ -252,7 +253,7 @@ function EquipmentCard({
             <p className="text-[11px] text-muted-foreground truncate">{eq.admin.email}</p>
           </div>
           <Badge variant="outline" className="text-[10px] shrink-0">
-            <Icon className="h-3 w-3 mr-1" />{meta.label}
+            <Icon className="h-3 w-3 mr-1" />{t(meta.labelKey)}
           </Badge>
         </div>
 
@@ -278,7 +279,7 @@ function EquipmentCard({
                   eq.conditionOnReturn === "damaged" ? "text-amber-700 border-amber-300 bg-amber-50" :
                   "text-red-700 border-red-300 bg-red-50"
                 }`}>
-                  {eq.conditionOnReturn === "good" ? "Bon état" : eq.conditionOnReturn === "damaged" ? "Endommagé" : "Perdu"}
+                  {eq.conditionOnReturn === "good" ? t("bon_etat") : eq.conditionOnReturn === "damaged" ? t("endommage") : t("perdu")}
                 </Badge>
               )}
             </div>
@@ -293,8 +294,7 @@ function EquipmentCard({
             </Button>
             {!isReturned && (
               <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onReturn}>
-                <PackageOpen className="h-3 w-3 mr-1" />Marquer retourné
-              </Button>
+                <PackageOpen className="h-3 w-3 mr-1" />{t("equipment_view_marquer_retourne")}</Button>
             )}
             <Button
               variant="outline"
@@ -321,6 +321,7 @@ function EquipmentDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.equipment");
   const tc = useTranslations("common");
   const [employeeId, setEmployeeId] = useState<string>("");
   const [category, setCategory] = useState<Category>("laptop");
@@ -360,7 +361,7 @@ function EquipmentDialog({
 
   const submit = async () => {
     if (!employeeId || !name.trim()) {
-      toast.error("Employé et étiquette requis");
+      toast.error(t("employe_etiquette_requis"));
       return;
     }
     setPending(true);
@@ -378,11 +379,11 @@ function EquipmentDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success(existing ? "Équipement modifié" : "Équipement assigné");
+      toast.success(existing ? t("equipement_modifie") : t("equipement_assigne"));
       onSaved();
       onClose();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -393,20 +394,20 @@ function EquipmentDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Package className="h-4 w-4" />
-              {existing ? "Modifier l'équipement" : "Assigner du matériel"}
+              {existing ? t("modifier_equipement") : t("assigner_materiel")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              {existing ? "Mettre à jour les informations de l'équipement assigné." : "Attribuer un équipement à un employé. Tracé pour responsabilité."}
+              {existing ? t("mettre_jour_informations_equipement_assigne") : t("attribuer_equipement_employe_trace_responsabilite")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
-          <FormSection icon={Package} title="Attribution">
+          <FormSection icon={Package} title={t("attribution")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Employé" required>
+              <Field label={t("employe")} required>
                 <Select value={employeeId} onValueChange={setEmployeeId} disabled={!!existing}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir..." /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>
@@ -414,49 +415,49 @@ function EquipmentDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Type" required>
+              <Field label={t("type")} required>
                 <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {Object.entries(CAT_META).map(([k, v]) => (
-                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      <SelectItem key={k} value={k}>{t(v.labelKey)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
             </div>
-            <Field label="Étiquette / Nom" required hint="Ex : MacBook Pro 14 M3">
-              <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" placeholder="MacBook Pro 14 M3" />
+            <Field label={t("etiquette_nom")} required hint={t("ex_macbook_pro_14_m3")}>
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="h-9 text-sm" placeholder={t("macbook_pro_14_m3")} />
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Marque">
-                <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="h-9 text-sm" placeholder="Apple" />
+              <Field label={t("marque")}>
+                <Input value={brand} onChange={(e) => setBrand(e.target.value)} className="h-9 text-sm" placeholder={t("apple")} />
               </Field>
-              <Field label="Modèle">
+              <Field label={t("modele")}>
                 <Input value={model} onChange={(e) => setModel(e.target.value)} className="h-9 text-sm" placeholder="A2918" />
               </Field>
             </div>
           </FormSection>
 
-          <FormSection icon={Briefcase} title="Détails">
+          <FormSection icon={Briefcase} title={t("details")}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <Field label="Numéro de série">
-                <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} className="h-9 text-sm font-mono" placeholder="SN-..." />
+              <Field label={t("numero_serie")}>
+                <Input value={serialNumber} onChange={(e) => setSerialNumber(e.target.value)} className="h-9 text-sm font-mono" placeholder={t("sn")} />
               </Field>
-              <Field label="Date assignation">
+              <Field label={t("date_assignation")}>
                 <Input type="date" value={assignedAt} onChange={(e) => setAssignedAt(e.target.value)} className="h-9 text-sm" />
               </Field>
-              <Field label="Valeur ($)">
+              <Field label={t("valeur")}>
                 <Input type="number" step="0.01" value={value} onChange={(e) => setValue(e.target.value)} className="h-9 text-sm" placeholder="—" />
               </Field>
             </div>
-            <Field label="Notes">
+            <Field label={t("notes")}>
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-xs resize-y"
-                placeholder="Observations particulières, accessoires inclus..."
+                placeholder={t("observations_particulieres_accessoires_inclus")}
               />
             </Field>
           </FormSection>
@@ -465,7 +466,7 @@ function EquipmentDialog({
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending}>
-            {pending ? "..." : existing ? "Enregistrer" : "Assigner"}
+            {pending ? "..." : existing ? t("enregistrer") : t("assigner")}
           </Button>
         </DialogFooter>
       </DialogContent>

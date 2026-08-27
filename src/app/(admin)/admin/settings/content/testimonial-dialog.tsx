@@ -25,6 +25,7 @@ export function TestimonialDialog({
   testimonial: TestimonialRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.content");
   const tc = useTranslations("common");
   const mode = testimonial ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -73,7 +74,7 @@ export function TestimonialDialog({
         ? await createTestimonialAction(payload)
         : await updateTestimonialAction({ id: testimonial!.id, ...payload });
       if (r.success) {
-        toast.success(mode === "create" ? "Témoignage ajouté" : "Témoignage mis à jour");
+        toast.success(mode === "create" ? t("temoignage_ajoute") : t("temoignage_mis_jour"));
         onSaved(); onOpenChange(false);
       } else {
         toast.error(r.error);
@@ -90,50 +91,50 @@ export function TestimonialDialog({
           </div>
           <div>
             <DialogTitle className="text-white text-base">
-              {mode === "create" ? "Nouveau témoignage" : testimonial?.clientName}
+              {mode === "create" ? t("nouveau_temoignage") : testimonial?.clientName}
             </DialogTitle>
-            <p className="text-xs text-white/70">Avis client à afficher sur le site</p>
+            <p className="text-xs text-white/70">{t("avis_client_afficher_site")}</p>
           </div>
         </div>
 
         <div className="p-6 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nom du client *</Label>
-              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder="Jean Tremblay" className="mt-1" />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("nom_client")}</Label>
+              <Input value={clientName} onChange={(e) => setClientName(e.target.value)} placeholder={t("jean_tremblay")} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Entreprise</Label>
-              <Input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder="Acme Manufacturing" className="mt-1" />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("entreprise")}</Label>
+              <Input value={clientCompany} onChange={(e) => setClientCompany(e.target.value)} placeholder={t("acme_manufacturing")} className="mt-1" />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Titre / Poste</Label>
-              <Input value={clientTitle} onChange={(e) => setClientTitle(e.target.value)} placeholder="Directeur de production" className="mt-1" />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre_poste")}</Label>
+              <Input value={clientTitle} onChange={(e) => setClientTitle(e.target.value)} placeholder={t("directeur_production")} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Langue</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("langue")}</Label>
               <Select value={locale} onValueChange={(v) => setLocale(v as "fr" | "en")}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">{t("francais")}</SelectItem>
+                  <SelectItem value="en">{t("english")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Avatar (URL)</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("avatar_url")}</Label>
             <Input value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} placeholder="https://..." className="mt-1" />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Témoignage *</Label>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} maxLength={2000} placeholder="Le projet d'automatisation a transformé..." className="mt-1 text-sm" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("temoignage")}</Label>
+            <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} maxLength={2000} placeholder={t("projet_automatisation_transforme")} className="mt-1 text-sm" />
             <p className="text-[10px] text-muted-foreground mt-1">{content.length}/2000 caractères</p>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Note</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("note")}</Label>
             <div className="flex gap-1 mt-1.5">
               {[1, 2, 3, 4, 5].map((n) => (
                 <button
@@ -151,15 +152,15 @@ export function TestimonialDialog({
           <div className="space-y-2">
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium">Approuvé pour publication</p>
-                <p className="text-xs text-muted-foreground">Décocher pour mettre en attente de modération</p>
+                <p className="text-sm font-medium">{t("approuve_publication")}</p>
+                <p className="text-xs text-muted-foreground">{t("decocher_mettre_attente_moderation")}</p>
               </div>
               <Switch checked={isApproved} onCheckedChange={setIsApproved} />
             </div>
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium">Mettre en vitrine</p>
-                <p className="text-xs text-muted-foreground">Affiché en priorité sur la page d&apos;accueil</p>
+                <p className="text-sm font-medium">{t("mettre_vitrine")}</p>
+                <p className="text-xs text-muted-foreground">{t("affiche_priorite_page_apos_accueil")}</p>
               </div>
               <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
             </div>
@@ -169,7 +170,7 @@ export function TestimonialDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !clientName.trim() || !content.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

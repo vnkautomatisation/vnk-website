@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { PoliciesView } from "./policies-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Congés — Politiques" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("conges_politiques") };
+}
 
 export default async function PoliciesPage() {
   const session = await auth();

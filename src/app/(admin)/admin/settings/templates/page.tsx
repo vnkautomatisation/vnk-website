@@ -1,12 +1,16 @@
 // Settings · Templates — Emails et PDF.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { TemplatesView } from "./templates-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Modèles emails et PDF — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("modeles_emails_pdf_vnk") };
+}
 
 export default async function TemplatesPage() {
   const session = await auth();

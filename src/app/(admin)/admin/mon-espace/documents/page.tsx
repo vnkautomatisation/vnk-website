@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { MyDocumentsView } from "./my-documents-view";
 
-export const metadata: Metadata = { title: "Mon espace - Documents" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mon_espace_documents") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function MyDocumentsPage() {

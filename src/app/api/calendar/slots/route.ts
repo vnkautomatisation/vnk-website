@@ -1,5 +1,6 @@
 // POST /api/calendar/slots — creer un creneau de disponibilite (admin)
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -29,6 +30,7 @@ const bulkSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -43,7 +45,7 @@ export async function POST(req: NextRequest) {
   if (body.bulk === true) {
     const parsed = bulkSchema.safeParse(body);
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+      return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
     }
     const from = new Date(parsed.data.fromDate);
     const to = new Date(parsed.data.toDate);
@@ -82,7 +84,7 @@ export async function POST(req: NextRequest) {
   // Mode unique : un seul slot
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const slot = await prisma.availabilitySlot.create({

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -99,24 +100,24 @@ const CHANNEL_BADGE: Record<string, { label: string; color: string }> = {
   both: { label: "Chat+Email", color: "bg-violet-100 text-violet-700" },
 };
 
-const FILTER_TABS: { key: FilterMode; label: string }[] = [
-  { key: "all", label: "Toutes" },
-  { key: "unread", label: "Non lus" },
-  { key: "chat", label: "Chat" },
-  { key: "email", label: "Email" },
-  { key: "archived", label: "Archivées" },
-  { key: "snoozed", label: "Snoozées" },
+const FILTER_TABS: { key: FilterMode; labelKey: string }[] = [
+  { key: "all", labelKey: "toutes" },
+  { key: "unread", labelKey: "non_lus" },
+  { key: "chat", labelKey: "chat" },
+  { key: "email", labelKey: "email" },
+  { key: "archived", labelKey: "archivees" },
+  { key: "snoozed", labelKey: "snoozees" },
 ];
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, justNow: string, locale: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "À l'instant";
+  if (min < 1) return justNow;
   if (min < 60) return `${min}min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 function formatMsgTime(iso: string): string {
@@ -133,8 +134,8 @@ function getAttachments(msg: Message | ReplyToSummary): MessageAttachment[] {
   return [];
 }
 
-function summarizeForReply(m: ReplyToSummary): string {
-  if (m.deletedAt) return "[Message supprimé]";
+function summarizeForReply(m: ReplyToSummary, deletedLabel: string, emptyLabel: string): string {
+  if (m.deletedAt) return deletedLabel;
   if (m.content) return m.content;
   const atts = m.attachmentsData ?? (m.attachmentData ? [m.attachmentData] : []);
   if (atts.length > 0) {
@@ -142,7 +143,7 @@ function summarizeForReply(m: ReplyToSummary): string {
     const more = atts.length > 1 ? ` +${atts.length - 1}` : "";
     return `📎 ${a.name}${more}`;
   }
-  return "(vide)";
+  return emptyLabel;
 }
 
 function highlightSearch(text: string, query: string): React.ReactNode {
@@ -171,6 +172,8 @@ export function MessagesView({
   templates: Template[];
   kpis: { totalConversations: number; totalMessages: number; todayMessages: number; weekMessages: number; totalUnread: number };
 }) {
+  const t = useTranslations("admin.messages");
+  const dateTag = useDateLocale();
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -180,7 +183,7 @@ export function MessagesView({
   const [filter, setFilter] = useState<FilterMode>("all");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const stickyBarSentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -206,8 +209,8 @@ export function MessagesView({
 
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMsgs, setLoadingMsgs] = useState(false);
-  // Windowing : ne render que les N derniers messages pour eviter 3000 noeuds DOM
-  // (pas de virtualisation lib). "Charger plus" remonte de PAGE_SIZE_MESSAGES.
+
+
   const [displayLimit, setDisplayLimit] = useState(PAGE_SIZE_MESSAGES);
   const [newMsg, setNewMsg] = useState("");
   const [pendingAtts, setPendingAtts] = useState<MessageAttachment[]>([]);
@@ -242,13 +245,13 @@ export function MessagesView({
         c.chatLabels.some((l) => l.toLowerCase().includes(q))
       );
     }
-    // Filtres mutuellement exclusifs
+
     if (filter === "archived") {
       result = result.filter((c) => !!c.chatArchivedAt);
     } else if (filter === "snoozed") {
       result = result.filter(isSnoozeActive);
     } else {
-      // Par defaut on cache les archivees
+
       result = result.filter((c) => !c.chatArchivedAt);
       if (filter === "unread") result = result.filter((c) => c.unreadCount > 0);
       else if (filter === "chat") result = result.filter((c) => c.lastMessage?.channel === "chat" || c.lastMessage?.channel === "both");
@@ -299,7 +302,7 @@ export function MessagesView({
       };
       setPendingAtts((prev) => prev.length >= MAX_ATTACHMENTS ? prev : [...prev, att]);
     };
-    reader.onerror = () => toast.error("Lecture du fichier impossible");
+    reader.onerror = () => toast.error(t("lecture_fichier_impossible"));
     reader.readAsDataURL(file);
   }, []);
 
@@ -350,7 +353,7 @@ export function MessagesView({
         router.refresh();
       }
     } catch {
-      toast.error("Erreur lors du chargement");
+      toast.error(t("erreur_lors_chargement"));
     } finally {
       setLoadingMsgs(false);
     }
@@ -368,14 +371,14 @@ export function MessagesView({
     setDisplayLimit(PAGE_SIZE_MESSAGES);  // reset window a la fin de l'historique
   }, [selectedId, loadMessages]);
 
-  // Auto-scroll vers le bas géré par Virtuoso (followOutput) — pas besoin d'useEffect manuel.
 
-  // SSE realtime sur conversation ouverte (remplace polling 5s)
+
+
   useMessageStream({
     enabled: !!selectedId,
     clientId: selectedId ?? undefined,
     onNewMessage: (msg) => {
-      // Refetch full thread pour avoir les nouveaux + reactions/edits sur anciens
+
       if (selectedId === msg.clientId) {
         fetch(`/api/messages?clientId=${selectedId}`).then((r) => r.ok ? r.json() : null).then((d) => {
           if (d?.messages) setMessages(d.messages);
@@ -384,22 +387,22 @@ export function MessagesView({
     },
   });
 
-  // SSE global (sans clientId) pour notifs admin sur n'importe quelle conversation
+
   useMessageStream({
     enabled: true,
     onNewMessage: (msg) => {
       if (msg.sender !== "client") return;
       const conv = conversations.find((c) => c.id === msg.clientId);
-      const name = conv?.fullName ?? "Client";
+      const name = conv?.fullName ?? t("client");
       playMessageSound();
-      showDesktopNotification(`Message de ${name}`, msg.content?.slice(0, 80) ?? "📎 Pièce jointe", () => {
+      showDesktopNotification(`Message de ${name}`, msg.content?.slice(0, 80) ?? t("piece_jointe"), () => {
         setSelectedId(msg.clientId);
       });
       router.refresh();
     },
   });
 
-  // Detect slash command in textarea (au debut OU apres newline)
+
   useEffect(() => {
     const lastSlashIdx = Math.max(newMsg.lastIndexOf("\n/"), newMsg.startsWith("/") ? 0 : -1);
     if (lastSlashIdx === -1) {
@@ -426,11 +429,11 @@ export function MessagesView({
       clientEmail: selected?.email,
     });
     setNewMsg(before + expanded);
-    // Applique le canal par defaut du template
+
     if (tpl.defaultChannel === "chat" || tpl.defaultChannel === "email") {
       setChannel(tpl.defaultChannel);
     }
-    // Ajoute les pieces jointes par defaut (sans dupliquer)
+
     if (tpl.defaultAttachmentsData && Array.isArray(tpl.defaultAttachmentsData) && tpl.defaultAttachmentsData.length > 0) {
       const newAtts = tpl.defaultAttachmentsData as MessageAttachment[];
       setPendingAtts((prev) => {
@@ -466,14 +469,14 @@ export function MessagesView({
         setPendingAtts([]);
         setReplyingTo(null);
         setInternalNote(false);
-        if (extra.scheduledFor) toast.success("Envoi programmé");
+        if (extra.scheduledFor) toast.success(t("envoi_programme"));
         await loadMessages(selectedId);
       } else {
         const data = await res.json();
-        toast.error(data.error || "Erreur");
+        toast.error(data.error || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setSending(false);
     }
@@ -492,7 +495,7 @@ export function MessagesView({
       const data = await res.json();
       toast.success(`${data.count ?? 0} message(s) marqué(s) lus`);
       router.refresh();
-    } else { toast.error("Erreur"); }
+    } else { toast.error(t("erreur")); }
   };
 
   const openEdit = (m: Message) => {
@@ -508,20 +511,20 @@ export function MessagesView({
       body: JSON.stringify({ content: editContent }),
     });
     if (res.ok) {
-      toast.success("Message modifié");
+      toast.success(t("message_modifie"));
       setEditingMsg(null);
       if (selectedId) loadMessages(selectedId);
-    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleDelete = async () => {
     if (!deleteMsg) return;
     const res = await fetch(`/api/messages/${deleteMsg.id}`, { method: "DELETE" });
     if (res.ok) {
-      toast.success("Message supprimé");
+      toast.success(t("message_supprime"));
       setDeleteMsg(null);
       if (selectedId) loadMessages(selectedId);
-    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleToggleReaction = async (msgId: number, emoji: string) => {
@@ -533,23 +536,23 @@ export function MessagesView({
     if (res.ok) {
       const data = await res.json();
       setMessages((prev) => prev.map((m) => m.id === msgId ? { ...m, reactions: data.reactions } : m));
-    } else { toast.error("Erreur"); }
+    } else { toast.error(t("erreur")); }
   };
 
-  // Export
+
   const exportCsv = useCallback(() => {
     if (!selected) return;
     const rows = [
-      ["Date", "Heure", "Auteur", "Canal", "Note interne", "Contenu", "Pieces jointes"],
+      [t("date"), t("heure"), t("auteur"), t("canal"), t("note_interne"), t("contenu"), t("pieces_jointes")],
       ...messages.filter((m) => !m.deletedAt).map((m) => {
         const d = new Date(m.createdAt);
         const atts = getAttachments(m);
         return [
-          d.toLocaleDateString("fr-CA"),
-          d.toLocaleTimeString("fr-CA"),
-          m.sender === "vnk" ? "Admin" : "Client",
+          d.toLocaleDateString(dateTag),
+          d.toLocaleTimeString(dateTag),
+          m.sender === "vnk" ? t("admin") : t("client"),
           m.channel,
-          m.isInternalNote ? "Oui" : "Non",
+          m.isInternalNote ? t("oui") : t("non"),
           (m.content ?? "").replace(/"/g, '""'),
           atts.map((a) => a.name).join(" | "),
         ];
@@ -563,23 +566,23 @@ export function MessagesView({
     a.download = `conversation-${selected.fullName.replace(/\s+/g, "_")}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success("CSV exporté");
+    toast.success(t("csv_exporte"));
   }, [selected, messages]);
 
   const exportPdf = useCallback(() => {
     if (!selected) return;
-    // Open new window with print-optimized HTML
+
     const w = window.open("", "_blank", "width=900,height=900");
-    if (!w) { toast.error("Bloqueur de popup ?"); return; }
+    if (!w) { toast.error(t("bloqueur_popup")); return; }
     const rows = messages.filter((m) => !m.deletedAt).map((m) => {
       const d = new Date(m.createdAt);
       const atts = getAttachments(m);
       const isAdmin = m.sender === "vnk";
-      const note = m.isInternalNote ? '<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;font-size:9px;margin-right:4px">NOTE INTERNE</span>' : "";
+      const note = m.isInternalNote ? `<span style="background:#fef3c7;color:#92400e;padding:1px 4px;border-radius:3px;font-size:9px;margin-right:4px">${t("note_interne")}</span>` : "";
       return `
         <div style="margin-bottom:14px;padding:10px;border-left:3px solid ${isAdmin ? "#0F2D52" : "#94a3b8"};background:${isAdmin ? "#f1f5f9" : "#ffffff"};border-radius:4px">
           <div style="font-size:10px;color:#64748b;margin-bottom:4px">
-            ${note}<strong>${isAdmin ? "VNK" : "Client"}</strong> · ${d.toLocaleString("fr-CA")} · ${m.channel}${m.editedAt ? " · modifié" : ""}
+            ${note}<strong>${isAdmin ? "VNK" : t("client")}</strong> · ${d.toLocaleString(dateTag)} · ${m.channel}${m.editedAt ? ` · ${t("modifie_mot")}` : ""}
           </div>
           <div style="font-size:13px;white-space:pre-wrap">${(m.content ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;")}</div>
           ${atts.length > 0 ? `<div style="font-size:11px;color:#475569;margin-top:6px">📎 ${atts.map((a) => a.name).join(", ")}</div>` : ""}
@@ -587,28 +590,28 @@ export function MessagesView({
       `;
     }).join("");
     w.document.write(`
-      <!DOCTYPE html><html><head><title>Conversation ${selected.fullName}</title>
+      <!DOCTYPE html><html><head><title>${t("conversation")} ${selected.fullName}</title>
       <style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:800px;margin:auto;color:#1e293b}
       h1{font-size:18px;color:#0F2D52;margin-bottom:4px}
       .meta{font-size:11px;color:#64748b;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #e2e8f0}
       @media print{body{padding:0}}</style></head><body>
-      <h1>Conversation — ${selected.fullName}</h1>
-      <div class="meta">${selected.companyName ?? selected.email} · ${messages.filter((m) => !m.deletedAt).length} messages · Exporté le ${new Date().toLocaleDateString("fr-CA")}</div>
+      <h1>${t("conversation")} — ${selected.fullName}</h1>
+      <div class="meta">${selected.companyName ?? selected.email} · ${t("messages_exporte_le", { count: messages.filter((m) => !m.deletedAt).length, date: new Date().toLocaleDateString(dateTag) })}</div>
       ${rows}
       <script>window.onload=()=>setTimeout(window.print,300)</script>
       </body></html>
     `);
     w.document.close();
-    toast.success("PDF prêt à imprimer");
+    toast.success(t("pdf_pret_imprimer"));
   }, [selected, messages]);
 
-  // Liste de messages visibles : recherche thread => pas de window (on cherche dans tout) ;
-  // sinon => derniers `displayLimit` messages seulement (gain perf sur convos longues).
+
+
   const visibleMessages = useMemo(() => {
     if (threadSearch) {
       return messages.filter((m) => !m.deletedAt && m.content?.toLowerCase().includes(threadSearch.toLowerCase()));
     }
-    // Window : derniers N messages
+
     return displayLimit >= messages.length ? messages : messages.slice(messages.length - displayLimit);
   }, [messages, threadSearch, displayLimit]);
 
@@ -628,7 +631,7 @@ export function MessagesView({
     }, []);
   }, [visibleMessages]);
 
-  // Flat virtualItems pour Virtuoso : date dividers + messages dans un seul tableau plat
+
   type VirtItem = { type: "date"; key: string; date: string } | { type: "msg"; key: string; msg: Message };
   const virtualItems = useMemo<VirtItem[]>(() => {
     const out: VirtItem[] = [];
@@ -644,19 +647,19 @@ export function MessagesView({
     return out;
   }, [visibleMessages]);
 
-  // Virtuoso handle pour scroll programmatique
+
   const virtuosoRef = useRef<VirtuosoHandle>(null);
   const [atBottom, setAtBottom] = useState(true);
   const scrollToBottom = useCallback(() => {
     virtuosoRef.current?.scrollToIndex({ index: virtualItems.length - 1, behavior: "smooth", align: "end" });
   }, [virtualItems.length]);
 
-  // Charger N messages plus anciens — Virtuoso gere la preservation de scroll automatiquement.
+
   const loadMoreOlder = useCallback(() => {
     setDisplayLimit((l) => l + PAGE_SIZE_MESSAGES);
   }, []);
 
-  // L'auto-load au scroll vers le haut est géré par Virtuoso (startReached) — pas besoin d'IntersectionObserver.
+
 
   const filesCount = useMemo(() => messages.reduce((s, m) => !m.deletedAt ? s + getAttachments(m).length : s, 0), [messages]);
   const linksCount = useMemo(() => {
@@ -679,11 +682,11 @@ export function MessagesView({
   return (
     <div className={cn(
       "space-y-4 lg:h-[calc(100dvh-6.5rem)] lg:flex lg:flex-col",
-      // Conv ouverte sur mobile + tablette (<lg) : full viewport en flex column,
-      // hauteur calculee pour compter le topbar (64px) + padding du <main> (16-24px).
+
+
       selectedId && "h-[calc(100dvh-6rem)] sm:h-[calc(100dvh-6.5rem)] flex flex-col lg:h-[calc(100dvh-6.5rem)]",
     )}>
-      {/* Hero VNK navy — caché sur mobile + tablet quand conversation active */}
+
       <div className={cn(
         "rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden shrink-0",
         selectedId && "hidden lg:block",
@@ -696,8 +699,8 @@ export function MessagesView({
               <MessageSquare className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Messages</h1>
-              <p className="text-white/70 text-sm mt-0.5">Multi-pièces · réactions · notes internes · templates · programmation · archive</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("messages")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("multi_pieces_reactions_notes_internes")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -709,8 +712,7 @@ export function MessagesView({
             )}
             {kpis.totalUnread > 0 && (
               <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold" onClick={handleMarkAllRead}>
-                <CheckSquare className="h-4 w-4" />Tout marquer lu
-              </Button>
+                <CheckSquare className="h-4 w-4" />{t("messages_view_tout_marquer_lu")}</Button>
             )}
             <div className="bg-white/10 rounded-lg p-1 backdrop-blur">
               <NotificationToggle />
@@ -723,13 +725,13 @@ export function MessagesView({
         "grid grid-cols-2 md:grid-cols-4 gap-3 shrink-0",
         selectedId && "hidden lg:grid",
       )}>
-        <StatCard label="Conversations" value={kpis.totalConversations} icon={Users} accent="bg-indigo-500" />
-        <StatCard label="Total messages" value={kpis.totalMessages} icon={MessageSquare} accent="bg-blue-500" />
+        <StatCard label={t("conversations")} value={kpis.totalConversations} icon={Users} accent="bg-indigo-500" />
+        <StatCard label={t("total_messages")} value={kpis.totalMessages} icon={MessageSquare} accent="bg-blue-500" />
         <StatCard label="Aujourd'hui" value={kpis.todayMessages} icon={Calendar} accent="bg-emerald-500" />
-        <StatCard label="Non lus" value={kpis.totalUnread} icon={Inbox} accent="bg-red-500" />
+        <StatCard label={t("non_lus")} value={kpis.totalUnread} icon={Inbox} accent="bg-red-500" />
       </div>
 
-      {/* Sentinel + Sticky compact bar — caché sur mobile + tablet quand conv ouverte */}
+
       <div ref={stickyBarSentinelRef} aria-hidden className={cn("h-px", selectedId && "hidden lg:block")} />
       {scrolled && (
         <div className={cn(
@@ -739,26 +741,26 @@ export function MessagesView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <MessageSquare className="h-4 w-4" />
-              Messages
+              {t("messages")}
             </span>
-            <span className="text-muted-foreground">Conversations <span className="font-semibold text-indigo-600">{kpis.totalConversations}</span></span>
-            <span className="text-muted-foreground">Total <span className="font-semibold text-blue-600">{kpis.totalMessages}</span></span>
-            <span className="text-muted-foreground">Aujourd&apos;hui <span className="font-semibold text-emerald-600">{kpis.todayMessages}</span></span>
-            {kpis.totalUnread > 0 && <span className="ml-auto text-muted-foreground">Non lus <span className="font-semibold text-red-600">{kpis.totalUnread}</span></span>}
+            <span className="text-muted-foreground">{t("conversations")} <span className="font-semibold text-indigo-600">{kpis.totalConversations}</span></span>
+            <span className="text-muted-foreground">{t("total")} <span className="font-semibold text-blue-600">{kpis.totalMessages}</span></span>
+            <span className="text-muted-foreground">{t("aujourd_apos_hui")} <span className="font-semibold text-emerald-600">{kpis.todayMessages}</span></span>
+            {kpis.totalUnread > 0 && <span className="ml-auto text-muted-foreground">{t("non_lus")} <span className="font-semibold text-red-600">{kpis.totalUnread}</span></span>}
           </div>
         </div>
       )}
 
       <div className={cn(
         "gap-4 lg:flex-1 lg:min-h-0 lg:grid lg:grid-cols-[340px_1fr]",
-        // Conv ouverte (<lg) : flex column fullscreen → chat Card prend toute la hauteur.
-        // Sans conv (<lg) : grid 1 col, sidebar list visible en grand.
-        // Desktop (lg+) : toujours grid 340px + chat.
+
+
+
         selectedId
           ? "flex flex-col flex-1 min-h-0"
           : "grid grid-cols-1 min-h-[600px] md:grid-cols-[340px_1fr]",
       )}>
-        {/* Sidebar conversations — cachee sur <lg quand conv ouverte */}
+
         <Card className={cn("overflow-hidden flex flex-col", selectedId && "hidden lg:flex")}>
           <div className="p-3 border-b space-y-2 shrink-0">
             <div className="relative">
@@ -766,7 +768,7 @@ export function MessagesView({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher (nom, étiquette…)"
+                placeholder={t("rechercher_nom_etiquette")}
                 className="pl-10 h-9"
               />
             </div>
@@ -780,7 +782,7 @@ export function MessagesView({
                     filter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </button>
               ))}
             </div>
@@ -788,7 +790,7 @@ export function MessagesView({
 
           <ul className="flex-1 overflow-y-auto">
             {filtered.length === 0 ? (
-              <li className="p-6 text-center text-sm text-muted-foreground">Aucune conversation</li>
+              <li className="p-6 text-center text-sm text-muted-foreground">{t("aucune_conversation")}</li>
             ) : (
               filtered.map((c) => {
                 const isActive = selectedId === c.id;
@@ -822,7 +824,7 @@ export function MessagesView({
                             </span>
                           </div>
                           {c.lastMessage && (
-                            <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(c.lastMessage.createdAt)}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">{formatTime(c.lastMessage.createdAt, t("instant"), dateTag)}</span>
                           )}
                         </div>
                         {c.companyName && (
@@ -831,8 +833,8 @@ export function MessagesView({
                         {c.lastMessage && (
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                             {c.lastMessage.isInternalNote && <StickyNote className="h-2.5 w-2.5 text-amber-500 inline mr-0.5" />}
-                            {c.lastMessage.sender === "vnk" && <span className="text-[#0F2D52]">Vous : </span>}
-                            {c.lastMessage.content?.slice(0, 60) ?? "📎 Pièce jointe"}
+                            {c.lastMessage.sender === "vnk" && <span className="text-[#0F2D52]">{t("vous")} </span>}
+                            {c.lastMessage.content?.slice(0, 60) ?? t("piece_jointe")}
                           </p>
                         )}
                         <div className="flex items-center gap-1 mt-1 flex-wrap">
@@ -843,13 +845,11 @@ export function MessagesView({
                           )}
                           {snoozeActive && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 font-medium flex items-center gap-0.5">
-                              <BellOff className="h-2.5 w-2.5" />Snoozée
-                            </span>
+                              <BellOff className="h-2.5 w-2.5" />{t("messages_view_snoozee")}</span>
                           )}
                           {c.chatArchivedAt && (
                             <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground font-medium flex items-center gap-0.5">
-                              <Archive className="h-2.5 w-2.5" />Archivée
-                            </span>
+                              <Archive className="h-2.5 w-2.5" />{t("messages_view_archivee")}</span>
                           )}
                           {c.chatLabels.slice(0, 2).map((l) => (
                             <span key={l} className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#0F2D52]/10 text-[#0F2D52] font-medium">
@@ -872,7 +872,7 @@ export function MessagesView({
           </ul>
         </Card>
 
-        {/* Zone conversation — fullscreen sur <lg quand conv ouverte */}
+
         <Card
           className={cn(
             "overflow-hidden flex flex-col relative min-h-0",
@@ -888,7 +888,7 @@ export function MessagesView({
             <div className="absolute inset-0 z-10 bg-[#0F2D52]/10 backdrop-blur-sm flex items-center justify-center pointer-events-none">
               <div className="bg-white rounded-lg shadow-lg px-6 py-4 text-center">
                 <Paperclip className="h-8 w-8 mx-auto text-[#0F2D52] mb-1" />
-                <p className="text-sm font-semibold text-[#0F2D52]">Déposer pour joindre</p>
+                <p className="text-sm font-semibold text-[#0F2D52]">{t("deposer_joindre")}</p>
               </div>
             </div>
           )}
@@ -897,12 +897,12 @@ export function MessagesView({
             <div className="flex-1 flex items-center justify-center text-center p-8">
               <div>
                 <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-                <p className="text-sm text-muted-foreground">Sélectionnez une conversation</p>
+                <p className="text-sm text-muted-foreground">{t("selectionnez_conversation")}</p>
               </div>
             </div>
           ) : (
             <>
-              {/* Header */}
+
               <div className="flex items-center gap-2 p-3 border-b shrink-0">
                 <Button variant="ghost" size="sm" className="lg:hidden h-8 w-8 p-0" onClick={() => setSelectedId(null)} aria-label={tc("back")}>
                   <ArrowLeft className="h-4 w-4" />
@@ -936,7 +936,7 @@ export function MessagesView({
                     "h-8 w-8 flex items-center justify-center rounded-md transition-colors",
                     threadSearchOpen ? "bg-[#0F2D52] text-white" : "hover:bg-muted text-muted-foreground"
                   )}
-                  aria-label="Rechercher dans la conversation"
+                  aria-label={t("rechercher_conversation")}
                 >
                   <Search className="h-4 w-4" />
                 </button>
@@ -960,7 +960,7 @@ export function MessagesView({
                       autoFocus
                       value={threadSearch}
                       onChange={(e) => setThreadSearch(e.target.value)}
-                      placeholder="Rechercher dans le thread…"
+                      placeholder={t("rechercher_thread")}
                       className="pl-9 h-8 text-sm"
                     />
                     {threadSearch && (
@@ -996,7 +996,7 @@ export function MessagesView({
                       </div>
                     ) : virtualItems.length === 0 ? (
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <p className="text-sm text-muted-foreground">{threadSearch ? "Aucun résultat" : "Aucun message — démarrez la conversation."}</p>
+                        <p className="text-sm text-muted-foreground">{threadSearch ? t("aucun_resultat") : t("aucun_message_demarrez_conversation")}</p>
                       </div>
                     ) : (
                       <Virtuoso
@@ -1046,22 +1046,22 @@ export function MessagesView({
                         }}
                       />
                     )}
-                    {/* Floating scroll-to-bottom button — visible si l'utilisateur a scrollé vers le haut */}
+
                     {!atBottom && virtualItems.length > 0 && !loadingMsgs && (
                       <button
                         type="button"
                         onClick={scrollToBottom}
                         className="absolute bottom-4 right-4 h-9 w-9 rounded-full bg-[#0F2D52] text-white shadow-lg flex items-center justify-center hover:bg-[#15406d] transition-all"
-                        aria-label="Aller au dernier message"
+                        aria-label={t("aller_dernier_message")}
                       >
                         <ArrowLeft className="h-4 w-4 -rotate-90" />
                       </button>
                     )}
                   </div>
 
-                  {/* COMPOSER — compact mobile, plus aere desktop */}
+
                   <div className="border-t p-2 sm:p-3 shrink-0 bg-card space-y-1.5 sm:space-y-2 relative">
-                    {/* Reply quote */}
+
                     {replyingTo && (
                       <div className="flex items-start gap-2 rounded-lg border-l-2 border-[#0F2D52] bg-muted/40 px-2 py-1.5">
                         <CornerUpLeft className="h-3.5 w-3.5 text-[#0F2D52] shrink-0 mt-0.5" />
@@ -1069,13 +1069,13 @@ export function MessagesView({
                           <p className="text-[10px] font-semibold text-[#0F2D52]">
                             Réponse à {replyingTo.sender === "vnk" ? "vous" : selected.fullName}
                           </p>
-                          <p className="text-xs text-muted-foreground line-clamp-1">{summarizeForReply(replyingTo as ReplyToSummary)}</p>
+                          <p className="text-xs text-muted-foreground line-clamp-1">{summarizeForReply(replyingTo as ReplyToSummary, t("message_supprime"), t("vide"))}</p>
                         </div>
                         <button
                           type="button"
                           onClick={() => setReplyingTo(null)}
                           className="h-6 w-6 flex items-center justify-center rounded text-muted-foreground hover:bg-background"
-                          aria-label="Annuler la réponse"
+                          aria-label={t("annuler_reponse")}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -1085,12 +1085,12 @@ export function MessagesView({
                     {internalNote && (
                       <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 px-2 py-1.5">
                         <StickyNote className="h-3.5 w-3.5 text-amber-700 shrink-0" />
-                        <p className="text-[11px] text-amber-800 flex-1">Note interne — visible admin uniquement, jamais envoyée au client</p>
+                        <p className="text-[11px] text-amber-800 flex-1">{t("note_interne_visible_admin_uniquement")}</p>
                         <button
                           type="button"
                           onClick={() => setInternalNote(false)}
                           className="h-6 w-6 flex items-center justify-center rounded text-amber-700 hover:bg-amber-100"
-                          aria-label="Désactiver note interne"
+                          aria-label={t("desactiver_note_interne")}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -1122,7 +1122,7 @@ export function MessagesView({
                           "flex items-center gap-1 text-[11px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-md transition-colors",
                           internalNote ? "bg-amber-100 text-amber-700 font-medium" : "text-muted-foreground hover:bg-muted"
                         )}
-                        title="Note visible admin seulement"
+                        title={t("note_visible_admin_seulement")}
                       >
                         <StickyNote className="h-3 w-3" /> Note interne
                       </button>
@@ -1155,7 +1155,7 @@ export function MessagesView({
                               type="button"
                               onClick={() => removePendingAtt(i)}
                               className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full bg-destructive text-white shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
-                              aria-label="Retirer"
+                              aria-label={t("retirer")}
                             >
                               <X className="h-3 w-3" />
                             </button>
@@ -1198,12 +1198,12 @@ export function MessagesView({
 
                       <button type="button" onClick={() => imageInputRef.current?.click()}
                         className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
-                        aria-label="Joindre une ou plusieurs images">
+                        aria-label={t("joindre_plusieurs_images")}>
                         <ImageIcon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                       <button type="button" onClick={() => fileInputRef.current?.click()}
                         className="h-8 w-8 sm:h-9 sm:w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
-                        aria-label="Joindre des fichiers">
+                        aria-label={t("joindre_fichiers")}>
                         <Paperclip className="h-4 w-4 sm:h-5 sm:w-5" />
                       </button>
                       <EmojiPicker onSelect={insertEmoji} />
@@ -1221,9 +1221,9 @@ export function MessagesView({
                           }
                         }}
                         placeholder={
-                          internalNote ? "Note interne…" :
-                          pendingAtts.length > 0 ? "Légende (optionnel)…" :
-                          replyingTo ? "Répondre…" : "Message…"
+                          internalNote ? t("note_interne_placeholder") :
+                          pendingAtts.length > 0 ? t("legende_optionnel") :
+                          replyingTo ? t("repondre") : t("message")
                         }
                         className={cn(
                           "flex-1 min-w-0 resize-none rounded-lg border bg-background px-2.5 py-1.5 sm:px-3 sm:py-2 text-[12px] sm:text-[13px] min-h-[36px] sm:min-h-[40px] max-h-[120px] focus:outline-none focus:ring-2",
@@ -1238,7 +1238,7 @@ export function MessagesView({
                         onClick={() => setScheduleOpen(true)}
                         disabled={sending || (!newMsg.trim() && pendingAtts.length === 0) || internalNote}
                         className="h-8 w-8 sm:h-9 sm:w-9 p-0 shrink-0"
-                        title="Programmer l'envoi"
+                        title={t("programmer_envoi")}
                       >
                         <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                       </Button>
@@ -1268,9 +1268,9 @@ export function MessagesView({
       <Dialog open={!!editingMsg} onOpenChange={(o) => { if (!o) setEditingMsg(null); }}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-4 text-white">
-            <DialogTitle className="text-white text-base">Modifier le message</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("modifier_message")}</DialogTitle>
             <DialogDescription className="text-white/70 text-xs mt-0.5">
-              L&apos;historique sera marqué « modifié »
+              {t("apos_historique_sera_marque_modifie")}
             </DialogDescription>
           </div>
           <div className="p-4">
@@ -1291,8 +1291,8 @@ export function MessagesView({
       <ConfirmDialog
         open={!!deleteMsg}
         onOpenChange={(o) => { if (!o) setDeleteMsg(null); }}
-        title="Supprimer ce message ?"
-        description="Le message sera masqué pour tous (texte et pièces jointes). Action irréversible."
+        title={t("supprimer_message")}
+        description={t("message_sera_masque_tous_texte")}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -1310,7 +1310,7 @@ export function MessagesView({
 const SYSTEM_KEYWORDS = /^(NOUVELLE DEMANDE|NOUVEAU DEVIS|NOUVEAU CONTRAT|NOUVEAU MANDAT|NOUVELLE FACTURE|FACTURE|CONTRAT|MANDAT|DEVIS|RDV|RENDEZ-VOUS|PAIEMENT|REMBOURSEMENT|SIGNATURE|DOCUMENT)\b/i;
 function isSystemMessage(content: string | null): boolean {
   if (!content) return false;
-  // Strip whitespace, emojis et tout caractère non-lettre du début
+
   const stripped = content.trim().replace(/^[^\p{L}]+/u, "");
   return SYSTEM_KEYWORDS.test(stripped);
 }
@@ -1324,33 +1324,33 @@ function systemMessageSummary(content: string): string {
 // Detecte une action liee a un message systeme.
 // 1. D'abord : numero d'entite formel (CT-XXX, F-XXX, DEV-XXX, MAN-XXX, REM-XXX) → ouvre filtre exact
 // 2. Sinon : mots-cles dans le texte → navigue vers la page admin correspondante
-type SystemAction = { route: string; label: string };
+type SystemAction = { route: string; labelKey: string };
 function detectSystemAction(content: string): SystemAction | null {
-  // 1. Numero d'entite formel
+
   const m = content.match(/\b(CT|F|DEV|MAN|REM)-(\d{4})-(\d+)\b/i);
   if (m) {
     const fullNumber = m[0].toUpperCase();
     const prefix = m[1].toUpperCase();
     const q = `?search=${encodeURIComponent(fullNumber)}`;
     switch (prefix) {
-      case "CT":  return { route: `/admin/contracts${q}`, label: "Voir le contrat" };
-      case "F":   return { route: `/admin/invoices${q}`, label: "Voir la facture" };
-      case "DEV": return { route: `/admin/quotes${q}`, label: "Voir le devis" };
-      case "MAN": return { route: `/admin/mandates${q}`, label: "Voir le mandat" };
-      case "REM": return { route: `/admin/refunds${q}`, label: "Voir le remboursement" };
+      case "CT":  return { route: `/admin/contracts${q}`, labelKey: "voir_contrat" };
+      case "F":   return { route: `/admin/invoices${q}`, labelKey: "voir_facture" };
+      case "DEV": return { route: `/admin/quotes${q}`, labelKey: "voir_devis" };
+      case "MAN": return { route: `/admin/mandates${q}`, labelKey: "voir_mandat" };
+      case "REM": return { route: `/admin/refunds${q}`, labelKey: "voir_remboursement" };
     }
   }
-  // 2. Mots-cles (pour les events sans numero formel : demandes projet, signatures, paiements...)
-  if (/nouvelle demande|demande de projet/i.test(content)) return { route: "/admin/requests", label: "Voir la demande" };
-  if (/contrat/i.test(content))                            return { route: "/admin/contracts", label: "Voir les contrats" };
-  if (/facture/i.test(content))                            return { route: "/admin/invoices", label: "Voir les factures" };
-  if (/devis/i.test(content))                              return { route: "/admin/quotes", label: "Voir les devis" };
-  if (/mandat/i.test(content))                             return { route: "/admin/mandates", label: "Voir les mandats" };
-  if (/remboursement/i.test(content))                      return { route: "/admin/refunds", label: "Voir les remboursements" };
-  if (/rdv|rendez-?vous/i.test(content))                   return { route: "/admin/calendar", label: "Voir le calendrier" };
-  if (/paiement/i.test(content))                           return { route: "/admin/finance/payments", label: "Voir les paiements" };
-  if (/signature/i.test(content))                          return { route: "/admin/contracts", label: "Voir le contrat" };
-  if (/document/i.test(content))                           return { route: "/admin/documents", label: "Voir le document" };
+
+  if (/nouvelle demande|demande de projet/i.test(content)) return { route: "/admin/requests", labelKey: "voir_demande" };
+  if (/contrat/i.test(content))                            return { route: "/admin/contracts", labelKey: "voir_contrats" };
+  if (/facture/i.test(content))                            return { route: "/admin/invoices", labelKey: "voir_factures" };
+  if (/devis/i.test(content))                              return { route: "/admin/quotes", labelKey: "voir_devis_2" };
+  if (/mandat/i.test(content))                             return { route: "/admin/mandates", labelKey: "voir_mandats" };
+  if (/remboursement/i.test(content))                      return { route: "/admin/refunds", labelKey: "voir_remboursements" };
+  if (/rdv|rendez-?vous/i.test(content))                   return { route: "/admin/calendar", labelKey: "voir_calendrier" };
+  if (/paiement/i.test(content))                           return { route: "/admin/finance/payments", labelKey: "voir_paiements" };
+  if (/signature/i.test(content))                          return { route: "/admin/contracts", labelKey: "voir_contrat" };
+  if (/document/i.test(content))                           return { route: "/admin/documents", labelKey: "voir_document" };
   return null;
 }
 
@@ -1366,6 +1366,7 @@ function MessageBubble({
   onReact: (emoji: string) => void;
   allMessages: Message[];
 }) {
+  const t = useTranslations("admin.messages");
   const isAdmin = msg.sender === "vnk";
   const isInternal = msg.isInternalNote;
   const channelInfo = CHANNEL_BADGE[msg.channel];
@@ -1379,24 +1380,24 @@ function MessageBubble({
   const ageMs = Date.now() - new Date(msg.createdAt).getTime();
   const canEditDelete = isAdmin && !msg.deletedAt && ageMs < 24 * 60 * 60 * 1000;
 
-  // Message systeme — pilule compacte qui wrap proprement en responsive (titre / temps / action)
+
   if (isSystem && msg.content && !msg.deletedAt) {
     const summary = systemMessageSummary(msg.content);
     const action = detectSystemAction(msg.content);
-    // hasMore : le contenu a plus de details que la premiere ligne (sinon le bouton "+" affiche la meme chose)
+
     const otherLines = msg.content.split("\n").slice(1).join("\n").trim();
     const hasMore = otherLines.length > 0;
     return (
       <div className="my-1 flex justify-center min-w-0">
         <div className="max-w-full min-w-0 flex flex-col items-center gap-1">
-          {/* Pilule : flex-wrap pour s'adapter en responsive (2 lignes si necessaire) */}
+
           <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 px-3 py-1.5 rounded-2xl bg-muted/40 text-[11px] text-muted-foreground max-w-full">
             {hasMore ? (
               <button
                 type="button"
                 onClick={() => setSystemExpanded((v) => !v)}
                 className="inline-flex items-center gap-1.5 hover:text-foreground transition-colors min-w-0 max-w-full"
-                aria-label={systemExpanded ? "Réduire" : "Développer"}
+                aria-label={systemExpanded ? t("reduire") : t("developper")}
               >
                 <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
                 <span className="opacity-60 shrink-0">·</span>
@@ -1404,7 +1405,7 @@ function MessageBubble({
                 <span className="opacity-60 shrink-0">{systemExpanded ? "−" : "+"}</span>
               </button>
             ) : (
-              // Pas d'expand bouton si le message tient sur une seule ligne (rien de plus a montrer)
+
               <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
                 <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
                 <span className="opacity-60 shrink-0">·</span>
@@ -1415,9 +1416,9 @@ function MessageBubble({
               <a
                 href={action.route}
                 className="text-[#0F2D52] font-semibold hover:underline inline-flex items-center gap-1 shrink-0"
-                aria-label={action.label}
+                aria-label={t(action.labelKey)}
               >
-                {action.label}
+                {t(action.labelKey)}
                 <ArrowLeft className="h-2.5 w-2.5 rotate-180" />
               </a>
             )}
@@ -1436,7 +1437,7 @@ function MessageBubble({
     return (
       <div className={cn("flex mb-0.5 min-w-0", isAdmin ? "justify-end" : "justify-start")}>
         <div className="max-w-[85%] md:max-w-[480px] rounded-2xl px-2.5 py-1.5 bg-muted/40 border border-dashed">
-          <p className="text-xs italic text-muted-foreground">Message supprimé</p>
+          <p className="text-xs italic text-muted-foreground">{t("message_supprime")}</p>
           <span className="text-[10px] text-muted-foreground">{formatMsgTime(msg.createdAt)}</span>
         </div>
       </div>
@@ -1447,7 +1448,7 @@ function MessageBubble({
 
   return (
     <div className={cn("group flex mb-0.5 min-w-0", isAdmin ? "justify-end" : "justify-start")}>
-      {/* Bulle bornee : 85% mobile (responsive), 480px max desktop — toutes les bulles ont la meme largeur max */}
+
       <div className="max-w-[85%] md:max-w-[480px] min-w-0 flex flex-col items-stretch">
         {isInternal && (
           <div className="text-[10px] font-semibold text-amber-700 mb-0.5 self-end flex items-center gap-1">
@@ -1484,10 +1485,10 @@ function MessageBubble({
                 }}
               >
                 <p className={cn("font-semibold", isAdmin && !isInternal ? "text-white/80" : "text-[#0F2D52]")}>
-                  {replyTarget.sender === "vnk" ? "Vous" : "Client"}
+                  {replyTarget.sender === "vnk" ? t("vous_2") : t("client")}
                 </p>
                 <p className={cn("line-clamp-1", isAdmin && !isInternal ? "text-white/70" : "text-muted-foreground")}>
-                  {summarizeForReply(replyTarget as ReplyToSummary)}
+                  {summarizeForReply(replyTarget as ReplyToSummary, t("message_supprime"), t("vide"))}
                 </p>
               </button>
             )}
@@ -1513,7 +1514,7 @@ function MessageBubble({
                 : "text-muted-foreground"
               )}>
                 {formatMsgTime(msg.createdAt)}
-                {msg.editedAt && " · modifié"}
+                {msg.editedAt && t("modifie")}
               </span>
               {channelInfo && !isInternal && (
                 <span className={cn("text-[9px] px-1 py-0.5 rounded",
@@ -1565,6 +1566,7 @@ function MessageActionsButton({
   canEditDelete?: boolean;
   onReact: (emoji: string) => void;
 }) {
+  const t = useTranslations("admin.messages");
   const tc = useTranslations("common");
   return (
     <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-0.5 self-center">
@@ -1573,7 +1575,7 @@ function MessageActionsButton({
           <button
             type="button"
             className="h-7 w-7 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Réagir"
+            aria-label={t("reagir")}
           >
             <SmilePlus className="h-3.5 w-3.5" />
           </button>
@@ -1605,8 +1607,7 @@ function MessageActionsButton({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-44">
           <DropdownMenuItem onSelect={onReply}>
-            <Reply className="h-3.5 w-3.5 mr-2" />Répondre
-          </DropdownMenuItem>
+            <Reply className="h-3.5 w-3.5 mr-2" />{t("messages_view_repondre")}</DropdownMenuItem>
           {canEditDelete && onEdit && (
             <DropdownMenuItem onSelect={onEdit}>
               <Pencil className="h-3.5 w-3.5 mr-2" />{tc("edit")}

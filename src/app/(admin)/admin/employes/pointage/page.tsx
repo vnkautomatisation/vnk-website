@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -10,7 +11,10 @@ import { checkRangeBreakCompliance } from "@/lib/services/break-compliance";
 import { getTimesheetScope as getSharedTimesheetScope } from "@/lib/services/timesheet-scope";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Pointage" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_pointage") };
+}
 
 
 // searchParams helpers.
@@ -46,6 +50,7 @@ export default async function PointagePage({
     status?: string;
   }>;
 }) {
+  const t = await getTranslations("admin.timeclock");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
@@ -395,7 +400,7 @@ export default async function PointagePage({
     if (!teamStatsMap.has(key)) {
       teamStatsMap.set(key, {
         teamId: m.teamId,
-        teamName: m.team?.name ?? "Sans équipe",
+        teamName: m.team?.name ?? t("sans_equipe"),
         teamColor: m.team?.color ?? null,
         memberCount: 0,
         totalMin: 0,

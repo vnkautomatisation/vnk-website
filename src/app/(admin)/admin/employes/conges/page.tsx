@@ -10,6 +10,8 @@
 //
 // Scope : getLeavesScope (founder = tout, HR = tous-sauf-soi, manager = subordonnés+teams)
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -18,7 +20,10 @@ import { getLeavesScope } from "@/lib/services/timesheet-scope";
 import { getLeaveBalance } from "@/lib/services/leave-balance";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Congés" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_conges") };
+}
 
 const PAGE_SIZE = 50;
 
@@ -37,10 +42,11 @@ export default async function CongesPage({
 }: {
   searchParams?: Promise<{ page?: string }>;
 }) {
+  const t = await getTranslations("admin.leaves");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
-  // P2-4 : pagination basique des pendingReviews (?page=N)
+
   const sp = (await searchParams) ?? {};
   const pageNum = Math.max(1, Number(sp.page) || 1);
 
@@ -56,7 +62,7 @@ export default async function CongesPage({
 
   const scope = await getLeavesScope(adminId);
 
-  // ── Filtre scope (Admin + LeaveRequest) ─────────────────────────────
+
   const adminScopeWhere: Record<string, unknown> = scope.isHr
     ? (scope.excludeSelfId ? { id: { not: scope.excludeSelfId } } : {})
     : { id: { in: scope.allowedAdminIds ?? [] } };
@@ -64,7 +70,7 @@ export default async function CongesPage({
     ? (scope.excludeSelfId ? { adminId: { not: scope.excludeSelfId } } : {})
     : { adminId: { in: scope.allowedAdminIds ?? [] } };
 
-  // Cas "manager sans aucun subordonné" : on rend une vue vide propre
+
   if (!scope.isHr && (scope.allowedAdminIds ?? []).length === 0) {
     return (
       <LeavesAdminView
@@ -115,15 +121,15 @@ export default async function CongesPage({
   const next30End = new Date(today); next30End.setDate(next30End.getDate() + 30);
   const next8WeeksEnd = new Date(today); next8WeeksEnd.setDate(next8WeeksEnd.getDate() + 56);
   const yearStart = new Date(now.getFullYear(), 0, 1);
-  // 12 mois glissants : on garde le 1er jour du mois il y a 11 mois
+
   const trailing12Start = new Date(now.getFullYear(), now.getMonth() - 11, 1);
 
-  // P2-4 : compte total pending pour pagination
+
   const pendingTotalPromise = isReviewer
     ? prisma.leaveRequest.count({ where: { status: "pending", ...leaveScopeWhere } })
     : Promise.resolve(0);
 
-  // ── Récupération bulk parallèle ─────────────────────────────────────
+
   const [
     pendingReviews,
     pendingTotal,
@@ -154,7 +160,7 @@ export default async function CongesPage({
         })
       : Promise.resolve([]),
     pendingTotalPromise,
-    // Calendrier équipe 28j (approuvés)
+
     prisma.leaveRequest.findMany({
       where: {
         status: "approved",
@@ -170,7 +176,7 @@ export default async function CongesPage({
         },
       },
     }),
-    // Top 10 prochaines absences sur 30 jours
+
     prisma.leaveRequest.findMany({
       where: {
         status: "approved",
@@ -183,7 +189,7 @@ export default async function CongesPage({
         admin: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
       },
     }),
-    // Absents AUJOURD'HUI (chevauchement avec today)
+
     prisma.leaveRequest.findMany({
       where: {
         status: "approved",
@@ -197,7 +203,7 @@ export default async function CongesPage({
         admin: { select: { id: true, fullName: true, email: true, avatarUrl: true } },
       },
     }),
-    // Absences cette semaine (pour KPI jours-personne semaine)
+
     prisma.leaveRequest.findMany({
       where: {
         status: "approved",
@@ -207,7 +213,7 @@ export default async function CongesPage({
       },
       select: { adminId: true, startDate: true, endDate: true, halfDay: true, daysCount: true },
     }),
-    // Absences mois en cours (pour taux absentéisme + détection conflits)
+
     prisma.leaveRequest.findMany({
       where: {
         status: "approved",
@@ -220,9 +226,9 @@ export default async function CongesPage({
         startDate: true, endDate: true, halfDay: true, daysCount: true,
       },
     }),
-    // Taille effective du scope (employés actifs)
+
     prisma.admin.count({ where: { ...adminScopeWhere, isActive: true } }),
-    // Liste employés scope avec infos contractuelles (tab Par employé)
+
     prisma.admin.findMany({
       where: { ...adminScopeWhere, isActive: true },
       orderBy: { fullName: "asc" },
@@ -232,7 +238,7 @@ export default async function CongesPage({
         team: { select: { id: true, name: true, color: true } },
       },
     }),
-    // Répartition par type sur l'année courante (analytics)
+
     prisma.leaveRequest.groupBy({
       by: ["type"],
       where: {
@@ -243,7 +249,7 @@ export default async function CongesPage({
       _sum: { daysCount: true },
       _count: { _all: true },
     }),
-    // P0-1 : fenêtres de selection actives (visibles Vue d'ensemble)
+
     prisma.vacationSelectionWindow.findMany({
       where: { status: { in: ["open", "closed", "in_review"] } },
       include: { _count: { select: { preferences: true } } },
@@ -251,7 +257,7 @@ export default async function CongesPage({
     }),
   ]);
 
-  // P0-1 : pour chaque window, compte distinct admins ayant soumis + pending appeals
+
   const windowIds = activeWindowsRaw.map((w) => w.id);
   const submittedByWindow = new Map<number, number>();
   const pendingAppealsByWindow = new Map<number, number>();
@@ -290,7 +296,7 @@ export default async function CongesPage({
   }));
   const activePendingAppealsTotal = activeWindows.reduce((s, w) => s + w.pendingAppealsCount, 0);
 
-  // ── Récupération séparée pour analytics (12 mois + mois précédent + 8 semaines à venir) ──
+
   const [
     trailing12Leaves,
     prevMonthLeaves,
@@ -323,11 +329,11 @@ export default async function CongesPage({
     }),
   ]);
 
-  // ── KPIs dérivés ────────────────────────────────────────────────────
+
   const absentTodaySet = new Set(absentTodayRows.map((r) => r.adminId));
   const absentTodayCount = absentTodaySet.size;
 
-  // Jours-personne semaine : on compte les jours ouvrés [weekStart, weekEnd) ∩ leaves
+
   function workingDayCount(start: Date, end: Date): number {
     let n = 0;
     const cursor = new Date(Math.max(start.getTime(), weekStart.getTime()));
@@ -347,8 +353,8 @@ export default async function CongesPage({
     absentDaysThisWeek += l.halfDay ? days * 0.5 : days;
   }
 
-  // Taux absentéisme mois courant
-  // = (jours-personne absents sur jours ouvrés du mois) / (scope * jours ouvrés du mois)
+
+
   let workingDaysInMonth = 0;
   {
     const cursor = new Date(monthStart);
@@ -359,7 +365,7 @@ export default async function CongesPage({
     }
   }
   let absentDaysThisMonth = 0;
-  // Conflits : map date -> count d'absents
+
   const absentByDateMap = new Map<string, Set<number>>();
   for (const l of monthApprovedLeaves) {
     const start = new Date(Math.max(l.startDate.getTime(), monthStart.getTime()));
@@ -382,7 +388,7 @@ export default async function CongesPage({
     ? Math.round((absentDaysThisMonth / (activeScopeCount * workingDaysInMonth)) * 1000) / 10
     : 0;
 
-  // Conflits : nombre de jours où > 30% du scope est absent
+
   let conflictDays = 0;
   if (activeScopeCount > 0) {
     const threshold = Math.max(1, Math.ceil(activeScopeCount * 0.3));
@@ -391,17 +397,17 @@ export default async function CongesPage({
     }
   }
 
-  // ── Tab Par employé : récupérer solde simplifié par batch ──────────
-  // Pour scalabilité on charge uniquement les soldes des employés visibles,
-  // en parallélisant les requêtes. Limite par défaut : on traite tous les employés
-  // du scope (à 100, ça reste raisonnable).
+
+
+
+
   const balancesPerEmp = await Promise.all(
     scopedEmployees.map((e) =>
       getLeaveBalance(e.id, "vacation").catch(() => null),
     ),
   );
 
-  // Agrégation : jours pris/planifiés/en attente par employé
+
   const requestsByAdmin = await prisma.leaveRequest.groupBy({
     by: ["adminId", "status"],
     where: {
@@ -425,7 +431,7 @@ export default async function CongesPage({
     }
   }
 
-  // Dernière demande par employé
+
   const lastRequests = await prisma.leaveRequest.findMany({
     where: { ...leaveScopeWhere, adminId: { in: scopedEmployees.map((e) => e.id) } },
     orderBy: { createdAt: "desc" },
@@ -458,15 +464,15 @@ export default async function CongesPage({
 
   const totalRemainingDays = employees.reduce((s, e) => s + (e.vacationDaysRemaining || 0), 0);
 
-  // Répartition par type pour analytics
+
   const absencesByType = typeStatsRaw.map((t) => ({
     type: t.type,
     daysCount: Number(t._sum.daysCount ?? 0),
     requestsCount: t._count._all,
   }));
 
-  // ── Analytics : taux absentéisme par mois sur 12 mois glissants ──
-  // Pour chaque mois, on calcule jours-personne absents / (scope * jours ouvrés)
+
+
   function workingDaysBetween(s: Date, e: Date): number {
     let n = 0;
     const cur = new Date(s);
@@ -504,7 +510,7 @@ export default async function CongesPage({
     });
   }
 
-  // Mois précédent : taux absentéisme pour comparer
+
   let prevMonthAbsDays = 0;
   const prevMonthWd = workingDaysBetween(prevMonthStart, prevMonthEnd);
   for (const l of prevMonthLeaves) {
@@ -517,12 +523,12 @@ export default async function CongesPage({
     ? Math.round((prevMonthAbsDays / (activeScopeCount * prevMonthWd)) * 1000) / 10
     : 0;
 
-  // Par équipe : jours pris cette année par équipe
+
   const teamDaysMap = new Map<number, { id: number; name: string; color: string | null; days: number; employees: number }>();
-  // map employé -> team
+
   const empTeam = new Map<number, { id: number; name: string; color: string | null } | null>();
   for (const e of scopedEmployees) empTeam.set(e.id, e.team);
-  const noTeamSlot: { id: number; name: string; color: string | null; days: number; employees: number } = { id: 0, name: "Sans équipe", color: null, days: 0, employees: 0 };
+  const noTeamSlot: { id: number; name: string; color: string | null; days: number; employees: number } = { id: 0, name: t("sans_equipe"), color: null, days: 0, employees: 0 };
   for (const e of scopedEmployees) {
     if (!e.team) noTeamSlot.employees++;
     else {
@@ -543,7 +549,7 @@ export default async function CongesPage({
     .concat(noTeamSlot.employees > 0 ? [noTeamSlot] : [])
     .sort((a, b) => b.days - a.days);
 
-  // Prévision 8 semaines à venir : par semaine, nb absents
+
   const next8WeeksForecast: Array<{ key: string; label: string; absents: number; days: number }> = [];
   for (let i = 0; i < 8; i++) {
     const wStart = new Date(weekStart); wStart.setDate(wStart.getDate() + i * 7);
@@ -565,7 +571,7 @@ export default async function CongesPage({
     });
   }
 
-  // Absents par jour pour la mini-heatmap (4 semaines)
+
   const heatmapDays: Array<{ date: string; count: number; ids: number[] }> = [];
   for (let i = 0; i < 28; i++) {
     const d = new Date(today); d.setDate(d.getDate() + i);
@@ -582,7 +588,7 @@ export default async function CongesPage({
     });
   }
 
-  // P2-4 : pendingCount = total back-end (pas juste la page courante)
+
   const pendingCount = pendingTotal;
   const pendingPages = Math.max(1, Math.ceil(pendingCount / PAGE_SIZE));
 

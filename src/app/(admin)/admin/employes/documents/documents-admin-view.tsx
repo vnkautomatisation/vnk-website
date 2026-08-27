@@ -229,10 +229,10 @@ function daysUntil(iso: string | null | undefined): number | null {
   return Math.floor((d.getTime() - Date.now()) / 86400000);
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  policy: "Politique",
-  nda: "NDA",
-  acknowledgment: "Accuse reception",
+const CATEGORY_KEYS: Record<string, string> = {
+  policy: "politique",
+  nda: "nda",
+  acknowledgment: "accuse_reception",
 };
 
 // ================================================================
@@ -265,6 +265,7 @@ export function DocumentsAdminView({
   templateIdsInActiveHandbooks?: number[];
   isSuper: boolean;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("overview");
@@ -426,30 +427,30 @@ export function DocumentsAdminView({
   ]);
 
   const TABS: TabItem<TabKey>[] = [
-    { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
-    { key: "templates", label: "Templates", icon: FileText, count: templates.length },
-    { key: "conformity", label: "Conformite", icon: ShieldCheck },
+    { key: "overview", label: t("vue_ensemble"), icon: Sparkles },
+    { key: "templates", label: t("templates"), icon: FileText, count: templates.length },
+    { key: "conformity", label: t("conformite_2"), icon: ShieldCheck },
     {
       key: "requests",
-      label: "Demandes signature",
+      label: t("demandes_signature"),
       icon: ClipboardList,
       count: pendingRequests.length,
       dot: pendingRequests.length > 0,
     },
     {
       key: "uploads",
-      label: "Demandes upload",
+      label: t("demandes_upload"),
       icon: Upload,
       count: uploadRequests.length,
       dot: kpis.uploadsToReview > 0,
     },
     {
       key: "signatures",
-      label: "Signatures",
+      label: t("signatures"),
       icon: FileSignature,
       count: allSignatures.length,
     },
-    { key: "employees", label: "Dossiers employes", icon: FolderOpen, count: employees.length },
+    { key: "employees", label: t("dossiers_employes"), icon: FolderOpen, count: employees.length },
   ];
 
   // --- Conformity callbacks (used by table & overview) -------
@@ -562,9 +563,9 @@ export function DocumentsAdminView({
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold leading-tight">Gestion des documents</h1>
+              <h1 className="text-base sm:text-lg font-bold leading-tight">{t("gestion_documents")}</h1>
               <p className="text-[11px] sm:text-xs text-white/80 leading-snug">
-                Templates legaux, conformite des signatures et dossiers documentaires.
+                {t("templates_legaux_conformite_signatures_dossiers")}
               </p>
             </div>
           </div>
@@ -577,7 +578,7 @@ export function DocumentsAdminView({
             >
               <Link href="/admin/employes/documents/bibliotheque">
                 <Library className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-                <span className="truncate">Bibliotheque</span>
+                <span className="truncate">{t("bibliotheque")}</span>
               </Link>
             </Button>
             <Button
@@ -598,7 +599,7 @@ export function DocumentsAdminView({
               className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
               <Upload className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-              <span className="truncate">Demander doc</span>
+              <span className="truncate">{t("demander_doc")}</span>
             </Button>
             <Button
               size="sm"
@@ -607,7 +608,7 @@ export function DocumentsAdminView({
               className="h-8 text-[11px] sm:text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white justify-start sm:justify-center"
             >
               <Send className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-              <span className="truncate">Demande signature</span>
+              <span className="truncate">{t("demande_signature")}</span>
             </Button>
             <Button
               size="sm"
@@ -615,7 +616,7 @@ export function DocumentsAdminView({
               className="h-8 text-[11px] sm:text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold col-span-2 sm:col-span-1 justify-center"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-              <span className="truncate">Nouveau template</span>
+              <span className="truncate">{t("nouveau_template")}</span>
             </Button>
           </div>
         </div>
@@ -624,37 +625,37 @@ export function DocumentsAdminView({
       {/* ====== KPIs ====== */}
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <DocumentStatsCard
-          label="Templates actifs"
+          label={t("templates_actifs")}
           value={kpis.templates}
           icon={FileText}
           accent="info"
           hint={`${employees.length} employes concernes`}
         />
         <DocumentStatsCard
-          label="Conformite globale"
+          label={t("conformite_globale")}
           value={`${kpis.conformity}%`}
           icon={ShieldCheck}
           accent={kpis.conformity >= 90 ? "success" : kpis.conformity >= 60 ? "warning" : "danger"}
-          hint="Signatures a jour des documents obligatoires"
+          hint={t("signatures_jour_documents_obligatoires")}
           onClick={() => setTab("conformity")}
         />
         <DocumentStatsCard
-          label="Demandes en attente"
+          label={t("demandes_attente")}
           value={kpis.pendingRequests}
           icon={ClipboardList}
           accent={kpis.pendingRequests > 0 ? "warning" : "info"}
-          hint="Signatures ciblees a relancer"
+          hint={t("signatures_ciblees_relancer")}
           onClick={() => setTab("requests")}
         />
         <DocumentStatsCard
-          label="Docs perso a venir"
+          label={t("docs_perso_venir")}
           value={kpis.expiringSoon}
           icon={CalendarClock}
           accent={kpis.expiredCount > 0 ? "danger" : kpis.expiringSoon > 0 ? "warning" : "success"}
           hint={
             kpis.expiredCount > 0
               ? `${kpis.expiredCount} deja expire${kpis.expiredCount > 1 ? "s" : ""}`
-              : "Expirations < 60 jours"
+              : t("expirations_60_jours")
           }
           onClick={() => setTab("employees")}
         />
@@ -664,7 +665,7 @@ export function DocumentsAdminView({
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
       {/* Portal : on injecte les KPIs DANS la module-nav mobile (sur la
-          meme ligne que "Employes") au scroll. Plus de 2e bande !
+          meme ligne que t("employes")) au scroll. Plus de 2e bande !
           Slot cible : #vnk-module-nav-extra (defini dans module-sidebar-nav).
           Labels compacts <480px pour rentrer sur petits ecrans. */}
       {navExtraEl && scrolled
@@ -672,8 +673,8 @@ export function DocumentsAdminView({
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Conf :</span>
-                  <span className="hidden min-[480px]:inline">Conformite :</span>
+                  <span className="min-[480px]:hidden">{t("conf")}</span>
+                  <span className="hidden min-[480px]:inline">{t("conformite")}</span>
                 </span>
                 <span
                   className={
@@ -690,16 +691,16 @@ export function DocumentsAdminView({
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Att :</span>
-                  <span className="hidden min-[480px]:inline">En attente :</span>
+                  <span className="min-[480px]:hidden">{t("att")}</span>
+                  <span className="hidden min-[480px]:inline">{t("attente")}</span>
                 </span>
                 <span className="font-semibold text-amber-600">{kpis.pendingRequests}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Exp :</span>
-                  <span className="hidden min-[480px]:inline">Expirations :</span>
+                  <span className="min-[480px]:hidden">{t("exp")}</span>
+                  <span className="hidden min-[480px]:inline">{t("expirations")}</span>
                 </span>
                 <span
                   className={
@@ -737,10 +738,10 @@ export function DocumentsAdminView({
         >
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <FileText className="h-4 w-4" />
-            Documents
+            {t("documents")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Conformite :</span>
+            <span className="text-muted-foreground">{t("conformite")}</span>
             <span
               className={
                 kpis.conformity >= 90
@@ -754,11 +755,11 @@ export function DocumentsAdminView({
             </span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">En attente :</span>
+            <span className="text-muted-foreground">{t("attente")}</span>
             <span className="font-semibold text-amber-600">{kpis.pendingRequests}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Expirations :</span>
+            <span className="text-muted-foreground">{t("expirations")}</span>
             <span
               className={
                 kpis.expiredCount > 0
@@ -773,7 +774,7 @@ export function DocumentsAdminView({
 
         {/* Tabs : toujours sticky */}
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_documents")} />
         </div>
       </div>
 
@@ -837,7 +838,7 @@ export function DocumentsAdminView({
           onPreviewPdf={(req) => {
             const tpl = templates.find((t) => t.id === req.templateId);
             if (!tpl) {
-              toast.error("Template introuvable");
+              toast.error(t("template_introuvable"));
               return;
             }
             // Si la demande cible un employe precis, on l'utilise directement.
@@ -937,11 +938,11 @@ export function DocumentsAdminView({
             acknowledgmentMode: data.acknowledgmentMode ?? "reading_only",
           };
           if (!payload.key) {
-            throw new Error("Cle technique requise");
+            throw new Error(t("cle_technique_requise"));
           }
           const r = await upsertLegalDocAction(payload);
-          if (!r.success) throw new Error(r.error || "Erreur");
-          toast.success(existing ? "Template mis a jour" : "Template cree");
+          if (!r.success) throw new Error(r.error || t("erreur"));
+          toast.success(existing ? t("template_mis_jour") : t("template_cree"));
           setEditDialog({ open: false, existing: null });
           router.refresh();
         }}
@@ -951,14 +952,14 @@ export function DocumentsAdminView({
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title ?? ""} ?`}
-        description="Si le document a deja ete signe par des employes, il sera desactive au lieu d'etre supprime."
+        description={t("si_document_deja_ete_signe")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteLegalDocAction({ id: confirmDel.id });
           if (r.success) {
-            toast.success("Document supprime");
+            toast.success(t("document_supprime"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -970,15 +971,15 @@ export function DocumentsAdminView({
       <ConfirmDialog
         open={!!confirmCancel}
         onOpenChange={(o) => !o && setConfirmCancel(null)}
-        title="Annuler cette demande ?"
+        title={t("annuler_demande")}
         description={confirmCancel?.template.title ?? ""}
-        confirmLabel="Annuler la demande"
+        confirmLabel={t("annuler_demande_2")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmCancel) return;
           const r = await cancelSignatureRequestAction({ id: confirmCancel.id });
           if (r.success) {
-            toast.success("Demande annulee");
+            toast.success(t("demande_annulee"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -1005,8 +1006,8 @@ export function DocumentsAdminView({
           position: null,
           avatarUrl: null,
         }))}
-        title="Choisir un employe pour l'apercu du template"
-        description="Selectionnez un employe pour voir le document genere avec ses informations."
+        title={t("choisir_employe_apercu_template")}
+        description={t("selectionnez_employe_voir_document_genere")}
       />
 
       {/* Auto-trigger pour template standalone (apres choix employe) */}
@@ -1053,7 +1054,7 @@ export function DocumentsAdminView({
         }))}
       />
 
-      {/* Dialog "Completer les champs" — ouvert AVANT SignatureRequestDialog
+      {/* Dialog t("completer_champs") — ouvert AVANT SignatureRequestDialog
           quand le template contient des `[CHAMP]` libres detectes par
           detectPlaceholders(). Une fois rempli, on passe au dialog suivant
           en transmettant les valeurs via customFieldValues. */}
@@ -1084,7 +1085,7 @@ export function DocumentsAdminView({
       {/* Flow brouillon (templates long-form Evaluation 30/60/90, etc.) :
           1. StartDraftDialog -> selectionne employe + cree brouillon
           2. DocumentDraftEditor -> editeur 2 colonnes plein ecran avec autosave
-             + bouton "Envoyer pour signature" qui cree DSR + archive brouillon */}
+             + bouton t("envoyer_signature") qui cree DSR + archive brouillon */}
       <StartDraftDialog
         open={startDraftDialog.open}
         templateId={startDraftDialog.template?.id ?? null}
@@ -1136,15 +1137,15 @@ export function DocumentsAdminView({
       <ConfirmDialog
         open={!!confirmCancelUpload}
         onOpenChange={(o) => !o && setConfirmCancelUpload(null)}
-        title="Annuler cette demande ?"
+        title={t("annuler_demande")}
         description={confirmCancelUpload?.title ?? ""}
-        confirmLabel="Annuler la demande"
+        confirmLabel={t("annuler_demande_2")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmCancelUpload) return;
           const r = await cancelUploadRequestAction(confirmCancelUpload.id);
           if (r.success) {
-            toast.success("Demande annulée");
+            toast.success(t("demande_annulee_2"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -1184,6 +1185,7 @@ function OverviewTab({
   onNewTemplate: () => void;
   onNewRequest: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const requiredCount = templates.filter((t) => t.isRequired).length;
   const topMissing = useMemo(() => {
     // Templates ayant le plus de signatures manquantes (parmi obligatoires)
@@ -1210,26 +1212,26 @@ function OverviewTab({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <FileText className="h-4 w-4 text-[#0F2D52]" />
-            Templates legaux
+            {t("templates_legaux")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoTemplates}>
-            Voir tout
+            {t("voir_tout")}
           </Button>
         </div>
         <div className="space-y-1.5">
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Actifs</span>
+            <span className="text-muted-foreground">{t("actifs")}</span>
             <span className="font-semibold">{templates.length}</span>
           </div>
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Obligatoires</span>
+            <span className="text-muted-foreground">{t("obligatoires")}</span>
             <span className="font-semibold">{requiredCount}</span>
           </div>
         </div>
         {topMissing.length > 0 && (
           <div className="pt-2 border-t space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Top a relancer
+              {t("top_relancer")}
             </p>
             {topMissing.map(({ template, missing }) => (
               <div key={template.id} className="flex items-center justify-between text-xs gap-2">
@@ -1242,7 +1244,7 @@ function OverviewTab({
                       : "text-emerald-700 border-emerald-300 bg-emerald-50"
                   }`}
                 >
-                  {missing} manquant{missing > 1 ? "s" : ""}
+                  {t("n_manquants", { count: missing })}
                 </Badge>
               </div>
             ))}
@@ -1250,7 +1252,7 @@ function OverviewTab({
         )}
         <Button size="sm" className="w-full h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={onNewTemplate}>
           <Plus className="h-3 w-3 mr-1" />
-          Nouveau template
+          {t("nouveau_template")}
         </Button>
       </Card>
 
@@ -1259,23 +1261,20 @@ function OverviewTab({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <ShieldCheck className="h-4 w-4 text-[#0F2D52]" />
-            Conformite
+            {t("conformite_2")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoConformity}>
-            Tableau detaille
+            {t("tableau_detaille")}
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          Suivi des signatures obligatoires par employe. Verifiez le tableau detaille pour
-          envoyer des relances ciblees.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("documents_admin_view_suivi_des_signatures_obligatoires_par_employe_verifiez")}</p>
         <div className="rounded-md border bg-muted/20 p-3 space-y-2">
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Employes actifs</span>
+            <span className="text-muted-foreground">{t("employes_actifs")}</span>
             <span className="font-semibold">{employees.length}</span>
           </div>
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Demandes en attente</span>
+            <span className="text-muted-foreground">{t("demandes_attente")}</span>
             <span className="font-semibold text-amber-700">{pendingRequests.length}</span>
           </div>
         </div>
@@ -1286,7 +1285,7 @@ function OverviewTab({
           onClick={onGoConformity}
         >
           <ShieldCheck className="h-3 w-3 mr-1" />
-          Ouvrir le tableau de conformite
+          {t("ouvrir_tableau_conformite")}
         </Button>
       </Card>
 
@@ -1295,39 +1294,39 @@ function OverviewTab({
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#0F2D52]" />
-            Actions rapides
+            {t("actions_rapides")}
           </h3>
         </div>
         <Button size="sm" variant="outline" className="w-full h-8 text-xs" onClick={onNewRequest}>
           <Send className="h-3 w-3 mr-1" />
-          Nouvelle demande de signature
+          {t("nouvelle_demande_signature")}
         </Button>
         {recentRequests.length > 0 && (
           <div className="pt-2 border-t space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Demandes recentes
+              {t("demandes_recentes")}
             </p>
             {recentRequests.map((r) => (
               <div key={r.id} className="flex items-center justify-between text-xs gap-2">
                 <span className="truncate flex-1">{r.template.title}</span>
                 <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
                   {r.targetAll
-                    ? "Tous"
+                    ? t("tous")
                     : r.targetTeamId
-                      ? "Equipe"
+                      ? t("equipe")
                       : r.targetAdmin?.fullName?.split(" ")[0] ?? "Individuel"}
                 </Badge>
               </div>
             ))}
             <Button size="sm" variant="ghost" className="w-full h-7 text-xs mt-1" onClick={onGoRequests}>
-              Voir toutes les demandes
+              {t("voir_toutes_demandes")}
             </Button>
           </div>
         )}
         {upcomingExpirations.length > 0 && (
           <div className="pt-2 border-t space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Expirations prochaines
+              {t("expirations_prochaines")}
             </p>
             {upcomingExpirations.map((d) => {
               const days = daysUntil(d.expiresAt);
@@ -1345,13 +1344,13 @@ function OverviewTab({
                         : "text-amber-700 border-amber-300 bg-amber-50"
                     }`}
                   >
-                    {expired ? "Expire" : `J-${days}`}
+                    {expired ? t("expire") : `J-${days}`}
                   </Badge>
                 </div>
               );
             })}
             <Button size="sm" variant="ghost" className="w-full h-7 text-xs mt-1" onClick={onGoEmployees}>
-              Ouvrir les dossiers
+              {t("ouvrir_dossiers")}
             </Button>
           </div>
         )}
@@ -1382,6 +1381,7 @@ function TemplatesTab({
   onPreview: (t: Template) => void;
   onRequest: (t: Template) => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<"all" | "required" | "optional">("all");
   // Mission 1 : par defaut on MASQUE les templates inclus dans un cahier.
@@ -1423,7 +1423,7 @@ function TemplatesTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un template..."
+          placeholder={t("rechercher_template")}
           className="h-9 text-sm flex-1"
         />
         <Select value={filter} onValueChange={(v) => setFilter(v as typeof filter)}>
@@ -1431,9 +1431,9 @@ function TemplatesTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les templates</SelectItem>
-            <SelectItem value="required">Obligatoires</SelectItem>
-            <SelectItem value="optional">Optionnels</SelectItem>
+            <SelectItem value="all">{t("tous_templates")}</SelectItem>
+            <SelectItem value="required">{t("obligatoires")}</SelectItem>
+            <SelectItem value="optional">{t("optionnels")}</SelectItem>
           </SelectContent>
         </Select>
         {hiddenInHandbooksCount > 0 && (
@@ -1455,7 +1455,7 @@ function TemplatesTab({
           className="h-9 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Nouveau
+          {t("nouveau")}
         </Button>
       </div>
 
@@ -1474,7 +1474,7 @@ function TemplatesTab({
                 href="/admin/employes/documents/cahiers"
                 className="text-[#0F2D52] underline font-semibold"
               >
-                Cahiers
+                {t("cahiers")}
               </Link>
               .
             </span>
@@ -1487,47 +1487,39 @@ function TemplatesTab({
       <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2.5 flex items-start gap-2.5">
         <BellRing className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
         <div className="text-[12px] leading-snug text-amber-900">
-          <p className="font-semibold">
-            Pour qu&apos;un modele soit visible aux employes, creez une demande
-            de signature ciblee.
-          </p>
-          <p className="text-amber-800/90 mt-0.5">
-            Cliquez sur <span className="font-semibold">« Demander la signature »</span> sur
-            une carte pour cibler un employe, une equipe ou tout le monde. Les
-            templates sans demande active restent dans la bibliotheque comme
-            modeles disponibles.
-          </p>
+          <p className="font-semibold">{t("documents_admin_view_pour_qu_un_modele_soit_visible_aux")}</p>
+          <p className="text-amber-800/90 mt-0.5">{t("documents_admin_view_cliquez_sur")}<span className="font-semibold">{t("demander_signature")}</span>{t("documents_admin_view_sur_une_carte_pour_cibler_un_employe")}</p>
         </div>
       </div>
 
       {filtered.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucun template trouve.
+          {t("aucun_template_trouve")}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map((t) => {
-            const inHandbook = handbookByTemplateId.get(t.id);
-            // Mission 5 : label adaptatif selon acknowledgmentMode.
-            const ackMode = t.acknowledgmentMode ?? "reading_only";
+          {filtered.map((tpl) => {
+            const inHandbook = handbookByTemplateId.get(tpl.id);
+            // Label follows acknowledgmentMode.
+            const ackMode = tpl.acknowledgmentMode ?? "reading_only";
             const primaryAction = ackMode === "signature"
-              ? { label: "Demander la signature", icon: FileSignature, onClick: () => onRequest(t) }
-              : { label: "Envoyer pour lecture", icon: BookOpen, onClick: () => onRequest(t) };
+              ? { label: t("demander_signature_2"), icon: FileSignature, onClick: () => onRequest(tpl) }
+              : { label: t("envoyer_lecture"), icon: BookOpen, onClick: () => onRequest(tpl) };
             return (
-              <div key={t.id} className="relative">
+              <div key={tpl.id} className="relative">
                 <DocumentCard
                   icon={FileSignature}
-                  title={t.title}
-                  subtitle={`v${t.version} - ${CATEGORY_LABELS[t.category] ?? t.category} - ${t._count.signatures} signature${t._count.signatures !== 1 ? "s" : ""}`}
+                  title={tpl.title}
+                  subtitle={`v${tpl.version} - ${CATEGORY_KEYS[tpl.category] ?? tpl.category} - ${tpl._count.signatures} signature${tpl._count.signatures !== 1 ? "s" : ""}`}
                   iconTone="neutral"
                   status={
-                    t.isRequired
-                      ? { label: "Obligatoire", tone: "danger" }
-                      : { label: "Optionnel", tone: "neutral" }
+                    tpl.isRequired
+                      ? { label: t("obligatoire"), tone: "danger" }
+                      : { label: t("optionnel"), tone: "neutral" }
                   }
-                  onPreview={() => onPreview(t)}
-                  onEdit={() => onEdit(t)}
-                  onDelete={() => onDelete(t)}
+                  onPreview={() => onPreview(tpl)}
+                  onEdit={() => onEdit(tpl)}
+                  onDelete={() => onDelete(tpl)}
                   primaryAction={primaryAction}
                 />
                 {inHandbook && (
@@ -1570,6 +1562,7 @@ function RequestsTab({
   onPreviewPdf: (r: PendingRequest) => void;
   onNewRequest: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [busyId, setBusyId] = useState<number | null>(null);
   // Mission 6 : toggle visibilite "En cours / Completees / Tout" (defaut "En cours").
@@ -1600,7 +1593,7 @@ function RequestsTab({
               [
                 { id: "pending", label: `En cours (${requests.length})` },
                 { id: "completed", label: `Completees (${completedRequests.length})` },
-                { id: "all", label: "Tout" },
+                { id: "all", label: t("tout") },
               ] as const
             ).map((s) => {
               const active = viewFilter === s.id;
@@ -1623,7 +1616,7 @@ function RequestsTab({
         </div>
         <Button size="sm" onClick={onNewRequest} className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
           <Send className="h-3.5 w-3.5 mr-1.5" />
-          Nouvelle demande
+          {t("nouvelle_demande")}
         </Button>
       </div>
 
@@ -1632,15 +1625,15 @@ function RequestsTab({
           <ClipboardList className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
             {viewFilter === "pending"
-              ? "Aucune demande en attente."
+              ? t("aucune_demande_attente")
               : viewFilter === "completed"
-                ? "Aucune demande completee dans l'historique recent."
-                : "Aucune demande a afficher."}
+                ? t("aucune_demande_completee_historique_recent")
+                : t("aucune_demande_afficher")}
           </p>
           {viewFilter === "pending" && (
             <Button size="sm" onClick={onNewRequest} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
               <Send className="h-3.5 w-3.5 mr-1.5" />
-              Nouvelle demande
+              {t("nouvelle_demande")}
             </Button>
           )}
         </Card>
@@ -1651,19 +1644,19 @@ function RequestsTab({
             <thead className="bg-[#0F2D52] text-white">
               <tr>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Document
+                  {t("document")}
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Cible
+                  {t("cible")}
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
                   {tc("status")}
                 </th>
                 <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Demandee par
+                  {t("demandee")}
                 </th>
                 <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Echeance
+                  {t("echeance")}
                 </th>
                 <th className="px-3 py-2 text-right font-semibold text-[10px] uppercase tracking-wider">
                   {tc("actions")}
@@ -1677,7 +1670,7 @@ function RequestsTab({
                 const overdue = days !== null && days < 0;
                 const isCompleted = r.status === "completed";
                 const isCancelled = r.status === "cancelled";
-                let targetLabel = "Tout le monde";
+                let targetLabel = t("tout_monde");
                 if (r.targetAdmin) {
                   targetLabel = r.targetAdmin.fullName ?? r.targetAdmin.email;
                 } else if (r.targetTeamId) {
@@ -1694,7 +1687,7 @@ function RequestsTab({
                       <p className="font-medium text-sm truncate">{r.template.title}</p>
                       <p className="text-[11px] text-muted-foreground">
                         v{r.template.version}
-                        {r.template.isRequired && " - obligatoire"}
+                        {r.template.isRequired && t("obligatoire")}
                       </p>
                       {r.reason && (
                         <p className="text-[11px] italic text-muted-foreground mt-0.5 line-clamp-1">
@@ -1721,7 +1714,7 @@ function RequestsTab({
                           className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200"
                         >
                           <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                          Signee
+                          {t("signee")}
                         </Badge>
                       ) : isCancelled ? (
                         <Badge
@@ -1729,7 +1722,7 @@ function RequestsTab({
                           className="text-[10px] bg-muted text-muted-foreground border-input"
                         >
                           <XCircle className="h-2.5 w-2.5 mr-1" />
-                          Annulee
+                          {t("annulee")}
                         </Badge>
                       ) : (
                         <Badge
@@ -1737,7 +1730,7 @@ function RequestsTab({
                           className="text-[10px] bg-amber-50 text-amber-700 border-amber-200"
                         >
                           <ClipboardList className="h-2.5 w-2.5 mr-1" />
-                          En attente
+                          {t("attente_2")}
                         </Badge>
                       )}
                     </td>
@@ -1772,20 +1765,20 @@ function RequestsTab({
                       )}
                     </td>
                     <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <ActionTooltip label="Apercu PDF">
+                      <ActionTooltip label={t("apercu_pdf")}>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8"
                           onClick={() => onPreviewPdf(r)}
-                          aria-label="Apercu PDF"
+                          aria-label={t("apercu_pdf")}
                         >
                           <Eye className="h-4 w-4" />
                         </Button>
                       </ActionTooltip>
                       {!isCompleted && !isCancelled && (
                         <>
-                          <ActionTooltip label="Envoyer un rappel">
+                          <ActionTooltip label={t("envoyer_rappel")}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1799,7 +1792,7 @@ function RequestsTab({
                                   setBusyId(null);
                                 }
                               }}
-                              aria-label="Relancer"
+                              aria-label={t("relancer")}
                             >
                               {busyId === r.id ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -1808,7 +1801,7 @@ function RequestsTab({
                               )}
                             </Button>
                           </ActionTooltip>
-                          <ActionTooltip label="Annuler la demande">
+                          <ActionTooltip label={t("annuler_demande_2")}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -1846,6 +1839,7 @@ function EmployeesTab({
   expiringDocs: ExpiringDoc[];
   onSelect: (e: Employee) => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const [search, setSearch] = useState("");
   const expiringByEmployee = useMemo(() => {
     const map = new Map<number, ExpiringDoc[]>();
@@ -1870,7 +1864,7 @@ function EmployeesTab({
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher un employe..."
+        placeholder={t("rechercher_employe")}
         className="h-9 text-sm"
       />
       <div className="rounded-lg border bg-card overflow-hidden">
@@ -1879,16 +1873,16 @@ function EmployeesTab({
             <thead className="bg-[#0F2D52] text-white">
               <tr>
                 <th className="px-3 py-2 text-left text-[10px] uppercase tracking-wider font-semibold">
-                  Employe
+                  {t("employe")}
                 </th>
                 <th className="hidden sm:table-cell px-3 py-2 text-left text-[10px] uppercase tracking-wider font-semibold">
-                  Equipe
+                  {t("equipe")}
                 </th>
                 <th className="px-3 py-2 text-center text-[10px] uppercase tracking-wider font-semibold">
-                  Alertes
+                  {t("alertes")}
                 </th>
                 <th className="px-3 py-2 text-right text-[10px] uppercase tracking-wider font-semibold">
-                  Action
+                  {t("action")}
                 </th>
               </tr>
             </thead>
@@ -1909,7 +1903,7 @@ function EmployeesTab({
                       <p className="font-medium text-sm truncate">{e.fullName ?? e.email}</p>
                       <p className="text-[11px] text-muted-foreground truncate">{e.email}</p>
                       <p className="sm:hidden text-[10px] text-muted-foreground truncate mt-0.5">
-                        {e.team?.name ?? "Sans equipe"}
+                        {e.team?.name ?? t("sans_equipe")}
                       </p>
                     </td>
                     <td className="hidden sm:table-cell px-3 py-2 text-xs">{e.team?.name ?? "-"}</td>
@@ -1925,7 +1919,7 @@ function EmployeesTab({
                         >
                           <AlertTriangle className="h-2.5 w-2.5 mr-1" />
                           {exp.length} doc{exp.length > 1 ? "s" : ""}{" "}
-                          {expired ? "expire" : "a renouveler"}
+                          {expired ? "expire" : t("renouveler")}
                         </Badge>
                       ) : (
                         <span className="text-[11px] text-muted-foreground">-</span>
@@ -1942,7 +1936,7 @@ function EmployeesTab({
                         }}
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
-                        Dossier
+                        {t("dossier")}
                       </Button>
                     </td>
                   </tr>
@@ -1951,7 +1945,7 @@ function EmployeesTab({
               {filtered.length === 0 && (
                 <tr>
                   <td colSpan={4} className="px-3 py-10 text-center text-sm text-muted-foreground">
-                    Aucun employe trouve.
+                    {t("aucun_employe_trouve")}
                   </td>
                 </tr>
               )}
@@ -1966,22 +1960,22 @@ function EmployeesTab({
 // ================================================================
 //                       TAB : UPLOAD REQUESTS
 // ================================================================
-const UPLOAD_STATUS_LABEL: Record<string, { label: string; tone: string }> = {
-  pending: { label: "En attente d'upload", tone: "bg-amber-50 text-amber-700 border-amber-200" },
-  uploaded: { label: "À valider", tone: "bg-blue-50 text-blue-700 border-blue-200" },
-  approved: { label: "Approuvé", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-  rejected: { label: "Rejeté", tone: "bg-red-50 text-red-700 border-red-200" },
-  cancelled: { label: "Annulé", tone: "bg-muted text-muted-foreground border-input" },
+const UPLOAD_STATUS_LABEL: Record<string, { labelKey: string; tone: string }> = {
+  pending: { labelKey: "attente_upload", tone: "bg-amber-50 text-amber-700 border-amber-200" },
+  uploaded: { labelKey: "valider", tone: "bg-blue-50 text-blue-700 border-blue-200" },
+  approved: { labelKey: "approuve", tone: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+  rejected: { labelKey: "rejete", tone: "bg-red-50 text-red-700 border-red-200" },
+  cancelled: { labelKey: "annule", tone: "bg-muted text-muted-foreground border-input" },
 };
 
-const UPLOAD_CATEGORY_LABEL: Record<string, string> = {
-  licence: "Licence / Permis",
-  diploma: "Diplôme",
-  certification: "Certification",
-  id_card: "Carte d'identité",
-  passport: "Passeport",
-  medical: "Document médical",
-  other: "Autre",
+const UPLOAD_CATEGORY_KEY: Record<string, string> = {
+  licence: "licence_permis",
+  diploma: "diplome",
+  certification: "certification",
+  id_card: "carte_d_identite",
+  passport: "passeport",
+  medical: "document_medical",
+  other: "autre",
 };
 
 function UploadRequestsTab({
@@ -1997,6 +1991,7 @@ function UploadRequestsTab({
   onCancel: (r: UploadRequestAdmin) => void;
   onRemind: (r: UploadRequestAdmin) => Promise<void> | void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
@@ -2026,14 +2021,14 @@ function UploadRequestsTab({
     return (
       <Card className="p-10 text-center space-y-3">
         <Inbox className="h-10 w-10 mx-auto text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Aucune demande de téléversement.</p>
+        <p className="text-sm text-muted-foreground">{t("aucune_demande_televersement")}</p>
         <Button
           size="sm"
           onClick={onNewRequest}
           className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
         >
           <Upload className="h-3.5 w-3.5 mr-1.5" />
-          Demander un document
+          {t("demander_document")}
         </Button>
       </Card>
     );
@@ -2045,7 +2040,7 @@ function UploadRequestsTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un employé ou un titre..."
+          placeholder={t("rechercher_employe_titre")}
           className="h-9 text-sm flex-1"
         />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -2053,13 +2048,13 @@ function UploadRequestsTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="open">Ouvertes (pending + à valider)</SelectItem>
-            <SelectItem value="pending">En attente d'upload</SelectItem>
-            <SelectItem value="uploaded">À valider</SelectItem>
-            <SelectItem value="approved">Approuvées</SelectItem>
-            <SelectItem value="rejected">Rejetées</SelectItem>
-            <SelectItem value="cancelled">Annulées</SelectItem>
-            <SelectItem value="all">Toutes</SelectItem>
+            <SelectItem value="open">{t("ouvertes_pending_valider")}</SelectItem>
+            <SelectItem value="pending">{t("en_attente_upload")}</SelectItem>
+            <SelectItem value="uploaded">{t("valider")}</SelectItem>
+            <SelectItem value="approved">{t("approuvees")}</SelectItem>
+            <SelectItem value="rejected">{t("rejetees")}</SelectItem>
+            <SelectItem value="cancelled">{t("annulees")}</SelectItem>
+            <SelectItem value="all">{t("toutes")}</SelectItem>
           </SelectContent>
         </Select>
         <Button
@@ -2068,13 +2063,13 @@ function UploadRequestsTab({
           className="h-9 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
         >
           <Upload className="h-3.5 w-3.5 mr-1.5" />
-          Demander un document
+          {t("demander_document")}
         </Button>
       </div>
 
       {filtered.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucune demande ne correspond aux filtres.
+          {t("aucune_demande_ne_correspond_filtres")}
         </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
@@ -2110,7 +2105,7 @@ function UploadRequestsTab({
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold truncate">{r.title}</p>
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {UPLOAD_CATEGORY_LABEL[r.category] ?? r.category} ·{" "}
+                      {UPLOAD_CATEGORY_KEY[r.category] ?? r.category} ·{" "}
                       Demandé par{" "}
                       {r.requestedBy.fullName ?? r.requestedBy.email}
                     </p>
@@ -2119,7 +2114,7 @@ function UploadRequestsTab({
                     variant="outline"
                     className={`text-[10px] ${meta.tone} shrink-0`}
                   >
-                    {meta.label}
+                    {t(meta.labelKey)}
                   </Badge>
                 </div>
 
@@ -2148,7 +2143,7 @@ function UploadRequestsTab({
                           : `Avant le ${formatDate(r.dueDate)}`}
                       </span>
                     ) : (
-                      "Sans échéance"
+                      t("sans_echeance")
                     )}
                   </span>
                   {r.status === "uploaded" && r.uploadedAt && (
@@ -2166,12 +2161,12 @@ function UploadRequestsTab({
                       className="h-7 text-[11px] bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                     >
                       <Eye className="h-3 w-3 mr-1" />
-                      Examiner
+                      {t("examiner")}
                     </Button>
                   )}
                   {r.status === "pending" && (
                     <>
-                      <ActionTooltip label="Envoyer un rappel">
+                      <ActionTooltip label={t("envoyer_rappel")}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -2185,7 +2180,7 @@ function UploadRequestsTab({
                               setBusyId(null);
                             }
                           }}
-                          aria-label="Envoyer un rappel"
+                          aria-label={t("envoyer_rappel")}
                         >
                           {busyId === r.id ? (
                             <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -2194,13 +2189,13 @@ function UploadRequestsTab({
                           )}
                         </Button>
                       </ActionTooltip>
-                      <ActionTooltip label="Annuler la demande">
+                      <ActionTooltip label={t("annuler_demande_2")}>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-7 w-7 hover:text-destructive"
                           onClick={() => onCancel(r)}
-                          aria-label="Annuler la demande"
+                          aria-label={t("annuler_demande_2")}
                         >
                           <XCircle className="h-3.5 w-3.5" />
                         </Button>
@@ -2210,7 +2205,7 @@ function UploadRequestsTab({
                   {r.status === "approved" && (
                     <span className="inline-flex items-center gap-1 text-[11px] text-emerald-700">
                       <CheckCircle2 className="h-3 w-3" />
-                      Document ajouté au dossier
+                      {t("document_ajoute_dossier")}
                     </span>
                   )}
                 </div>
@@ -2235,6 +2230,7 @@ function EmployeePersonalDocsDialog({
   isSuper: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [docs, setDocs] = useState<PersonalDocCardData[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -2279,7 +2275,7 @@ function EmployeePersonalDocsDialog({
       }));
       setDocs(mapped);
     } catch (err) {
-      toast.error("Impossible de charger les documents");
+      toast.error(t("impossible_charger_documents"));
       setDocs([]);
       // eslint-disable-next-line no-console
       console.error(err);
@@ -2295,7 +2291,7 @@ function EmployeePersonalDocsDialog({
   const handleVerify = async (docId: number, notes: string) => {
     const r = await verifyPersonalDocAction({ id: docId, verified: true, notes: notes || null });
     if (r.success) {
-      toast.success("Document verifie");
+      toast.success(t("document_verifie"));
       await fetchDocs();
       router.refresh();
     } else {
@@ -2316,7 +2312,7 @@ function EmployeePersonalDocsDialog({
               <DialogDescription className="text-white/80 text-xs">
                 {employee.email}
                 {employee.team ? ` - Equipe ${employee.team.name}` : ""}
-                {!isSuper && " - Les documents prives ne sont pas affiches"}
+                {!isSuper && t("documents_prives_ne_pas_affiches")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -2325,7 +2321,7 @@ function EmployeePersonalDocsDialog({
             {loading ? (
               <div className="py-10 flex items-center justify-center text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                Chargement...
+                {t("chargement")}
               </div>
             ) : docs && docs.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -2349,7 +2345,7 @@ function EmployeePersonalDocsDialog({
               </div>
             ) : (
               <Card className="p-10 text-center text-sm text-muted-foreground">
-                Aucun document personnel pour cet employe.
+                {t("aucun_document_personnel_cet_employe")}
               </Card>
             )}
           </div>
@@ -2374,7 +2370,7 @@ function EmployeePersonalDocsDialog({
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer "${confirmDel?.title ?? ""}" ?`}
-        description="Cette action est irreversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
@@ -2382,7 +2378,7 @@ function EmployeePersonalDocsDialog({
           const { deletePersonalDocAction } = await import("@/app/actions/hr-personal-docs");
           const r = await deletePersonalDocAction({ id: confirmDel.id });
           if (r.success) {
-            toast.success("Document supprime");
+            toast.success(t("document_supprime"));
             await fetchDocs();
             router.refresh();
           } else {
@@ -2408,6 +2404,7 @@ function DocsTemplatePreviewAutoTrigger({
   employeeId: number;
   onDone: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const triggerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -2431,10 +2428,10 @@ function DocsTemplatePreviewAutoTrigger({
         signatureScope={template.signatureScope}
         templateKey={template.key}
         onError={(err) => {
-          toast.error(err.message || "Apercu indisponible");
+          toast.error(err.message || t("apercu_indisponible"));
           onDone();
         }}
-        trigger={<button ref={triggerRef} type="button">Apercu</button>}
+        trigger={<button ref={triggerRef} type="button">{t("apercu")}</button>}
       />
     </div>
   );
@@ -2458,6 +2455,7 @@ function SignaturesTab({
   templates: Template[];
   employees: Employee[];
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -2523,7 +2521,7 @@ function SignaturesTab({
       try {
         const r = await regenerateSignedPdfAction({ signatureId: sigId });
         if (r.success) {
-          toast.success("PDF régénéré");
+          toast.success(t("pdf_regenere"));
           setPdfPreview({
             url: r.data.finalPdfUrl,
             title,
@@ -2531,7 +2529,7 @@ function SignaturesTab({
           });
           router.refresh();
         } else {
-          toast.error(r.error || "Échec de la régénération");
+          toast.error(r.error || t("echec_regeneration"));
         }
       } finally {
         setRegenBusyId(null);
@@ -2545,7 +2543,7 @@ function SignaturesTab({
       <Card className="p-10 text-center space-y-3">
         <FileSignature className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
-          Aucune signature enregistrée pour le moment.
+          {t("aucune_signature_enregistree_moment")}
         </p>
       </Card>
     );
@@ -2557,7 +2555,7 @@ function SignaturesTab({
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Rechercher un employé, un document ou une version..."
+          placeholder={t("rechercher_employe_document_version")}
           className="h-9 text-sm flex-1"
         />
         <Select value={templateFilter} onValueChange={setTemplateFilter}>
@@ -2565,7 +2563,7 @@ function SignaturesTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les documents</SelectItem>
+            <SelectItem value="all">{t("tous_documents")}</SelectItem>
             {templates.map((t) => (
               <SelectItem key={t.id} value={String(t.id)}>
                 {t.title}
@@ -2581,16 +2579,16 @@ function SignaturesTab({
             <thead className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white">
               <tr>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Employé
+                  {t("employe_2")}
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Document
+                  {t("document")}
                 </th>
                 <th className="hidden lg:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Version
+                  {t("version")}
                 </th>
                 <th className="hidden md:table-cell px-3 py-2 text-left font-semibold text-[10px] uppercase tracking-wider">
-                  Date signature
+                  {t("date_signature")}
                 </th>
                 <th className="hidden sm:table-cell px-3 py-2 text-center font-semibold text-[10px] uppercase tracking-wider">
                   PDF
@@ -2607,7 +2605,7 @@ function SignaturesTab({
                     colSpan={6}
                     className="px-3 py-10 text-center text-sm text-muted-foreground"
                   >
-                    Aucune signature ne correspond aux filtres.
+                    {t("aucune_signature_ne_correspond_filtres")}
                   </td>
                 </tr>
               ) : (
@@ -2636,7 +2634,7 @@ function SignaturesTab({
                         <p className="text-sm truncate">{docTitle}</p>
                         {template?.category && (
                           <p className="text-[10px] text-muted-foreground">
-                            {CATEGORY_LABELS[template.category] ?? template.category}
+                            {CATEGORY_KEYS[template.category] ?? template.category}
                           </p>
                         )}
                         {/* Sur mobile : recap inline (version + date) */}
@@ -2660,7 +2658,7 @@ function SignaturesTab({
                             className="text-[10px] bg-emerald-50 text-emerald-700 border-emerald-200"
                           >
                             <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                            Disponible
+                            {t("disponible")}
                           </Badge>
                         ) : (
                           <Badge
@@ -2668,13 +2666,13 @@ function SignaturesTab({
                             className="text-[10px] bg-amber-50 text-amber-700 border-amber-200"
                           >
                             <AlertTriangle className="h-2.5 w-2.5 mr-1" />
-                            À régénérer
+                            {t("regenerer")}
                           </Badge>
                         )}
                       </td>
                       <td className="px-3 py-2 text-right whitespace-nowrap">
                         {hasPdf ? (
-                          <ActionTooltip label="Aperçu PDF signé">
+                          <ActionTooltip label={t("apercu_pdf_signe")}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2686,20 +2684,20 @@ function SignaturesTab({
                                   description: `${employeeLabel} · v${sig.version}`,
                                 })
                               }
-                              aria-label="Aperçu PDF"
+                              aria-label={t("apercu_pdf_2")}
                             >
                               <Eye className="h-4 w-4" />
                             </Button>
                           </ActionTooltip>
                         ) : (
-                          <ActionTooltip label="Régénérer le PDF">
+                          <ActionTooltip label={t("regenerer_pdf")}>
                             <Button
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8"
                               disabled={isBusy}
                               onClick={() => handleRegen(sig.id, docTitle, employeeLabel)}
-                              aria-label="Régénérer le PDF"
+                              aria-label={t("regenerer_pdf")}
                             >
                               {isBusy ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -2721,7 +2719,7 @@ function SignaturesTab({
                             && ack !== "reading_only";
                           if (!needsEmployer || sig.employerSignedAt) return null;
                           return (
-                            <ActionTooltip label="Contresigner (employeur)">
+                            <ActionTooltip label={t("contresigner_employeur")}>
                               <Button
                                 variant="ghost"
                                 size="icon"
@@ -2734,7 +2732,7 @@ function SignaturesTab({
                                     employeeLabel,
                                   });
                                 }}
-                                aria-label="Contresigner (employeur)"
+                                aria-label={t("contresigner_employeur")}
                               >
                                 <FileSignature className="h-4 w-4" />
                               </Button>
@@ -2742,7 +2740,7 @@ function SignaturesTab({
                           );
                         })()}
                         {sig.signatureData && (
-                          <ActionTooltip label="Voir la signature manuscrite">
+                          <ActionTooltip label={t("voir_signature_manuscrite")}>
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2755,7 +2753,7 @@ function SignaturesTab({
                                   signedAt: sig.signedAt,
                                 })
                               }
-                              aria-label="Voir la signature"
+                              aria-label={t("voir_signature")}
                             >
                               <FileSignature className="h-4 w-4" />
                             </Button>
@@ -2789,7 +2787,7 @@ function SignaturesTab({
             <DialogHeader>
               <DialogTitle className="text-white text-sm flex items-center gap-2">
                 <FileSignature className="h-4 w-4" />
-                Contresignature employeur
+                {t("contresignature_employeur")}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-[11px]">
                 {employerSignFor?.docTitle} · signé par {employerSignFor?.employeeLabel}
@@ -2797,10 +2795,7 @@ function SignaturesTab({
             </DialogHeader>
           </div>
           <div className="p-5 space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Votre signature sera ajoutée au bloc « Signature employeur » du
-              PDF final, qui sera régénéré avec les deux signatures.
-            </p>
+            <p className="text-xs text-muted-foreground">{t("documents_admin_view_votre_signature_sera_ajoutee_au_bloc_signature")}</p>
             <div className="rounded-md border bg-white p-3">
               <SignaturePad value={employerPadValue} onChange={setEmployerPadValue} />
             </div>
@@ -2827,11 +2822,11 @@ function SignaturesTab({
                     signatureDataUrl: employerPadValue,
                   });
                   if (r.success) {
-                    toast.success("Document contresigné");
+                    toast.success(t("document_contresigne"));
                     setEmployerSignFor(null);
                     router.refresh();
                   } else {
-                    toast.error(r.error || "Échec de la contresignature");
+                    toast.error(r.error || t("echec_contresignature"));
                   }
                 } finally {
                   setEmployerSignBusy(false);
@@ -2858,7 +2853,7 @@ function SignaturesTab({
             <DialogHeader>
               <DialogTitle className="text-white text-sm flex items-center gap-2">
                 <FileSignature className="h-4 w-4" />
-                Signature manuscrite
+                {t("signature_manuscrite")}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-[11px]">
                 {sigPreview?.employeeName} · {sigPreview?.title}

@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion des AdminApiToken.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -39,10 +40,11 @@ const createSchema = z.object({
 });
 
 export async function createApiTokenAction(input: z.infer<typeof createSchema>): Promise<Result<{ token: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const raw = crypto.randomBytes(32).toString("base64url");
   const token = `vnk_pat_${raw}`;

@@ -14,6 +14,7 @@
 // auteur (manager) ou aux admins RH (role admin).
 // ─────────────────────────────────────────────────────────
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -76,6 +77,7 @@ const updateSchema = z.object({
  * retourne au lieu d'en creer un nouveau (idempotent).
  */
 export async function createDocumentDraftAction(input: unknown) {
+  const t = await getTranslations("admin.action_errors");
   const me = await requireAdmin();
   const parsed = createSchema.parse(input);
 
@@ -93,7 +95,7 @@ export async function createDocumentDraftAction(input: unknown) {
   if (!tpl) throw new Error("Modele introuvable");
   if (!target) throw new Error("Employe introuvable");
   if (!(await canManageEmployeeDocs(me.id, parsed.targetAdminId))) {
-    throw new Error("Non autorise pour cet employe (RH ou manager direct requis)");
+    throw new Error(t("non_autorise_rh_ou_manager_direct"));
   }
 
   // Idempotence : reutilise un brouillon "draft" existant si meme paire
@@ -140,6 +142,7 @@ export async function createDocumentDraftAction(input: unknown) {
  * - Refuse si status != "draft" (un brouillon "sent" est immuable).
  */
 export async function updateDocumentDraftAction(input: unknown) {
+  const t = await getTranslations("admin.action_errors");
   const me = await requireAdmin();
   const parsed = updateSchema.parse(input);
 
@@ -154,7 +157,7 @@ export async function updateDocumentDraftAction(input: unknown) {
     throw new Error("Non autorise a modifier ce brouillon");
   }
   if (draft.status !== "draft" && draft.status !== "ready") {
-    throw new Error("Ce brouillon est verrouille (deja envoye)");
+    throw new Error(t("brouillon_verrouille_deja_envoye"));
   }
 
   await prisma.documentDraft.update({
@@ -205,6 +208,7 @@ export async function sendDocumentDraftForSignatureAction(
   id: number,
   opts?: { dueDate?: string | null; reason?: string | null },
 ) {
+  const t = await getTranslations("admin.action_errors");
   const me = await requireAdmin();
   const draft = await prisma.documentDraft.findUnique({
     where: { id },
@@ -217,7 +221,7 @@ export async function sendDocumentDraftForSignatureAction(
   if (draft.authorId !== me.id) throw new Error("Non autorise");
   if (draft.status === "sent") throw new Error("Deja envoye");
   if (!(await canManageEmployeeDocs(me.id, draft.targetAdminId))) {
-    throw new Error("Non autorise pour cet employe (RH ou manager direct requis)");
+    throw new Error(t("non_autorise_rh_ou_manager_direct"));
   }
 
   const dueDate = opts?.dueDate ? new Date(opts.dueDate) : null;

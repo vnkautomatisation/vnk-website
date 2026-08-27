@@ -46,16 +46,16 @@ export type IncidentRow = {
 
 type Tab = "banner" | "windows" | "incidents";
 
-const SEVERITY_BADGE: Record<string, { label: string; color: string }> = {
-  minor: { label: "Mineur", color: "bg-blue-500" },
-  major: { label: "Majeur", color: "bg-amber-500" },
-  critical: { label: "Critique", color: "bg-red-600" },
+const SEVERITY_BADGE: Record<string, { labelKey: string; color: string }> = {
+  minor: { labelKey: "mineur", color: "bg-blue-500" },
+  major: { labelKey: "majeur", color: "bg-amber-500" },
+  critical: { labelKey: "critique", color: "bg-red-600" },
 };
-const STATUS_BADGE: Record<string, { label: string; color: string }> = {
-  investigating: { label: "Investigation", color: "bg-red-500" },
-  identified: { label: "Identifié", color: "bg-amber-500" },
-  monitoring: { label: "Surveillance", color: "bg-blue-500" },
-  resolved: { label: "Résolu", color: "bg-emerald-600" },
+const STATUS_BADGE: Record<string, { labelKey: string; color: string }> = {
+  investigating: { labelKey: "investigation", color: "bg-red-500" },
+  identified: { labelKey: "identifie", color: "bg-amber-500" },
+  monitoring: { labelKey: "surveillance", color: "bg-blue-500" },
+  resolved: { labelKey: "resolu", color: "bg-emerald-600" },
 };
 
 export function MaintenanceView({
@@ -65,12 +65,13 @@ export function MaintenanceView({
   incidents: IncidentRow[];
   banner: Record<string, string>;
 }) {
+  const t = useTranslations("admin.maintenance");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("banner");
   const [pending, startTransition] = useTransition();
 
-  // Banner state
+
   const [bannerEnabled, setBannerEnabled] = useState(banner.banner_enabled === "true");
   const [bannerMessage, setBannerMessage] = useState(banner.banner_message ?? "");
   const [bannerVariant, setBannerVariant] = useState<"info" | "warning" | "success" | "error">((banner.banner_variant as "info" | "warning" | "success" | "error") ?? "info");
@@ -94,8 +95,8 @@ export function MaintenanceView({
         ctaUrl: bannerCtaUrl || null,
         audience: bannerAudience,
       });
-      if (r.success) { toast.success("Bandeau enregistré"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("bandeau_enregistre")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
     });
   };
 
@@ -104,12 +105,12 @@ export function MaintenanceView({
     const r = confirmDelete.kind === "maintenance"
       ? await deleteMaintenanceAction({ id: confirmDelete.id })
       : await deleteIncidentAction({ id: confirmDelete.id });
-    if (r.success) { toast.success("Supprimé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("supprime")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDelete(null);
   };
 
-  // Variantes de couleur pour le preview bandeau
+
   const BANNER_VARIANTS: Record<string, { bg: string; border: string; text: string }> = {
     info: { bg: "bg-blue-50", border: "border-blue-200", text: "text-blue-900" },
     warning: { bg: "bg-amber-50", border: "border-amber-200", text: "text-amber-900" },
@@ -118,9 +119,9 @@ export function MaintenanceView({
   };
 
   const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; count: number }[] = [
-    { key: "banner", label: "Bandeau d'annonce", icon: Megaphone, count: bannerEnabled ? 1 : 0 },
-    { key: "windows", label: "Fenêtres de maintenance", icon: Calendar, count: windows.length },
-    { key: "incidents", label: "Incidents", icon: AlertTriangle, count: incidents.filter((i) => i.status !== "resolved").length },
+    { key: "banner", label: t("bandeau_annonce"), icon: Megaphone, count: bannerEnabled ? 1 : 0 },
+    { key: "windows", label: t("fenetres_maintenance"), icon: Calendar, count: windows.length },
+    { key: "incidents", label: t("incidents"), icon: AlertTriangle, count: incidents.filter((i) => i.status !== "resolved").length },
   ];
 
   return (
@@ -131,9 +132,9 @@ export function MaintenanceView({
           <Wrench className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Maintenance & Annonces</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("maintenance_annonces")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Bandeau global, fenêtres de maintenance planifiées et journal d&apos;incidents
+            {t("bandeau_global_fenetres_maintenance_planifiees")}
           </p>
         </div>
       </div>
@@ -160,74 +161,74 @@ export function MaintenanceView({
         </div>
       </div>
 
-      {/* BANNER */}
+
       {tab === "banner" && (
         <div className="space-y-4">
           <Card>
             <CardContent className="p-5 space-y-4">
               <div className="flex items-center justify-between rounded-lg border p-3 bg-muted/20">
                 <div>
-                  <p className="text-sm font-semibold">Bandeau activé</p>
-                  <p className="text-xs text-muted-foreground">Affiché en haut des pages selon l&apos;audience choisie</p>
+                  <p className="text-sm font-semibold">{t("bandeau_active")}</p>
+                  <p className="text-xs text-muted-foreground">{t("affiche_haut_pages_selon_apos")}</p>
                 </div>
                 <Switch checked={bannerEnabled} onCheckedChange={setBannerEnabled} />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Type</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("type")}</Label>
                   <Select value={bannerVariant} onValueChange={(v) => setBannerVariant(v as typeof bannerVariant)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="info">Info (bleu)</SelectItem>
-                      <SelectItem value="warning">Avertissement (jaune)</SelectItem>
-                      <SelectItem value="success">Succès (vert)</SelectItem>
-                      <SelectItem value="error">Erreur (rouge)</SelectItem>
+                      <SelectItem value="info">{t("info_bleu")}</SelectItem>
+                      <SelectItem value="warning">{t("avertissement_jaune")}</SelectItem>
+                      <SelectItem value="success">{t("succes_vert")}</SelectItem>
+                      <SelectItem value="error">{t("erreur_rouge")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Audience</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("audience")}</Label>
                   <Select value={bannerAudience} onValueChange={(v) => setBannerAudience(v as typeof bannerAudience)}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Toutes les pages</SelectItem>
-                      <SelectItem value="admin">Admin uniquement</SelectItem>
-                      <SelectItem value="portal">Portail client uniquement</SelectItem>
-                      <SelectItem value="public">Site public uniquement</SelectItem>
+                      <SelectItem value="all">{t("toutes_pages")}</SelectItem>
+                      <SelectItem value="admin">{t("admin_uniquement")}</SelectItem>
+                      <SelectItem value="portal">{t("portail_client_uniquement")}</SelectItem>
+                      <SelectItem value="public">{t("site_public_uniquement")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Message *</Label>
-                <Textarea value={bannerMessage} onChange={(e) => setBannerMessage(e.target.value)} rows={2} maxLength={500} placeholder="Ex : Maintenance prévue dimanche à 2h00..." className="mt-1 text-sm" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("message")}</Label>
+                <Textarea value={bannerMessage} onChange={(e) => setBannerMessage(e.target.value)} rows={2} maxLength={500} placeholder={t("ex_maintenance_prevue_dimanche_2h00")} className="mt-1 text-sm" />
                 <p className="text-[10px] text-muted-foreground mt-1">{bannerMessage.length}/500</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Texte du bouton (CTA)</Label>
-                  <Input value={bannerCtaLabel} onChange={(e) => setBannerCtaLabel(e.target.value)} placeholder="En savoir plus" className="mt-1" />
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("texte_bouton_cta")}</Label>
+                  <Input value={bannerCtaLabel} onChange={(e) => setBannerCtaLabel(e.target.value)} placeholder={t("savoir_plus")} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">URL du bouton</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("url_bouton")}</Label>
                   <Input value={bannerCtaUrl} onChange={(e) => setBannerCtaUrl(e.target.value)} placeholder="https://..." className="mt-1" />
                 </div>
               </div>
 
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
-                  <p className="text-sm font-medium">Permettre fermeture</p>
-                  <p className="text-xs text-muted-foreground">L&apos;utilisateur peut masquer le bandeau (X)</p>
+                  <p className="text-sm font-medium">{t("permettre_fermeture")}</p>
+                  <p className="text-xs text-muted-foreground">{t("apos_utilisateur_peut_masquer_bandeau")}</p>
                 </div>
                 <Switch checked={bannerDismissible} onCheckedChange={setBannerDismissible} />
               </div>
 
-              {/* Aperçu */}
+
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 block">Aperçu</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 block">{t("apercu")}</Label>
                 <div className={cn(
                   "rounded-md border-l-4 px-4 py-3 flex items-center gap-3",
                   BANNER_VARIANTS[bannerVariant].bg,
@@ -235,7 +236,7 @@ export function MaintenanceView({
                   BANNER_VARIANTS[bannerVariant].text
                 )}>
                   <Megaphone className="h-4 w-4 shrink-0" />
-                  <span className="text-sm flex-1">{bannerMessage || "Votre message apparaîtra ici"}</span>
+                  <span className="text-sm flex-1">{bannerMessage || t("votre_message_apparaitra_ici")}</span>
                   {bannerCtaLabel && (
                     <span className="text-xs font-medium underline">{bannerCtaLabel}</span>
                   )}
@@ -246,19 +247,18 @@ export function MaintenanceView({
           </Card>
 
           <Button onClick={saveBanner} disabled={pending} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            <Save className="h-4 w-4 mr-1.5" />{pending ? "..." : "Enregistrer le bandeau"}
+            <Save className="h-4 w-4 mr-1.5" />{pending ? "..." : t("enregistrer_bandeau")}
           </Button>
         </div>
       )}
 
-      {/* MAINTENANCE WINDOWS */}
+
       {tab === "windows" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{windows.filter((w) => w.isActive).length} actif{windows.filter((w) => w.isActive).length > 1 ? "ves" : "ve"} sur {windows.length}</p>
             <Button onClick={() => setMaintenanceDialog({ open: true, window: null })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Planifier une maintenance
-            </Button>
+              <Plus className="h-4 w-4 mr-1.5" />{t("maintenance_view_planifier_une_maintenance")}</Button>
           </div>
           <Card>
             <div className="divide-y">
@@ -276,9 +276,9 @@ export function MaintenanceView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm">{w.title}</p>
-                        {isOngoing && <Badge className="text-[10px] bg-red-600 hover:bg-red-600 animate-pulse">En cours</Badge>}
-                        {!w.isActive && <Badge variant="secondary" className="text-[10px]">Désactivée</Badge>}
-                        {isPast && <Badge variant="outline" className="text-[10px]">Passée</Badge>}
+                        {isOngoing && <Badge className="text-[10px] bg-red-600 hover:bg-red-600 animate-pulse">{t("cours")}</Badge>}
+                        {!w.isActive && <Badge variant="secondary" className="text-[10px]">{t("desactivee")}</Badge>}
+                        {isPast && <Badge variant="outline" className="text-[10px]">{t("passee")}</Badge>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {new Date(w.startsAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
@@ -286,9 +286,9 @@ export function MaintenanceView({
                         {new Date(w.endsAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                       <div className="flex gap-1 mt-1 flex-wrap">
-                        {w.affectsPortal && <Badge variant="outline" className="text-[9px]">Portail</Badge>}
-                        {w.affectsAdmin && <Badge variant="outline" className="text-[9px]">Admin</Badge>}
-                        {w.affectsPublic && <Badge variant="outline" className="text-[9px]">Site public</Badge>}
+                        {w.affectsPortal && <Badge variant="outline" className="text-[9px]">{t("portail")}</Badge>}
+                        {w.affectsAdmin && <Badge variant="outline" className="text-[9px]">{t("admin")}</Badge>}
+                        {w.affectsPublic && <Badge variant="outline" className="text-[9px]">{t("site_public")}</Badge>}
                       </div>
                       {w.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{w.description}</p>}
                     </div>
@@ -303,13 +303,13 @@ export function MaintenanceView({
                   </div>
                 );
               })}
-              {windows.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucune fenêtre planifiée.</p>}
+              {windows.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucune_fenetre_planifiee")}</p>}
             </div>
           </Card>
         </div>
       )}
 
-      {/* INCIDENTS */}
+
       {tab === "incidents" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -317,8 +317,7 @@ export function MaintenanceView({
               {incidents.filter((i) => i.status !== "resolved").length} actif{incidents.filter((i) => i.status !== "resolved").length > 1 ? "s" : ""}
             </p>
             <Button onClick={() => setIncidentDialog({ open: true, incident: null })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Signaler un incident
-            </Button>
+              <Plus className="h-4 w-4 mr-1.5" />{t("maintenance_view_signaler_un_incident")}</Button>
           </div>
           <Card>
             <div className="divide-y">
@@ -333,9 +332,9 @@ export function MaintenanceView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm">{i.title}</p>
-                        <Badge className={cn("text-[10px] text-white", sev?.color)}>{sev?.label}</Badge>
-                        <Badge className={cn("text-[10px] text-white", stat?.color)}>{stat?.label}</Badge>
-                        {!i.isPublic && <Badge variant="outline" className="text-[10px]">Privé</Badge>}
+                        <Badge className={cn("text-[10px] text-white", sev?.color)}>{sev ? t(sev.labelKey) : null}</Badge>
+                        <Badge className={cn("text-[10px] text-white", stat?.color)}>{stat ? t(stat.labelKey) : null}</Badge>
+                        {!i.isPublic && <Badge variant="outline" className="text-[10px]">{t("prive")}</Badge>}
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         Début : {new Date(i.startedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
@@ -354,7 +353,7 @@ export function MaintenanceView({
                   </div>
                 );
               })}
-              {incidents.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucun incident enregistré.</p>}
+              {incidents.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucun_incident_enregistre")}</p>}
             </div>
           </Card>
         </div>
@@ -376,7 +375,7 @@ export function MaintenanceView({
         open={!!confirmDelete}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}

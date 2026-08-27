@@ -1,6 +1,7 @@
 "use client";
 // Affiche l'attachement d'un message selon son type (image / audio / pdf / file)
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { FileText, Download, Paperclip } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
@@ -28,6 +29,7 @@ export function MessageAttachmentDisplay({
   attachment: MessageAttachment;
   isAdmin: boolean;
 }) {
+  const t = useTranslations("admin.messages");
   const [imgOpen, setImgOpen] = useState(false);
   const [pdfOpen, setPdfOpen] = useState(false);
 
@@ -56,8 +58,7 @@ export function MessageAttachmentDisplay({
                 download={attachment.name}
                 className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-[#0F2D52] text-white hover:bg-[#1a3a66] transition-colors"
               >
-                <Download className="h-3 w-3" />Télécharger
-              </a>
+                <Download className="h-3 w-3" />{t("message_attachment_display_telecharger")}</a>
             </div>
           </DialogContent>
         </Dialog>

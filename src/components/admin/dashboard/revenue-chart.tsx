@@ -9,6 +9,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslations } from "next-intl";
 import { formatCurrency } from "@/lib/utils";
 
 type MonthData = {
@@ -17,13 +18,14 @@ type MonthData = {
 };
 
 export function RevenueChart({ data }: { data: MonthData[] }) {
+  const t = useTranslations("admin.ui");
   return (
     <Card>
       <CardContent className="p-5">
-        <h3 className="font-semibold text-sm mb-4">Revenus — 6 derniers mois</h3>
+        <h3 className="font-semibold text-sm mb-4">{t("revenus_6_derniers_mois")}</h3>
         {data.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-10">
-            Aucune donnee disponible
+            {t("aucune_donnee_disponible")}
           </p>
         ) : (
           <div className="h-[280px]">
@@ -58,7 +60,7 @@ export function RevenueChart({ data }: { data: MonthData[] }) {
                     fontSize: "12px",
                     boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                   }}
-                  formatter={(value) => [formatCurrency(Number(value ?? 0)), "Revenus"]}
+                  formatter={(value) => [formatCurrency(Number(value ?? 0)), t("revenus")]}
                   labelStyle={{ color: "#64748B", fontWeight: 600 }}
                 />
                 <Area

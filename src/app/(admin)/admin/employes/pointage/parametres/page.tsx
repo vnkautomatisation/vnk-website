@@ -1,6 +1,7 @@
 // Time clock settings: the 7 "hr_pointage" values, which had no UI at all
 // (DB-only edits). Gated on the "timeclock" HR domain.
 import { auth } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -10,7 +11,10 @@ import { TimeclockSettingsView } from "./timeclock-settings-view";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Paramètres du pointage" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("parametres_pointage") };
+}
 
 const PIN_PAGE_SIZE = 10;
 

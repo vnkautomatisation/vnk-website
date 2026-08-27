@@ -37,6 +37,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useGooglePlaces, parseAddressComponents } from "@/hooks/use-google-places";
 import { initials, formatCurrency, formatDate, cn } from "@/lib/utils";
+import { AddressFields, TechPicker, COUNTRY_FORMATS } from "@/components/admin/client-form-fields";
 import {
   Mail,
   Phone,
@@ -153,6 +154,7 @@ export function ClientDetailPanel({
   onOpenChange: (open: boolean) => void;
   initialTab?: "info" | "mandates" | "quotes" | "invoices" | "contracts";
 }) {
+  const t = useTranslations("admin.clients");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -162,7 +164,7 @@ export function ClientDetailPanel({
   const [busy, setBusy] = useState(false);
   const [activeTab, setActiveTab] = useState<string>(initialTab ?? "info");
 
-  // Synchronise l'onglet quand on (re)ouvre le panel sur un autre client/section
+
   useEffect(() => {
     if (open) setActiveTab(initialTab ?? "info");
   }, [open, clientId, initialTab]);
@@ -177,10 +179,10 @@ export function ClientDetailPanel({
     isAdminSigned?: boolean;
   } | null>(null);
 
-  // Signature dialog (canvas pro VNK, partage avec portail client)
+
   const [signingContract, setSigningContract] = useState<{ id: number; number: string; title: string; amount: number | null } | null>(null);
 
-  // Edition complete du client
+
   const [editOpen, setEditOpen] = useState(false);
   const [edFullName, setEdFullName] = useState("");
   const [edPhone, setEdPhone] = useState("");
@@ -211,7 +213,7 @@ export function ClientDetailPanel({
   };
 
   const handleSaveClient = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!client || !edFullName.trim()) return { success: false, error: "Nom requis" };
+    if (!client || !edFullName.trim()) return { success: false, error: t("nom_requis") };
     try {
       const res = await fetch(`/api/clients/${client.id}`, {
         method: "PATCH",
@@ -232,22 +234,22 @@ export function ClientDetailPanel({
       });
       if (res.ok) { await refresh(); return { success: true }; }
       const d = await res.json();
-      return { success: false, error: d.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: d.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
-  // Marquer payee avec methode
+
   const [paidDialog, setPaidDialog] = useState<{ id: number; num: string } | null>(null);
   const [paidMethod, setPaidMethod] = useState<string>("");
   const [paidNote, setPaidNote] = useState("");
 
   const PAYMENT_METHODS = [
-    { value: "interac", label: "Virement Interac" },
-    { value: "bank_transfer", label: "Virement bancaire" },
-    { value: "card", label: "Carte (Stripe)" },
-    { value: "check", label: "Chèque" },
-    { value: "cash", label: "Espèces" },
-    { value: "other", label: "Autre" },
+    { value: "interac", label: t("virement_interac") },
+    { value: "bank_transfer", label: t("virement_bancaire") },
+    { value: "card", label: t("carte_stripe") },
+    { value: "check", label: t("cheque") },
+    { value: "cash", label: t("especes") },
+    { value: "other", label: t("autre") },
   ];
 
   const submitMarkPaid = async () => {
@@ -265,7 +267,7 @@ export function ClientDetailPanel({
         setPaidMethod("");
         setPaidNote("");
         await refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
@@ -277,8 +279,8 @@ export function ClientDetailPanel({
     fetch(`/api/clients/${clientId}`, { cache: "no-store" })
       .then(async (r) => {
         if (r.status === 401) {
-          // Session admin expiree — redirect vers login
-          toast.error("Session expirée, reconnexion requise");
+
+          toast.error(t("session_expiree_reconnexion_requise"));
           router.push("/admin/login");
           throw new Error("UNAUTHORIZED");
         }
@@ -288,7 +290,7 @@ export function ClientDetailPanel({
       .then((data) => {
         if (cancelled) return;
         if (!data.client) {
-          toast.error("Client introuvable");
+          toast.error(t("client_introuvable"));
           return;
         }
         setClient(data.client);
@@ -296,7 +298,7 @@ export function ClientDetailPanel({
       .catch((err) => {
         if (cancelled || err.message === "UNAUTHORIZED") return;
         console.error("Erreur chargement client:", err);
-        toast.error("Erreur chargement client");
+        toast.error(t("erreur_chargement_client"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -315,22 +317,22 @@ export function ClientDetailPanel({
   const acceptQuote = async (id: number, num: string) => {
     setPdfPreview(null); // ferme PDF pour eviter conflit z-index avec confirm
     const ok = await confirm({
-      title: "Accepter ce devis ?",
+      title: t("accepter_devis"),
       description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
-      confirmLabel: "Accepter",
+      confirmLabel: t("accepter"),
       variant: "default",
     });
     if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/quotes/${id}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepté"); await refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("devis_accepte")); await refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
   const markPaid = (id: number, num: string) => {
-    // Ouvre le dialog de selection de methode (PDF doit etre ferme avant pour eviter z-index)
+
     setPdfPreview(null);
     setPaidMethod("");
     setPaidNote("");
@@ -349,13 +351,13 @@ export function ClientDetailPanel({
     const ok = await confirm({
       title: `Envoyer au client ?`,
       description: `Le ${meta.fr} ${entityNumber} sera ajouté dans la catégorie "${meta.category}" du portail client + notification + message chat avec lien.`,
-      confirmLabel: "Envoyer",
+      confirmLabel: t("envoyer"),
       variant: "default",
     });
     if (!ok) return;
     setBusy(true);
     try {
-      // 1) Creer une entree Document dans la bonne categorie pour le portail client
+
       const docRes = await fetch("/api/documents", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -370,10 +372,10 @@ export function ClientDetailPanel({
       });
       if (!docRes.ok) {
         const d = await docRes.json();
-        toast.error(d.error || "Erreur création document");
+        toast.error(d.error || t("erreur_creation_document"));
         return;
       }
-      // 2) Message chat pour notifier
+
       await fetch("/api/messages", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -408,19 +410,19 @@ export function ClientDetailPanel({
       <SheetContent
         className="w-full sm:max-w-xl p-0 overflow-hidden flex flex-col [&>button]:text-white [&>button]:opacity-100 [&>button]:hover:bg-white/15 [&>button]:rounded-md [&>button]:p-1.5 [&>button]:top-5 [&>button]:right-5 [&>button]:transition-colors"
         onPointerDownOutside={(e) => {
-          // Empeche la fermeture du panel quand on clique sur les modales empilees
+
           if (pdfPreview || paidDialog || signingContract) e.preventDefault();
         }}
         onEscapeKeyDown={(e) => {
           if (pdfPreview || paidDialog || signingContract) e.preventDefault();
         }}
       >
-        {/* Title/Description toujours presents pour a11y Radix — le titre visible vit dans SheetHeader */}
+
         <SheetTitle className="sr-only">
-          {client?.fullName ?? "Détail client"}
+          {client?.fullName ?? t("detail_client")}
         </SheetTitle>
         <SheetDescription className="sr-only">
-          {client ? `Informations détaillées pour ${client.fullName}` : "Chargement..."}
+          {client ? `Informations détaillées pour ${client.fullName}` : t("chargement")}
         </SheetDescription>
 
         {loading || !client ? (
@@ -429,7 +431,7 @@ export function ClientDetailPanel({
           </div>
         ) : (
           <>
-            {/* Header gradient navy */}
+
             <SheetHeader className="bg-gradient-to-br from-[#0F2D52] to-[#1e4a7e] text-white p-6 space-y-4 shrink-0">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16 ring-2 ring-white/20">
@@ -446,15 +448,15 @@ export function ClientDetailPanel({
                 </div>
               </div>
 
-              {/* Quick stats colorees */}
+
               <div className="grid grid-cols-4 gap-2">
-                <StatBox icon={Briefcase} label="Mandats" value={client.mandates.length} />
-                <StatBox icon={FileText} label="Devis" value={client.quotes.length} />
-                <StatBox icon={Receipt} label="Factures" value={client.invoices.length} />
-                <StatBox icon={FileSignature} label="Contrats" value={client.contracts.length} />
+                <StatBox icon={Briefcase} label={t("mandats")} value={client.mandates.length} />
+                <StatBox icon={FileText} label={t("devis")} value={client.quotes.length} />
+                <StatBox icon={Receipt} label={t("factures")} value={client.invoices.length} />
+                <StatBox icon={FileSignature} label={t("contrats")} value={client.contracts.length} />
               </div>
 
-              {/* Sticky actions — toujours visibles */}
+
               <div className="flex flex-wrap gap-2 pt-1">
                 <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
                   <Link href={`/admin/mandates?newFor=${client.id}`}>
@@ -482,7 +484,7 @@ export function ClientDetailPanel({
                       size="sm"
                       variant="secondary"
                       className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
-                      title="Télécharger l'intégralité du dossier client"
+                      title={t("telecharger_integralite_dossier_client")}
                     >
                       <Archive className="h-3 w-3" />Dossier ZIP
                     </Button>
@@ -493,27 +495,27 @@ export function ClientDetailPanel({
                         const a = document.createElement("a");
                         a.href = `/api/clients/${client.id}/export-zip?lang=fr`;
                         a.click();
-                        toast.success("Préparation du dossier ZIP (FR)…");
+                        toast.success(t("preparation_dossier_zip_fr"));
                       }}
                     >
-                      Français
+                      {t("francais")}
                     </DropdownMenuItem>
                     <DropdownMenuItem
                       onClick={() => {
                         const a = document.createElement("a");
                         a.href = `/api/clients/${client.id}/export-zip?lang=en`;
                         a.click();
-                        toast.success("Generating ZIP (EN)…");
+                        toast.success(t("generating_zip"));
                       }}
                     >
-                      English
+                      {t("english")}
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             </SheetHeader>
 
-            {/* Tabs scrollable — scrollbar toujours visible */}
+
             <div className="flex-1 overflow-y-scroll px-6 pt-0 pb-6 [scrollbar-gutter:stable]">
               <ClientTabs
                 client={client}
@@ -532,11 +534,11 @@ export function ClientDetailPanel({
       </SheetContent>
     </Sheet>
 
-    {/* Edit complet du client — Dialog VNK navy */}
+
     {client && (
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-2xl p-0 overflow-hidden gap-0 [&>button]:text-white [&>button]:opacity-80 [&>button]:hover:opacity-100 [&>button]:hover:bg-white/15 [&>button]:rounded-md [&>button]:p-1.5 [&>button]:right-5 [&>button]:top-5">
-          {/* Header navy avec avatar + info */}
+
           <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#1e4a7e] text-white p-6 space-y-2 shrink-0">
             <div className="flex items-center gap-4">
               <Avatar className="h-12 w-12 ring-2 ring-white/20">
@@ -545,38 +547,38 @@ export function ClientDetailPanel({
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <DialogTitle className="text-white text-lg">Modifier le client</DialogTitle>
+                <DialogTitle className="text-white text-lg">{t("modifier_client")}</DialogTitle>
                 <DialogDescription className="text-white/70 truncate">{client.email}</DialogDescription>
               </div>
             </div>
           </DialogHeader>
 
-          {/* Body — sections groupees */}
+
           <div className="p-6 space-y-5 max-h-[65vh] overflow-y-auto">
-            {/* Section: Identite */}
-            <FormSection title="Identité" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
+
+            <FormSection title={t("identite")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nom complet *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("nom_complet")}</Label>
                 <Input value={edFullName} onChange={(e) => setEdFullName(e.target.value)} />
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Téléphone</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("telephone")}</Label>
                   <Input value={edPhone} onChange={(e) => setEdPhone(e.target.value)} placeholder="418-000-0000" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Entreprise</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("entreprise")}</Label>
                   <Input value={edCompany} onChange={(e) => setEdCompany(e.target.value)} />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Secteur</Label>
-                <Input value={edSector} onChange={(e) => setEdSector(e.target.value)} placeholder="Manufacturier, agroalimentaire, énergie..." />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("secteur")}</Label>
+                <Input value={edSector} onChange={(e) => setEdSector(e.target.value)} placeholder={t("manufacturier_agroalimentaire_energie")} />
               </div>
             </FormSection>
 
-            {/* Section: Adresse — adaptative selon pays */}
-            <FormSection title="Adresse" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}>
+
+            <FormSection title={t("adresse")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}>
               <AddressFields
                 country={edCountry} onCountryChange={(c) => { setEdCountry(c); /* reset province si pays sans province */ const meta = COUNTRY_FORMATS[c]; if (!meta?.hasRegion) setEdProvince(""); }}
                 address={edAddress} onAddressChange={setEdAddress}
@@ -586,23 +588,23 @@ export function ClientDetailPanel({
               />
             </FormSection>
 
-            {/* Section: Technique & notes */}
-            <FormSection title="Technique & notes" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>}>
+
+            <FormSection title={t("technique_notes")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Technologies</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("technologies")}</Label>
                 <TechPicker value={edTech} onChange={setEdTech} />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Notes internes
-                  <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-700 font-semibold normal-case tracking-normal">Admin uniquement</span>
+                  {t("notes_internes")}
+                  <span className="ml-2 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-700 font-semibold normal-case tracking-normal">{t("admin_uniquement")}</span>
                 </Label>
-                <Textarea value={edNotes} onChange={(e) => setEdNotes(e.target.value)} rows={3} placeholder="Notes privées, jamais visibles par le client..." className="bg-amber-50/30" />
+                <Textarea value={edNotes} onChange={(e) => setEdNotes(e.target.value)} rows={3} placeholder={t("notes_privees_jamais_visibles_client")} className="bg-amber-50/30" />
               </div>
             </FormSection>
           </div>
 
-          {/* Footer */}
+
           <div className="flex items-center justify-end gap-2 px-6 py-4 bg-muted/30 border-t">
             <Button variant="outline" onClick={() => setEditOpen(false)} disabled={busy}>
               {tc("cancel")}
@@ -614,37 +616,37 @@ export function ClientDetailPanel({
                 try {
                   const result = await handleSaveClient();
                   if (result.success) {
-                    toast.success("Client mis à jour");
+                    toast.success(t("client_mis_jour"));
                     setEditOpen(false);
                   } else {
-                    toast.error(result.error || "Erreur");
+                    toast.error(result.error || t("erreur"));
                   }
                 } finally { setBusy(false); }
               }}
               disabled={busy || !edFullName.trim()}
             >
-              {busy ? "Enregistrement..." : "Enregistrer"}
+              {busy ? t("enregistrement") : t("enregistrer")}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
     )}
 
-    {/* Dialog Marquer payée — choix méthode */}
+
     <Dialog
       open={!!paidDialog}
       onOpenChange={(o) => { if (!o) { setPaidDialog(null); setPaidMethod(""); setPaidNote(""); } }}
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Marquer comme payée</DialogTitle>
+          <DialogTitle>{t("marquer_comme_payee")}</DialogTitle>
           <DialogDescription>
             Facture {paidDialog?.num} — sélectionnez la méthode de paiement utilisée.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Methode</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("methode")}</Label>
             <div className="grid grid-cols-2 gap-2">
               {PAYMENT_METHODS.map((m) => (
                 <button
@@ -663,13 +665,13 @@ export function ClientDetailPanel({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="paid-note" className="text-xs uppercase tracking-wider text-muted-foreground">Note (optionnel)</Label>
+            <Label htmlFor="paid-note" className="text-xs uppercase tracking-wider text-muted-foreground">{t("note_optionnel")}</Label>
             <Textarea
               id="paid-note"
               value={paidNote}
               onChange={(e) => setPaidNote(e.target.value)}
               rows={2}
-              placeholder="N° de transaction, référence..."
+              placeholder={t("n_transaction_reference")}
             />
           </div>
         </div>
@@ -683,7 +685,7 @@ export function ClientDetailPanel({
             disabled={!paidMethod || busy}
           >
             <CreditCard className="h-4 w-4 mr-1.5" />
-            {busy ? "Enregistrement..." : "Confirmer le paiement"}
+            {busy ? t("enregistrement") : t("confirmer_paiement")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -698,34 +700,32 @@ export function ClientDetailPanel({
         documentNumber={pdfPreview.documentNumber}
         downloadName={pdfPreview.downloadName}
         actions={(() => {
-          const t = pdfPreview.entityType;
+          const entity = pdfPreview.entityType;
           const id = pdfPreview.entityId;
           const num = pdfPreview.documentNumber ?? "";
           const status = pdfPreview.status;
-          if (!t || !id) return undefined;
+          if (!entity || !id) return undefined;
 
           const buttons: React.ReactNode[] = [];
 
-          // Action principale selon type+statut
-          if (t === "quote" && status === "pending") {
+
+          if (entity === "quote" && status === "pending") {
             buttons.push(
               <Button key="accept" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
                 onClick={async () => { await acceptQuote(id, num); }}>
-                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer accepté
-              </Button>
+                <CheckCircle2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />{t("client_detail_panel_marquer_accepte")}</Button>
             );
           }
-          if (t === "invoice" && (status === "unpaid" || status === "overdue")) {
+          if (entity === "invoice" && (status === "unpaid" || status === "overdue")) {
             buttons.push(
               <Button key="paid" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
                 onClick={async () => { await markPaid(id, num); }}>
-                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Marquer payée
-              </Button>
+                <CreditCard className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />{t("client_detail_panel_marquer_payee")}</Button>
             );
           }
-          if (t === "contract" && status === "pending" && !pdfPreview.isAdminSigned) {
+          if (entity === "contract" && status === "pending" && !pdfPreview.isAdminSigned) {
             buttons.push(
               <Button key="sign" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
@@ -735,21 +735,21 @@ export function ClientDetailPanel({
             );
           }
 
-          // Envoyer au client (sauf si finalise)
-          const finalStatus = (t === "quote" && status === "accepted") ||
-                              (t === "invoice" && status === "paid") ||
-                              (t === "contract" && status === "signed");
+
+          const finalStatus = (entity === "quote" && status === "accepted") ||
+                              (entity === "invoice" && status === "paid") ||
+                              (entity === "contract" && status === "signed");
           if (!finalStatus) {
             buttons.push(
               <Button key="send" size="sm" variant="outline" disabled={busy}
                 className="h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
-                onClick={async () => { await sendToClient(t, num, id, pdfPreview.title); }}>
+                onClick={async () => { await sendToClient(entity, num, id, pdfPreview.title); }}>
                 <Send className="h-3.5 w-3.5 sm:h-4 sm:w-4 mr-1 sm:mr-1.5" />Envoyer au client
               </Button>
             );
           }
 
-          // Telecharger toujours en derniere action
+
           buttons.push(
             <Button key="dl" size="sm"
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white h-8 px-2 text-[11px] sm:h-9 sm:px-3 sm:text-sm"
@@ -788,412 +788,6 @@ export function ClientDetailPanel({
   );
 }
 
-// ── Catalogue de technologies (aligne avec services VNK) ─────────
-const TECH_CATALOG: { category: string; items: string[] }[] = [
-  {
-    category: "PLC / Automates",
-    items: [
-      "Siemens S7-1500", "Siemens S7-1200", "Siemens S7-300/400",
-      "Rockwell ControlLogix", "Rockwell CompactLogix", "Allen-Bradley MicroLogix",
-      "Schneider Modicon M580", "Schneider Modicon M340",
-      "B&R X20", "Omron", "Mitsubishi", "Beckhoff TwinCAT",
-    ],
-  },
-  {
-    category: "HMI / SCADA",
-    items: ["TIA Portal / WinCC", "FactoryTalk View", "EcoStruxure / Vijeo", "MappView (B&R)", "AVEVA / Wonderware", "Ignition"],
-  },
-  {
-    category: "Robotique",
-    items: ["FANUC", "ABB", "KUKA", "Yaskawa"],
-  },
-  {
-    category: "Réseaux & Protocoles",
-    items: ["Profinet", "EtherNet/IP", "Modbus TCP", "OPC UA", "Profibus"],
-  },
-  {
-    category: "Accès distant",
-    items: ["Secomea SiteManager", "TeamViewer", "AnyDesk", "VPN"],
-  },
-];
-
-function TechPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const tc = useTranslations("common");
-  const [pickerOpen, setPickerOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const [customInput, setCustomInput] = useState("");
-
-  const selected = value.split(",").map((s) => s.trim()).filter(Boolean);
-  const allCatalog = new Set(TECH_CATALOG.flatMap((c) => c.items));
-  const customItems = selected.filter((s) => !allCatalog.has(s));
-
-  const toggle = (item: string) => {
-    const set = new Set(selected);
-    if (set.has(item)) set.delete(item); else set.add(item);
-    onChange(Array.from(set).join(", "));
-  };
-
-  const remove = (item: string) => {
-    onChange(selected.filter((s) => s !== item).join(", "));
-  };
-
-  const addCustom = () => {
-    const v = customInput.trim();
-    if (!v || selected.includes(v)) { setCustomInput(""); return; }
-    onChange([...selected, v].join(", "));
-    setCustomInput("");
-  };
-
-  // Filtrage selon la recherche
-  const filteredCatalog = TECH_CATALOG.map((cat) => ({
-    ...cat,
-    items: cat.items.filter((i) => i.toLowerCase().includes(search.toLowerCase())),
-  })).filter((cat) => cat.items.length > 0);
-
-  return (
-    <div className="space-y-2">
-      {/* Chips selectionnes + bouton ajouter */}
-      <div className="flex flex-wrap gap-1.5 min-h-[34px] items-center p-2 rounded-md border bg-background">
-        {selected.length === 0 && (
-          <span className="text-xs text-muted-foreground italic">Aucune technologie sélectionnée</span>
-        )}
-        {selected.map((item) => {
-          const isCustom = !allCatalog.has(item);
-          return (
-            <span
-              key={item}
-              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] ${
-                isCustom
-                  ? "bg-amber-50 border border-amber-300 text-amber-900"
-                  : "bg-[#0F2D52] text-white"
-              }`}
-            >
-              {item}
-              <button
-                type="button"
-                onClick={() => remove(item)}
-                className={`rounded-full h-3.5 w-3.5 flex items-center justify-center ${isCustom ? "hover:bg-amber-200" : "hover:bg-white/20"}`}
-                aria-label={`Retirer ${item}`}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
-              </button>
-            </span>
-          );
-        })}
-
-        <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
-          <PopoverTrigger asChild>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-dashed text-[11px] text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
-              {tc("add")}
-            </button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="w-[320px] max-w-[calc(100vw-2rem)] p-0 flex flex-col overflow-hidden"
-            style={{ maxHeight: "min(80vh, var(--radix-popover-content-available-height, 80vh))" }}
-            align="start"
-            collisionPadding={8}
-          >
-            <div className="p-2 border-b shrink-0">
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher..."
-                className="h-8 text-xs"
-                autoFocus
-              />
-            </div>
-            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
-              {filteredCatalog.length === 0 && search && (
-                <p className="text-xs text-muted-foreground text-center py-4">Aucun resultat pour &quot;{search}&quot;</p>
-              )}
-              {filteredCatalog.map((cat) => (
-                <div key={cat.category} className="space-y-1">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">{cat.category}</p>
-                  <div className="flex flex-wrap gap-1">
-                    {cat.items.map((item) => {
-                      const isOn = selected.includes(item);
-                      return (
-                        <button
-                          key={item}
-                          type="button"
-                          onClick={() => toggle(item)}
-                          className={`px-2 py-0.5 rounded-full border text-[10px] transition-colors ${
-                            isOn
-                              ? "border-[#0F2D52] bg-[#0F2D52] text-white"
-                              : "border-input hover:bg-muted"
-                          }`}
-                        >
-                          {isOn && (
-                            <svg className="inline -ml-0.5 mr-1" width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                          )}
-                          {item}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-            {/* Custom add */}
-            <div className="p-2 border-t bg-muted/30 shrink-0">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Custom</p>
-              <div className="flex gap-1.5">
-                <Input
-                  value={customInput}
-                  onChange={(e) => setCustomInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
-                  placeholder="Techno spécifique..."
-                  className="h-8 text-xs flex-1"
-                />
-                <Button type="button" variant="outline" size="sm" onClick={addCustom} disabled={!customInput.trim()} className="h-8 px-2 text-xs">
-                  {tc("add")}
-                </Button>
-              </div>
-              {customItems.length > 0 && (
-                <p className="text-[9px] text-muted-foreground mt-1.5">{customItems.length} custom: {customItems.join(", ")}</p>
-              )}
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-    </div>
-  );
-}
-
-// ── Formats d'adresses par pays ─────────────────────────────────
-type CountryFormat = {
-  name: string;
-  hasRegion: boolean;
-  regionLabel?: string;
-  regionOptions?: { code: string; name: string }[];
-  postalLabel: string;
-  postalPlaceholder: string;
-  cityLabel?: string;
-  /** Ordre d'affichage : 'city-region-postal' (CA/US/MX) | 'postal-city' (FR/BE/DE) | 'city-postal' (UK) */
-  layout: "city-region-postal" | "postal-city" | "city-postal";
-};
-
-const CA_PROVINCES = [
-  { code: "QC", name: "Québec" }, { code: "ON", name: "Ontario" }, { code: "BC", name: "Colombie-Britannique" },
-  { code: "AB", name: "Alberta" }, { code: "MB", name: "Manitoba" }, { code: "SK", name: "Saskatchewan" },
-  { code: "NS", name: "Nouvelle-Écosse" }, { code: "NB", name: "Nouveau-Brunswick" }, { code: "NL", name: "Terre-Neuve-et-Labrador" },
-  { code: "PE", name: "Île-du-Prince-Édouard" }, { code: "YT", name: "Yukon" }, { code: "NT", name: "Territoires du Nord-Ouest" }, { code: "NU", name: "Nunavut" },
-];
-
-const US_STATES = [
-  { code: "AL", name: "Alabama" }, { code: "AK", name: "Alaska" }, { code: "AZ", name: "Arizona" }, { code: "AR", name: "Arkansas" },
-  { code: "CA", name: "California" }, { code: "CO", name: "Colorado" }, { code: "CT", name: "Connecticut" }, { code: "DE", name: "Delaware" },
-  { code: "DC", name: "District of Columbia" }, { code: "FL", name: "Florida" }, { code: "GA", name: "Georgia" }, { code: "HI", name: "Hawaii" },
-  { code: "ID", name: "Idaho" }, { code: "IL", name: "Illinois" }, { code: "IN", name: "Indiana" }, { code: "IA", name: "Iowa" },
-  { code: "KS", name: "Kansas" }, { code: "KY", name: "Kentucky" }, { code: "LA", name: "Louisiana" }, { code: "ME", name: "Maine" },
-  { code: "MD", name: "Maryland" }, { code: "MA", name: "Massachusetts" }, { code: "MI", name: "Michigan" }, { code: "MN", name: "Minnesota" },
-  { code: "MS", name: "Mississippi" }, { code: "MO", name: "Missouri" }, { code: "MT", name: "Montana" }, { code: "NE", name: "Nebraska" },
-  { code: "NV", name: "Nevada" }, { code: "NH", name: "New Hampshire" }, { code: "NJ", name: "New Jersey" }, { code: "NM", name: "New Mexico" },
-  { code: "NY", name: "New York" }, { code: "NC", name: "North Carolina" }, { code: "ND", name: "North Dakota" }, { code: "OH", name: "Ohio" },
-  { code: "OK", name: "Oklahoma" }, { code: "OR", name: "Oregon" }, { code: "PA", name: "Pennsylvania" }, { code: "RI", name: "Rhode Island" },
-  { code: "SC", name: "South Carolina" }, { code: "SD", name: "South Dakota" }, { code: "TN", name: "Tennessee" }, { code: "TX", name: "Texas" },
-  { code: "UT", name: "Utah" }, { code: "VT", name: "Vermont" }, { code: "VA", name: "Virginia" }, { code: "WA", name: "Washington" },
-  { code: "WV", name: "West Virginia" }, { code: "WI", name: "Wisconsin" }, { code: "WY", name: "Wyoming" },
-];
-
-const MX_ESTADOS = [
-  { code: "AGU", name: "Aguascalientes" }, { code: "BCN", name: "Baja California" }, { code: "BCS", name: "Baja California Sur" },
-  { code: "CAM", name: "Campeche" }, { code: "CHP", name: "Chiapas" }, { code: "CHH", name: "Chihuahua" }, { code: "CMX", name: "Ciudad de Mexico" },
-  { code: "COA", name: "Coahuila" }, { code: "COL", name: "Colima" }, { code: "DUR", name: "Durango" }, { code: "GUA", name: "Guanajuato" },
-  { code: "GRO", name: "Guerrero" }, { code: "HID", name: "Hidalgo" }, { code: "JAL", name: "Jalisco" }, { code: "MEX", name: "Estado de Mexico" },
-  { code: "MIC", name: "Michoacan" }, { code: "MOR", name: "Morelos" }, { code: "NAY", name: "Nayarit" }, { code: "NLE", name: "Nuevo Leon" },
-  { code: "OAX", name: "Oaxaca" }, { code: "PUE", name: "Puebla" }, { code: "QUE", name: "Queretaro" }, { code: "ROO", name: "Quintana Roo" },
-  { code: "SLP", name: "San Luis Potosi" }, { code: "SIN", name: "Sinaloa" }, { code: "SON", name: "Sonora" }, { code: "TAB", name: "Tabasco" },
-  { code: "TAM", name: "Tamaulipas" }, { code: "TLA", name: "Tlaxcala" }, { code: "VER", name: "Veracruz" }, { code: "YUC", name: "Yucatan" }, { code: "ZAC", name: "Zacatecas" },
-];
-
-const BR_ESTADOS = [
-  { code: "AC", name: "Acre" }, { code: "AL", name: "Alagoas" }, { code: "AP", name: "Amapa" }, { code: "AM", name: "Amazonas" },
-  { code: "BA", name: "Bahia" }, { code: "CE", name: "Ceara" }, { code: "DF", name: "Distrito Federal" }, { code: "ES", name: "Espirito Santo" },
-  { code: "GO", name: "Goias" }, { code: "MA", name: "Maranhao" }, { code: "MT", name: "Mato Grosso" }, { code: "MS", name: "Mato Grosso do Sul" },
-  { code: "MG", name: "Minas Gerais" }, { code: "PA", name: "Para" }, { code: "PB", name: "Paraiba" }, { code: "PR", name: "Parana" },
-  { code: "PE", name: "Pernambuco" }, { code: "PI", name: "Piaui" }, { code: "RJ", name: "Rio de Janeiro" }, { code: "RN", name: "Rio Grande do Norte" },
-  { code: "RS", name: "Rio Grande do Sul" }, { code: "RO", name: "Rondonia" }, { code: "RR", name: "Roraima" }, { code: "SC", name: "Santa Catarina" },
-  { code: "SP", name: "Sao Paulo" }, { code: "SE", name: "Sergipe" }, { code: "TO", name: "Tocantins" },
-];
-
-const CH_CANTONS = [
-  { code: "ZH", name: "Zurich" }, { code: "BE", name: "Berne" }, { code: "LU", name: "Lucerne" }, { code: "UR", name: "Uri" },
-  { code: "SZ", name: "Schwytz" }, { code: "OW", name: "Obwald" }, { code: "NW", name: "Nidwald" }, { code: "GL", name: "Glaris" },
-  { code: "ZG", name: "Zoug" }, { code: "FR", name: "Fribourg" }, { code: "SO", name: "Soleure" }, { code: "BS", name: "Bale-Ville" },
-  { code: "BL", name: "Bale-Campagne" }, { code: "SH", name: "Schaffhouse" }, { code: "AR", name: "Appenzell Rhodes-Exterieures" },
-  { code: "AI", name: "Appenzell Rhodes-Interieures" }, { code: "SG", name: "Saint-Gall" }, { code: "GR", name: "Grisons" },
-  { code: "AG", name: "Argovie" }, { code: "TG", name: "Thurgovie" }, { code: "TI", name: "Tessin" }, { code: "VD", name: "Vaud" },
-  { code: "VS", name: "Valais" }, { code: "NE", name: "Neuchatel" }, { code: "GE", name: "Geneve" }, { code: "JU", name: "Jura" },
-];
-
-const IT_REGIONI = [
-  { code: "ABR", name: "Abruzzes" }, { code: "BAS", name: "Basilicate" }, { code: "CAL", name: "Calabre" }, { code: "CAM", name: "Campanie" },
-  { code: "EMR", name: "Emilie-Romagne" }, { code: "FVG", name: "Frioul-Venetie julienne" }, { code: "LAZ", name: "Latium" }, { code: "LIG", name: "Ligurie" },
-  { code: "LOM", name: "Lombardie" }, { code: "MAR", name: "Marches" }, { code: "MOL", name: "Molise" }, { code: "PIE", name: "Piemont" },
-  { code: "PUG", name: "Pouilles" }, { code: "SAR", name: "Sardaigne" }, { code: "SIC", name: "Sicile" }, { code: "TOS", name: "Toscane" },
-  { code: "TAA", name: "Trentin-Haut-Adige" }, { code: "UMB", name: "Ombrie" }, { code: "VDA", name: "Vallee d'Aoste" }, { code: "VEN", name: "Venetie" },
-];
-
-const ES_COMUNIDADES = [
-  { code: "AN", name: "Andalousie" }, { code: "AR", name: "Aragon" }, { code: "AS", name: "Asturies" }, { code: "IB", name: "Iles Baleares" },
-  { code: "PV", name: "Pays basque" }, { code: "CN", name: "Iles Canaries" }, { code: "CB", name: "Cantabrie" }, { code: "CL", name: "Castille-et-Leon" },
-  { code: "CM", name: "Castille-La Manche" }, { code: "CT", name: "Catalogne" }, { code: "EX", name: "Estremadure" }, { code: "GA", name: "Galice" },
-  { code: "RI", name: "La Rioja" }, { code: "MD", name: "Madrid" }, { code: "MC", name: "Murcie" }, { code: "NC", name: "Navarre" }, { code: "VC", name: "Valence" },
-  { code: "CE", name: "Ceuta" }, { code: "ML", name: "Melilla" },
-];
-
-const COUNTRY_FORMATS: Record<string, CountryFormat> = {
-  CA: { name: "Canada", hasRegion: true, regionLabel: "Province", regionOptions: CA_PROVINCES, postalLabel: "Code postal", postalPlaceholder: "G6V 3P8", layout: "city-region-postal" },
-  US: { name: "Etats-Unis", hasRegion: true, regionLabel: "Etat", regionOptions: US_STATES, postalLabel: "ZIP code", postalPlaceholder: "12345", layout: "city-region-postal" },
-  FR: { name: "France", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "75001", layout: "postal-city" },
-  BE: { name: "Belgique", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "1000", layout: "postal-city" },
-  CH: { name: "Suisse", hasRegion: true, regionLabel: "Canton (optionnel)", regionOptions: CH_CANTONS, postalLabel: "NPA", postalPlaceholder: "1200", layout: "postal-city" },
-  LU: { name: "Luxembourg", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "L-1234", layout: "postal-city" },
-  GB: { name: "Royaume-Uni", hasRegion: true, regionLabel: "County (optionnel)", postalLabel: "Postcode", postalPlaceholder: "SW1A 1AA", layout: "city-postal" },
-  DE: { name: "Allemagne", hasRegion: false, postalLabel: "PLZ", postalPlaceholder: "10115", layout: "postal-city" },
-  ES: { name: "Espagne", hasRegion: true, regionLabel: "Communaute autonome (optionnel)", regionOptions: ES_COMUNIDADES, postalLabel: "Codigo postal", postalPlaceholder: "28001", layout: "postal-city" },
-  IT: { name: "Italie", hasRegion: true, regionLabel: "Regione", regionOptions: IT_REGIONI, postalLabel: "CAP", postalPlaceholder: "00100", layout: "postal-city" },
-  MX: { name: "Mexique", hasRegion: true, regionLabel: "Estado", regionOptions: MX_ESTADOS, postalLabel: "Codigo postal", postalPlaceholder: "01000", layout: "city-region-postal" },
-  BR: { name: "Bresil", hasRegion: true, regionLabel: "Estado", regionOptions: BR_ESTADOS, postalLabel: "CEP", postalPlaceholder: "01310-100", layout: "city-region-postal" },
-  OTHER: { name: "Autre", hasRegion: true, regionLabel: "Region (optionnel)", postalLabel: "Code postal", postalPlaceholder: "", layout: "city-region-postal" },
-};
-
-function AddressFields({
-  country, onCountryChange,
-  address, onAddressChange,
-  city, onCityChange,
-  province, onProvinceChange,
-  postal, onPostalChange,
-}: {
-  country: string; onCountryChange: (v: string) => void;
-  address: string; onAddressChange: (v: string) => void;
-  city: string; onCityChange: (v: string) => void;
-  province: string; onProvinceChange: (v: string) => void;
-  postal: string; onPostalChange: (v: string) => void;
-}) {
-  const meta = COUNTRY_FORMATS[country] ?? COUNTRY_FORMATS.OTHER;
-  const places = useGooglePlaces();
-  const addressInputRef = useRef<HTMLInputElement>(null);
-
-  // Brancher Google Autocomplete sur l'input "Rue" quand l'API est chargee
-  useEffect(() => {
-    if (!places.loaded || !addressInputRef.current || !window.google?.maps?.places) return;
-    const ac = new window.google.maps.places.Autocomplete(addressInputRef.current, {
-      types: ["address"],
-      fields: ["address_components", "formatted_address"],
-    });
-    const listener = ac.addListener("place_changed", () => {
-      const place = ac.getPlace();
-      if (!place.address_components) return;
-      const parsed = parseAddressComponents(place.address_components);
-      onAddressChange(parsed.street);
-      onCityChange(parsed.city);
-      onProvinceChange(parsed.province);
-      onPostalChange(parsed.postal);
-      if (parsed.country && COUNTRY_FORMATS[parsed.country]) {
-        onCountryChange(parsed.country);
-      }
-    });
-    return () => { listener.remove(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [places.loaded]);
-  const cityField = (
-    <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{meta.cityLabel ?? "Ville"}</Label>
-      <Input value={city} onChange={(e) => onCityChange(e.target.value)} />
-    </div>
-  );
-  const postalField = (
-    <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{meta.postalLabel}</Label>
-      <Input value={postal} onChange={(e) => onPostalChange(e.target.value)} placeholder={meta.postalPlaceholder} />
-    </div>
-  );
-  const regionField = meta.hasRegion ? (
-    <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{meta.regionLabel}</Label>
-      {meta.regionOptions && meta.regionOptions.length > 0 ? (
-        <Select value={province} onValueChange={onProvinceChange}>
-          <SelectTrigger><SelectValue placeholder="Selectionner" /></SelectTrigger>
-          <SelectContent>
-            {meta.regionOptions.map((p) => (
-              <SelectItem key={p.code} value={p.code}>{p.code} — {p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : (
-        <Input value={province} onChange={(e) => onProvinceChange(e.target.value)} />
-      )}
-    </div>
-  ) : null;
-
-  return (
-    <>
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Pays</Label>
-        <Select value={country} onValueChange={onCountryChange}>
-          <SelectTrigger><SelectValue /></SelectTrigger>
-          <SelectContent>
-            {Object.entries(COUNTRY_FORMATS).map(([code, c]) => (
-              <SelectItem key={code} value={code}>{c.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-          Rue / Adresse
-          {places.loaded && (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-blue-100 text-blue-700 font-semibold normal-case tracking-normal">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              Suggestions Google
-            </span>
-          )}
-        </Label>
-        <Input
-          ref={addressInputRef}
-          value={address}
-          onChange={(e) => onAddressChange(e.target.value)}
-          placeholder={places.loaded ? "Commence a taper, suggestions auto..." : "123 rue Industrielle"}
-          autoComplete="off"
-        />
-      </div>
-      {meta.layout === "postal-city" && (
-        // FR/BE/DE/CH/etc — code postal puis ville sur meme ligne, region en dessous si applicable
-        <>
-          <div className="grid grid-cols-3 gap-3">
-            <div className="col-span-1">{postalField}</div>
-            <div className="col-span-2">{cityField}</div>
-          </div>
-          {regionField && <div>{regionField}</div>}
-        </>
-      )}
-      {meta.layout === "city-postal" && (
-        // UK — ville puis postcode, county en dessous
-        <>
-          <div className="grid grid-cols-2 gap-3">
-            {cityField}
-            {postalField}
-          </div>
-          {regionField && <div>{regionField}</div>}
-        </>
-      )}
-      {meta.layout === "city-region-postal" && (
-        // CA/US/MX/BR — ville, region, code postal sur 3 colonnes
-        <div className="grid grid-cols-3 gap-3">
-          {cityField}
-          {regionField ?? <div />}
-          {postalField}
-        </div>
-      )}
-    </>
-  );
-}
 
 function FormSection({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -1229,12 +823,13 @@ function ClientTabs({
   markPaid: (id: number, num: string) => void;
   setPdfPreview: (p: { url: string; title: string; documentNumber?: string; downloadName?: string; entityType?: "quote" | "invoice" | "contract"; entityId?: number; status?: string; isAdminSigned?: boolean }) => void;
 }) {
+  const t = useTranslations("admin.clients");
   const tc = useTranslations("common");
   const [tab, setTab] = useState("identite");
   const [activity, setActivity] = useState<AuditEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
 
-  // Fetch activity events lazily quand on ouvre l'onglet
+
   useEffect(() => {
     if (tab !== "activite") return;
     if (activity.length > 0) return;
@@ -1252,7 +847,7 @@ function ClientTabs({
     .filter((i) => i.status === "unpaid" || i.status === "overdue")
     .reduce((s, i) => s + Number(i.amountTtc ?? 0), 0);
 
-  // Onglets conditionnels selon les donnees presentes
+
   const hasLegalData =
     !!client.termsAcceptedAt ||
     !!client.privacyAcceptedAt ||
@@ -1263,22 +858,22 @@ function ClientTabs({
 
   return (
     <Tabs value={tab} onValueChange={setTab}>
-      {/* Bande sticky pleine largeur — couvre les gouttieres du parent px-6 */}
+
       <div className="sticky top-0 z-20 -mx-6 px-6 pt-4 pb-2 bg-background border-b border-border/40">
         <TabsList className={cn(
           "h-auto gap-1 bg-muted p-1 w-full flex overflow-x-auto sm:grid sm:overflow-visible shadow-sm",
           tabsCount === 4 ? "sm:grid-cols-4" : tabsCount === 5 ? "sm:grid-cols-5" : "sm:grid-cols-6",
         )}>
-          <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Identité</TabsTrigger>
-          <TabsTrigger value="finance" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Finance</TabsTrigger>
-          <TabsTrigger value="activite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Activité</TabsTrigger>
-          <TabsTrigger value="documents" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Documents</TabsTrigger>
-          {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Légal</TabsTrigger>}
-          {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">Équipe</TabsTrigger>}
+          <TabsTrigger value="identite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("identite")}</TabsTrigger>
+          <TabsTrigger value="finance" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("finance")}</TabsTrigger>
+          <TabsTrigger value="activite" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("activite")}</TabsTrigger>
+          <TabsTrigger value="documents" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("documents")}</TabsTrigger>
+          {hasLegalData && <TabsTrigger value="legal" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("legal")}</TabsTrigger>}
+          {hasTeamMembers && <TabsTrigger value="equipe" className="text-[11px] px-3 py-1.5 shrink-0 whitespace-nowrap sm:shrink">{t("equipe")}</TabsTrigger>}
         </TabsList>
       </div>
 
-      {/* Identité — fusionne courriel + contact + adresse + business */}
+
       <TabsContent value="identite" className="space-y-3 mt-4">
         <div className="flex justify-end gap-1.5">
           <Button size="sm" variant="outline" onClick={() => router.push(`/admin/messages?clientId=${client.id}`)}>
@@ -1288,23 +883,23 @@ function ClientTabs({
             <Pencil className="h-3.5 w-3.5 mr-1.5" />{tc("edit")}
           </Button>
         </div>
-        <InfoRow icon={Mail} label="Courriel" value={client.email} />
-        {client.phone && <InfoRow icon={Phone} label="Téléphone" value={client.phone} />}
+        <InfoRow icon={Mail} label={t("courriel")} value={client.email} />
+        {client.phone && <InfoRow icon={Phone} label={t("telephone")} value={client.phone} />}
         {(client.address || client.city || client.province || client.postalCode) && (
           <InfoRow
             icon={MapPin}
-            label="Adresse"
+            label={t("adresse")}
             value={[client.address, client.city, client.province, client.postalCode, client.country].filter(Boolean).join(", ")}
           />
         )}
-        {client.companyName && <InfoRow icon={Building2} label="Entreprise" value={client.companyName} />}
-        {client.sector && <InfoRow icon={Briefcase} label="Secteur" value={client.sector} />}
-        <InfoRow icon={Calendar} label="Compte créé" value={formatDate(new Date(client.createdAt))} />
-        <InfoRow icon={Clock} label="Dernière connexion" value={client.lastLogin ? formatDate(new Date(client.lastLogin)) : "Jamais"} />
+        {client.companyName && <InfoRow icon={Building2} label={t("entreprise")} value={client.companyName} />}
+        {client.sector && <InfoRow icon={Briefcase} label={t("secteur")} value={client.sector} />}
+        <InfoRow icon={Calendar} label={t("compte_cree")} value={formatDate(new Date(client.createdAt))} />
+        <InfoRow icon={Clock} label={t("derniere_connexion")} value={client.lastLogin ? formatDate(new Date(client.lastLogin)) : "Jamais"} />
 
         {client.technologies && (
           <div className="pt-2">
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Technologies</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("technologies")}</p>
             <div className="flex flex-wrap gap-1">
               {client.technologies.split(",").map((t, i) => (
                 <Badge key={i} variant="secondary" className="text-[10px]">{t.trim()}</Badge>
@@ -1315,7 +910,7 @@ function ClientTabs({
 
         {client.internalNotes && (
           <div className="pt-2">
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Notes internes</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("notes_internes")}</p>
             <div className="p-3 rounded-md bg-amber-50 border border-amber-200 text-xs whitespace-pre-wrap">
               {client.internalNotes}
             </div>
@@ -1323,13 +918,13 @@ function ClientTabs({
         )}
       </TabsContent>
 
-      {/* Finance */}
+
       <TabsContent value="finance" className="space-y-3 mt-0">
-        {/* KPIs sticky sous les onglets */}
+
         <div className="sticky top-[3.6rem] z-10 -mx-6 px-6 pt-3 pb-3 bg-background border-b border-border/40 mb-3">
           <div className="grid grid-cols-3 gap-2">
-            <FinanceBox label="Total dépensé" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
-            <FinanceBox label="Solde ouvert" value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
+            <FinanceBox label={t("total_depense")} value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-emerald-600" />
+            <FinanceBox label={t("solde_ouvert")} value={formatCurrency(openBalance || unpaidAmount)} accent={openBalance > 0 || unpaidAmount > 0 ? "text-amber-600" : "text-muted-foreground"} />
             <FinanceBox label="LTV" value={formatCurrency(totalSpent || totalInvoicesAmount)} accent="text-[#0F2D52]" />
           </div>
         </div>
@@ -1357,8 +952,8 @@ function ClientTabs({
                 amount={Number(q.amountTtc)} status={q.status}
                 onClick={() => openEntity("quote", q.id)}
                 actions={[
-                  ...(q.status === "pending" ? [{ label: "Marquer accepté", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(q.id, q.quoteNumber) }] : []),
-                  { label: "Voir PDF", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/quotes/${q.id}/pdf`, title: q.title, documentNumber: q.quoteNumber, downloadName: `devis-${q.quoteNumber}`, entityType: "quote", entityId: q.id, status: q.status }) },
+                  ...(q.status === "pending" ? [{ label: t("marquer_accepte"), icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(q.id, q.quoteNumber) }] : []),
+                  { label: t("voir_pdf"), icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/quotes/${q.id}/pdf`, title: q.title, documentNumber: q.quoteNumber, downloadName: `devis-${q.quoteNumber}`, entityType: "quote", entityId: q.id, status: q.status }) },
                 ]}
                 busy={busy} />
             ))}
@@ -1374,8 +969,8 @@ function ClientTabs({
                 amount={Number(i.amountTtc)} status={i.status} alert={i.status === "overdue"}
                 onClick={() => openEntity("invoice", i.id)}
                 actions={[
-                  ...(i.status === "unpaid" || i.status === "overdue" ? [{ label: "Marquer payée", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markPaid(i.id, i.invoiceNumber) }] : []),
-                  { label: "Voir PDF", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/invoices/${i.id}/pdf`, title: `Facture ${i.invoiceNumber}`, documentNumber: i.invoiceNumber, downloadName: `facture-${i.invoiceNumber}`, entityType: "invoice", entityId: i.id, status: i.status }) },
+                  ...(i.status === "unpaid" || i.status === "overdue" ? [{ label: t("marquer_payee"), icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markPaid(i.id, i.invoiceNumber) }] : []),
+                  { label: t("voir_pdf"), icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => setPdfPreview({ url: `/api/invoices/${i.id}/pdf`, title: `Facture ${i.invoiceNumber}`, documentNumber: i.invoiceNumber, downloadName: `facture-${i.invoiceNumber}`, entityType: "invoice", entityId: i.id, status: i.status }) },
                 ]}
                 busy={busy} />
             ))}
@@ -1437,12 +1032,12 @@ function ClientTabs({
         )}
       </TabsContent>
 
-      {/* 5. Activité (timeline event-sourcing) */}
+
       <TabsContent value="activite" className="space-y-2 mt-4">
         {activityLoading ? (
           <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>
         ) : activity.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Aucun événement enregistré pour ce client</p>
+          <p className="text-sm text-muted-foreground text-center py-8">{t("aucun_evenement_enregistre_client")}</p>
         ) : (
           <div className="space-y-1">
             {activity.map((e) => (
@@ -1461,16 +1056,16 @@ function ClientTabs({
               </div>
             ))}
             <Button variant="link" size="sm" onClick={() => router.push(`/admin/audit-trail?clientId=${client.id}`)} className="w-full">
-              Voir l&apos;audit trail complet →
+              {t("voir_apos_audit_trail_complet")}
             </Button>
           </div>
         )}
       </TabsContent>
 
-      {/* 6. Documents */}
+
       <TabsContent value="documents" className="space-y-2 mt-4">
         {(client.documents?.length ?? 0) === 0 ? (
-          <EmptyState text="Aucun document" actionLabel="Téléverser" actionHref={`/admin/documents?newFor=${client.id}`} />
+          <EmptyState text={t("aucun_document")} actionLabel={t("televerser")} actionHref={`/admin/documents?newFor=${client.id}`} />
         ) : (
           <>
             {client.documents!.slice(0, 30).map((d) => (
@@ -1484,45 +1079,45 @@ function ClientTabs({
                     </p>
                   </div>
                 </div>
-                {!d.isRead && <Badge variant="destructive" className="text-[9px]">Non lu</Badge>}
+                {!d.isRead && <Badge variant="destructive" className="text-[9px]">{t("non_lu")}</Badge>}
               </div>
             ))}
             <Button variant="link" size="sm" onClick={() => router.push(`/admin/documents`)} className="w-full">
-              Voir tous les documents →
+              {t("voir_tous_documents")}
             </Button>
           </>
         )}
       </TabsContent>
 
-      {/* Légal / Compliance — affiche uniquement si donnees presentes */}
+
       <TabsContent value="legal" className="space-y-3 mt-4">
         {(client.termsAcceptedAt || client.privacyAcceptedAt || client.marketingConsent) && (
           <>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Consentements</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("consentements")}</p>
             {client.termsAcceptedAt && (
-              <InfoRow icon={CheckCircle2} label="Conditions générales" value={`${formatDate(new Date(client.termsAcceptedAt))}${client.termsAcceptedVersion ? ` (v${client.termsAcceptedVersion})` : ""}`} />
+              <InfoRow icon={CheckCircle2} label={t("conditions_generales")} value={`${formatDate(new Date(client.termsAcceptedAt))}${client.termsAcceptedVersion ? ` (v${client.termsAcceptedVersion})` : ""}`} />
             )}
             {client.privacyAcceptedAt && (
-              <InfoRow icon={CheckCircle2} label="Politique vie privée" value={formatDate(new Date(client.privacyAcceptedAt))} />
+              <InfoRow icon={CheckCircle2} label={t("politique_vie_privee")} value={formatDate(new Date(client.privacyAcceptedAt))} />
             )}
             {client.marketingConsent && (
-              <InfoRow icon={CheckCircle2} label="Marketing" value={`Oui${client.marketingConsentAt ? ` (${formatDate(new Date(client.marketingConsentAt))})` : ""}`} />
+              <InfoRow icon={CheckCircle2} label={t("marketing")} value={`Oui${client.marketingConsentAt ? ` (${formatDate(new Date(client.marketingConsentAt))})` : ""}`} />
             )}
-            {client.termsAcceptedIp && <InfoRow icon={Globe} label="IP acceptation" value={client.termsAcceptedIp} />}
+            {client.termsAcceptedIp && <InfoRow icon={Globe} label={t("ip_acceptation")} value={client.termsAcceptedIp} />}
           </>
         )}
 
         {client.identityVerifiedAt && (
           <>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Vérification identité</p>
-            <InfoRow icon={CheckCircle2} label="Vérifié le" value={formatDate(new Date(client.identityVerifiedAt))} />
-            {client.identityVerifiedBy && <InfoRow icon={ShieldCheck} label="Vérifié par" value={client.identityVerifiedBy} />}
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">{t("verification_identite")}</p>
+            <InfoRow icon={CheckCircle2} label={t("verifie")} value={formatDate(new Date(client.identityVerifiedAt))} />
+            {client.identityVerifiedBy && <InfoRow icon={ShieldCheck} label={t("verifie_2")} value={client.identityVerifiedBy} />}
           </>
         )}
 
         {client.contracts.some((c) => c.adminSignatureData || c.clientSignatureData) && (
           <>
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">Signatures</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground pt-3">{t("signatures")}</p>
             {client.contracts
               .filter((c) => c.adminSignatureData || c.clientSignatureData)
               .map((c) => (
@@ -1530,8 +1125,8 @@ function ClientTabs({
                   <div className="min-w-0">
                     <p className="font-medium truncate">{c.contractNumber} — {c.title}</p>
                     <p className="text-[10px] text-muted-foreground">
-                      {c.adminSignatureData && c.clientSignatureData ? "Signé par les deux parties" :
-                       c.adminSignatureData ? "Admin signé" : "Client signé"}
+                      {c.adminSignatureData && c.clientSignatureData ? t("signe_deux_parties") :
+                       c.adminSignatureData ? t("admin_signe") : t("client_signe")}
                       {c.signedAt && ` · ${formatDate(new Date(c.signedAt))}`}
                     </p>
                   </div>
@@ -1545,7 +1140,7 @@ function ClientTabs({
                     status: c.status,
                     isAdminSigned: !!c.adminSignatureData,
                   })}>
-                    Voir PDF
+                    {t("voir_pdf")}
                   </Button>
                 </div>
               ))}
@@ -1553,10 +1148,10 @@ function ClientTabs({
         )}
       </TabsContent>
 
-      {/* 9. Équipe */}
+
       <TabsContent value="equipe" className="space-y-2 mt-4">
         {(client.teamMembers?.length ?? 0) === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Aucun membre d&apos;équipe — ce client est seul utilisateur</p>
+          <p className="text-sm text-muted-foreground text-center py-8">{t("aucun_membre_apos_equipe_client")}</p>
         ) : (
           client.teamMembers!.map((m) => (
             <div key={m.id} className="p-3 rounded-lg border bg-card">
@@ -1652,7 +1247,7 @@ function EntityRow({
   actions?: Array<{ label: string; icon: React.ReactNode; onClick: () => void }>;
   alert?: boolean;
   busy?: boolean;
-  /** Si fourni, le contenu (sauf actions menu) est cliquable et appelle onClick */
+
   onClick?: () => void;
 }) {
   const innerContent = (

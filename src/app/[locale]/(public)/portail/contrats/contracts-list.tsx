@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign, X, ShieldCheck, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -32,14 +33,15 @@ const STATUS_BAR_COLORS: Record<string, string> = {
   cancelled: "bg-red-500",
 };
 
-const filterOptions: FilterOption[] = [
-  { value: "pending", label: "En attente" },
-  { value: "signed", label: "Signe" },
-  { value: "expired", label: "Expire" },
-  { value: "cancelled", label: "Annule" },
+const filterOptions: { value: string; labelKey: string }[] = [
+  { value: "pending", labelKey: "opt_en_attente" },
+  { value: "signed", labelKey: "opt_signe" },
+  { value: "expired", labelKey: "opt_expire" },
+  { value: "cancelled", labelKey: "opt_annule" },
 ];
 
 function SignatureCheck({ signed, label }: { signed: boolean; label: string }) {
+  const t = useTranslations("portal");
   return (
     <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${signed ? "text-emerald-700" : "text-muted-foreground/60"}`}>
       <span>{signed ? "\u2713" : "\u25CB"}</span>
@@ -49,6 +51,7 @@ function SignatureCheck({ signed, label }: { signed: boolean; label: string }) {
 }
 
 export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
+  const t = useTranslations("portal");
   const router = useRouter();
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
   const [showSignature, setShowSignature] = useState(false);
@@ -97,20 +100,20 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           const data = await res.json();
           toast.success(
             data.fullySigned
-              ? "Contrat signe par les deux parties — facture generee"
-              : "Votre signature a ete enregistree"
+              ? t("contrat_signe_deux_parties_facture")
+              : t("signature_ete_enregistree")
           );
-          // Rester dans le PDF, fermer signature, recharger PDF avec signature
+
           setShowSignature(false);
           setSigned(true);
           setPdfKey((k) => k + 1);
           router.refresh();
         } else {
           const err = await res.json().catch(() => ({}));
-          toast.error(err.error ?? "Erreur signature");
+          toast.error(err.error ?? t("erreur_signature"));
         }
       } catch {
-        toast.error("Erreur de connexion");
+        toast.error(t("erreur_connexion"));
       } finally {
         setSigning(false);
       }
@@ -130,7 +133,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     },
     {
       key: "info",
-      header: "Contrat",
+      header: t("contrat"),
       accessor: (r) => (
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.contractNumber}</span>
@@ -143,7 +146,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (r) => (
         <span className="font-bold text-[#0F2D52]">{formatCurrency(r.amountTtc)}</span>
       ),
@@ -152,12 +155,12 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "signedAt",
-      header: "Signe le",
+      header: t("signe"),
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
           {r.signedAt ? formatDate(r.signedAt) : "\u2014"}
@@ -169,12 +172,12 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     },
     {
       key: "signatures",
-      header: "Signatures",
+      header: t("signatures"),
       accessor: (r) => (
         <div className="flex items-center gap-2">
           <SignatureCheck signed={!!r.adminSignedAt} label="VNK" />
           <span className="text-muted-foreground/40 select-none">|</span>
-          <SignatureCheck signed={r.clientSignatureData} label="Vous" />
+          <SignatureCheck signed={r.clientSignatureData} label={t("vous")} />
         </div>
       ),
       hiddenOnMobile: true,
@@ -192,7 +195,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
               onClick={(e) => openPdf(r, e)}
             >
               <PenLine className="h-3.5 w-3.5 mr-1" />
-              Signer
+              {t("signer_2")}
             </Button>
           ) : (
             <Button
@@ -201,7 +204,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
               onClick={(e) => openPdf(r, e)}
             >
               <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
+              {t("voir")}
             </Button>
           )}
         </div>
@@ -213,7 +216,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
     <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
       <div className={`h-1.5 ${STATUS_BAR_COLORS[c.status] ?? "bg-gray-300"}`} />
       <CardContent className="p-0">
-        {/* Header: contract number + date + badge */}
+
         <div className="px-4 pt-4 pb-2">
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
@@ -225,25 +228,25 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
           <p className="font-semibold truncate mt-2">{c.title}</p>
         </div>
 
-        {/* Signatures */}
+
         <div className="mx-4 mb-3 rounded-lg bg-muted/40 px-3 py-2.5 flex items-center justify-center gap-3">
           <SignatureCheck signed={!!c.adminSignedAt} label="VNK" />
           <span className="text-muted-foreground/40 select-none">|</span>
-          <SignatureCheck signed={c.clientSignatureData} label="Vous" />
+          <SignatureCheck signed={c.clientSignatureData} label={t("vous")} />
         </div>
 
-        {/* Footer: amount + action */}
+
         <div className="border-t px-4 py-3 flex items-center justify-between gap-2">
           <p className="text-lg font-bold text-[#0F2D52]">{formatCurrency(c.amountTtc)}</p>
           {c.status === "pending" && !c.clientSignatureData ? (
             <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(c, e)}>
               <PenLine className="h-3.5 w-3.5 mr-1" />
-              Signer
+              {t("signer_2")}
             </Button>
           ) : (
             <Button size="sm" variant="outline" onClick={(e) => openPdf(c, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
+              {t("voir")}
             </Button>
           )}
         </div>
@@ -261,8 +264,8 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 <FileSignature className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="portal-title">Contrats</h1>
-                <p className="text-sm text-muted-foreground">Signez et consultez vos contrats</p>
+                <h1 className="portal-title">{t("contrats")}</h1>
+                <p className="text-sm text-muted-foreground">{t("signez_consultez_contrats")}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
@@ -272,7 +275,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                     <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Total contrats</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("total_contrats")}</p>
                     <p className="portal-kpi-number">{contractKpis.total}</p>
                   </div>
                 </div>
@@ -283,7 +286,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                     <PenLine className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-amber-600">A signer</p>
+                    <p className="portal-kpi-label text-amber-600">{t("signer")}</p>
                     <p className="portal-kpi-number">{contractKpis.aSigner}</p>
                   </div>
                 </div>
@@ -294,7 +297,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-emerald-600">Signes</p>
+                    <p className="portal-kpi-label text-emerald-600">{t("signes")}</p>
                     <p className="portal-kpi-number">{contractKpis.signes}</p>
                   </div>
                 </div>
@@ -305,7 +308,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                     <DollarSign className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Montant total</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("montant_total")}</p>
                     <p className="portal-kpi-number">{formatCurrency(contractKpis.montantTotal)}</p>
                   </div>
                 </div>
@@ -318,14 +321,14 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
         getRowId={(r) => r.id}
         renderCard={renderCard}
         storageKey="portal-contracts"
-        searchPlaceholder="Rechercher un contrat..."
+        searchPlaceholder={t("rechercher_contrat")}
         searchFn={(r) => `${r.contractNumber} ${r.title}`}
-        filterOptions={filterOptions}
+        filterOptions={filterOptions.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
         filterFn={(r) => r.status}
-        emptyMessage="Aucun contrat"
+        emptyMessage={t("aucun_contrat")}
       />
 
-      {/* PDF preview — Signer button in footer if pending */}
+
       {pdfContract && (
         <PdfViewerModal
           open={!!pdfContract}
@@ -345,7 +348,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 a.click();
               }}>
                 <Download className="h-4 w-4 mr-1.5" />
-                Telecharger le contrat
+                {t("telecharger_contrat")}
               </Button>
             ) : showSignature ? null
               : pdfContract.status === "pending" && !pdfContract.clientSignatureData ? (
@@ -355,14 +358,14 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 onClick={startSign}
               >
                 <PenLine className="h-4 w-4 mr-1" />
-                Signer ce contrat
+                {t("signer_contrat_2")}
               </Button>
             ) : undefined
           }
         />
       )}
 
-      {/* Signature overlay — SUR le PDF modal */}
+
       {pdfContract && showSignature && (
         <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[10000] flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSignature(false)} />
@@ -379,12 +382,12 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                   <FileSignature className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Signer le contrat</h2>
+                  <h2 className="text-lg font-bold">{t("signer_contrat")}</h2>
                   <p className="text-white/60 text-sm">{pdfContract.contractNumber} — {pdfContract.title}</p>
                 </div>
               </div>
               <div className="mt-4 bg-white/10 rounded-lg px-3 py-2 w-fit">
-                <span className="text-white/70 text-sm">Montant : </span>
+                <span className="text-white/70 text-sm">{t("montant")} </span>
                 <span className="text-white font-bold">{formatCurrency(pdfContract.amountTtc)}</span>
               </div>
             </div>
@@ -393,21 +396,21 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
                 onSave={handleSign}
                 height={180}
                 disabled={signing}
-                legalText="les conditions du contrat"
+                legalText={t("conditions_contrat")}
               />
               {signing && (
                 <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">
-                  Signature en cours...
+                  {t("signature_cours")}
                 </p>
               )}
             </div>
             <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <ShieldCheck className="h-3.5 w-3.5" />
-                <span>Signature juridiquement valide</span>
+                <span>{t("signature_juridiquement_valide")}</span>
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowSignature(false)} disabled={signing}>
-                Annuler
+                {t("annuler")}
               </Button>
             </div>
           </div>

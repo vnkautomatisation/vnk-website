@@ -24,6 +24,7 @@ export function FaqDialog({
   faq: FaqRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.content");
   const tc = useTranslations("common");
   const mode = faq ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -59,7 +60,7 @@ export function FaqDialog({
         ? await createFaqAction(payload)
         : await updateFaqAction({ id: faq!.id, ...payload });
       if (r.success) {
-        toast.success(mode === "create" ? "Question ajoutée" : "Question mise à jour");
+        toast.success(mode === "create" ? t("question_ajoutee") : t("question_mise_jour"));
         onSaved(); onOpenChange(false);
       } else {
         toast.error(r.error);
@@ -76,43 +77,43 @@ export function FaqDialog({
           </div>
           <div>
             <DialogTitle className="text-white text-base">
-              {mode === "create" ? "Nouvelle question" : "Modifier la question"}
+              {mode === "create" ? t("nouvelle_question") : t("modifier_question")}
             </DialogTitle>
-            <p className="text-xs text-white/70">Foire aux questions</p>
+            <p className="text-xs text-white/70">{t("foire_questions")}</p>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Question *</Label>
-              <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="Comment se déroule..." className="mt-1" />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("question")}</Label>
+              <Input value={question} onChange={(e) => setQuestion(e.target.value)} placeholder={t("comment_se_deroule")} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Langue</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("langue")}</Label>
               <Select value={locale} onValueChange={(v) => setLocale(v as "fr" | "en")}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="fr">Français</SelectItem>
-                  <SelectItem value="en">English</SelectItem>
+                  <SelectItem value="fr">{t("francais")}</SelectItem>
+                  <SelectItem value="en">{t("english")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Catégorie</Label>
-            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Facturation, Technique..." className="mt-1" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("categorie")}</Label>
+            <Input value={category} onChange={(e) => setCategory(e.target.value)} placeholder={t("facturation_technique")} className="mt-1" />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Réponse *</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("reponse")}</Label>
             <div className="mt-1">
               <RichEditor value={answer} onChange={setAnswer} rows={8} />
             </div>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <p className="text-sm font-medium">Visible sur le site</p>
-              <p className="text-xs text-muted-foreground">Décocher pour masquer cette question</p>
+              <p className="text-sm font-medium">{t("visible_site")}</p>
+              <p className="text-xs text-muted-foreground">{t("decocher_masquer_question")}</p>
             </div>
             <Switch checked={isPublished} onCheckedChange={setIsPublished} />
           </div>
@@ -121,7 +122,7 @@ export function FaqDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !question.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

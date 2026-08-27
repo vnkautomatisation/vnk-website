@@ -2,12 +2,14 @@
 // Calcule revenu HT, TPS, TVQ et taxes payees pour la periode SANS creer la declaration.
 // Utilise pour la prevision live dans le modal Nouvelle declaration.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
   const from = searchParams.get("from");
   const to = searchParams.get("to");
   if (!from || !to) {
-    return NextResponse.json({ error: "Paramètres from et to requis" }, { status: 400 });
+    return NextResponse.json({ error: t("parametres_from_et_to_requis") }, { status: 400 });
   }
 
   const periodStart = new Date(from);
@@ -29,7 +31,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Dates invalides" }, { status: 400 });
   }
   if (periodEnd < periodStart) {
-    return NextResponse.json({ error: "La date de fin doit être après la date de début" }, { status: 400 });
+    return NextResponse.json({ error: t("la_date_de_fin_doit_etre_apres") }, { status: 400 });
   }
 
   const periodEndExclusive = new Date(periodEnd);

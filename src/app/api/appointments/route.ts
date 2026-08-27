@@ -1,6 +1,7 @@
 // GET /api/appointments — liste RDV (admin: tous, client: les siens)
 // POST /api/appointments — creer un RDV (admin) + auto-creation Teams meeting si MS connecte
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -58,6 +59,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   // Normalise : si endTime <= startTime, force endTime = startTime + 30min (defaut RDV)

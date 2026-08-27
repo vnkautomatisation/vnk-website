@@ -20,22 +20,23 @@ type Emp = { id: number; fullName: string | null; email: string; position: { nam
 type Salary = { id: number; effectiveDate: string; type: string; salaryAnnual: number | null; hourlyRate: number | null; reason: string | null; admin: { id: number; fullName: string | null; email: string } };
 type Bonus = { id: number; type: string; amount: number; reason: string | null; awardedAt: string; admin: { id: number; fullName: string | null; email: string } };
 
-const SAL_TYPE: Record<string, string> = {
-  initial: "Initial", raise: "Augmentation", promotion: "Promotion", adjustment: "Ajustement",
-  bonus_base: "Bonus base", demotion: "Rétrogradation",
+const SAL_TYPE_KEY: Record<string, string> = {
+  initial: "initial", raise: "augmentation", promotion: "promotion", adjustment: "ajustement",
+  bonus_base: "bonus_base", demotion: "retrogradation",
 };
-const BONUS_TYPE: Record<string, string> = {
-  annual_bonus: "Bonus annuel", spot_bonus: "Spot bonus", commission: "Commission",
-  sign_on: "Sign-on", referral: "Référence", retention: "Rétention",
+const BONUS_TYPE_KEY: Record<string, string> = {
+  annual_bonus: "bonus_annuel", spot_bonus: "spot_bonus", commission: "commission",
+  sign_on: "sign_on", referral: "reference", retention: "retention",
 };
 
 export function CompensationView({ employees, salaryHistory, bonuses }: { employees: Emp[]; salaryHistory: Salary[]; bonuses: Bonus[] }) {
+  const t = useTranslations("admin.compensation");
   const router = useRouter();
   const [tab, setTab] = useState<"salaries" | "bonuses">("salaries");
   const [salDialog, setSalDialog] = useState(false);
   const [bonusDialog, setBonusDialog] = useState(false);
 
-  // Filtres
+
   const [salEmp, setSalEmp] = useState<string>("all");
   const [salType, setSalType] = useState<string>("all");
   const [salYear, setSalYear] = useState<string>("all");
@@ -76,7 +77,7 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
     });
   }, [bonuses, bonusEmp, bonusType, bonusYear]);
 
-  // Reset pagination quand filtres changent
+
   useEffect(() => { setSalPage(0); }, [salEmp, salType, salYear]);
   useEffect(() => { setBonusPage(0); }, [bonusEmp, bonusType, bonusYear]);
 
@@ -86,21 +87,21 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
   const bonusPageItems = filteredBonuses.slice(bonusPage * PAGE_SIZE, (bonusPage + 1) * PAGE_SIZE);
 
   const TABS: TabItem<"salaries" | "bonuses">[] = [
-    { key: "salaries", label: "Historique salaires", icon: TrendingUp, count: salaryHistory.length },
-    { key: "bonuses", label: "Bonus & primes", icon: Gift, count: bonuses.length },
+    { key: "salaries", label: t("historique_salaires"), icon: TrendingUp, count: salaryHistory.length },
+    { key: "bonuses", label: t("bonus_primes"), icon: Gift, count: bonuses.length },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><BarChart className="h-5 w-5 text-[#0F2D52]" />Compensation</h1>
-          <p className="text-sm text-muted-foreground">Historique des salaires, augmentations, bonus et primes.</p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><BarChart className="h-5 w-5 text-[#0F2D52]" />{t("compensation")}</h1>
+          <p className="text-sm text-muted-foreground">{t("historique_salaires_augmentations_bonus_primes")}</p>
         </div>
         {tab === "salaries" ? (
-          <Button onClick={() => setSalDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Ajustement salarial</Button>
+          <Button onClick={() => setSalDialog(true)}><Plus className="h-4 w-4 mr-1.5" />{t("ajustement_salarial")}</Button>
         ) : (
-          <Button onClick={() => setBonusDialog(true)}><Plus className="h-4 w-4 mr-1.5" />Bonus</Button>
+          <Button onClick={() => setBonusDialog(true)}><Plus className="h-4 w-4 mr-1.5" />{t("bonus")}</Button>
         )}
       </div>
 
@@ -108,27 +109,27 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
 
       {tab === "salaries" && (
         <>
-          {/* Filtres salaires */}
+
           <Card className="p-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <Select value={salEmp} onValueChange={setSalEmp}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Employé" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("employe_2")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les employés</SelectItem>
+                  <SelectItem value="all">{t("tous_employes")}</SelectItem>
                   {employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={salType} onValueChange={setSalType}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("type")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {Object.entries(SAL_TYPE).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  <SelectItem value="all">{t("tous_types")}</SelectItem>
+                  {Object.entries(SAL_TYPE_KEY).map(([k, v]) => <SelectItem key={k} value={k}>{t(v)}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={salYear} onValueChange={setSalYear}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Année" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("annee")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes les années</SelectItem>
+                  <SelectItem value="all">{t("toutes_annees")}</SelectItem>
                   {salYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -139,11 +140,11 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
             <div className="divide-y">
               {filteredSalaries.length === 0 ? (
                 <div className="p-10 text-center text-sm text-muted-foreground">
-                  {salaryHistory.length === 0 ? "Aucun historique salarial." : "Aucun résultat avec ces filtres."}
+                  {salaryHistory.length === 0 ? t("aucun_historique_salarial") : t("aucun_resultat_filtres")}
                 </div>
               ) : salPageItems.map((s) => (
                 <div key={s.id} className="p-3 flex items-center gap-3 text-sm">
-                  <Badge variant="outline" className="text-[10px]">{SAL_TYPE[s.type] ?? s.type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{SAL_TYPE_KEY[s.type] ? t(SAL_TYPE_KEY[s.type]) : s.type}</Badge>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{s.admin.fullName || s.admin.email}</p>
                     {s.reason && <p className="text-xs text-muted-foreground italic">« {s.reason} »</p>}
@@ -167,27 +168,27 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
 
       {tab === "bonuses" && (
         <>
-          {/* Filtres bonus */}
+
           <Card className="p-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <Select value={bonusEmp} onValueChange={setBonusEmp}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Employé" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("employe_2")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les employés</SelectItem>
+                  <SelectItem value="all">{t("tous_employes")}</SelectItem>
                   {employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={bonusType} onValueChange={setBonusType}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Type" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("type")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {Object.entries(BONUS_TYPE).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  <SelectItem value="all">{t("tous_types")}</SelectItem>
+                  {Object.entries(BONUS_TYPE_KEY).map(([k, v]) => <SelectItem key={k} value={k}>{t(v)}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Select value={bonusYear} onValueChange={setBonusYear}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Année" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("annee")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Toutes les années</SelectItem>
+                  <SelectItem value="all">{t("toutes_annees")}</SelectItem>
                   {bonusYears.map((y) => <SelectItem key={y} value={y}>{y}</SelectItem>)}
                 </SelectContent>
               </Select>
@@ -198,12 +199,12 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
             <div className="divide-y">
               {filteredBonuses.length === 0 ? (
                 <div className="p-10 text-center text-sm text-muted-foreground">
-                  {bonuses.length === 0 ? "Aucun bonus enregistré." : "Aucun résultat avec ces filtres."}
+                  {bonuses.length === 0 ? t("aucun_bonus_enregistre") : t("aucun_resultat_filtres")}
                 </div>
               ) : bonusPageItems.map((b) => (
                 <div key={b.id} className="p-3 flex items-center gap-3 text-sm">
                   <Gift className="h-4 w-4 text-amber-500" />
-                  <Badge variant="outline" className="text-[10px]">{BONUS_TYPE[b.type] ?? b.type}</Badge>
+                  <Badge variant="outline" className="text-[10px]">{BONUS_TYPE_KEY[b.type] ? t(BONUS_TYPE_KEY[b.type]) : b.type}</Badge>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium">{b.admin.fullName || b.admin.email}</p>
                     {b.reason && <p className="text-xs text-muted-foreground italic">« {b.reason} »</p>}
@@ -229,16 +230,17 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
 }
 
 function PaginationBar({ page, totalPages, total, onPrev, onNext }: { page: number; totalPages: number; total: number; onPrev: () => void; onNext: () => void }) {
+  const t = useTranslations("admin.compensation");
   return (
     <div className="px-3 py-2 border-t bg-muted/30 flex items-center justify-between text-xs">
       <span className="text-muted-foreground">
         Page {page + 1} / {totalPages} · {total} entrée{total > 1 ? "s" : ""}
       </span>
       <div className="flex items-center gap-1">
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={onPrev} disabled={page === 0} aria-label="Page précédente">
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={onPrev} disabled={page === 0} aria-label={t("page_precedente")}>
           <ChevronLeft className="h-3.5 w-3.5" />
         </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" onClick={onNext} disabled={page >= totalPages - 1} aria-label="Page suivante">
+        <Button variant="outline" size="icon" className="h-7 w-7" onClick={onNext} disabled={page >= totalPages - 1} aria-label={t("page_suivante")}>
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>
@@ -247,6 +249,7 @@ function PaginationBar({ page, totalPages, total, onPrev, onNext }: { page: numb
 }
 
 function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; employees: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations("admin.compensation");
   const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [type, setType] = useState<"initial" | "raise" | "promotion" | "adjustment" | "bonus_base" | "demotion">("raise");
@@ -268,8 +271,8 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
   }, [open]);
 
   const submit = async () => {
-    if (!adminId) { toast.error("Employé requis"); return; }
-    if (!salaryAnnual && !hourlyRate) { toast.error("Salaire annuel OU taux/h requis"); return; }
+    if (!adminId) { toast.error(t("employe_requis")); return; }
+    if (!salaryAnnual && !hourlyRate) { toast.error(t("salaire_annuel_taux_h_requis")); return; }
     setPending(true);
     const r = await addSalaryHistoryAction({
       adminId: Number(adminId),
@@ -279,7 +282,7 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
       reason: reason || null,
     });
     setPending(false);
-    if (r.success) { toast.success("Ajouté"); onSaved(); onClose(); setAdminId(""); setSalaryAnnual(""); setHourlyRate(""); setReason(""); }
+    if (r.success) { toast.success(t("ajoute")); onSaved(); onClose(); setAdminId(""); setSalaryAnnual(""); setHourlyRate(""); setReason(""); }
     else toast.error(r.error || "");
   };
 
@@ -287,47 +290,47 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
-          <DialogHeader><DialogTitle className="text-base text-white">Ajustement salarial</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base text-white">{t("ajustement_salarial")}</DialogTitle></DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Employé *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("employe")}</Label>
               <Select value={adminId} onValueChange={setAdminId}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Type</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("type")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as "initial" | "raise" | "promotion" | "adjustment" | "bonus_base" | "demotion")}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(SAL_TYPE).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                <SelectContent>{Object.entries(SAL_TYPE_KEY).map(([k, v]) => <SelectItem key={k} value={k}>{t(v)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Salaire annuel</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("salaire_annuel")}</Label>
               <Input type="number" value={salaryAnnual} onChange={(e) => setSalaryAnnual(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Taux/h</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("taux_h")}</Label>
               <Input type="number" step="0.01" value={hourlyRate} onChange={(e) => setHourlyRate(e.target.value)} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Effectif</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("effectif")}</Label>
               <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Motif</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("motif")}</Label>
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : t("enregistrer")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -335,6 +338,7 @@ function SalaryDialog({ open, employees, onClose, onSaved }: { open: boolean; em
 }
 
 function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; employees: Emp[]; onClose: () => void; onSaved: () => void }) {
+  const t = useTranslations("admin.compensation");
   const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [type, setType] = useState<"annual_bonus" | "spot_bonus" | "commission" | "sign_on" | "referral" | "retention">("spot_bonus");
@@ -354,7 +358,7 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
   }, [open]);
 
   const submit = async () => {
-    if (!adminId || !amount) { toast.error("Champs obligatoires"); return; }
+    if (!adminId || !amount) { toast.error(t("champs_obligatoires")); return; }
     setPending(true);
     const r = await addBonusAction({
       adminId: Number(adminId), type,
@@ -362,7 +366,7 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
       reason: reason || null,
     });
     setPending(false);
-    if (r.success) { toast.success("Bonus accordé"); onSaved(); onClose(); setAdminId(""); setAmount(""); setReason(""); }
+    if (r.success) { toast.success(t("bonus_accorde")); onSaved(); onClose(); setAdminId(""); setAmount(""); setReason(""); }
     else toast.error(r.error || "");
   };
 
@@ -370,28 +374,28 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
-          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Gift className="h-4 w-4 text-amber-300" />Nouveau bonus</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Gift className="h-4 w-4 text-amber-300" />{t("nouveau_bonus")}</DialogTitle></DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Employé *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("employe")}</Label>
               <Select value={adminId} onValueChange={setAdminId}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Type</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("type")}</Label>
               <Select value={type} onValueChange={(v) => setType(v as "annual_bonus" | "spot_bonus" | "commission" | "sign_on" | "referral" | "retention")}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
-                <SelectContent>{Object.entries(BONUS_TYPE).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}</SelectContent>
+                <SelectContent>{Object.entries(BONUS_TYPE_KEY).map(([k, v]) => <SelectItem key={k} value={k}>{t(v)}</SelectItem>)}</SelectContent>
               </Select>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Montant *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("montant")}</Label>
               <Input type="number" step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
             </div>
             <div className="space-y-1.5">
@@ -400,13 +404,13 @@ function BonusDialog({ open, employees, onClose, onSaved }: { open: boolean; emp
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Motif</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("motif")}</Label>
             <textarea value={reason} onChange={(e) => setReason(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : "Accorder"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : t("accorder")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

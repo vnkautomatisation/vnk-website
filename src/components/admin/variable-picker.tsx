@@ -15,6 +15,7 @@
 //   <VariablePicker onInsert={(v) => insertAtCursor(v)} />
 // ─────────────────────────────────────────────────────────
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   ChevronDown,
   ChevronRight,
@@ -54,6 +55,8 @@ type Props = {
 };
 
 export function VariablePicker({ onInsert, filterSource, className }: Props) {
+  const t = useTranslations("admin.ui");
+  const tv = useTranslations("admin.library");
   const [query, setQuery] = useState("");
   const [showTechnical, setShowTechnical] = useState(false);
   const [openSources, setOpenSources] = useState<Record<string, boolean>>(() =>
@@ -72,10 +75,10 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
     return VARIABLE_REGISTRY.filter(
       (v) =>
         v.key.toLowerCase().includes(q) ||
-        v.label.toLowerCase().includes(q) ||
+        tv(v.labelKey).toLowerCase().includes(q) ||
         v.example.toLowerCase().includes(q)
     );
-  }, [query]);
+  }, [query, tv]);
 
   const grouped = useMemo(() => {
     const map = new Map<VariableSource, VariableDef[]>();
@@ -102,13 +105,13 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
         className
       )}
     >
-      {/* Header + recherche */}
+
       <div className="px-3 py-2.5 border-b bg-muted/30 shrink-0">
         <div className="flex items-center justify-between gap-2 mb-2">
           <div className="flex items-center gap-2 min-w-0">
             <Sparkles className="h-3.5 w-3.5 text-[#0F2D52] shrink-0" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] truncate">
-              Champs a inserer
+              {t("champs_inserer")}
             </h4>
           </div>
           <button
@@ -122,13 +125,13 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
             )}
             title={
               showTechnical
-                ? "Masquer la syntaxe technique"
-                : "Afficher la syntaxe technique (developpeurs)"
+                ? t("masquer_syntaxe_technique")
+                : t("afficher_syntaxe_technique_developpeurs")
             }
             aria-pressed={showTechnical}
           >
             <Code2 className="h-2.5 w-2.5" />
-            Tech
+            {t("tech")}
           </button>
         </div>
         <div className="relative">
@@ -136,13 +139,13 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un champ…"
+            placeholder={t("rechercher_champ")}
             className="pl-8 h-8 text-xs"
           />
         </div>
       </div>
 
-      {/* Sections collapsibles */}
+
       <div className="flex-1 overflow-y-auto divide-y">
         {visibleSources.map((section) => {
           const items = grouped.get(section.source) ?? [];
@@ -163,7 +166,7 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
                 )}
                 <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />
                 <span className="text-xs font-semibold text-foreground flex-1">
-                  {section.label}
+                  {tv(section.labelKey)}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   {items.length}
@@ -173,7 +176,7 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
                 <div className="px-1.5 pb-1.5 space-y-0.5">
                   {items.length === 0 ? (
                     <p className="px-2 py-1.5 text-[11px] text-muted-foreground italic">
-                      Aucun champ.
+                      {t("aucun_champ")}
                     </p>
                   ) : (
                     items.map((v) => (
@@ -182,11 +185,11 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
                         type="button"
                         onClick={() => handleInsert(v.key)}
                         className="w-full text-left rounded px-2 py-1.5 hover:bg-blue-50 hover:border-blue-200 focus:bg-blue-100 focus:outline-none transition border border-transparent group"
-                        title={`Inserer le champ : ${v.label}`}
+                        title={tv("inserer_le_champ", { label: tv(v.labelKey) })}
                       >
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[13px] font-semibold text-foreground truncate group-hover:text-blue-900">
-                            {v.label}
+                            {tv(v.labelKey)}
                           </span>
                         </div>
                         {v.example && (
@@ -214,18 +217,15 @@ export function VariablePicker({ onInsert, filterSource, className }: Props) {
           <div className="px-3 py-8 text-center">
             <Search className="h-6 w-6 mx-auto text-muted-foreground/40 mb-2" />
             <p className="text-xs text-muted-foreground">
-              Aucun champ ne correspond a votre recherche.
+              {t("aucun_champ_ne_correspond_recherche")}
             </p>
           </div>
         )}
       </div>
 
-      {/* Footer */}
+
       <div className="px-3 py-2 border-t bg-muted/20 shrink-0">
-        <p className="text-[10px] text-muted-foreground leading-snug">
-          Cliquez sur un champ pour l&apos;inserer au curseur. Il sera rempli
-          automatiquement avec les vraies donnees de l&apos;employe.
-        </p>
+        <p className="text-[10px] text-muted-foreground leading-snug">{tv("variable_picker_cliquez_sur_un_champ_pour_l_inserer")}</p>
       </div>
     </div>
   );

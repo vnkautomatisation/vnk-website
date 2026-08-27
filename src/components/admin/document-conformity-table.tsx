@@ -99,7 +99,7 @@ function cellStatus(
   employeeId: number,
   signatures: SignatureRow[]
 ): { status: CellStatus; signedAt?: string; version?: string } {
-  // On prend la signature la plus récente de cet employé pour ce template
+
   const sigs = signatures.filter(
     (s) => s.adminId === employeeId && s.templateId === template.id
   );
@@ -152,12 +152,13 @@ export function DocumentConformityTable({
   handbookSignatures?: HandbookSignatureLite[];
   employees: Employee[];
   signatures: SignatureRow[];
-  /** Envoie une relance individuelle (templateId, employeeId). */
+
   onRemind: (templateId: number, employeeId: number) => void | Promise<void>;
-  /** Crée une demande de signature pour 1+ employés. */
+
   onRequest: (templateId: number, employeeIds: number[]) => void | Promise<void>;
   className?: string;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -174,8 +175,8 @@ export function DocumentConformityTable({
     return Array.from(map.values()).sort((a, b) => a.localeCompare(b));
   }, [employees]);
 
-  // Mission 1 : colonnes = handbooks actifs (en premier) + templates standalone.
-  // Filtrage : "all" / "h:<handbookId>" / "t:<templateId>".
+
+
   const allColumns: ColumnItem[] = useMemo(() => {
     const cols: ColumnItem[] = [];
     for (const h of handbooks.filter((h) => h.isActive)) {
@@ -197,7 +198,7 @@ export function DocumentConformityTable({
       const id = Number(templateFilter.slice(2));
       return allColumns.filter((c) => c.kind === "template" && c.template.id === id);
     }
-    // backward compat : valeur numerique pure = templateId.
+
     return allColumns.filter((c) => c.kind === "template" && String(c.template.id) === templateFilter);
   }, [allColumns, templateFilter]);
 
@@ -228,7 +229,7 @@ export function DocumentConformityTable({
       }
       return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [
     employees,
     search,
@@ -239,7 +240,7 @@ export function DocumentConformityTable({
     handbookSignatures,
   ]);
 
-  // Statistiques globales (sur colonnes filtrees obligatoires + tous les employés)
+
   const stats = useMemo(() => {
     let total = 0;
     let signedCurrent = 0;
@@ -259,10 +260,10 @@ export function DocumentConformityTable({
     }
     const pct = total > 0 ? Math.round((signedCurrent / total) * 100) : 100;
     return { total, signedCurrent, outdated, missing, pct };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [filteredColumns, employees, signatures, handbookSignatures]);
 
-  // Sélection multi-employés pour bulk request
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const toggleEmp = (id: number) =>
     setSelectedIds((prev) => {
@@ -279,15 +280,15 @@ export function DocumentConformityTable({
     }
   };
 
-  // Bulk demande de signature : uniquement quand on filtre sur UN template standalone
-  // (les cahiers ont leur propre workflow d'assignation collective).
+
+
   const bulkTemplateId = (() => {
     if (templateFilter === "all") return null;
     if (templateFilter.startsWith("t:")) {
       const id = Number(templateFilter.slice(2));
       return Number.isFinite(id) ? id : null;
     }
-    // backward-compat : valeur numerique pure = templateId
+
     if (!templateFilter.startsWith("h:")) {
       const id = Number(templateFilter);
       return Number.isFinite(id) ? id : null;
@@ -299,53 +300,53 @@ export function DocumentConformityTable({
 
   return (
     <div className={cn("space-y-4", className)}>
-      {/* KPI globaux */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="Conformité"
+          label={t("conformite_2")}
           value={`${stats.pct}%`}
           icon={ShieldCheck}
           accent={stats.pct >= 90 ? "success" : stats.pct >= 60 ? "warning" : "danger"}
           hint={`${stats.signedCurrent} / ${stats.total} signatures à jour`}
         />
         <DocumentStatsCard
-          label="À jour"
+          label={t("jour")}
           value={stats.signedCurrent}
           icon={Check}
           accent="success"
         />
         <DocumentStatsCard
-          label="Version périmée"
+          label={t("version_perimee")}
           value={stats.outdated}
           icon={AlertTriangle}
           accent="warning"
         />
         <DocumentStatsCard
-          label="Jamais signé"
+          label={t("jamais_signe")}
           value={stats.missing}
           icon={X}
           accent="danger"
         />
       </div>
 
-      {/* Filtres */}
+
       <div className="flex flex-col md:flex-row gap-2 md:items-center">
         <div className="relative flex-1">
           <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un employé…"
+            placeholder={t("rechercher_employe")}
             className="pl-8 h-9 text-sm"
           />
         </div>
         <Select value={teamFilter} onValueChange={setTeamFilter}>
           <SelectTrigger className="h-9 text-sm md:w-40">
             <Users className="h-3.5 w-3.5 mr-1.5 text-[#0F2D52]" />
-            <SelectValue placeholder="Équipe" />
+            <SelectValue placeholder={t("equipe")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toutes les équipes</SelectItem>
+            <SelectItem value="all">{t("toutes_equipes")}</SelectItem>
             {teams.map((t) => (
               <SelectItem key={t} value={t}>
                 {t}
@@ -356,13 +357,13 @@ export function DocumentConformityTable({
         <Select value={templateFilter} onValueChange={setTemplateFilter}>
           <SelectTrigger className="h-9 text-sm md:w-56">
             <FileText className="h-3.5 w-3.5 mr-1.5 text-[#0F2D52]" />
-            <SelectValue placeholder="Document" />
+            <SelectValue placeholder={t("document")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les documents</SelectItem>
+            <SelectItem value="all">{t("tous_documents")}</SelectItem>
             {handbooks.filter((h) => h.isActive).length > 0 && (
               <SelectItem value="__sep_handbooks" disabled>
-                — Cahiers —
+                {t("cahiers_separateur")}
               </SelectItem>
             )}
             {handbooks
@@ -374,7 +375,7 @@ export function DocumentConformityTable({
               ))}
             {templates.length > 0 && (
               <SelectItem value="__sep_templates" disabled>
-                — Documents individuels —
+                {t("documents_individuels")}
               </SelectItem>
             )}
             {templates.map((t) => (
@@ -393,19 +394,19 @@ export function DocumentConformityTable({
             <SelectValue placeholder={tc("status")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous statuts</SelectItem>
-            <SelectItem value="missing">Jamais signé</SelectItem>
-            <SelectItem value="outdated">Version périmée</SelectItem>
-            <SelectItem value="current">À jour</SelectItem>
+            <SelectItem value="all">{t("tous_statuts")}</SelectItem>
+            <SelectItem value="missing">{t("jamais_signe")}</SelectItem>
+            <SelectItem value="outdated">{t("version_perimee")}</SelectItem>
+            <SelectItem value="current">{t("jour")}</SelectItem>
           </SelectContent>
         </Select>
       </div>
 
-      {/* Barre d'actions bulk */}
+
       {selectedIds.size > 0 && (
         <div className="flex items-center gap-2 rounded-lg border bg-[#0F2D52]/5 border-[#0F2D52]/20 px-3 py-2">
           <span className="text-xs font-semibold text-[#0F2D52]">
-            {selectedIds.size} employé{selectedIds.size > 1 ? "s" : ""} sélectionné{selectedIds.size > 1 ? "s" : ""}
+            {t("employes_selectionnes", { count: selectedIds.size })}
           </span>
           <Button
             type="button"
@@ -420,17 +421,17 @@ export function DocumentConformityTable({
             }}
           >
             <Send className="h-3 w-3 mr-1" />
-            Demander la signature
+            {t("demander_signature")}
           </Button>
           {!canBulk && (
             <span className="text-[10px] text-muted-foreground">
-              Sélectionnez un document précis pour activer
+              {t("selectionnez_document_precis_activer")}
             </span>
           )}
         </div>
       )}
 
-      {/* Tableau */}
+
       <div className="rounded-lg border bg-card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -440,7 +441,7 @@ export function DocumentConformityTable({
                   <button
                     type="button"
                     onClick={toggleAll}
-                    aria-label="Tout sélectionner"
+                    aria-label={t("tout_selectionner")}
                     className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-white/15"
                   >
                     {selectedIds.size === filteredEmployees.length && filteredEmployees.length > 0 ? (
@@ -451,7 +452,7 @@ export function DocumentConformityTable({
                   </button>
                 </th>
                 <th className="px-3 py-2 text-left font-semibold text-xs uppercase tracking-wider">
-                  Employé
+                  {t("employe")}
                 </th>
                 {filteredColumns.map((col) => {
                   const key = col.kind === "handbook" ? `h-${col.handbook.id}` : `t-${col.template.id}`;
@@ -470,7 +471,7 @@ export function DocumentConformityTable({
                         </span>
                         <span className="text-white/60 text-[9px] font-normal">
                           v{version}
-                          {isRequired ? " · obligatoire" : ""}
+                          {isRequired ? t("obligatoire_suffixe") : ""}
                         </span>
                       </div>
                     </th>
@@ -535,7 +536,7 @@ export function DocumentConformityTable({
                         </td>
                       );
                     }
-                    // handbook cell : pas d'action onRequest individuelle (signature collective)
+
                     const { status, signedAt, version } = handbookCellStatus(
                       col.handbook,
                       e.id,
@@ -562,7 +563,7 @@ export function DocumentConformityTable({
                     colSpan={2 + filteredColumns.length}
                     className="px-3 py-10 text-center text-sm text-muted-foreground"
                   >
-                    Aucun employé ne correspond aux filtres.
+                    {t("aucun_employe_ne_correspond_filtres")}
                   </td>
                 </tr>
               )}
@@ -586,10 +587,11 @@ function ConformityCell({
   signedAt?: string;
   version?: string;
   templateVersion: string;
-  /** Pour les cahiers : pas d'action individuelle (signature collective). */
+
   onAction?: () => void;
   isHandbook?: boolean;
 }) {
+  const t = useTranslations("admin.hr_documents");
   if (status === "signed_current") {
     const dateLabel = signedAt
       ? new Date(signedAt).toLocaleDateString("fr-CA")
@@ -613,12 +615,12 @@ function ConformityCell({
           </span>
         </ActionTooltip>
         {!isHandbook && onAction && (
-          <ActionTooltip label="Envoyer un rappel">
+          <ActionTooltip label={t("envoyer_rappel")}>
             <button
               type="button"
               onClick={onAction}
               className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-amber-100 text-amber-700"
-              aria-label="Rappel"
+              aria-label={t("rappel")}
             >
               <BellRing className="h-3.5 w-3.5" />
             </button>
@@ -627,21 +629,21 @@ function ConformityCell({
       </div>
     );
   }
-  // missing
+
   return (
     <div className="inline-flex items-center gap-1">
-      <ActionTooltip label={isHandbook ? "Cahier non signe" : "Jamais signé"}>
+      <ActionTooltip label={isHandbook ? t("cahier_non_signe") : t("jamais_signe")}>
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-red-100 text-red-700 ring-1 ring-red-200">
           <X className="h-3.5 w-3.5" />
         </span>
       </ActionTooltip>
       {!isHandbook && onAction && (
-        <ActionTooltip label="Demander à signer">
+        <ActionTooltip label={t("demander_signer")}>
           <button
             type="button"
             onClick={onAction}
             className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-red-100 text-red-700"
-            aria-label="Demander à signer"
+            aria-label={t("demander_signer")}
           >
             <Send className="h-3.5 w-3.5" />
           </button>

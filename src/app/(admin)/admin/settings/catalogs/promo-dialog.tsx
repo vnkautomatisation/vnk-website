@@ -30,6 +30,7 @@ export function PromoDialog({
   promo: PromoRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.catalogs");
   const tc = useTranslations("common");
   const mode = promo ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -75,7 +76,7 @@ export function PromoDialog({
           ? await createPromoAction(payload)
           : await updatePromoAction({ id: promo!.id, ...payload });
       if (result.success) {
-        toast.success(mode === "create" ? "Code promo créé" : "Code promo mis à jour");
+        toast.success(mode === "create" ? t("code_promo_cree") : t("code_promo_mis_jour"));
         onSaved();
         onOpenChange(false);
       } else {
@@ -93,36 +94,36 @@ export function PromoDialog({
           </div>
           <div>
             <DialogTitle className="text-white text-base">
-              {mode === "create" ? "Nouveau code promo" : promo?.code}
+              {mode === "create" ? t("nouveau_code_promo") : promo?.code}
             </DialogTitle>
-            <p className="text-xs text-white/70">Réduction applicable aux devis et factures</p>
+            <p className="text-xs text-white/70">{t("reduction_applicable_devis_factures")}</p>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Code *</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("code")}</Label>
             <div className="flex gap-2 mt-1">
               <Input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} className="font-mono uppercase" disabled={mode === "edit"} />
               {mode === "create" && (
-                <Button type="button" variant="outline" size="icon" onClick={() => setCode(generateCode())} title="Régénérer">
+                <Button type="button" variant="outline" size="icon" onClick={() => setCode(generateCode())} title={t("regenerer")}>
                   <RefreshCw className="h-4 w-4" />
                 </Button>
               )}
             </div>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description")}</Label>
             <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className="mt-1 text-sm" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Type</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("type")}</Label>
               <Select value={discountType} onValueChange={(v) => setDiscountType(v as "percent" | "fixed")}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="percent">Pourcentage (%)</SelectItem>
-                  <SelectItem value="fixed">Montant fixe ($)</SelectItem>
+                  <SelectItem value="percent">{t("pourcentage")}</SelectItem>
+                  <SelectItem value="fixed">{t("montant_fixe")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -134,16 +135,16 @@ export function PromoDialog({
             </div>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nb d&apos;utilisations max</Label>
-            <Input type="number" min="1" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder="Illimité" className="mt-1" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("nb_apos_utilisations_max")}</Label>
+            <Input type="number" min="1" value={maxUses} onChange={(e) => setMaxUses(e.target.value)} placeholder={t("illimite")} className="mt-1" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Valide à partir du</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("valide_partir")}</Label>
               <Input type="date" value={validFrom} onChange={(e) => setValidFrom(e.target.value)} className="mt-1" />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Valide jusqu&apos;au</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("valide_jusqu_apos")}</Label>
               <Input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="mt-1" />
             </div>
           </div>
@@ -152,7 +153,7 @@ export function PromoDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !code.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

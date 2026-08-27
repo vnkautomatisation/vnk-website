@@ -1,9 +1,13 @@
 // Admin · Contrats — KPIs + filtres + creation + signature + PDF + envoi client
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { ContractsView } from "./contracts-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Contrats" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("contrats") };
+}
 
 export default async function ContractsPage() {
   const now = new Date();

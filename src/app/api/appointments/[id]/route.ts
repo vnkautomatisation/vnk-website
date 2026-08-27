@@ -2,6 +2,7 @@
 // PATCH /api/appointments/[id] — modifier un RDV (admin)
 // DELETE /api/appointments/[id] — supprimer un RDV (admin)
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -56,17 +57,18 @@ const updateSchema = z.object({
   meetingLink: z.string().nullable().optional(),
   notesAdmin: z.string().nullable().optional(),
   status: z.enum(["confirmed", "cancelled", "no_show", "completed"]).optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
-const STATUS_TO_EVENT: Record<string, { type: WorkflowEventType; label: string }> = {
-  cancelled: { type: "appointment_cancelled", label: "annulé" },
-  completed: { type: "appointment_completed", label: "complété" },
+const STATUS_TO_EVENT: Record<string, { type: WorkflowEventType; labelKey: string }> = {
+  cancelled: { type: "appointment_cancelled", labelKey: "annule" },
+  completed: { type: "appointment_completed", labelKey: "complete" },
 };
 
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -84,7 +86,7 @@ export async function GET(
   });
 
   if (!appointment) {
-    return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("rendez_vous_introuvable") }, { status: 404 });
   }
   if (session.user.role === "client" && appointment.clientId !== session.user.clientId) {
     return unauthorizedJson(403);
@@ -97,6 +99,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -110,13 +113,13 @@ export async function PATCH(
 
   const existing = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   if (!existing) {
-    return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("rendez_vous_introuvable") }, { status: 404 });
   }
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -192,7 +195,7 @@ export async function PATCH(
       await createWorkflowEvent({
         clientId: existing.clientId,
         eventType: meta.type,
-        eventLabel: `Rendez-vous ${meta.label} — ${existing.subject || existing.startTime}`,
+        eventLabel: t("rdv_statut_sujet", { statut: t(meta.labelKey), sujet: existing.subject || existing.startTime }),
         triggeredBy: "admin",
         metadata: { appointmentId },
       });
@@ -216,6 +219,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -229,7 +233,7 @@ export async function DELETE(
 
   const appt = await prisma.appointment.findUnique({ where: { id: appointmentId } });
   if (!appt) {
-    return NextResponse.json({ error: "Rendez-vous introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("rendez_vous_introuvable") }, { status: 404 });
   }
 
   if (appt.slotId) {

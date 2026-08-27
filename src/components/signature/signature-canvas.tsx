@@ -4,6 +4,7 @@
 // Look papier signature, stroke lisse, haute resolution adaptative
 // ═══════════════════════════════════════════════════════════
 import { useRef, useState, useEffect, useCallback, useLayoutEffect } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Pen, Eraser, Check, Type, Upload } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -21,6 +22,7 @@ export function SignatureCanvas({
   disabled?: boolean;
   legalText?: string;
 }) {
+  const tc = useTranslations("common");
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [mode, setMode] = useState<SignMode>("draw");
@@ -224,7 +226,7 @@ export function SignatureCanvas({
     setMode(m);
   };
 
-  const defaultLegal = legalText ?? "les conditions de ce document";
+  const defaultLegal = legalText ?? tc("conditions_de_ce_document");
 
   return (
     <div className="space-y-4">
@@ -278,7 +280,7 @@ export function SignatureCanvas({
             mode === "draw" ? "cursor-crosshair" : "cursor-default"
           )}
           style={{ imageRendering: "auto", WebkitFontSmoothing: "antialiased" } as React.CSSProperties}
-          aria-label="Zone de signature"
+          aria-label={tc("zone_de_signature")}
         />
 
         {/* Placeholder elegant (en dehors du canvas pour eviter rendu pixel) */}
@@ -287,25 +289,21 @@ export function SignatureCanvas({
             <span
               className="text-2xl sm:text-3xl text-slate-300 italic font-light tracking-wide select-none"
               style={{ fontFamily: '"Brush Script MT", "Segoe Script", cursive' }}
-            >
-              Votre signature
-            </span>
+            >{tc("signature_canvas_votre_signature")}</span>
             <span className="text-[11px] text-slate-400 mt-1 flex items-center gap-1.5">
-              <Pen className="h-3 w-3" />
-              Tracez avec la souris ou votre doigt
-            </span>
+              <Pen className="h-3 w-3" />{tc("signature_canvas_tracez_avec_la_souris_ou_votre_doigt")}</span>
           </div>
         )}
         {!hasContent && mode === "upload" && !uploadedImg && (
           <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
             <Upload className="h-7 w-7 text-slate-300 mb-2" />
-            <span className="text-sm text-slate-400">Importez votre signature</span>
+            <span className="text-sm text-slate-400">{tc("importez_votre_signature")}</span>
             <span className="text-[11px] text-slate-400 mt-0.5">PNG, JPG ou WebP</span>
           </div>
         )}
         {!hasContent && mode === "type" && !initials && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <span className="text-sm text-slate-400">Tapez vos initiales ci-dessous</span>
+            <span className="text-sm text-slate-400">{tc("signature_canvas_tapez_vos_initiales_ci_dessous")}</span>
           </div>
         )}
       </div>
@@ -346,7 +344,7 @@ export function SignatureCanvas({
             className="w-full h-11"
           >
             <Upload className="h-4 w-4 mr-1.5" />
-            {uploadedImg ? "Changer l'image" : "Choisir un fichier"}
+            {uploadedImg ? tc("changer_image") : tc("choisir_fichier")}
           </Button>
         </>
       )}
@@ -378,9 +376,7 @@ export function SignatureCanvas({
 
       <p className="text-[11px] text-slate-500 text-center leading-relaxed px-2">
         En signant, vous confirmez avoir lu et accepté {defaultLegal}.
-        <br className="hidden sm:inline" />
-        Votre adresse IP est enregistrée comme preuve légale.
-      </p>
+        <br className="hidden sm:inline" />{tc("signature_canvas_votre_adresse_ip_est_enregistree_comme_preuve")}</p>
     </div>
   );
 }

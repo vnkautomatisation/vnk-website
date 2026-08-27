@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { CreditCard, Lock, Shield, Receipt } from "lucide-react";
 import {
@@ -35,6 +36,7 @@ export function PaymentModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("portal");
   const [loading, setLoading] = useState(false);
 
   if (!invoice) return null;
@@ -52,15 +54,15 @@ export function PaymentModal({
         if (data.url) {
           window.location.href = data.url;
         } else {
-          toast.error("URL de paiement non disponible");
+          toast.error(t("url_paiement_non_disponible"));
           setLoading(false);
         }
       } else {
-        toast.error("Erreur lors de la creation du paiement");
+        toast.error(t("erreur_lors_creation_paiement"));
         setLoading(false);
       }
     } catch {
-      toast.error("Erreur de connexion");
+      toast.error(t("erreur_connexion"));
       setLoading(false);
     }
   };
@@ -68,7 +70,7 @@ export function PaymentModal({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="p-0 gap-0 overflow-hidden max-w-md">
-        {/* Header */}
+
         <div className="bg-[#0F2D52] px-6 py-5 text-white">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-lg bg-white/15 flex items-center justify-center">
@@ -76,7 +78,7 @@ export function PaymentModal({
             </div>
             <div>
               <DialogTitle className="text-lg font-bold text-white">
-                Paiement de facture
+                {t("paiement_facture")}
               </DialogTitle>
               <DialogDescription className="text-white/70 text-sm mt-0.5">
                 {invoice.invoiceNumber} — {invoice.title}
@@ -85,11 +87,11 @@ export function PaymentModal({
           </div>
         </div>
 
-        {/* Invoice recap */}
+
         <div className="px-6 py-5 space-y-3">
           <div className="space-y-2">
             <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Montant HT</span>
+              <span className="text-muted-foreground">{t("montant_ht")}</span>
               <span className="font-medium">{formatCurrency(invoice.amountHt)}</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -104,7 +106,7 @@ export function PaymentModal({
 
           <div className="border-t pt-3">
             <div className="flex justify-between items-baseline">
-              <span className="text-sm font-semibold text-muted-foreground">Total TTC</span>
+              <span className="text-sm font-semibold text-muted-foreground">{t("total_ttc")}</span>
               <span className="text-2xl font-bold text-[#0F2D52]">
                 {formatCurrency(invoice.amountTtc)}
               </span>
@@ -117,7 +119,7 @@ export function PaymentModal({
           </div>
         </div>
 
-        {/* Info section */}
+
         <div className="mx-6 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 px-4 py-3 flex gap-3 items-start">
           <div className="h-8 w-8 rounded-full bg-[#0F2D52]/10 flex items-center justify-center shrink-0 mt-0.5">
             <Lock className="h-4 w-4 text-[#0F2D52]" />
@@ -125,19 +127,16 @@ export function PaymentModal({
           <div>
             <p className="text-sm font-semibold text-[#0F2D52] flex items-center gap-1.5">
               <Shield className="h-3.5 w-3.5" />
-              Paiement securise via Stripe
+              {t("paiement_securise_via_stripe")}
             </p>
-            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-              Vous allez etre redirige vers la page de paiement securisee Stripe
-              pour completer la transaction.
-            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{t("payment_modal_vous_allez_etre_redirige_vers_la_page")}</p>
           </div>
         </div>
 
-        {/* Footer */}
+
         <div className="px-6 py-4 mt-2 flex justify-end gap-3 border-t">
           <Button variant="outline" onClick={onClose} disabled={loading}>
-            Annuler
+            {t("annuler")}
           </Button>
           <Button
             className="bg-[#0F2D52] hover:bg-[#1a3a66]"
@@ -145,7 +144,7 @@ export function PaymentModal({
             disabled={loading}
           >
             <CreditCard className="h-4 w-4 mr-2" />
-            {loading ? "Redirection..." : "Proceder au paiement"}
+            {loading ? t("redirection") : t("proceder_paiement")}
           </Button>
         </div>
       </DialogContent>

@@ -2,6 +2,7 @@
 // Export PDF du rapport RH (people analytics).
 // Auth : admin connecte.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -13,13 +14,14 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
   }
   // Rapports RH : reserves RH (super_admin / users.write / hr.write).
   if (!(await isHrAdmin(session.user.adminId!))) {
-    return NextResponse.json({ error: "Permission refusée (RH requis)" }, { status: 403 });
+    return NextResponse.json({ error: t("permission_refusee_rh_requis") }, { status: 403 });
   }
   const adminId = session.user.adminId!;
 

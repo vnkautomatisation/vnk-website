@@ -2,6 +2,7 @@
 // PATCH /api/contracts/[id] — mettre a jour (interdit apres signature client)
 // DELETE /api/contracts/[id] — supprimer un contrat non signe
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -20,7 +21,7 @@ const updateSchema = z.object({
   expiresAt: z.string().nullable().optional(),
   mandateId: z.number().int().positive().nullable().optional(),
   quoteId: z.number().int().positive().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
@@ -48,6 +49,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -63,13 +65,13 @@ export async function PATCH(
     return NextResponse.json({ error: "Contrat introuvable" }, { status: 404 });
   }
   if (existing.clientSignatureData || existing.signedAt) {
-    return NextResponse.json({ error: "Contrat deja signe par le client — non modifiable" }, { status: 409 });
+    return NextResponse.json({ error: t("contrat_deja_signe_par_le_client_non") }, { status: 409 });
   }
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -106,6 +108,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -125,7 +128,7 @@ export async function DELETE(
   }
   if (existing.signedAt || existing.clientSignatureData || existing._count.invoices > 0) {
     return NextResponse.json(
-      { error: "Contrat signe ou lie a des factures — impossible de supprimer" },
+      { error: t("contrat_signe_ou_lie_a_des_factures") },
       { status: 409 }
     );
   }

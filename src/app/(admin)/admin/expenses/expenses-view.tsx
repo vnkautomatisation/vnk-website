@@ -77,16 +77,16 @@ type Kpis = {
 };
 
 const EXPENSE_CATEGORIES = [
-  { value: "logiciels_licences", label: "Logiciels / Licences" },
-  { value: "materiel_informatique", label: "Matériel informatique" },
-  { value: "telecommunications", label: "Télécommunications" },
-  { value: "formation", label: "Formation" },
-  { value: "marketing", label: "Marketing" },
-  { value: "transport", label: "Transport" },
-  { value: "fournitures", label: "Fournitures" },
-  { value: "services_comptables", label: "Services comptables" },
-  { value: "assurance", label: "Assurance" },
-  { value: "autre", label: "Autre" },
+  { value: "logiciels_licences", labelKey: "logiciels_licences" },
+  { value: "materiel_informatique", labelKey: "materiel_informatique" },
+  { value: "telecommunications", labelKey: "telecommunications" },
+  { value: "formation", labelKey: "formation" },
+  { value: "marketing", labelKey: "marketing" },
+  { value: "transport", labelKey: "transport" },
+  { value: "fournitures", labelKey: "fournitures" },
+  { value: "services_comptables", labelKey: "services_comptables" },
+  { value: "assurance", labelKey: "assurance" },
+  { value: "autre", labelKey: "autre" },
 ];
 
 const TPS_RATE = 0.05;
@@ -95,8 +95,8 @@ const TODAY = () => new Date().toISOString().slice(0, 10);
 
 type ReceiptAction = "create" | "keep" | "replace" | "remove";
 
-function categoryLabel(v: string): string {
-  return EXPENSE_CATEGORIES.find((c) => c.value === v)?.label ?? v.replace(/_/g, " ");
+function categoryKey(v: string): string | null {
+  return EXPENSE_CATEGORIES.find((c) => c.value === v)?.labelKey ?? null;
 }
 
 function csvEscape(v: string | number | null): string {
@@ -113,7 +113,7 @@ function readFileAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(reader.result as string);
-    reader.onerror = () => reject(new Error("Lecture du fichier échouée"));
+    reader.onerror = () => reject(new Error("File read failed"));
     reader.readAsDataURL(file);
   });
 }
@@ -162,6 +162,7 @@ export function ExpensesView({
   expenses: Expense[];
   kpis: Kpis;
 }) {
+  const t = useTranslations("admin.expenses");
   const tc = useTranslations("common");
   const router = useRouter();
   const [view, setView] = useViewMode("expenses", "list");
@@ -171,10 +172,10 @@ export function ExpensesView({
   const [dateTo, setDateTo] = useState("");
   const [createOpen, setCreateOpen] = useState(false);
 
-  // PDF/image preview
+
   const [previewExpense, setPreviewExpense] = useState<Expense | null>(null);
 
-  // Sticky scroll detection (Wix pattern)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -188,7 +189,7 @@ export function ExpensesView({
     return () => obs.disconnect();
   }, []);
 
-  // Create form state
+
   const [newDate, setNewDate] = useState(TODAY());
   const [newCategory, setNewCategory] = useState("");
   const [newTitle, setNewTitle] = useState("");
@@ -200,7 +201,7 @@ export function ExpensesView({
   const [newReceiptData, setNewReceiptData] = useState<string | null>(null);
   const [newReceiptName, setNewReceiptName] = useState("");
 
-  // Edit form state
+
   const [editExpense, setEditExpense] = useState<Expense | null>(null);
   const [editDate, setEditDate] = useState("");
   const [editCategory, setEditCategory] = useState("");
@@ -229,7 +230,7 @@ export function ExpensesView({
     setNewReceiptName("");
   };
 
-  // Auto-calc TPS/TVQ à partir du montant HT
+
   const autoCalcCreate = () => {
     const a = Number(newAmount);
     if (!Number.isFinite(a) || a <= 0) return;
@@ -267,7 +268,7 @@ export function ExpensesView({
       setNewReceiptData(dataUrl);
       setNewReceiptName(file.name);
     } catch {
-      toast.error("Impossible de lire le fichier");
+      toast.error(t("impossible_lire_fichier"));
     }
   };
 
@@ -280,12 +281,12 @@ export function ExpensesView({
       setEditReceiptName(file.name);
       setEditReceiptAction("replace");
     } catch {
-      toast.error("Impossible de lire le fichier");
+      toast.error(t("impossible_lire_fichier"));
     }
   };
 
   const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!editExpense || !editTitle.trim() || !editAmount) return { success: false, error: "Description et montant requis" };
+    if (!editExpense || !editTitle.trim() || !editAmount) return { success: false, error: t("description_montant_requis") };
     try {
       const payload: Record<string, unknown> = {
         expenseDate: editDate || undefined,
@@ -307,20 +308,20 @@ export function ExpensesView({
       });
       if (res.ok) { router.refresh(); return { success: true }; }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: data.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
   const handleDelete = async () => {
     if (!deleteExpense) return;
     const res = await fetch(`/api/expenses/${deleteExpense.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Dépense supprimée"); setDeleteExpense(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("depense_supprimee")); setDeleteExpense(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newDate || !newCategory || !newTitle.trim() || !newAmount) {
-      return { success: false, error: "Date, catégorie, description et montant requis" };
+      return { success: false, error: t("date_categorie_description_montant_requis") };
     }
     try {
       const res = await fetch("/api/expenses", {
@@ -344,9 +345,9 @@ export function ExpensesView({
         return { success: true };
       }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
+      return { success: false, error: data.error || t("erreur") };
     } catch {
-      return { success: false, error: "Erreur réseau" };
+      return { success: false, error: t("erreur_reseau") };
     }
   };
 
@@ -379,39 +380,39 @@ export function ExpensesView({
       result = result.filter(
         (e) =>
           e.title.toLowerCase().includes(q) ||
-          categoryLabel(e.category).toLowerCase().includes(q) ||
+          (categoryKey(e.category) ? t(categoryKey(e.category)!) : e.category.replace(/_/g, " ")).toLowerCase().includes(q) ||
           (e.vendor ?? "").toLowerCase().includes(q)
       );
     }
     return result;
   }, [expenses, searchQuery, categoryFilter, dateFrom, dateTo]);
 
-  // Export CSV des dépenses filtrées
+
   const exportCsv = () => {
     const headers = [
-      "Date",
-      "Catégorie",
-      "Description",
-      "Fournisseur",
-      "Montant HT",
-      "TPS payée",
-      "TVQ payée",
-      "Total TTC",
-      "Reçu joint",
-      "Notes",
+      t("date"),
+      t("categorie"),
+      t("description"),
+      t("fournisseur"),
+      t("montant_ht"),
+      t("tps_payee"),
+      t("tvq_payee"),
+      t("total_ttc"),
+      t("recu_joint"),
+      t("notes"),
     ];
     const lines = [headers.map(csvEscape).join(",")];
     filtered.forEach((e) => {
       lines.push([
         e.expenseDate.slice(0, 10),
-        categoryLabel(e.category),
+        (categoryKey(e.category) ? t(categoryKey(e.category)!) : e.category.replace(/_/g, " ")),
         e.title,
         e.vendor ?? "",
         e.amount.toFixed(2),
         e.tpsPaid.toFixed(2),
         e.tvqPaid.toFixed(2),
         (e.amount + e.tpsPaid + e.tvqPaid).toFixed(2),
-        e.receiptUrl ? "Oui" : "Non",
+        e.receiptUrl ? t("oui") : t("non"),
         e.notes ?? "",
       ].map(csvEscape).join(","));
     });
@@ -431,8 +432,8 @@ export function ExpensesView({
   const filteredWithReceipt = filtered.filter((e) => e.receiptUrl).length;
   const hasActiveFilter = !!(searchQuery || categoryFilter !== "all" || dateFrom || dateTo);
 
-  // Export PDF — utilise les filtres serveur (from, to, category) ; la recherche libre n'est pas envoyée
-  // Pas de window.open (qui crée un onglet vide) : on déclenche le download via un anchor invisible
+
+
   const exportPdf = () => {
     const params = new URLSearchParams();
     if (dateFrom) params.set("from", dateFrom);
@@ -445,39 +446,39 @@ export function ExpensesView({
     a.click();
   };
 
-  // Actions menu pour EntityCard
+
   const getActions = useCallback((e: Expense) => [
-    ...(e.receiptUrl ? [{ label: "Voir le reçu", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setPreviewExpense(e) }] : []),
-    { label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(e) },
-    { label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteExpense(e), separator: true, variant: "destructive" as const },
+    ...(e.receiptUrl ? [{ label: t("voir_recu"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => setPreviewExpense(e) }] : []),
+    { label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(e) },
+    { label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteExpense(e), separator: true, variant: "destructive" as const },
   ], []);
 
   const columns: Column<Expense>[] = [
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => formatDate(new Date(r.expenseDate)),
       sortable: true,
       sortBy: (r) => r.expenseDate,
     },
-    { key: "title", header: "Description", accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title },
+    { key: "title", header: t("description"), accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title },
     {
       key: "category",
-      header: "Catégorie",
-      accessor: (r) => <span className="text-xs">{categoryLabel(r.category)}</span>,
+      header: t("categorie"),
+      accessor: (r) => <span className="text-xs">{(categoryKey(r.category) ? t(categoryKey(r.category)!) : r.category.replace(/_/g, " "))}</span>,
       sortable: true,
       sortBy: (r) => r.category,
       hiddenOnMobile: true,
     },
     {
       key: "vendor",
-      header: "Fournisseur",
+      header: t("fournisseur"),
       accessor: (r) => r.vendor ?? <span className="text-muted-foreground italic">—</span>,
       hiddenOnMobile: true,
     },
     {
       key: "amount",
-      header: "Montant HT",
+      header: t("montant_ht"),
       accessor: (r) => <span className="font-semibold">{formatCurrency(r.amount)}</span>,
       sortable: true,
       sortBy: (r) => r.amount,
@@ -496,19 +497,19 @@ export function ExpensesView({
     },
     {
       key: "receipt",
-      header: "Reçu",
+      header: t("recu"),
       accessor: (r) => r.receiptUrl ? (
-        <ActionTooltip label="Voir le reçu joint">
+        <ActionTooltip label={t("voir_recu_joint")}>
           <button
             onClick={(ev) => { ev.stopPropagation(); setPreviewExpense(r); }}
             className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-emerald-600"
-            aria-label="Voir le reçu"
+            aria-label={t("voir_recu")}
           >
             <Paperclip className="h-3.5 w-3.5" />
           </button>
         </ActionTooltip>
       ) : (
-        <ActionTooltip label="Aucun reçu joint">
+        <ActionTooltip label={t("aucun_recu_joint")}>
           <span className="text-muted-foreground/60 text-xs italic cursor-help">—</span>
         </ActionTooltip>
       ),
@@ -518,7 +519,7 @@ export function ExpensesView({
       header: "",
       accessor: (r) => (
         <div className="flex items-center gap-1" onClick={(ev) => ev.stopPropagation()}>
-          <ActionTooltip label="Modifier la dépense">
+          <ActionTooltip label={t("modifier_depense")}>
             <button
               onClick={() => openEdit(r)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -527,7 +528,7 @@ export function ExpensesView({
               <Pencil className="h-3.5 w-3.5" />
             </button>
           </ActionTooltip>
-          <ActionTooltip label="Supprimer la dépense">
+          <ActionTooltip label={t("supprimer_depense")}>
             <button
               onClick={() => setDeleteExpense(r)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-red-600"
@@ -541,7 +542,7 @@ export function ExpensesView({
     },
   ];
 
-  // Pas de dépenses du tout : empty state full-page avec CTA
+
   if (expenses.length === 0) {
     return (
       <div className="space-y-5">
@@ -550,21 +551,21 @@ export function ExpensesView({
             <div>
               <h1 className="text-xl font-bold flex items-center gap-2">
                 <Wallet className="h-5 w-5" />
-                Dépenses professionnelles
+                {t("depenses_professionnelles")}
               </h1>
-              <p className="text-white/70 text-xs mt-0.5">Suivi des dépenses et taxes réclamables</p>
+              <p className="text-white/70 text-xs mt-0.5">{t("suivi_depenses_taxes_reclamables")}</p>
             </div>
           </div>
         </div>
         <div className="rounded-xl border bg-card p-10 text-center">
           <Wallet className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="font-semibold text-base">Aucune dépense enregistrée</p>
+          <p className="font-semibold text-base">{t("aucune_depense_enregistree")}</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-            Ajoutez vos premières dépenses (logiciels, matériel, transport, etc.) pour suivre les taxes TPS et TVQ payées à réclamer dans vos déclarations fiscales.
+            {t("ajoutez_premieres_depenses_logiciels_materiel")}
           </p>
           <Button onClick={() => { resetForm(); setCreateOpen(true); }} className="mt-4">
             <Plus className="h-4 w-4 mr-1.5" />
-            Créer ma première dépense
+            {t("creer_ma_premiere_depense")}
           </Button>
         </div>
         <ExpenseFormDialog
@@ -599,64 +600,64 @@ export function ExpensesView({
 
   return (
     <div className="space-y-5">
-      {/* Hero VNK */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Wallet className="h-5 w-5" />
-              Dépenses professionnelles
+              {t("depenses_professionnelles")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Suivi des dépenses et taxes réclamables · {expenses.length} dépense{expenses.length > 1 ? "s" : ""} enregistrée{expenses.length > 1 ? "s" : ""}
+              {t("suivi_depenses_n_enregistrees", { count: expenses.length })}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <ActionTooltip label="Exporter en PDF avec KPI + tableau formaté (filtres actifs appliqués)">
+            <ActionTooltip label={t("exporter_pdf_kpi_tableau_formate")}>
               <Button onClick={exportPdf} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
                 <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                Exporter PDF
+                {t("exporter_pdf")}
               </Button>
             </ActionTooltip>
-            <ActionTooltip label="Exporter en CSV pour Excel / comptable (filtres actifs appliqués)">
+            <ActionTooltip label={t("exporter_csv_excel_comptable_filtres")}>
               <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
-                Exporter CSV
+                {t("exporter_csv")}
               </Button>
             </ActionTooltip>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }} size="sm" variant="secondary" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Nouvelle dépense
+              {t("nouvelle_depense")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs principaux : 4 cards */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Année courante</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("annee_courante")}</p>
           <p className="text-lg font-bold tabular-nums">{formatCurrency(kpis.ytdTotal)}</p>
-          <p className="text-[10px] text-muted-foreground">Total YTD HT</p>
+          <p className="text-[10px] text-muted-foreground">{t("total_ytd_ht")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Trimestre courant</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("trimestre_courant")}</p>
           <p className="text-lg font-bold tabular-nums">{formatCurrency(kpis.quarterTotal)}</p>
           <p className="text-[10px] text-muted-foreground">TPS {formatCurrency(kpis.quarterTps)} · TVQ {formatCurrency(kpis.quarterTvq)}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">TPS réclamable (YTD)</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("tps_reclamable_ytd")}</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{formatCurrency(kpis.ytdTps)}</p>
-          <p className="text-[10px] text-muted-foreground">à déduire en déclaration</p>
+          <p className="text-[10px] text-muted-foreground">{t("deduire_declaration")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">TVQ réclamable (YTD)</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("tvq_reclamable_ytd")}</p>
           <p className="text-lg font-bold text-indigo-600 tabular-nums">{formatCurrency(kpis.ytdTvq)}</p>
-          <p className="text-[10px] text-muted-foreground">à déduire en déclaration</p>
+          <p className="text-[10px] text-muted-foreground">{t("deduire_declaration")}</p>
         </div>
       </div>
 
-      {/* Breakdown par catégorie + Top fournisseurs */}
+
       {(kpis.byCategory.length > 0 || kpis.topVendors.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           {kpis.byCategory.length > 0 && (
@@ -664,7 +665,7 @@ export function ExpensesView({
               <div className="flex items-center justify-between mb-3">
                 <h3 className="text-sm font-semibold flex items-center gap-1.5">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  Répartition par catégorie
+                  {t("repartition_categorie")}
                 </h3>
                 <span className="text-[10px] text-muted-foreground">Total : {formatCurrency(kpis.total)}</span>
               </div>
@@ -674,7 +675,7 @@ export function ExpensesView({
                   return (
                     <div key={c.category}>
                       <div className="flex items-center justify-between text-xs mb-0.5">
-                        <button onClick={() => setCategoryFilter(c.category)} className="truncate hover:text-[#0F2D52] hover:underline text-left">{categoryLabel(c.category)}</button>
+                        <button onClick={() => setCategoryFilter(c.category)} className="truncate hover:text-[#0F2D52] hover:underline text-left">{(categoryKey(c.category) ? t(categoryKey(c.category)!) : c.category.replace(/_/g, " "))}</button>
                         <span className="tabular-nums font-medium">{formatCurrency(c.total)} <span className="text-muted-foreground">({pct.toFixed(0)}%)</span></span>
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
@@ -690,7 +691,7 @@ export function ExpensesView({
             <div className="rounded-lg border bg-card p-4">
               <h3 className="text-sm font-semibold flex items-center gap-1.5 mb-3">
                 <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                Top fournisseurs
+                {t("top_fournisseurs")}
               </h3>
               <div className="space-y-2">
                 {kpis.topVendors.map((v) => (
@@ -713,19 +714,19 @@ export function ExpensesView({
         </div>
       )}
 
-      {/* Sentinel — détecte fin des KPI */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Wallet className="h-4 w-4" />
-              Dépenses
+              {t("depenses")}
             </span>
             <span className="font-semibold">{filtered.length} affichées</span>
-            <span className="text-muted-foreground">Total <span className="font-semibold">{formatCurrency(filteredTotal)}</span></span>
+            <span className="text-muted-foreground">{t("total")} <span className="font-semibold">{formatCurrency(filteredTotal)}</span></span>
             <span className="text-muted-foreground">TPS <span className="font-semibold text-blue-600">{formatCurrency(filteredTps)}</span></span>
             <span className="text-muted-foreground">TVQ <span className="font-semibold text-indigo-600">{formatCurrency(filteredTvq)}</span></span>
             <span className="ml-auto text-muted-foreground">{filteredWithReceipt}/{filtered.length} avec reçu</span>
@@ -733,19 +734,19 @@ export function ExpensesView({
         </div>
       )}
 
-      {/* Filtres en flow normal */}
+
       <div>
-        {/* Présets de période */}
+
         <div className="flex flex-wrap items-center gap-1 mb-2">
-          <span className="text-[10px] text-muted-foreground mr-1">Période :</span>
+          <span className="text-[10px] text-muted-foreground mr-1">{t("periode")}</span>
           {[
-            { k: "all", l: "Toutes" },
-            { k: "30d", l: "30 jours" },
-            { k: "thisMonth", l: "Ce mois" },
-            { k: "lastMonth", l: "Mois dernier" },
-            { k: "thisQuarter", l: "Ce trimestre" },
-            { k: "thisYear", l: "Cette année" },
-            { k: "lastYear", l: "Année dernière" },
+            { k: "all", l: t("toutes") },
+            { k: "30d", l: t("30_jours") },
+            { k: "thisMonth", l: t("mois") },
+            { k: "lastMonth", l: t("mois_dernier") },
+            { k: "thisQuarter", l: t("trimestre") },
+            { k: "thisYear", l: t("annee") },
+            { k: "lastYear", l: t("annee_derniere") },
           ].map((p) => (
             <button
               key={p.k}
@@ -765,70 +766,70 @@ export function ExpensesView({
           ))}
           {activePreset === "custom" && (
             <span className="px-2 py-1 rounded text-[10px] font-medium border bg-amber-50 text-amber-800 border-amber-200">
-              Personnalisée
+              {t("personnalisee")}
             </span>
           )}
         </div>
 
-        {/* Filtres inline */}
+
         <div className="flex flex-wrap items-end gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Label className="text-[10px]">Recherche</Label>
+            <Label className="text-[10px]">{t("recherche")}</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Description, catégorie, fournisseur…"
+                placeholder={t("description_categorie_fournisseur")}
                 className="h-9 pl-8 text-xs"
               />
             </div>
           </div>
           <div>
-            <Label className="text-[10px]">Catégorie</Label>
+            <Label className="text-[10px]">{t("categorie")}</Label>
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes</SelectItem>
+                <SelectItem value="all">{t("toutes")}</SelectItem>
                 {EXPENSE_CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                  <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-[10px]">Du</Label>
+            <Label className="text-[10px]">{t("du")}</Label>
             <Input type="date" max={TODAY()} value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-36 text-xs" />
           </div>
           <div>
-            <Label className="text-[10px]">Au</Label>
+            <Label className="text-[10px]">{t("au")}</Label>
             <Input type="date" max={TODAY()} value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-36 text-xs" />
           </div>
           {hasActiveFilter && (
             <Button onClick={() => { setDateFrom(""); setDateTo(""); setCategoryFilter("all"); setSearchQuery(""); }} size="sm" variant="ghost" className="h-9">
               <X className="h-3.5 w-3.5 mr-1" />
-              Effacer
+              {t("effacer")}
             </Button>
           )}
           <ViewToggle storageKey="expenses" defaultView="list" onChange={setView} />
         </div>
       </div>
 
-      {/* Vue grille ou table */}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((e) => (
             <EntityCard
               key={e.id}
               title={e.title}
-              subtitle={e.vendor ?? "Aucun fournisseur"}
+              subtitle={e.vendor ?? t("aucun_fournisseur")}
               icon={<Wallet className="h-5 w-5 text-muted-foreground" />}
               badges={[
-                { label: categoryLabel(e.category), variant: "outline" },
-                ...(e.receiptUrl ? [{ label: "Reçu", variant: "secondary" as const }] : []),
+                { label: (categoryKey(e.category) ? t(categoryKey(e.category)!) : e.category.replace(/_/g, " ")), variant: "outline" },
+                ...(e.receiptUrl ? [{ label: t("recu"), variant: "secondary" as const }] : []),
               ]}
               stats={[
-                { label: "Montant HT", value: formatCurrency(e.amount) },
+                { label: t("montant_ht"), value: formatCurrency(e.amount) },
                 { label: "TTC", value: formatCurrency(e.amount + e.tpsPaid + e.tvqPaid) },
               ]}
               actions={getActions(e)}
@@ -841,7 +842,7 @@ export function ExpensesView({
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune dépense ne correspond aux filtres</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucune_depense_ne_correspond_filtres")}</div>
           )}
         </div>
       ) : (
@@ -849,18 +850,18 @@ export function ExpensesView({
           data={filtered}
           columns={columns}
           getRowId={(r) => r.id}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           storageKey="admin-expenses"
           onRowClick={(r) => openEdit(r)}
           emptyMessage={
             hasActiveFilter
-              ? "Aucune dépense ne correspond aux filtres"
-              : "Aucune dépense enregistrée"
+              ? t("aucune_depense_ne_correspond_filtres")
+              : t("aucune_depense_enregistree")
           }
         />
       )}
 
-      {/* Edit dialog (VNK theme) */}
+
       <ExpenseFormDialog
         mode="edit"
         open={!!editExpense}
@@ -891,13 +892,13 @@ export function ExpensesView({
       <ConfirmDialog
         open={!!deleteExpense}
         onOpenChange={(o) => { if (!o) setDeleteExpense(null); }}
-        title="Supprimer cette dépense ?"
+        title={t("supprimer_depense_2")}
         description={`La dépense "${deleteExpense?.title}" sera supprimée définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
-      {/* Create dialog (VNK theme) */}
+
       <ExpenseFormDialog
         mode="create"
         open={createOpen}
@@ -925,7 +926,7 @@ export function ExpensesView({
         onSubmit={handleCreate}
       />
 
-      {/* PDF/image preview modal pour reçus */}
+
       {previewExpense?.receiptUrl && (
         <PdfViewerModal
           open={!!previewExpense}
@@ -985,6 +986,7 @@ function ExpenseFormDialog({
   onPreviewReceipt: () => void;
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const t = useTranslations("admin.expenses");
   const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const isCreate = mode === "create";
@@ -1000,10 +1002,10 @@ function ExpenseFormDialog({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success(isCreate ? "Dépense créée" : "Dépense mise à jour");
+        toast.success(isCreate ? t("depense_creee") : t("depense_mise_jour"));
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue");
+        toast.error(result.error || t("erreur_survenue"));
       }
     });
   };
@@ -1011,7 +1013,7 @@ function ExpenseFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
-        {/* Header navy gradient VNK */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-5 text-white relative shrink-0">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" aria-hidden />
           <div className="relative flex items-center gap-4">
@@ -1020,59 +1022,59 @@ function ExpenseFormDialog({
             </div>
             <div className="min-w-0">
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouvelle dépense" : "Modifier la dépense"}
+                {isCreate ? t("nouvelle_depense") : t("modifier_depense")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5 truncate">
                 {isCreate
-                  ? "Enregistrer une dépense professionnelle et ses taxes payées"
-                  : (editExpense?.title || "Modification")}
+                  ? t("enregistrer_depense_professionnelle_taxes_payees")
+                  : (editExpense?.title || t("modification"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
-        {/* Body */}
+
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          {/* Section 1 : Détails */}
-          <FormSection title="Détails" icon={<FileText className="h-3.5 w-3.5" />}>
+
+          <FormSection title={t("details")} icon={<FileText className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date")}</Label>
                 <Input type="date" max={TODAY()} value={values.date} onChange={(e) => values.setDate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Catégorie *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("categorie_2")}</Label>
                 <Select value={values.category} onValueChange={values.setCategory}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                   <SelectContent>
                     {EXPENSE_CATEGORIES.map((c) => (
-                      <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                      <SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description *</Label>
-              <Input value={values.title} onChange={(e) => values.setTitle(e.target.value)} placeholder="ex : Abonnement Railway — Mai" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description")}</Label>
+              <Input value={values.title} onChange={(e) => values.setTitle(e.target.value)} placeholder={t("ex_abonnement_railway_mai")} />
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground inline-flex items-center gap-1.5">
                 <Building2 className="h-3 w-3" /> Fournisseur
               </Label>
-              <Input value={values.vendor} onChange={(e) => values.setVendor(e.target.value)} placeholder="ex : Stripe, Railway, Bell, Canadian Tire…" />
+              <Input value={values.vendor} onChange={(e) => values.setVendor(e.target.value)} placeholder={t("ex_stripe_railway_bell_canadian")} />
             </div>
           </FormSection>
 
-          {/* Section 2 : Montant & taxes */}
-          <FormSection title="Montant et taxes" icon={<Calculator className="h-3.5 w-3.5" />}>
+
+          <FormSection title={t("montant_taxes")} icon={<Calculator className="h-3.5 w-3.5" />}>
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant HT (CAD) *</Label>
-                <ActionTooltip label="Calculer automatiquement TPS (5%) et TVQ (9,975%) du Québec">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ht_cad")}</Label>
+                <ActionTooltip label={t("calculer_automatiquement_tps_5_tvq")}>
                   <button type="button" onClick={autoCalc} disabled={!values.amount} className="inline-flex items-center gap-1 text-[10px] font-medium text-[#0F2D52] hover:underline disabled:opacity-40 disabled:cursor-not-allowed">
                     <Calculator className="h-3 w-3" />
-                    Calculer taxes
+                    {t("calculer_taxes")}
                   </button>
                 </ActionTooltip>
               </div>
@@ -1080,56 +1082,56 @@ function ExpenseFormDialog({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">TPS payée</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tps_payee")}</Label>
                 <Input type="number" step="0.01" min="0" value={values.tps} onChange={(e) => values.setTps(e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">TVQ payée</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tvq_payee")}</Label>
                 <Input type="number" step="0.01" min="0" value={values.tvq} onChange={(e) => values.setTvq(e.target.value)} placeholder="0.00" />
               </div>
             </div>
             {amountNum > 0 && (
               <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Sous-total HT</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TPS payée</span><span className="tabular-nums text-blue-600">{formatCurrency(tpsNum)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TVQ payée</span><span className="tabular-nums text-indigo-600">{formatCurrency(tvqNum)}</span></div>
-                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>Total TTC</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("sous_total_ht")}</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_payee")}</span><span className="tabular-nums text-blue-600">{formatCurrency(tpsNum)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_payee")}</span><span className="tabular-nums text-indigo-600">{formatCurrency(tvqNum)}</span></div>
+                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>{t("total_ttc")}</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
               </div>
             )}
           </FormSection>
 
-          {/* Section 3 : Reçu / justificatif */}
-          <FormSection title="Reçu / justificatif" icon={<Receipt className="h-3.5 w-3.5" />}>
+
+          <FormSection title={t("recu_justificatif")} icon={<Receipt className="h-3.5 w-3.5" />}>
             {isCreate ? (
               receiptData ? (
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5 truncate max-w-[260px]">
                     <Paperclip className="h-3.5 w-3.5" />
-                    {receiptName || "Reçu joint"}
+                    {receiptName || t("recu_joint")}
                   </span>
                   <Button type="button" size="sm" variant="ghost" className="h-8 text-red-600 hover:text-red-700" onClick={() => { setReceiptData(null); setReceiptName(""); }}>
                     <X className="h-3 w-3 mr-1" />
-                    Retirer
+                    {t("retirer")}
                   </Button>
                 </div>
               ) : (
                 <div className="space-y-2">
                   <Label htmlFor="ef-receipt-new" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border bg-background hover:bg-muted cursor-pointer w-fit">
                     <Paperclip className="h-3.5 w-3.5" />
-                    Joindre un reçu (PDF ou image)
+                    {t("joindre_recu_pdf_image")}
                     <input id="ef-receipt-new" type="file" accept="application/pdf,image/*" className="hidden" onChange={onReceiptFile} />
                   </Label>
-                  <p className="text-[10px] text-muted-foreground">Optionnel — recommandé pour la justification ARC en cas d&apos;audit fiscal (max 10 Mo).</p>
+                  <p className="text-[10px] text-muted-foreground">{t("optionnel_recommande_justification_arc_cas")}</p>
                 </div>
               )
             ) : (
-              // edit mode : 4 états (keep avec reçu / keep sans reçu / replace / remove)
+
               <>
                 {receiptAction === "keep" && editExpense?.receiptUrl ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-2.5 py-1.5">
                       <Paperclip className="h-3.5 w-3.5" />
-                      Reçu joint
+                      {t("recu_joint")}
                     </span>
                     <Button type="button" size="sm" variant="outline" className="h-8" onClick={onPreviewReceipt}>
                       <Eye className="h-3 w-3 mr-1" />
@@ -1138,57 +1140,57 @@ function ExpenseFormDialog({
                     <Label htmlFor="ef-receipt-replace" className="cursor-pointer">
                       <span className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded text-xs font-medium border bg-background hover:bg-muted">
                         <Pencil className="h-3 w-3" />
-                        Remplacer
+                        {t("remplacer")}
                       </span>
                       <input id="ef-receipt-replace" type="file" accept="application/pdf,image/*" className="hidden" onChange={onReceiptFile} />
                     </Label>
                     <Button type="button" size="sm" variant="ghost" className="h-8 text-red-600 hover:text-red-700" onClick={() => setReceiptAction("remove")}>
                       <Trash2 className="h-3 w-3 mr-1" />
-                      Retirer
+                      {t("retirer")}
                     </Button>
                   </div>
                 ) : receiptAction === "replace" ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-2.5 py-1.5 truncate max-w-[260px]">
                       <Paperclip className="h-3.5 w-3.5" />
-                      {receiptName || "Nouveau reçu prêt"}
+                      {receiptName || t("nouveau_recu_pret")}
                     </span>
                     <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => { setReceiptAction("keep"); setReceiptData(null); setReceiptName(""); }}>
-                      Annuler le remplacement
+                      {t("annuler_remplacement")}
                     </Button>
                   </div>
                 ) : receiptAction === "remove" ? (
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="inline-flex items-center gap-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-2.5 py-1.5">
                       <Trash2 className="h-3.5 w-3.5" />
-                      Le reçu sera retiré à l&apos;enregistrement
+                      {t("recu_sera_retire_apos_enregistrement")}
                     </span>
                     <Button type="button" size="sm" variant="ghost" className="h-8" onClick={() => setReceiptAction("keep")}>
                       {tc("cancel")}
                     </Button>
                   </div>
                 ) : (
-                  // pas de reçu : permettre d'en joindre un
+
                   <div className="space-y-2">
                     <Label htmlFor="ef-receipt-add" className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium border bg-background hover:bg-muted cursor-pointer w-fit">
                       <Paperclip className="h-3.5 w-3.5" />
-                      Joindre un reçu (PDF ou image)
+                      {t("joindre_recu_pdf_image")}
                       <input id="ef-receipt-add" type="file" accept="application/pdf,image/*" className="hidden" onChange={onReceiptFile} />
                     </Label>
-                    <p className="text-[10px] text-muted-foreground">Aucun reçu joint pour cette dépense.</p>
+                    <p className="text-[10px] text-muted-foreground">{t("aucun_recu_joint_depense")}</p>
                   </div>
                 )}
               </>
             )}
           </FormSection>
 
-          {/* Section 4 : Notes */}
-          <FormSection title="Notes internes" icon={<Tag className="h-3.5 w-3.5" />}>
-            <Textarea value={values.notes} onChange={(e) => values.setNotes(e.target.value)} rows={3} placeholder="Commentaire, n° de référence fournisseur, contexte…" />
+
+          <FormSection title={t("notes_internes")} icon={<Tag className="h-3.5 w-3.5" />}>
+            <Textarea value={values.notes} onChange={(e) => values.setNotes(e.target.value)} rows={3} placeholder={t("commentaire_n_reference_fournisseur_contexte")} />
           </FormSection>
         </div>
 
-        {/* Footer */}
+
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button
@@ -1196,7 +1198,7 @@ function ExpenseFormDialog({
             disabled={pending || !canSubmit}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {pending ? "Enregistrement…" : (isCreate ? "Créer la dépense" : "Enregistrer")}
+            {pending ? t("enregistrement") : (isCreate ? t("creer_depense") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

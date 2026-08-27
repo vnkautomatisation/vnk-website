@@ -61,9 +61,10 @@ export function RequestDocumentUploadDialog({
   onClose: () => void;
   onCreated: () => void;
   availableEmployees: RequestDocEmployee[];
-  /** Pré-sélectionner un employé (depuis une fiche employé). */
+
   presetEmployeeId?: number | null;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [employeeId, setEmployeeId] = useState<number | null>(presetEmployeeId ?? null);
   const [empSearch, setEmpSearch] = useState("");
@@ -75,17 +76,17 @@ export function RequestDocumentUploadDialog({
   const [isRequired, setIsRequired] = useState(true);
   const [submitting, setSubmitting] = useState(false);
 
-  // Auto-suggère un titre clair en fonction de la catégorie tant que l'utilisateur
-  // n'a pas tapé manuellement (titleTouched=false) → évite d'avoir « dsfdgfd » par défaut.
+
+
   useEffect(() => {
     if (titleTouched) return;
     const suggestion = ({
-      licence: "Permis de conduire",
-      diploma: "Diplôme officiel",
-      certification: "Certification professionnelle",
-      id_card: "Carte d'identité (recto-verso)",
-      passport: "Passeport (page identité)",
-      medical: "Document médical / Attestation",
+      licence: t("permis_conduire"),
+      diploma: t("diplome_officiel"),
+      certification: t("certification_professionnelle"),
+      id_card: t("carte_identite_recto_verso"),
+      passport: t("passeport_page_identite"),
+      medical: t("document_medical_attestation"),
       other: "",
     } as Record<string, string>)[category] ?? "";
     setTitle(suggestion);
@@ -122,11 +123,11 @@ export function RequestDocumentUploadDialog({
 
   const submit = async () => {
     if (!employeeId) {
-      toast.error("Sélectionnez un employé");
+      toast.error(t("selectionnez_employe"));
       return;
     }
     if (!title.trim()) {
-      toast.error("Le titre est requis");
+      toast.error(t("titre_requis"));
       return;
     }
     setSubmitting(true);
@@ -147,14 +148,14 @@ export function RequestDocumentUploadDialog({
         isRequired,
       });
       if (r.success) {
-        toast.success("Demande envoyée à l'employé");
+        toast.success(t("demande_envoyee_employe"));
         onCreated();
         onClose();
       } else {
-        toast.error(r.error || "Erreur lors de la création");
+        toast.error(r.error || t("erreur_lors_creation"));
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : t("erreur_inconnue"));
     } finally {
       setSubmitting(false);
     }
@@ -163,24 +164,21 @@ export function RequestDocumentUploadDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <FileText className="h-4 w-4 shrink-0" />
-              <span className="truncate">Demander un document</span>
+              <span className="truncate">{t("demander_document")}</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
-              L'employé recevra une notification et pourra téléverser le document
-              demandé depuis Mon espace.
-            </DialogDescription>
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">{t("request_document_upload_l_employe_recevra_une_notification_et_pourra")}</DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Body */}
+
         <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {/* Cible : employé */}
-          <FormSection icon={User} title="Employé concerné">
+
+          <FormSection icon={User} title={t("employe_concerne")}>
             {selectedEmp && presetEmployeeId ? (
               <div className="rounded-md border bg-[#0F2D52]/5 border-[#0F2D52]/15 px-3 py-2 flex items-center gap-2">
                 <User className="h-4 w-4 text-[#0F2D52] shrink-0" />
@@ -201,7 +199,7 @@ export function RequestDocumentUploadDialog({
                   <Input
                     value={empSearch}
                     onChange={(e) => setEmpSearch(e.target.value)}
-                    placeholder="Rechercher un employé…"
+                    placeholder={t("rechercher_employe")}
                     className="pl-8 h-9 text-sm"
                   />
                 </div>
@@ -236,7 +234,7 @@ export function RequestDocumentUploadDialog({
                   })}
                   {filteredEmps.length === 0 && (
                     <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                      Aucun employé trouvé.
+                      {t("aucun_employe_trouve")}
                     </p>
                   )}
                 </div>
@@ -244,10 +242,10 @@ export function RequestDocumentUploadDialog({
             )}
           </FormSection>
 
-          {/* Contenu de la demande */}
-          <FormSection icon={FileText} title="Document demandé">
+
+          <FormSection icon={FileText} title={t("document_demande")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Catégorie" required>
+              <Field label={t("categorie")} required>
                 <Select value={category} onValueChange={setCategory}>
                   <SelectTrigger className="h-9 text-sm">
                     <SelectValue />
@@ -255,29 +253,29 @@ export function RequestDocumentUploadDialog({
                   <SelectContent>
                     {DOC_REQUEST_CATEGORIES.map((c) => (
                       <SelectItem key={c.value} value={c.value}>
-                        {c.label}
+                        {t(c.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Échéance" hint={tc("optional")}>
+              <Field label={t("echeance")} hint={tc("optional")}>
                 <DatePopover value={dueDate} onChange={setDueDate} />
               </Field>
             </div>
-            <Field label="Titre" required hint="Suggestion auto basée sur la catégorie — modifiable">
+            <Field label={t("titre")} required hint={t("suggestion_auto_basee_categorie_modifiable")}>
               <Input
                 value={title}
                 onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }}
-                placeholder="Ex : Permis de conduire classe 5"
+                placeholder={t("ex_permis_conduire_classe_5")}
                 maxLength={140}
               />
             </Field>
-            <Field label="Instructions" hint="Précisions pour l'employé (recto-verso, lisibilité…)">
+            <Field label={t("instructions")} hint={t("precisions_employe_recto_verso_lisibilite")}>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Téléverser un scan recto-verso lisible (PDF ou image)."
+                placeholder={t("televerser_scan_recto_verso_lisible")}
                 rows={3}
                 maxLength={1000}
                 className="text-sm resize-y"
@@ -293,17 +291,15 @@ export function RequestDocumentUploadDialog({
               <div className="space-y-0.5">
                 <p className="text-sm font-medium flex items-center gap-1.5">
                   <CalendarClock className="h-3.5 w-3.5 text-[#0F2D52]" />
-                  Document obligatoire
+                  {t("document_obligatoire")}
                 </p>
-                <p className="text-[11px] text-muted-foreground">
-                  Marque la demande comme obligatoire dans le bandeau de l'employé.
-                </p>
+                <p className="text-[11px] text-muted-foreground">{t("request_document_upload_marque_la_demande_comme_obligatoire_dans_le")}</p>
               </div>
             </label>
           </FormSection>
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"

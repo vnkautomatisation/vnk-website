@@ -36,6 +36,7 @@ export function JobCodesView({
   positions: Position[];
   jobCodes: JobCode[];
 }) {
+  const t = useTranslations("admin.job_codes");
   const tc = useTranslations("common");
   const router = useRouter();
   const [search, setSearch] = useState("");
@@ -44,7 +45,7 @@ export function JobCodesView({
   const [editing, setEditing] = useState<JobCode | null>(null);
   const [creating, setCreating] = useState(false);
 
-  // Group by position.
+
   const grouped = useMemo(() => {
     const filtered = jobCodes.filter((jc) => {
       if (filterPositionId !== "all" && jc.position.id !== Number(filterPositionId)) return false;
@@ -65,43 +66,43 @@ export function JobCodesView({
 
   const handleToggle = async (id: number) => {
     const r = await toggleJobCodeActiveAction({ id });
-    if (r.success) { toast.success(r.data.isActive ? "Code activé" : "Code désactivé"); router.refresh(); }
+    if (r.success) { toast.success(r.data.isActive ? t("code_active") : t("code_desactive")); router.refresh(); }
     else toast.error(r.error);
   };
   const handleDelete = async (id: number, code: string) => {
     const ok = await confirmDialog({
-      title: "Supprimer le code de tâche",
+      title: t("supprimer_code_tache"),
       description: `Le code « ${code} » sera retiré des choix proposés au pointage.`,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("supprimer"),
       variant: "destructive",
     });
     if (!ok) return;
     const r = await deleteJobCodeAction({ id });
-    if (r.success) { toast.success("Code supprimé"); router.refresh(); }
+    if (r.success) { toast.success(t("code_supprime")); router.refresh(); }
     else toast.error(r.error);
   };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-lg font-bold">Codes de tâche</h1>
-            <p className="text-xs text-white/80">Codes par poste. Obligatoires au pointage de l&apos;employé.</p>
+            <h1 className="text-lg font-bold">{t("codes_tache")}</h1>
+            <p className="text-xs text-white/80">{t("codes_poste_obligatoires_pointage_apos")}</p>
           </div>
           <Button onClick={() => setCreating(true)} variant="secondary" size="sm">
-            <Plus className="h-4 w-4 mr-1" />Nouveau code
+            <Plus className="h-4 w-4 mr-1" />{t("nouveau_code")}
           </Button>
         </div>
       </div>
 
-      {/* Filtres */}
+
       <div className="flex items-center gap-2 flex-wrap">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Rechercher code ou libellé…"
+            placeholder={t("rechercher_code_libelle")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9"
@@ -110,7 +111,7 @@ export function JobCodesView({
         <Select value={filterPositionId} onValueChange={setFilterPositionId}>
           <SelectTrigger className="w-[200px]"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les postes</SelectItem>
+            <SelectItem value="all">{t("tous_postes")}</SelectItem>
             {positions.map((p) => (
               <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
             ))}
@@ -121,14 +122,14 @@ export function JobCodesView({
           size="sm"
           onClick={() => setShowOnlyActive((v) => !v)}
         >
-          Actifs uniquement
+          {t("actifs_uniquement")}
         </Button>
       </div>
 
-      {/* Grouped by position */}
+
       {grouped.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
-          Aucun code. Cliquez sur <strong>Nouveau code</strong> pour en créer.
+          {t.rich("aucun_code_cliquez", { b: (c) => <strong>{c}</strong> })}
         </div>
       ) : (
         <div className="space-y-3">
@@ -149,7 +150,7 @@ export function JobCodesView({
                     {jc._count.timeClocks > 0 && (
                       <span className="text-xs text-muted-foreground">{jc._count.timeClocks} usage(s)</span>
                     )}
-                    <Button variant="ghost" size="sm" onClick={() => handleToggle(jc.id)} title={jc.isActive ? "Désactiver" : "Activer"}>
+                    <Button variant="ghost" size="sm" onClick={() => handleToggle(jc.id)} title={jc.isActive ? t("desactiver") : t("activer")}>
                       <Power className={`h-4 w-4 ${jc.isActive ? "text-emerald-600" : "text-muted-foreground"}`} />
                     </Button>
                     <Button variant="ghost" size="sm" onClick={() => setEditing(jc)} title={tc("edit")}>
@@ -166,7 +167,7 @@ export function JobCodesView({
         </div>
       )}
 
-      {/* Modal Create */}
+
       {creating && (
         <JobCodeFormDialog
           positions={positions}
@@ -175,7 +176,7 @@ export function JobCodesView({
         />
       )}
 
-      {/* Modal Edit */}
+
       {editing && (
         <JobCodeFormDialog
           positions={positions}
@@ -197,6 +198,7 @@ function JobCodeFormDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.job_codes");
   const tc = useTranslations("common");
   const [code, setCode] = useState(existing?.code ?? "");
   const [label, setLabel] = useState(existing?.label ?? "");
@@ -206,7 +208,7 @@ function JobCodeFormDialog({
 
   const submit = async () => {
     if (!code.trim() || !label.trim() || !positionId) {
-      toast.error("Tous les champs sont requis");
+      toast.error(t("tous_champs_requis"));
       return;
     }
     setPending(true);
@@ -225,7 +227,7 @@ function JobCodeFormDialog({
           sortOrder: Number(sortOrder) || 0,
         });
     setPending(false);
-    if (r.success) { toast.success(existing ? "Code mis à jour" : "Code créé"); onSaved(); }
+    if (r.success) { toast.success(existing ? t("code_mis_jour") : t("code_cree")); onSaved(); }
     else toast.error(r.error);
   };
 
@@ -233,35 +235,35 @@ function JobCodeFormDialog({
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{existing ? "Modifier le code" : "Nouveau code de tâche"}</DialogTitle>
-          <DialogDescription>Lié à un poste. Les employés du poste devront le choisir au pointage.</DialogDescription>
+          <DialogTitle>{existing ? t("modifier_code") : t("nouveau_code_tache")}</DialogTitle>
+          <DialogDescription>{t("lie_poste_employes_poste_devront")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3 py-2">
           <div className="space-y-1.5">
-            <Label htmlFor="jc-code">Code (lettres maj, chiffres, - et _)</Label>
+            <Label htmlFor="jc-code">{t("code_lettres_maj_chiffres")}</Label>
             <Input
               id="jc-code"
               value={code}
               onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="COMPTA-001"
+              placeholder={t("compta_001")}
               className="font-mono"
               maxLength={40}
             />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="jc-label">Libellé descriptif</Label>
+            <Label htmlFor="jc-label">{t("libelle_descriptif")}</Label>
             <Input
               id="jc-label"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Saisie des écritures mensuelles"
+              placeholder={t("saisie_ecritures_mensuelles")}
               maxLength={120}
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Poste</Label>
+            <Label>{t("poste")}</Label>
             <Select value={positionId} onValueChange={setPositionId}>
-              <SelectTrigger><SelectValue placeholder="Choisir un poste…" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("choisir_poste")} /></SelectTrigger>
               <SelectContent>
                 {positions.map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
@@ -270,7 +272,7 @@ function JobCodeFormDialog({
             </Select>
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="jc-order">Ordre d&apos;affichage (optionnel)</Label>
+            <Label htmlFor="jc-order">{t("ordre_apos_affichage_optionnel")}</Label>
             <Input
               id="jc-order"
               type="number"
@@ -282,7 +284,7 @@ function JobCodeFormDialog({
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "…" : (existing ? "Enregistrer" : "Créer")}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "…" : (existing ? t("enregistrer") : t("creer"))}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

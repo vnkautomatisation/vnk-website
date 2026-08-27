@@ -1,5 +1,6 @@
 // POST /api/contact — formulaire public (avec rate limiting + honeypot)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 
@@ -33,6 +34,7 @@ function checkRateLimit(ip: string): boolean {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0] ??
     req.headers.get("x-real-ip") ??
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
 
   if (!checkRateLimit(ip)) {
     return NextResponse.json(
-      { error: "Trop de soumissions. Réessayez dans une heure." },
+      { error: t("trop_de_soumissions_reessayez_dans_une_heure") },
       { status: 429 }
     );
   }
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
   const parsed = contactSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Données invalides", details: parsed.error.flatten() },
+      { error: t("donnees_invalides"), details: parsed.error.flatten() },
       { status: 400 }
     );
   }

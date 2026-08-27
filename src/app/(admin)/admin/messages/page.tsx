@@ -1,9 +1,13 @@
 // Admin · Messages — conversations + thread + envoi + KPIs + meta
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { MessagesView } from "./messages-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Messages" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("messages") };
+}
 
 export default async function MessagesPage() {
   const now = new Date();

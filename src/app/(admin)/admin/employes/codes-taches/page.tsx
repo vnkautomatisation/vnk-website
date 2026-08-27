@@ -2,6 +2,7 @@
 // Chaque poste (Comptable, Programmeur, ...) a sa propre liste de codes.
 // Au pointage, l'employe doit choisir un code parmi ceux de son poste.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
@@ -9,7 +10,10 @@ import { JobCodesView } from "./job-codes-view";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Codes de tâche" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("codes_tache") };
+}
 
 export default async function JobCodesPage() {
   const session = await auth();

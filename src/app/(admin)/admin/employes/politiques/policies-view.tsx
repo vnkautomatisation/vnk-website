@@ -81,6 +81,7 @@ export function PoliciesAdminView({
   policies: Policy[];
   activeAdminCount: number;
 }) {
+  const t = useTranslations("admin.hr_nav");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
@@ -89,12 +90,12 @@ export function PoliciesAdminView({
     existing: null,
   });
   const [previewPolicy, setPreviewPolicy] = useState<Policy | null>(null);
-  // Aperçu PDF declenche directement (sans passer par le dialog markdown)
+
   const [pdfPreviewCtx, setPdfPreviewCtx] = useState<{ policy: Policy; nonce: number } | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<Policy | null>(null);
   const [archiving, setArchiving] = useState(false);
 
-  // --- Sticky bar detection (Finance pattern) -----------------
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -108,11 +109,11 @@ export function PoliciesAdminView({
     return () => obs.disconnect();
   }, []);
 
-  // --- KPIs ----------------------------------------------------
+
   const kpis = useMemo(() => {
     const active = policies.filter((p) => p.isActive);
     const archived = policies.filter((p) => !p.isActive);
-    // Politique publiee dans les 30 derniers jours
+
     const now = Date.now();
     const recent = policies.filter((p) => {
       const t = new Date(p.effectiveFrom).getTime();
@@ -126,7 +127,7 @@ export function PoliciesAdminView({
     };
   }, [policies]);
 
-  // --- Filtered list ------------------------------------------
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return policies.filter((p) => {
@@ -138,14 +139,14 @@ export function PoliciesAdminView({
   }, [policies, tab, search]);
 
   const TABS: TabItem<TabKey>[] = [
-    { key: "all", label: "Toutes", icon: Layers, count: policies.length },
-    { key: "active", label: "Actives", icon: CheckCircle2, count: kpis.active },
-    { key: "archived", label: "Archivees", icon: Archive, count: kpis.archived },
+    { key: "all", label: t("toutes"), icon: Layers, count: policies.length },
+    { key: "active", label: t("actives_2"), icon: CheckCircle2, count: kpis.active },
+    { key: "archived", label: t("archivees_2"), icon: Archive, count: kpis.archived },
   ];
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+
       <div className="rounded-xl bg-gradient-to-r from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -157,11 +158,8 @@ export function PoliciesAdminView({
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Politiques d&apos;entreprise</h1>
-              <p className="text-xs text-white/80">
-                Politiques internes (harcelement, teletravail, IT, code de conduite) consultables
-                par tout le personnel.
-              </p>
+              <h1 className="text-lg font-bold">{t("politiques_apos_entreprise")}</h1>
+              <p className="text-xs text-white/80">{t("policies_view_politiques_internes_harcelement_teletravail_it_code_de")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -171,16 +169,16 @@ export function PoliciesAdminView({
               className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Nouvelle politique
+              {t("nouvelle_politique")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="Politiques actives"
+          label={t("politiques_actives")}
           value={kpis.active}
           icon={ShieldCheck}
           accent="success"
@@ -188,47 +186,47 @@ export function PoliciesAdminView({
           onClick={() => setTab("active")}
         />
         <DocumentStatsCard
-          label="Total publiees"
+          label={t("total_publiees")}
           value={kpis.total}
           icon={FileText}
           accent="info"
-          hint="Tout statut confondu"
+          hint={t("tout_statut_confondu")}
           onClick={() => setTab("all")}
         />
         <DocumentStatsCard
-          label="Recentes (30 jours)"
+          label={t("recentes_30_jours")}
           value={kpis.recent}
           icon={Sparkles}
           accent={kpis.recent > 0 ? "warning" : "info"}
-          hint="Mises en vigueur recemment"
+          hint={t("mises_vigueur_recemment")}
         />
         <DocumentStatsCard
-          label="Archivees"
+          label={t("archivees_2")}
           value={kpis.archived}
           icon={Archive}
           accent="info"
-          hint="Inactives - historique"
+          hint={t("inactives_historique")}
           onClick={() => setTab("archived")}
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky bar */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <ShieldCheck className="h-4 w-4" />
-              Politiques
+              {t("politiques")}
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Actives :</span>
+              <span className="text-muted-foreground">{t("actives")}</span>
               <span className="font-semibold text-emerald-700">{kpis.active}</span>
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Archivees :</span>
+              <span className="text-muted-foreground">{t("archivees")}</span>
               <span className="font-semibold text-muted-foreground">{kpis.archived}</span>
             </span>
             <Button
@@ -237,30 +235,30 @@ export function PoliciesAdminView({
               onClick={() => setEditDialog({ open: true, existing: null })}
             >
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Nouvelle
+              {t("nouvelle")}
             </Button>
           </div>
         </div>
       )}
 
-      {/* ====== Tabs + search ====== */}
-      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Filtre politiques" />
+
+      <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("filtre_politiques")} />
 
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher une politique (titre, cle, version)..."
+        placeholder={t("rechercher_politique_titre_cle_version")}
         className="h-9 text-sm"
       />
 
-      {/* ====== Cards grid ====== */}
+
       {filtered.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <ShieldCheck className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
             {policies.length === 0
-              ? "Aucune politique publiee pour le moment."
-              : "Aucune politique ne correspond aux filtres."}
+              ? t("aucune_politique_publiee_moment")
+              : t("aucune_politique_ne_correspond_filtres")}
           </p>
           {policies.length === 0 && (
             <Button
@@ -269,7 +267,7 @@ export function PoliciesAdminView({
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <Plus className="h-3.5 w-3.5 mr-1.5" />
-              Creer la premiere politique
+              {t("creer_premiere_politique")}
             </Button>
           )}
         </Card>
@@ -284,15 +282,15 @@ export function PoliciesAdminView({
               iconTone={p.isActive ? "neutral" : "info"}
               status={
                 p.isActive
-                  ? { label: "Active", tone: "success" }
-                  : { label: "Archivee", tone: "neutral" }
+                  ? { label: t("active"), tone: "success" }
+                  : { label: t("archivee"), tone: "neutral" }
               }
               date={`En vigueur depuis ${formatDate(p.effectiveFrom)}`}
               onPreview={() => setPreviewPolicy(p)}
               onEdit={() => setEditDialog({ open: true, existing: p })}
               onDelete={p.isActive ? () => setConfirmArchive(p) : undefined}
               primaryAction={{
-                label: "Apercu PDF",
+                label: t("apercu_pdf"),
                 icon: FileText,
                 onClick: () => setPdfPreviewCtx({ policy: p, nonce: Date.now() }),
               }}
@@ -301,7 +299,7 @@ export function PoliciesAdminView({
         </div>
       )}
 
-      {/* ============== Modals ============== */}
+
       <TemplateWizard
         open={editDialog.open}
         onClose={() => setEditDialog({ open: false, existing: null })}
@@ -331,8 +329,8 @@ export function PoliciesAdminView({
             effectiveFrom,
             isActive: existing?.isActive ?? true,
           });
-          if (!r.success) throw new Error(r.error || "Erreur");
-          toast.success(existing ? "Politique mise a jour" : "Politique creee");
+          if (!r.success) throw new Error(r.error || t("erreur"));
+          toast.success(existing ? t("politique_mise_jour") : t("politique_creee"));
           setEditDialog({ open: false, existing: null });
           router.refresh();
         }}
@@ -351,8 +349,8 @@ export function PoliciesAdminView({
         open={!!confirmArchive}
         onOpenChange={(o) => !o && !archiving && setConfirmArchive(null)}
         title={`Archiver "${confirmArchive?.title ?? ""}" ?`}
-        description="La politique restera consultable dans l'historique mais ne sera plus marquee comme active pour les employes."
-        confirmLabel="Archiver"
+        description={t("politique_restera_consultable_historique_mais")}
+        confirmLabel={t("archiver")}
         variant="destructive"
         loading={archiving}
         onConfirm={async () => {
@@ -369,7 +367,7 @@ export function PoliciesAdminView({
           });
           setArchiving(false);
           if (r.success) {
-            toast.success("Politique archivee");
+            toast.success(t("politique_archivee"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -378,7 +376,7 @@ export function PoliciesAdminView({
         }}
       />
 
-      {/* Auto-trigger apercu PDF d'une politique (declenche depuis la carte) */}
+
       {pdfPreviewCtx && (
         <PolicyPdfPreviewAutoTrigger
           key={pdfPreviewCtx.nonce}
@@ -401,6 +399,7 @@ function PolicyPdfPreviewAutoTrigger({
   policy: Policy;
   onDone: () => void;
 }) {
+  const t = useTranslations("admin.hr_nav");
   const triggerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
     const t = window.setTimeout(() => {
@@ -418,10 +417,10 @@ function PolicyPdfPreviewAutoTrigger({
         metadata={{ version: policy.version }}
         signatureScope="none"
         onError={(err) => {
-          toast.error(err.message || "Apercu indisponible");
+          toast.error(err.message || t("apercu_indisponible"));
           onDone();
         }}
-        trigger={<button ref={triggerRef} type="button">Apercu</button>}
+        trigger={<button ref={triggerRef} type="button">{t("apercu")}</button>}
       />
     </div>
   );
@@ -439,6 +438,7 @@ function PolicyPreviewDialog({
   onClose: () => void;
   onEdit: (p: Policy) => void;
 }) {
+  const t = useTranslations("admin.hr_nav");
   const tc = useTranslations("common");
   return (
     <Dialog open={!!policy} onOpenChange={(o) => !o && onClose()}>
@@ -463,7 +463,7 @@ function PolicyPreviewDialog({
                     policy.isActive ? "bg-emerald-500/20 text-white" : "bg-white/10 text-white/80"
                   )}
                 >
-                  {policy.isActive ? "Active" : "Archivee"}
+                  {policy.isActive ? t("active") : t("archivee")}
                 </Badge>
               )}
             </DialogDescription>
@@ -474,7 +474,7 @@ function PolicyPreviewDialog({
           {policy?.bodyMarkdown ? (
             <MarkdownView>{policy.bodyMarkdown}</MarkdownView>
           ) : (
-            <p className="text-sm text-muted-foreground italic">Aucun contenu.</p>
+            <p className="text-sm text-muted-foreground italic">{t("aucun_contenu")}</p>
           )}
         </div>
 
@@ -489,11 +489,11 @@ function PolicyPreviewDialog({
               documentType="policy"
               metadata={{ version: policy.version }}
               signatureScope="none"
-              onError={(err) => toast.error(err.message || "Apercu indisponible")}
+              onError={(err) => toast.error(err.message || t("apercu_indisponible"))}
               trigger={
                 <Button variant="outline">
                   <FileText className="h-3.5 w-3.5 mr-1.5" />
-                  Apercu PDF
+                  {t("apercu_pdf")}
                 </Button>
               }
             />

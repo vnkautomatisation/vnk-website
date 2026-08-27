@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -21,6 +22,7 @@ export function OverdueAlerts({
 }: {
   invoices: OverdueInvoice[];
 }) {
+  const t = useTranslations("admin.ui");
   if (invoices.length === 0) {
     return (
       <Card className="border-emerald-200 bg-emerald-50/50">
@@ -30,10 +32,10 @@ export function OverdueAlerts({
           </div>
           <div>
             <p className="text-sm font-medium text-emerald-800">
-              Tout est a jour
+              {t("tout_jour")}
             </p>
             <p className="text-xs text-emerald-600">
-              Aucune facture en retard
+              {t("aucune_facture_retard")}
             </p>
           </div>
         </CardContent>

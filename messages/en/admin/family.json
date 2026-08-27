@@ -1,0 +1,21 @@
+{
+  "assure": "Insured",
+  "aucun_dependant_enregistre": "No dependant recorded.",
+  "autre": "Other",
+  "couvert_apos_assurance_collective": "Covered by the group insurance",
+  "date_naissance": "Date of birth",
+  "dependant_fiscal": "Tax dependant",
+  "dependant_fiscal_t4_releve_1": "Tax dependant (for T4/Relevé 1)",
+  "dependant_sera_retire_dossier": "This dependant is removed from your file.",
+  "enfant": "Child",
+  "enregistre": "Saved",
+  "enregistrer": "Save",
+  "family_view_conjoint_e_et_enfants_couverts_par_votre": "Spouse and children covered by your group insurance or declared to the tax authorities.",
+  "family_view_famille_dependants": "Family / dependants",
+  "modifier": "Edit",
+  "nom_complet": "Full name *",
+  "nom_requis": "Name required",
+  "nouveau": "New",
+  "supprime": "Deleted",
+  "type": "Type"
+}

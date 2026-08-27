@@ -46,25 +46,25 @@ export function PublicNav() {
       )}
     >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 h-[72px] flex items-center justify-between">
-        {/* Logo */}
+
         <Link href="/" className="flex items-center gap-2.5 sm:gap-3 group min-w-0">
           <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-lg bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center shrink-0 group-hover:bg-white/20 transition-colors">
             <span className="text-white font-bold text-sm">VNK</span>
           </div>
           <div className="min-w-0">
             <div className="text-sm font-bold leading-tight text-white truncate">
-              Automatisation Inc.
+              {t("automatisation_inc")}
             </div>
             <div className="text-[8px] sm:text-[9px] text-white/60 tracking-[0.1em] sm:tracking-[0.15em] font-medium">
-              VALUE · NETWORK · KNOWLEDGE
+              {t("value_network_knowledge")}
             </div>
           </div>
         </Link>
 
-        {/* Desktop nav */}
+
         <nav
           className="hidden lg:flex items-center gap-1"
-          aria-label="Navigation principale"
+          aria-label={t("navigation_principale")}
         >
           {items.map((item) => {
             const active = isActive(item.href);
@@ -88,10 +88,10 @@ export function PublicNav() {
             );
           })}
 
-          {/* Divider */}
+
           <div className="h-6 w-px bg-white/20 mx-3" />
 
-          {/* Portail CTA */}
+
           <Button
             asChild
             size="sm"
@@ -102,7 +102,7 @@ export function PublicNav() {
             </Link>
           </Button>
 
-          {/* Locale switcher — bouton FR/EN */}
+
           <NextLink
             href={switcherHref}
             aria-label={`Changer vers ${otherLabel}`}
@@ -112,7 +112,7 @@ export function PublicNav() {
           </NextLink>
         </nav>
 
-        {/* Mobile — langue + menu */}
+
         <div className="lg:hidden flex items-center gap-2 shrink-0">
           <NextLink
             href={switcherHref}
@@ -132,7 +132,7 @@ export function PublicNav() {
         </div>
       </div>
 
-      {/* Mobile drawer */}
+
       {open && (
         <>
           <div
@@ -147,11 +147,11 @@ export function PublicNav() {
             style={{ backgroundColor: "#0a1f3a" }}
           >
             <div className="h-[72px] px-5 flex items-center justify-between border-b border-white/15">
-              <span className="font-bold text-base">Menu</span>
+              <span className="font-bold text-base">{t("menu")}</span>
               <button
                 onClick={() => setOpen(false)}
                 className="h-9 w-9 rounded-md hover:bg-white/10 flex items-center justify-center"
-                aria-label="Fermer"
+                aria-label={t("fermer")}
               >
                 <X className="h-4 w-4" />
               </button>

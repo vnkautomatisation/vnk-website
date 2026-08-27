@@ -45,43 +45,44 @@ export type PdfTemplateRow = {
 type Tab = "email" | "pdf";
 
 // Templates système suggérés (créés automatiquement si absents)
-const EMAIL_TEMPLATE_DEFINITIONS: { key: string; label: string; description: string }[] = [
-  { key: "tpl_welcome", label: "Bienvenue client", description: "Premier email après création du compte" },
-  { key: "tpl_new_quote", label: "Nouveau devis", description: "Envoi d'un devis au client" },
-  { key: "tpl_invoice_sent", label: "Facture envoyée", description: "Facture émise" },
-  { key: "tpl_invoice_paid", label: "Facture payée", description: "Confirmation de paiement reçu" },
-  { key: "tpl_invoice_reminder", label: "Rappel de facture", description: "Relance avant ou après échéance" },
-  { key: "tpl_contract_to_sign", label: "Contrat à signer", description: "Demande de signature électronique" },
-  { key: "tpl_contract_signed", label: "Contrat signé", description: "Confirmation après signature" },
-  { key: "tpl_appointment_confirmed", label: "RDV confirmé", description: "Confirmation de rendez-vous" },
-  { key: "tpl_appointment_reminder", label: "Rappel RDV", description: "Rappel 24h avant" },
-  { key: "tpl_password_reset", label: "Réinitialisation mot de passe", description: "Email avec lien de réinit" },
+const EMAIL_TEMPLATE_DEFINITIONS: { key: string; labelKey: string; descriptionKey: string }[] = [
+  { key: "tpl_welcome", labelKey: "tpl_tpl_welcome", descriptionKey: "tpld_tpl_welcome" },
+  { key: "tpl_new_quote", labelKey: "tpl_tpl_new_quote", descriptionKey: "tpld_tpl_new_quote" },
+  { key: "tpl_invoice_sent", labelKey: "tpl_tpl_invoice_sent", descriptionKey: "tpld_tpl_invoice_sent" },
+  { key: "tpl_invoice_paid", labelKey: "tpl_tpl_invoice_paid", descriptionKey: "tpld_tpl_invoice_paid" },
+  { key: "tpl_invoice_reminder", labelKey: "tpl_tpl_invoice_reminder", descriptionKey: "tpld_tpl_invoice_reminder" },
+  { key: "tpl_contract_to_sign", labelKey: "tpl_tpl_contract_to_sign", descriptionKey: "tpld_tpl_contract_to_sign" },
+  { key: "tpl_contract_signed", labelKey: "tpl_tpl_contract_signed", descriptionKey: "tpld_tpl_contract_signed" },
+  { key: "tpl_appointment_confirmed", labelKey: "tpl_tpl_appointment_confirmed", descriptionKey: "tpld_tpl_appointment_confirmed" },
+  { key: "tpl_appointment_reminder", labelKey: "tpl_tpl_appointment_reminder", descriptionKey: "tpld_tpl_appointment_reminder" },
+  { key: "tpl_password_reset", labelKey: "tpl_tpl_password_reset", descriptionKey: "tpld_tpl_password_reset" },
 ];
 
-const PDF_TEMPLATE_DEFINITIONS: { key: string; label: string; description: string }[] = [
-  { key: "pdf_quote", label: "Devis", description: "Template pour les devis exportés" },
-  { key: "pdf_invoice", label: "Facture", description: "Template pour les factures émises" },
-  { key: "pdf_contract", label: "Contrat", description: "Template pour les contrats" },
-  { key: "pdf_receipt", label: "Reçu", description: "Reçu de paiement" },
-  { key: "pdf_report", label: "Rapport technique", description: "Rapport de mandat technique" },
+const PDF_TEMPLATE_DEFINITIONS: { key: string; labelKey: string; descriptionKey: string }[] = [
+  { key: "pdf_quote", labelKey: "tpl_pdf_quote", descriptionKey: "tpld_pdf_quote" },
+  { key: "pdf_invoice", labelKey: "tpl_pdf_invoice", descriptionKey: "tpld_pdf_invoice" },
+  { key: "pdf_contract", labelKey: "tpl_pdf_contract", descriptionKey: "tpld_pdf_contract" },
+  { key: "pdf_receipt", labelKey: "tpl_pdf_receipt", descriptionKey: "tpld_pdf_receipt" },
+  { key: "pdf_report", labelKey: "tpl_pdf_report", descriptionKey: "tpld_pdf_report" },
 ];
 
-const COMMON_EMAIL_VARS: Record<string, string> = {
-  client_name: "Nom du client",
-  client_company: "Entreprise du client",
-  invoice_number: "Numéro de facture",
-  invoice_amount: "Montant total",
-  invoice_due_date: "Date d'échéance",
-  quote_number: "Numéro de devis",
-  quote_amount: "Montant du devis",
-  payment_url: "Lien de paiement",
-  signature_url: "Lien de signature",
-  appointment_date: "Date du rendez-vous",
-  appointment_time: "Heure du rendez-vous",
-  company_name: "Nom de l'entreprise",
-  company_phone: "Téléphone entreprise",
-  company_email: "Courriel entreprise",
-  current_year: "Année courante",
+// Les cles sont resolues au rendu : ce catalogue vit hors composant.
+const COMMON_EMAIL_VAR_KEYS: Record<string, string> = {
+  client_name: "var_client_name",
+  client_company: "var_client_company",
+  invoice_number: "var_invoice_number",
+  invoice_amount: "var_invoice_amount",
+  invoice_due_date: "var_invoice_due_date",
+  quote_number: "var_quote_number",
+  quote_amount: "var_quote_amount",
+  payment_url: "var_payment_url",
+  signature_url: "var_signature_url",
+  appointment_date: "var_appointment_date",
+  appointment_time: "var_appointment_time",
+  company_name: "var_company_name",
+  company_phone: "var_company_phone",
+  company_email: "var_company_email",
+  current_year: "var_current_year",
 };
 
 export function TemplatesView({
@@ -90,6 +91,10 @@ export function TemplatesView({
   emailTemplates: EmailTemplateRow[];
   pdfTemplates: PdfTemplateRow[];
 }) {
+  const t = useTranslations("admin.email_templates");
+  const commonVars = Object.fromEntries(
+    Object.entries(COMMON_EMAIL_VAR_KEYS).map(([name, key]) => [name, t(key)]),
+  );
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("email");
@@ -103,38 +108,38 @@ export function TemplatesView({
     const r = confirmDelete.kind === "email"
       ? await deleteEmailTemplateAction({ id: confirmDelete.id })
       : await deletePdfTemplateAction({ id: confirmDelete.id });
-    if (r.success) { toast.success("Supprimé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("supprime")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDelete(null);
   };
 
-  const toggleEmailEnabled = async (t: EmailTemplateRow) => {
+  const toggleEmailEnabled = async (tpl: EmailTemplateRow) => {
     const r = await upsertEmailTemplateAction({
-      id: t.id, key: t.key, locale: t.locale as "fr" | "en",
-      subject: t.subject, bodyHtml: t.bodyHtml, bodyText: t.bodyText,
-      variables: t.variables ?? {},
-      isEnabled: !t.isEnabled,
+      id: tpl.id, key: tpl.key, locale: tpl.locale as "fr" | "en",
+      subject: tpl.subject, bodyHtml: tpl.bodyHtml, bodyText: tpl.bodyText,
+      variables: tpl.variables ?? {},
+      isEnabled: !tpl.isEnabled,
     });
-    if (r.success) { toast.success(t.isEnabled ? "Désactivé" : "Activé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(tpl.isEnabled ? t("desactive") : t("active")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
-  const togglePdfEnabled = async (t: PdfTemplateRow) => {
+  const togglePdfEnabled = async (tpl: PdfTemplateRow) => {
     const r = await upsertPdfTemplateAction({
-      id: t.id, key: t.key, locale: t.locale as "fr" | "en",
-      content: t.content as Parameters<typeof upsertPdfTemplateAction>[0]["content"],
-      variables: t.variables ?? {},
-      isEnabled: !t.isEnabled,
+      id: tpl.id, key: tpl.key, locale: tpl.locale as "fr" | "en",
+      content: tpl.content as Parameters<typeof upsertPdfTemplateAction>[0]["content"],
+      variables: tpl.variables ?? {},
+      isEnabled: !tpl.isEnabled,
     });
-    if (r.success) { toast.success(t.isEnabled ? "Désactivé" : "Activé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(tpl.isEnabled ? t("desactive") : t("active")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
-  const handleCreateMissing = (def: { key: string; label: string }) => {
+  const handleCreateMissing = (def: { key: string; labelKey: string }) => {
     if (tab === "email") {
-      setEmailDialog({ open: true, template: null, defaultKey: def.key, defaultLabel: def.label });
+      setEmailDialog({ open: true, template: null, defaultKey: def.key, defaultLabel: t(def.labelKey) });
     } else {
-      setPdfDialog({ open: true, template: null, defaultKey: def.key, defaultLabel: def.label });
+      setPdfDialog({ open: true, template: null, defaultKey: def.key, defaultLabel: t(def.labelKey) });
     }
   };
 
@@ -151,8 +156,8 @@ export function TemplatesView({
           <FileText className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Modèles</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Courriels transactionnels et documents PDF (factures, devis, contrats)</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("modeles")}</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{t("courriels_transactionnels_documents_pdf_factures")}</p>
         </div>
       </div>
 
@@ -181,38 +186,38 @@ export function TemplatesView({
         </div>
       </div>
 
-      {/* EMAIL TEMPLATES */}
+
       {tab === "email" && (
         <div className="space-y-4">
-          {/* Existants */}
+
           {emailTemplates.length > 0 && (
             <Card>
               <div className="divide-y">
-                {emailTemplates.map((t) => {
-                  const def = EMAIL_TEMPLATE_DEFINITIONS.find((d) => d.key === t.key);
+                {emailTemplates.map((tpl) => {
+                  const def = EMAIL_TEMPLATE_DEFINITIONS.find((d) => d.key === tpl.key);
                   return (
-                    <div key={t.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/40", !t.isEnabled && "opacity-60")}>
+                    <div key={tpl.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/40", !tpl.isEnabled && "opacity-60")}>
                       <div className="h-9 w-9 rounded-lg bg-sky-500 text-white flex items-center justify-center shrink-0">
                         <Mail className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-sm">{def?.label ?? t.key}</p>
-                          <Badge variant="outline" className="text-[10px] uppercase">{t.locale}</Badge>
-                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
+                          <p className="font-semibold text-sm">{def ? t(def.labelKey) : tpl.key}</p>
+                          <Badge variant="outline" className="text-[10px] uppercase">{tpl.locale}</Badge>
+                          {!tpl.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{t.key}</p>
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{tpl.key}</p>
                         <p className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                          <span className="font-medium">Objet :</span> {t.subject}
+                          <span className="font-medium">{t("objet")}</span> {tpl.subject}
                         </p>
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setEmailDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleEmailEnabled(t)}><Power className="h-4 w-4 mr-2" />{t.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setEmailDialog({ open: true, template: tpl })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleEmailEnabled(tpl)}><Power className="h-4 w-4 mr-2" />{tpl.isEnabled ? t("desactiver") : t("activer")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "email", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "email", id: tpl.id, label: def ? t(def.labelKey) : tpl.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -222,11 +227,11 @@ export function TemplatesView({
             </Card>
           )}
 
-          {/* Templates système manquants */}
+
           {missingEmailDefs.length > 0 && (
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                Modèles suggérés à créer ({missingEmailDefs.length})
+                {t("modeles_suggeres_creer", { count: missingEmailDefs.length })}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {missingEmailDefs.map((def) => (
@@ -239,8 +244,8 @@ export function TemplatesView({
                       <Plus className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{def.label}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{def.description}</p>
+                      <p className="font-medium text-sm">{t(def.labelKey)}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{t(def.descriptionKey)}</p>
                     </div>
                   </button>
                 ))}
@@ -248,43 +253,43 @@ export function TemplatesView({
             </div>
           )}
 
-          {/* Bouton créer custom */}
+
           <Button onClick={() => setEmailDialog({ open: true, template: null })} variant="outline">
-            <Plus className="h-4 w-4 mr-1.5" />Créer un modèle personnalisé
+            <Plus className="h-4 w-4 mr-1.5" />{t("creer_modele_personnalise")}
           </Button>
         </div>
       )}
 
-      {/* PDF TEMPLATES */}
+
       {tab === "pdf" && (
         <div className="space-y-4">
           {pdfTemplates.length > 0 && (
             <Card>
               <div className="divide-y">
-                {pdfTemplates.map((t) => {
-                  const def = PDF_TEMPLATE_DEFINITIONS.find((d) => d.key === t.key);
+                {pdfTemplates.map((tpl) => {
+                  const def = PDF_TEMPLATE_DEFINITIONS.find((d) => d.key === tpl.key);
                   return (
-                    <div key={t.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/40", !t.isEnabled && "opacity-60")}>
-                      <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ backgroundColor: t.content.accentColor || "#0F2D52" }}>
+                    <div key={tpl.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/40", !tpl.isEnabled && "opacity-60")}>
+                      <div className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-white" style={{ backgroundColor: tpl.content.accentColor || "#0F2D52" }}>
                         <FileSignature className="h-4 w-4" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <p className="font-semibold text-sm">{def?.label ?? t.key}</p>
-                          <Badge variant="outline" className="text-[10px] uppercase">{t.locale}</Badge>
-                          <Badge variant="outline" className="text-[10px]">{t.content.pageSize}</Badge>
-                          {!t.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
+                          <p className="font-semibold text-sm">{def ? t(def.labelKey) : tpl.key}</p>
+                          <Badge variant="outline" className="text-[10px] uppercase">{tpl.locale}</Badge>
+                          <Badge variant="outline" className="text-[10px]">{tpl.content.pageSize}</Badge>
+                          {!tpl.isEnabled && <Badge variant="secondary" className="text-[10px]">{tc("disabled")}</Badge>}
                         </div>
-                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{t.key}</p>
-                        {def?.description && <p className="text-xs text-muted-foreground mt-1">{def.description}</p>}
+                        <p className="text-[10px] text-muted-foreground font-mono mt-0.5">{tpl.key}</p>
+                        {def && <p className="text-xs text-muted-foreground mt-1">{t(def.descriptionKey)}</p>}
                       </div>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => setPdfDialog({ open: true, template: t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => togglePdfEnabled(t)}><Power className="h-4 w-4 mr-2" />{t.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setPdfDialog({ open: true, template: tpl })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => togglePdfEnabled(tpl)}><Power className="h-4 w-4 mr-2" />{tpl.isEnabled ? t("desactiver") : t("activer")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "pdf", id: t.id, label: def?.label ?? t.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "pdf", id: tpl.id, label: def ? t(def.labelKey) : tpl.key })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>
@@ -297,7 +302,7 @@ export function TemplatesView({
           {missingPdfDefs.length > 0 && (
             <div>
               <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
-                Modèles suggérés à créer ({missingPdfDefs.length})
+                {t("modeles_suggeres_creer", { count: missingPdfDefs.length })}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
                 {missingPdfDefs.map((def) => (
@@ -310,8 +315,8 @@ export function TemplatesView({
                       <Plus className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{def.label}</p>
-                      <p className="text-[10px] text-muted-foreground line-clamp-1">{def.description}</p>
+                      <p className="font-medium text-sm">{t(def.labelKey)}</p>
+                      <p className="text-[10px] text-muted-foreground line-clamp-1">{t(def.descriptionKey)}</p>
                     </div>
                   </button>
                 ))}
@@ -320,19 +325,19 @@ export function TemplatesView({
           )}
 
           <Button onClick={() => setPdfDialog({ open: true, template: null })} variant="outline">
-            <Plus className="h-4 w-4 mr-1.5" />Créer un modèle personnalisé
+            <Plus className="h-4 w-4 mr-1.5" />{t("creer_modele_personnalise")}
           </Button>
         </div>
       )}
 
-      {/* Dialogs */}
+
       <EmailTemplateDialog
         open={emailDialog.open}
         onOpenChange={(open) => setEmailDialog({ open, template: open ? emailDialog.template : null, defaultKey: open ? emailDialog.defaultKey : undefined, defaultLabel: open ? emailDialog.defaultLabel : undefined })}
         template={emailDialog.template}
         defaultKey={emailDialog.defaultKey}
         defaultLabel={emailDialog.defaultLabel}
-        commonVars={COMMON_EMAIL_VARS}
+        commonVars={commonVars}
         onSaved={() => router.refresh()}
       />
       <PdfTemplateDialog
@@ -341,7 +346,7 @@ export function TemplatesView({
         template={pdfDialog.template}
         defaultKey={pdfDialog.defaultKey}
         defaultLabel={pdfDialog.defaultLabel}
-        commonVars={COMMON_EMAIL_VARS}
+        commonVars={commonVars}
         onSaved={() => router.refresh()}
       />
 
@@ -349,7 +354,7 @@ export function TemplatesView({
         open={!!confirmDelete}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible. Le modèle par défaut sera utilisé à la place."
+        description={t("action_irreversible_modele_defaut_sera")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}

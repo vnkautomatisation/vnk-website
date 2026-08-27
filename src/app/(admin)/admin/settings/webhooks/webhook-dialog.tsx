@@ -18,13 +18,13 @@ import {
 import type { OutgoingWebhookRow } from "./webhooks-view";
 
 const EVENT_GROUPS = [
-  { label: "Clients", prefix: "client." },
-  { label: "Devis", prefix: "quote." },
-  { label: "Factures", prefix: "invoice." },
-  { label: "Contrats", prefix: "contract." },
-  { label: "Paiements", prefix: "payment." },
-  { label: "Mandats", prefix: "mandate." },
-  { label: "Rendez-vous", prefix: "appointment." },
+  { labelKey: "grp_clients", prefix: "client." },
+  { labelKey: "grp_devis", prefix: "quote." },
+  { labelKey: "grp_factures", prefix: "invoice." },
+  { labelKey: "grp_contrats", prefix: "contract." },
+  { labelKey: "grp_paiements", prefix: "payment." },
+  { labelKey: "grp_mandats", prefix: "mandate." },
+  { labelKey: "grp_rendez_vous", prefix: "appointment." },
 ];
 
 export function WebhookDialog({
@@ -35,6 +35,7 @@ export function WebhookDialog({
   webhook: OutgoingWebhookRow | null;
   onSaved: (secret?: string) => void;
 }) {
+  const t = useTranslations("admin.webhooks");
   const tc = useTranslations("common");
   const mode = webhook ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -95,7 +96,7 @@ export function WebhookDialog({
       } else {
         const r = await updateWebhookAction({ id: webhook!.id, ...payload });
         if (r.success) {
-          toast.success("Webhook enregistré");
+          toast.success(t("webhook_enregistre"));
           onSaved();
           onOpenChange(false);
         } else {
@@ -108,7 +109,7 @@ export function WebhookDialog({
   const copySecret = () => {
     if (generatedSecret) {
       navigator.clipboard.writeText(generatedSecret);
-      toast.success("Secret copié");
+      toast.success(t("secret_copie"));
     }
   };
 
@@ -121,9 +122,9 @@ export function WebhookDialog({
           </div>
           <div className="flex-1">
             <DialogTitle className="text-white text-base">
-              {mode === "create" ? "Nouveau webhook" : webhook?.name}
+              {mode === "create" ? t("nouveau_webhook") : webhook?.name}
             </DialogTitle>
-            <p className="text-xs text-white/70">Webhook HTTP sortant signé HMAC-SHA256</p>
+            <p className="text-xs text-white/70">{t("webhook_http_sortant_signe_hmac")}</p>
           </div>
           <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label={tc("enabled")} />
         </div>
@@ -134,15 +135,13 @@ export function WebhookDialog({
               <div className="flex items-start gap-2">
                 <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
                 <div>
-                  <p className="font-semibold text-sm text-amber-900">Secret à copier maintenant</p>
-                  <p className="text-xs text-amber-800 mt-1">
-                    Ce secret servira à vérifier la signature des webhooks reçus de votre côté. <strong>Il ne sera plus jamais affiché.</strong> Si perdu, il faudra le régénérer.
-                  </p>
+                  <p className="font-semibold text-sm text-amber-900">{t("secret_copier_maintenant")}</p>
+                  <p className="text-xs text-amber-800 mt-1">{t("webhook_dialog_ce_secret_servira_a_verifier_la_signature")}<strong>{t("il_ne_sera_plus_jamais")}</strong>{t("webhook_dialog_si_perdu_il_faudra_le_regenerer")}</p>
                 </div>
               </div>
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Secret</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("secret")}</Label>
               <div className="flex gap-2 mt-1.5">
                 <code className="flex-1 text-xs font-mono bg-muted px-3 py-2 rounded border break-all">
                   {generatedSecret}
@@ -157,7 +156,7 @@ export function WebhookDialog({
             </div>
             <div className="flex justify-end">
               <Button onClick={() => { setGeneratedSecret(null); onOpenChange(false); }} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                J&apos;ai copié le secret
+                {t("j_apos_ai_copie_secret")}
               </Button>
             </div>
           </div>
@@ -165,18 +164,18 @@ export function WebhookDialog({
           <>
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nom *</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex : Intégration Zapier" className="mt-1" />
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("nom")}</Label>
+                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("ex_integration_zapier")} className="mt-1" />
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">URL de destination *</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("url_destination")}</Label>
                 <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://hooks.partenaire.com/vnk-events" className="mt-1 font-mono text-sm" />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Événements à envoyer *
+                    {t("evenements_envoyer")}
                   </Label>
                   <Badge variant="outline" className="text-[10px]">{selectedEvents.size} sélectionnés</Badge>
                 </div>
@@ -192,14 +191,14 @@ export function WebhookDialog({
                             checked={allSelected ? true : someSelected ? "indeterminate" : false}
                             onCheckedChange={(c) => toggleGroup(group.prefix, !!c)}
                           />
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{group.label}</p>
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">{t(group.labelKey)}</p>
                         </div>
                         <div className="ml-6 grid grid-cols-1 sm:grid-cols-2 gap-1">
                           {groupEvents.map((e) => (
                             <label key={e.key} className="flex items-center gap-2 cursor-pointer hover:bg-muted/40 rounded px-1.5 py-1">
                               <Checkbox checked={selectedEvents.has(e.key)} onCheckedChange={() => toggleEvent(e.key)} />
                               <code className="text-[10px] font-mono text-muted-foreground">{e.key}</code>
-                              <span className="text-[10px] text-muted-foreground">— {e.label}</span>
+                              <span className="text-[10px] text-muted-foreground">— {t(e.labelKey)}</span>
                             </label>
                           ))}
                         </div>
@@ -213,7 +212,7 @@ export function WebhookDialog({
             <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
               <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
               <Button onClick={handleSave} disabled={pending || !name.trim() || !url.trim() || selectedEvents.size === 0} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+                {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
               </Button>
             </div>
           </>

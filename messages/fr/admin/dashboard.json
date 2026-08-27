@@ -16,5 +16,8 @@
   "anonymous_visitor": "Visiteur anonyme",
   "public_site": "Site public",
   "recent_activity": "Activité récente",
-  "events_count": "{count} événements"
+  "events_count": "{count} événements",
+  "n_clients_actifs": "{count, plural, one {# client actif} other {# clients actifs}}",
+  "n_mandats_cours": "{count, plural, one {# mandat en cours} other {# mandats en cours}}",
+  "n_en_attente": "{count} en attente"
 }

@@ -40,6 +40,7 @@ export function QuoteDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -69,16 +70,16 @@ export function QuoteDetailPanel({
   const accept = async () => {
     if (!quote) return;
     const ok = await confirm({
-      title: "Accepter ce devis ?",
+      title: t("accepter_devis"),
       description: `Le devis ${quote.quoteNumber} sera marqué comme accepté et un contrat sera généré.`,
-      confirmLabel: "Accepter",
+      confirmLabel: t("accepter"),
     });
     if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/quotes/${quote.id}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepté"); await refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("devis_accepte")); await refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
@@ -88,7 +89,7 @@ export function QuoteDetailPanel({
         open={open}
         onOpenChange={onOpenChange}
         loading={loading || !quote}
-        title={quote?.title ?? "Devis"}
+        title={quote?.title ?? t("devis")}
         subtitle={quote ? `${quote.quoteNumber} · ${quote.client.fullName}` : undefined}
         icon={<FileText className="h-7 w-7 text-white" />}
         preventClose={pdfOpen}
@@ -124,8 +125,8 @@ export function QuoteDetailPanel({
         {quote && (
           <Tabs defaultValue="info">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="info">Infos</TabsTrigger>
-              <TabsTrigger value="amounts">Montants</TabsTrigger>
+              <TabsTrigger value="info">{t("infos")}</TabsTrigger>
+              <TabsTrigger value="amounts">{t("montants")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4 mt-4">
@@ -135,7 +136,7 @@ export function QuoteDetailPanel({
                   <StatusBadge status={quote.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Numero</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("numero")}</span>
                   <span className="text-sm font-mono">{quote.quoteNumber}</span>
                 </div>
                 {quote.expiryDate && (
@@ -148,7 +149,7 @@ export function QuoteDetailPanel({
                 )}
                 {quote.acceptedAt && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Accepte le</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("accepte")}</span>
                     <span className="text-sm">{formatDate(new Date(quote.acceptedAt))}</span>
                   </div>
                 )}
@@ -156,17 +157,17 @@ export function QuoteDetailPanel({
 
               {quote.description && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Description</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("description")}</p>
                   <p className="text-sm whitespace-pre-wrap">{quote.description}</p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="amounts" className="space-y-2 mt-4">
-              <Row label="Sous-total HT" value={formatCurrency(Number(quote.amountHt))} />
+              <Row label={t("sous_total_ht")} value={formatCurrency(Number(quote.amountHt))} />
               <Row label="TPS" value={formatCurrency(Number(quote.tpsAmount))} muted />
               <Row label="TVQ" value={formatCurrency(Number(quote.tvqAmount))} muted />
-              <Row label="Total TTC" value={formatCurrency(Number(quote.amountTtc))} bold />
+              <Row label={t("total_ttc")} value={formatCurrency(Number(quote.amountTtc))} bold />
             </TabsContent>
           </Tabs>
         )}

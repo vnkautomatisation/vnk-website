@@ -1,5 +1,6 @@
 // API publique v1 · Factures — list.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authenticateApiToken } from "@/lib/api-auth";
@@ -14,13 +15,14 @@ const listSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const auth = await authenticateApiToken(req, "read:invoices");
   if (!auth.ok) return auth.response;
 
   const url = new URL(req.url);
   const parsed = listSchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const where: Record<string, unknown> = {};

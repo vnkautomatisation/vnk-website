@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock, Download } from "lucide-react";
@@ -41,6 +42,7 @@ const filterOptions: FilterOption[] = [
 ];
 
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
+  const t = useTranslations("portal");
   const router = useRouter();
   const [pdfInvoice, setPdfInvoice] = useState<Invoice | null>(null);
   const [showPayment, setShowPayment] = useState(false);
@@ -70,7 +72,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     setShowPayment(false);
     setPaid(true);
     setPdfKey((k) => k + 1);
-    toast.success("Paiement effectue — merci !");
+    toast.success(t("paiement_effectue_merci"));
     router.refresh();
   };
 
@@ -93,7 +95,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     },
     {
       key: "info",
-      header: "Facture",
+      header: t("facture"),
       accessor: (r) => (
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.invoiceNumber}</span>
@@ -106,7 +108,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (r) => (
         <span className="font-bold text-[#0F2D52]">{formatCurrency(r.amountTtc)}</span>
       ),
@@ -115,7 +117,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     },
     {
       key: "due",
-      header: "Echeance",
+      header: t("echeance"),
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
           {r.dueDate ? formatDate(new Date(r.dueDate)) : "\u2014"}
@@ -127,12 +129,12 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "paidAt",
-      header: "Paye le",
+      header: t("paye"),
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
           {r.paidAt ? formatDate(r.paidAt) : "\u2014"}
@@ -155,12 +157,12 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
               onClick={(e) => openPdf(r, e)}
             >
               <CreditCard className="h-3.5 w-3.5 mr-1" />
-              Payer
+              {t("payer_2")}
             </Button>
           ) : r.status === "paid" ? (
             <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
+              {t("voir")}
             </Button>
           ) : null}
         </div>
@@ -174,7 +176,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
     return (
       <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow border-l-[3px]" style={{ borderLeftColor: isOverdue ? "#dc2626" : isPaid ? "#059669" : inv.status === "unpaid" ? "#f59e0b" : "#d1d5db" }}>
         <CardContent className="p-4 space-y-3">
-          {/* Header: number + title + badge */}
+
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-mono">{inv.invoiceNumber}</p>
@@ -183,15 +185,15 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             <StatusBadge status={inv.status} />
           </div>
 
-          {/* Amount prominent */}
+
           <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(inv.amountTtc)}</p>
 
-          {/* Tax breakdown */}
+
           <p className="text-[11px] text-muted-foreground leading-relaxed">
             {formatCurrency(inv.amountHt)} HT + TPS {formatCurrency(inv.tpsAmount)} + TVQ {formatCurrency(inv.tvqAmount)}
           </p>
 
-          {/* Dates */}
+
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
               Emise le {formatDate(new Date(inv.createdAt))}
@@ -209,7 +211,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
             )}
           </div>
 
-          {/* Action */}
+
           <div className="pt-1">
             {(inv.status === "unpaid" || isOverdue) ? (
               <Button
@@ -218,12 +220,12 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                 onClick={(e) => openPdf(inv, e)}
               >
                 <CreditCard className="h-3.5 w-3.5 mr-1" />
-                Payer
+                {t("payer_2")}
               </Button>
             ) : isPaid ? (
               <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(inv, e)}>
                 <Eye className="h-3.5 w-3.5 mr-1" />
-                Voir
+                {t("voir")}
               </Button>
             ) : null}
           </div>
@@ -242,8 +244,8 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                 <Receipt className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="portal-title">Factures</h1>
-                <p className="text-sm text-muted-foreground">Suivi de vos factures et paiements</p>
+                <h1 className="portal-title">{t("factures")}</h1>
+                <p className="text-sm text-muted-foreground">{t("suivi_factures_paiements")}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
@@ -253,7 +255,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                     <FileText className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Total factures</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("total_factures")}</p>
                     <p className="portal-kpi-number">{invoiceKpis.totalCount}</p>
                   </div>
                 </div>
@@ -264,7 +266,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                     <Clock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-amber-600">A payer</p>
+                    <p className="portal-kpi-label text-amber-600">{t("payer")}</p>
                     <p className="portal-kpi-number">{invoiceKpis.aPayerCount}</p>
                     <p className="text-xs text-muted-foreground">{formatCurrency(invoiceKpis.aPayerSum)}</p>
                   </div>
@@ -276,7 +278,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                     <AlertTriangle className="h-4 w-4 text-red-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-red-600">En retard</p>
+                    <p className="portal-kpi-label text-red-600">{t("retard")}</p>
                     <p className="portal-kpi-number">{invoiceKpis.enRetardCount}</p>
                   </div>
                 </div>
@@ -287,7 +289,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-emerald-600">Payees</p>
+                    <p className="portal-kpi-label text-emerald-600">{t("payees")}</p>
                     <p className="portal-kpi-number">{invoiceKpis.payeesCount}</p>
                   </div>
                 </div>
@@ -300,15 +302,15 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         getRowId={(r) => r.id}
         renderCard={renderCard}
         storageKey="portal-invoices"
-        searchPlaceholder="Rechercher une facture..."
+        searchPlaceholder={t("rechercher_facture")}
         searchFn={(r) => `${r.invoiceNumber} ${r.title}`}
         filterOptions={filterOptions}
         filterFn={(r) => r.status}
         exportFilename="factures"
-        emptyMessage="Aucune facture"
+        emptyMessage={t("aucune_facture")}
       />
 
-      {/* PDF preview — with Pay button if unpaid */}
+
       {pdfInvoice && (
         <PdfViewerModal
           open={!!pdfInvoice}
@@ -328,7 +330,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                 a.click();
               }}>
                 <Download className="h-4 w-4 mr-1.5" />
-                Telecharger la facture
+                {t("telecharger_facture")}
               </Button>
             ) : showPayment ? null
               : (pdfInvoice.status === "unpaid" || pdfInvoice.status === "overdue") ? (
@@ -338,14 +340,14 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
                 onClick={startPay}
               >
                 <CreditCard className="h-4 w-4 mr-1" />
-                Payer maintenant
+                {t("payer_maintenant")}
               </Button>
             ) : undefined
           }
         />
       )}
 
-      {/* Stripe payment overlay — SUR le PDF */}
+
       {pdfInvoice && showPayment && (
         <StripePaymentModal
           invoice={pdfInvoice}

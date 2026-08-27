@@ -1,6 +1,7 @@
 "use client";
 // Uploader pour les pieces jointes par defaut d'un template (multi-files)
 import { useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Paperclip, X, FileText, Image as ImageIcon, Music } from "lucide-react";
 import { toast } from "sonner";
 import type { MessageAttachment } from "@/components/messages/message-attachment-display";
@@ -22,6 +23,7 @@ export function TemplateAttachmentsInput({
   attachments: MessageAttachment[];
   onChange: (next: MessageAttachment[]) => void;
 }) {
+  const t = useTranslations("admin.messages");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFiles = useCallback((files: FileList | File[]) => {
@@ -46,7 +48,7 @@ export function TemplateAttachmentsInput({
           kind, name: file.name, mimeType: file.type || "application/octet-stream", size: file.size, dataUrl,
         }]);
       };
-      reader.onerror = () => toast.error("Lecture impossible");
+      reader.onerror = () => toast.error(t("lecture_impossible"));
       reader.readAsDataURL(file);
     });
   }, [attachments, onChange]);
@@ -56,7 +58,7 @@ export function TemplateAttachmentsInput({
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[11px] text-muted-foreground">Ces fichiers seront automatiquement attachés aux messages utilisant ce template</p>
+        <p className="text-[11px] text-muted-foreground">{t("fichiers_seront_automatiquement_attaches_messages")}</p>
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
@@ -93,7 +95,7 @@ export function TemplateAttachmentsInput({
                   type="button"
                   onClick={() => removeAt(i)}
                   className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
-                  aria-label="Retirer"
+                  aria-label={t("retirer")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
@@ -103,7 +105,7 @@ export function TemplateAttachmentsInput({
         </ul>
       )}
       {attachments.length === 0 && (
-        <p className="text-[10px] text-muted-foreground italic">Aucune pièce jointe par défaut</p>
+        <p className="text-[10px] text-muted-foreground italic">{t("aucune_piece_jointe_defaut")}</p>
       )}
     </div>
   );

@@ -60,14 +60,14 @@ function formatDate(iso: string | null): string {
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
 }
 
-const CATEGORY_LABELS: Record<string, string> = {
-  licence: "Licence / Permis",
-  diploma: "Diplôme",
-  certification: "Certification",
-  id_card: "Carte d'identité",
-  passport: "Passeport",
-  medical: "Document médical",
-  other: "Autre",
+const CATEGORY_KEYS: Record<string, string> = {
+  licence: "req_cat_licence",
+  diploma: "req_cat_diploma",
+  certification: "req_cat_certification",
+  id_card: "req_cat_id_card",
+  passport: "req_cat_passport",
+  medical: "req_cat_medical",
+  other: "req_cat_other",
 };
 
 export function ReviewUploadRequestDialog({
@@ -81,6 +81,7 @@ export function ReviewUploadRequestDialog({
   onReviewed: () => void;
   request: ReviewableRequest | null;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [mode, setMode] = useState<"approve" | "reject">("approve");
   const [notes, setNotes] = useState("");
@@ -109,7 +110,7 @@ export function ReviewUploadRequestDialog({
 
   const submit = async () => {
     if (mode === "reject" && !notes.trim()) {
-      toast.error("Le motif est requis pour rejeter");
+      toast.error(t("motif_requis_rejeter"));
       return;
     }
     setSubmitting(true);
@@ -122,8 +123,8 @@ export function ReviewUploadRequestDialog({
         if (r.success) {
           toast.success(
             alsoCreate
-              ? "Document approuvé et ajouté au dossier officiel"
-              : "Document approuvé",
+              ? t("document_approuve_ajoute_dossier_officiel")
+              : t("document_approuve"),
           );
           onReviewed();
           reset();
@@ -134,7 +135,7 @@ export function ReviewUploadRequestDialog({
       } else {
         const r = await rejectUploadRequestAction(request.id, notes.trim());
         if (r.success) {
-          toast.success("Document refusé — l'employé a été notifié");
+          toast.success(t("document_refuse_employe_ete_notifie"));
           onReviewed();
           reset();
           onClose();
@@ -143,7 +144,7 @@ export function ReviewUploadRequestDialog({
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : t("erreur_inconnue"));
     } finally {
       setSubmitting(false);
     }
@@ -153,15 +154,15 @@ export function ReviewUploadRequestDialog({
     <>
       <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
         <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
-          {/* Header navy */}
+
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
             <DialogHeader>
               <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
                 <ShieldCheck className="h-4 w-4 shrink-0" />
-                <span className="truncate">Validation du document</span>
+                <span className="truncate">{t("validation_document")}</span>
               </DialogTitle>
               <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
-                {request.title} — {CATEGORY_LABELS[request.category] ?? request.category}
+                {request.title} — {CATEGORY_KEYS[request.category] ? t(CATEGORY_KEYS[request.category]) : request.category}
               </DialogDescription>
             </DialogHeader>
             <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px]">
@@ -183,10 +184,10 @@ export function ReviewUploadRequestDialog({
             </div>
           </div>
 
-          {/* Body */}
+
           <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-            {/* Preview du fichier */}
-            <FormSection icon={FileText} title="Fichier téléversé">
+
+            <FormSection icon={FileText} title={t("fichier_televerse")}>
               <div className="rounded-md border bg-muted/10 p-3 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0 flex-1">
@@ -194,7 +195,7 @@ export function ReviewUploadRequestDialog({
                       {request.fileName ?? "document"}
                     </p>
                     <p className="text-[11px] text-muted-foreground">
-                      {request.fileMimeType ?? "type inconnu"}
+                      {request.fileMimeType ?? t("type_inconnu")}
                     </p>
                   </div>
                   <div className="flex items-center gap-1.5">
@@ -207,7 +208,7 @@ export function ReviewUploadRequestDialog({
                         className="h-8 text-xs"
                       >
                         <Eye className="h-3.5 w-3.5 mr-1" />
-                        Aperçu
+                        {t("apercu")}
                       </Button>
                     )}
                     <Button
@@ -224,7 +225,7 @@ export function ReviewUploadRequestDialog({
                 </div>
 
                 {isImage && (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img
                     src={fileUrl}
                     alt={request.fileName ?? "preview"}
@@ -233,14 +234,14 @@ export function ReviewUploadRequestDialog({
                 )}
                 {!isImage && !isPdf && (
                   <p className="text-[11px] text-muted-foreground italic">
-                    Aperçu non disponible pour ce type de fichier — utilisez Télécharger.
+                    {t("apercu_non_disponible_type_fichier")}
                   </p>
                 )}
               </div>
             </FormSection>
 
-            {/* Choix de l'action */}
-            <FormSection icon={ShieldCheck} title="Décision">
+
+            <FormSection icon={ShieldCheck} title={t("decision")}>
               <div className="grid grid-cols-2 gap-2">
                 <button
                   type="button"
@@ -262,12 +263,10 @@ export function ReviewUploadRequestDialog({
                         mode === "approve" ? "text-emerald-800" : "text-foreground"
                       }`}
                     >
-                      Approuver
+                      {t("approuver")}
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                    Le document est conforme — l'ajoute au dossier officiel.
-                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{t("review_upload_request_le_document_est_conforme_l_ajoute_au")}</p>
                 </button>
                 <button
                   type="button"
@@ -289,26 +288,24 @@ export function ReviewUploadRequestDialog({
                         mode === "reject" ? "text-red-800" : "text-foreground"
                       }`}
                     >
-                      Rejeter
+                      {t("rejeter")}
                     </span>
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">
-                    L'employé pourra re-téléverser après correction.
-                  </p>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-snug">{t("review_upload_request_l_employe_pourra_re_televerser_apres_correction")}</p>
                 </button>
               </div>
 
               <div className="space-y-2">
                 <label className="text-xs font-medium text-muted-foreground">
-                  {mode === "approve" ? "Notes (optionnel)" : "Motif du rejet (obligatoire)"}
+                  {mode === "approve" ? t("notes_optionnel") : t("motif_rejet_obligatoire")}
                 </label>
                 <Textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
                   placeholder={
                     mode === "approve"
-                      ? "Ex : Document conforme, archivé au dossier."
-                      : "Ex : Le document est illisible, merci de scanner à nouveau."
+                      ? t("ex_document_conforme_archive_dossier")
+                      : t("ex_document_illisible_merci_scanner")
                   }
                   rows={3}
                   maxLength={1000}
@@ -325,19 +322,16 @@ export function ReviewUploadRequestDialog({
                   />
                   <div className="space-y-0.5">
                     <p className="text-sm font-medium">
-                      Créer un document personnel officiel
+                      {t("creer_document_personnel_officiel")}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Ajoute une entrée dans le dossier personnel de l'employé, marquée
-                      vérifiée par les RH.
-                    </p>
+                    <p className="text-[11px] text-muted-foreground">{t("review_upload_request_ajoute_une_entree_dans_le_dossier_personnel")}</p>
                   </div>
                 </label>
               )}
             </FormSection>
           </div>
 
-          {/* Footer sticky */}
+
           <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button
               type="button"
@@ -364,7 +358,7 @@ export function ReviewUploadRequestDialog({
               ) : (
                 <XCircle className="h-3.5 w-3.5 mr-1.5" />
               )}
-              {mode === "approve" ? "Approuver" : "Rejeter"}
+              {mode === "approve" ? t("approuver") : t("rejeter")}
             </Button>
           </DialogFooter>
         </DialogContent>

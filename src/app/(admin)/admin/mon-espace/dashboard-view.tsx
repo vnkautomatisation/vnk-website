@@ -40,11 +40,11 @@ function equipmentIcon(category: string) {
   return Briefcase;
 }
 
-function taxDocLabel(type: string): string {
+function taxDocLabel(type: string, t: (k: string) => string): string {
   const map: Record<string, string> = {
     t4: "T4",
-    releve1: "Relevé 1",
-    employment_letter: "Lettre d'emploi",
+    releve1: t("releve_1"),
+    employment_letter: t("lettre_emploi"),
     nr4: "NR4",
     t2200: "T2200",
   };
@@ -131,6 +131,7 @@ export function MonEspaceDashboard({
   pendingSignatureRequests?: Array<{ id: number; dueDate: string | null; reason: string | null; targetAll: boolean; template: { id: number; title: string; version: string } }>;
   recentNotifications?: Array<{ id: number; title: string; body: string | null; type: string; link: string | null; icon: string | null; createdAt: string; readAt: string | null }>;
 }) {
+  const t = useTranslations("admin.my_dashboard");
   const tc = useTranslations("common");
   const router = useRouter();
   const totalActions =
@@ -138,18 +139,18 @@ export function MonEspaceDashboard({
     expiringTrainings.length + (me.twoFactorEnabled ? 0 : 1) +
     pendingUploadRequests.length + pendingSignatureRequests.length;
 
-  // Dialog de selection du code au clock-in
+
   const [showJobCodeDialog, setShowJobCodeDialog] = useState(false);
   const [selectedJobCodeId, setSelectedJobCodeId] = useState<number | null>(null);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
   const handleClockInClick = () => {
-    // Si pas de codes dispos pour ce poste -> clock-in direct sans code
+
     if (availableJobCodes.length === 0) {
       void doClockIn(null);
       return;
     }
-    // Sinon ouvrir le dialog pour choisir
+
     setSelectedJobCodeId(availableJobCodes[0]?.id ?? null);
     setShowJobCodeDialog(true);
   };
@@ -158,7 +159,7 @@ export function MonEspaceDashboard({
     const r = await clockInAction(jobCodeId ? { jobCodeId } : {});
     if (r.success) {
       const code = jobCodeId ? availableJobCodes.find((c) => c.id === jobCodeId)?.code : null;
-      toast.success(code ? `Pointage démarré · ${code}` : "Pointage démarré");
+      toast.success(code ? `Pointage démarré · ${code}` : t("pointage_demarre"));
       setShowJobCodeDialog(false);
       router.refresh();
     } else {
@@ -172,28 +173,28 @@ export function MonEspaceDashboard({
   };
   const handlePause = async () => {
     const r = await pauseClockAction();
-    if (r.success) { toast.success("En pause"); router.refresh(); }
+    if (r.success) { toast.success(t("pause_2")); router.refresh(); }
     else toast.error(r.error || "");
   };
   const handleResume = async () => {
     const r = await resumeClockAction();
     if (r.success) {
-      toast.success(r.data.breakAddedMin > 0 ? `Reprise · pause de ${fmtHours(r.data.breakAddedMin)}` : "Reprise");
+      toast.success(r.data.breakAddedMin > 0 ? `Reprise · pause de ${fmtHours(r.data.breakAddedMin)}` : t("reprise"));
       router.refresh();
     }
     else toast.error(r.error || "");
   };
 
-  // KPI "Heures cette semaine" LIVE : si un shift est en cours, on incremente
-  // 1 minute par tick. weekHours (prop server) inclut DEJA la duree du shift
-  // ouvert au moment du fetch (calcule server-side). On ajoute juste le delta
-  // depuis ce fetch.
-  //
-  // CRITIQUE : la dep du useEffect est openClock?.id (PRIMITIVE stable) et
-  // non l'objet openClock entier (re-cree a chaque render via JSON serialization
-  // -> ref instable -> effect en boucle). Reset explicite de tick a 0 quand
-  // l'id change (clock-in -> clock-out -> clock-in laisserait sinon le tick
-  // de la 1ere session se cumuler avec la 2eme).
+
+
+
+
+
+
+
+
+
+
   const openClockId = openClock?.id ?? null;
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -208,7 +209,7 @@ export function MonEspaceDashboard({
 
   return (
     <div className="space-y-4">
-      {/* Hero VNK */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-5 py-4 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" aria-hidden />
         <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -232,13 +233,13 @@ export function MonEspaceDashboard({
               </div>
             </div>
           </div>
-          {/* Quick clock : Pause / Reprendre / Arreter sur le shift en cours */}
+
           {openClock ? (
             <div className="flex items-center gap-2 shrink-0">
               {openClock.pausedAt ? (
                 <>
                   <span className="px-2.5 py-1 rounded-md bg-amber-400/20 border border-amber-300/40 text-xs font-mono">
-                    En pause
+                    {t("pause_2")}
                   </span>
                   <Button variant="secondary" onClick={handleResume} size="sm">
                     <Play className="h-3.5 w-3.5 mr-1" />Reprendre
@@ -258,39 +259,37 @@ export function MonEspaceDashboard({
                 </>
               )}
               <Button variant="secondary" onClick={handleClockOut} size="sm" className="bg-red-500/90 hover:bg-red-500 text-white border-0">
-                <Square className="h-3.5 w-3.5 mr-1" />Arrêter
-              </Button>
+                <Square className="h-3.5 w-3.5 mr-1" />{t("dashboard_view_arreter")}</Button>
             </div>
           ) : (
             <Button onClick={handleClockInClick} variant="secondary" size="sm" className="shrink-0">
-              <Play className="h-3.5 w-3.5 mr-1.5" />Commencer ma journée
-            </Button>
+              <Play className="h-3.5 w-3.5 mr-1.5" />{t("dashboard_view_commencer_ma_journee")}</Button>
           )}
         </div>
       </div>
 
-      {/* Quick actions */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <QuickAction icon={Plane} label="Demander un congé" href="/admin/mon-espace/conges" />
-        <QuickAction icon={Mail} label="Demander une lettre" href="/admin/mon-espace/documents" />
-        <QuickAction icon={FileSignature} label="Mon contrat" href="/admin/mon-espace/contrats" />
-        <QuickAction icon={BookOpen} label="Mes politiques" href="/admin/mon-espace/politiques" />
+        <QuickAction icon={Plane} label={t("demander_conge")} href="/admin/mon-espace/conges" />
+        <QuickAction icon={Mail} label={t("demander_lettre")} href="/admin/mon-espace/documents" />
+        <QuickAction icon={FileSignature} label={t("mon_contrat")} href="/admin/mon-espace/contrats" />
+        <QuickAction icon={BookOpen} label={t("mes_politiques")} href="/admin/mon-espace/politiques" />
       </div>
 
-      {/* KPIs personnels */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-        <KpiCard label="Heures cette semaine" value={fmtHours(liveWeekHours)} icon={Clock} accent="emerald" />
-        <KpiCard label="Actions à faire" value={String(totalActions)} icon={AlertTriangle} accent={totalActions > 0 ? "amber" : "emerald"} />
-        <KpiCard label="Congés en attente" value={String(pendingLeavesCount)} icon={CalendarDays} accent={pendingLeavesCount > 0 ? "blue" : "muted"} />
+        <KpiCard label={t("heures_semaine")} value={fmtHours(liveWeekHours)} icon={Clock} accent="emerald" />
+        <KpiCard label={t("actions_faire")} value={String(totalActions)} icon={AlertTriangle} accent={totalActions > 0 ? "amber" : "emerald"} />
+        <KpiCard label={t("conges_attente")} value={String(pendingLeavesCount)} icon={CalendarDays} accent={pendingLeavesCount > 0 ? "blue" : "muted"} />
         <KpiCard
-          label="Dernière paie"
+          label={t("derniere_paie")}
           value={recentPayStubs[0] ? `${Number(recentPayStubs[0].netPay).toFixed(2)} $` : "—"}
           icon={Calculator}
           accent="muted"
         />
       </div>
 
-      {/* Solde de congés */}
+
       {leaveBalance && (
         <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 relative overflow-hidden">
           <div className="absolute bottom-0 right-0 w-48 h-48 bg-white/5 rounded-full translate-y-20 translate-x-20" aria-hidden />
@@ -298,23 +297,23 @@ export function MonEspaceDashboard({
             <div className="flex items-center justify-between mb-3">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <Plane className="h-4 w-4" />
-                Mon solde de congés
+                {t("mon_solde_conges")}
               </h2>
               <Link href="/admin/mon-espace/conges" className="text-xs text-white/80 hover:text-white hover:underline">
-                Gérer →
+                {t("gerer")}
               </Link>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <LeaveBlock label="Disponibles" value={leaveBalance.vacationDaysRemaining} sub={`sur ${leaveBalance.vacationDaysTotal}`} highlight />
-              <LeaveBlock label="Pris" value={leaveBalance.vacationDaysTaken} sub="cette année" />
-              <LeaveBlock label="Planifiés" value={leaveBalance.vacationDaysPlanned} sub="à venir" />
-              <LeaveBlock label="Maladie" value={leaveBalance.sickDaysTaken} sub="utilisés" />
+              <LeaveBlock label={t("disponibles")} value={leaveBalance.vacationDaysRemaining} sub={t("sur_n", { total: leaveBalance.vacationDaysTotal })} highlight />
+              <LeaveBlock label={t("pris")} value={leaveBalance.vacationDaysTaken} sub={t("cette_annee")} />
+              <LeaveBlock label={t("planifies")} value={leaveBalance.vacationDaysPlanned} sub={t("a_venir")} />
+              <LeaveBlock label={t("maladie")} value={leaveBalance.sickDaysTaken} sub={t("utilises")} />
             </div>
           </div>
         </div>
       )}
 
-      {/* Actions à faire */}
+
       {totalActions > 0 && (
         <Card className="border-amber-200 bg-amber-50/50">
           <div className="p-4 space-y-2">
@@ -329,7 +328,7 @@ export function MonEspaceDashboard({
                   icon={Upload}
                   label={`Téléverser : ${u.title}${u.requestedBy ? ` (demandé par ${u.requestedBy.fullName ?? u.requestedBy.email})` : ""}`}
                   href="/admin/mon-espace/documents"
-                  cta="Téléverser"
+                  cta={t("televerser")}
                   urgent={u.isRequired}
                 />
               ))}
@@ -337,18 +336,18 @@ export function MonEspaceDashboard({
                 <ActionRow
                   key={`sr-${s.id}`}
                   icon={FileSignature}
-                  label={`Signer : ${s.template.title} (v${s.template.version})${s.targetAll ? " — pour tous les employés" : ""}`}
+                  label={`Signer : ${s.template.title} (v${s.template.version})${s.targetAll ? t("tous_employes") : ""}`}
                   href="/admin/mon-espace/documents"
-                  cta="Signer"
+                  cta={t("signer")}
                   urgent={!!s.dueDate && new Date(s.dueDate).getTime() - Date.now() < 3 * 86400000}
                 />
               ))}
               {!me.twoFactorEnabled && (
                 <ActionRow
                   icon={ShieldCheck}
-                  label="Activer la double authentification (2FA)"
+                  label={t("activer_double_authentification_2fa")}
                   href="/admin/settings/security"
-                  cta="Configurer"
+                  cta={t("configurer")}
                 />
               )}
               {pendingContracts.map((c) => (
@@ -357,7 +356,7 @@ export function MonEspaceDashboard({
                   icon={FileSignature}
                   label={`Signer mon contrat : ${c.title}`}
                   href="/admin/mon-espace/contrats"
-                  cta="Signer"
+                  cta={t("signer")}
                   urgent
                 />
               ))}
@@ -367,7 +366,7 @@ export function MonEspaceDashboard({
                   icon={FileSignature}
                   label={`Signer : ${d.title} (v${d.version})`}
                   href="/admin/mon-espace/documents"
-                  cta="Lire & signer"
+                  cta={t("lire_signer")}
                 />
               ))}
               {expiringLicenses.map((l) => (
@@ -376,17 +375,17 @@ export function MonEspaceDashboard({
                   icon={AlertTriangle}
                   label={`Permis "${l.type}" expire le ${new Date(l.expiresAt).toLocaleDateString("fr-CA")}`}
                   href="/admin/mon-espace/formations"
-                  cta="Voir"
+                  cta={t("voir")}
                   urgent
                 />
               ))}
-              {expiringTrainings.map((t) => (
+              {expiringTrainings.map((training) => (
                 <ActionRow
-                  key={`t-${t.id}`}
+                  key={`t-${training.id}`}
                   icon={GraduationCap}
-                  label={`Formation "${t.title}" expire le ${new Date(t.expiresAt).toLocaleDateString("fr-CA")}`}
+                  label={`Formation "${training.title}" expire le ${new Date(training.expiresAt).toLocaleDateString("fr-CA")}`}
                   href="/admin/mon-espace/formations"
-                  cta="Voir"
+                  cta={t("voir")}
                 />
               ))}
             </div>
@@ -394,13 +393,13 @@ export function MonEspaceDashboard({
         </Card>
       )}
 
-      {/* Complétion profil */}
+
       <Card>
         <div className="p-4">
           <div className="flex items-center justify-between mb-2">
             <h2 className="font-bold text-sm flex items-center gap-2">
               <ClipboardList className="h-4 w-4 text-[#0F2D52]" />
-              Complétion de mon dossier
+              {t("completion_mon_dossier")}
             </h2>
             <span className="text-xs font-semibold text-[#0F2D52] tabular-nums">{completionPct}%</span>
           </div>
@@ -413,7 +412,7 @@ export function MonEspaceDashboard({
           {completionPct >= 100 ? (
             <div className="flex items-center gap-2 text-sm text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2">
               <CheckCircle2 className="h-4 w-4" />
-              <span className="font-medium">Profil complet — merci d&apos;avoir rempli toutes les informations.</span>
+              <span className="font-medium">{t("profil_complet_merci_apos_avoir")}</span>
             </div>
           ) : (
             <div className="space-y-1.5">
@@ -426,7 +425,7 @@ export function MonEspaceDashboard({
                   <span className="h-4 w-4 rounded-full border-2 border-muted-foreground/40 shrink-0" aria-hidden />
                   <span className="flex-1 text-xs text-foreground">{s.label}</span>
                   <span className="text-[11px] font-semibold text-[#0F2D52] flex items-center gap-0.5">
-                    Compléter
+                    {t("completer")}
                     <ArrowRight className="h-3 w-3" />
                   </span>
                 </Link>
@@ -436,16 +435,16 @@ export function MonEspaceDashboard({
         </div>
       </Card>
 
-      {/* Activité récente — dernières notifications de l'employé */}
+
       {recentNotifications.length > 0 && (
         <Card className="overflow-hidden">
           <div className="p-4 border-b flex items-center justify-between">
             <h2 className="font-bold text-sm flex items-center gap-2">
               <Bell className="h-4 w-4 text-[#0F2D52]" />
-              Activité récente
+              {t("activite_recente")}
             </h2>
             <Link href="/admin/notifications" className="text-xs text-[#0F2D52] hover:underline">
-              Toutes →
+              {t("toutes")}
             </Link>
           </div>
           <div className="divide-y">
@@ -481,20 +480,20 @@ export function MonEspaceDashboard({
       {/* Grille 3 colonnes equilibrees : annonces a gauche, equipe au milieu, finances/equip a droite.
           Pas de max-h interne : tout coule naturellement avec le scroll de page (evite le double-scroll). */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
-        {/* Colonne 1 : Annonces (peut etre la plus haute) */}
+
         <Card className="overflow-hidden md:col-span-2 lg:col-span-1">
           <div className="p-4 border-b flex items-center justify-between">
             <h2 className="font-bold text-sm flex items-center gap-2">
               <Megaphone className="h-4 w-4 text-[#0F2D52]" />
-              Annonces récentes
+              {t("annonces_recentes")}
             </h2>
             <Link href="/admin/mon-espace/annonces" className="text-xs text-[#0F2D52] hover:underline">
-              Toutes →
+              {t("toutes")}
             </Link>
           </div>
           <div className="divide-y">
             {announcements.length === 0 ? (
-              <p className="p-6 text-sm text-muted-foreground text-center">Aucune annonce récente.</p>
+              <p className="p-6 text-sm text-muted-foreground text-center">{t("aucune_annonce_recente")}</p>
             ) : (
               announcements.map((a) => (
                 <article key={a.id} className="p-4 hover:bg-muted/30 transition relative">
@@ -514,15 +513,15 @@ export function MonEspaceDashboard({
           </div>
         </Card>
 
-        {/* Colonne 2 : Equipe (manager, 1-on-1, anniversaires) */}
+
         <div className="space-y-4">
-          {/* Mon manager */}
+
           {me.manager && (
             <Card>
               <div className="p-4 border-b">
                 <h2 className="font-bold text-sm flex items-center gap-2">
                   <UserCheck className="h-4 w-4 text-[#0F2D52]" />
-                  Mon manager
+                  {t("mon_manager")}
                 </h2>
               </div>
               <div className="p-3 flex items-center gap-3">
@@ -542,20 +541,20 @@ export function MonEspaceDashboard({
                   href={`/admin/employes/one-on-ones/new?manager=${me.manager.id}`}
                   className="block text-center text-xs font-semibold text-[#0F2D52] border border-[#0F2D52]/20 rounded-md py-1.5 hover:bg-[#0F2D52]/5 transition"
                 >
-                  Planifier un 1-on-1
+                  {t("planifier_1_on_1")}
                 </Link>
               </div>
             </Card>
           )}
 
-          {/* 1-on-1 */}
+
           <Card>
             <div className="p-4 border-b">
-              <h2 className="font-bold text-sm">Prochaines 1-on-1</h2>
+              <h2 className="font-bold text-sm">{t("prochaines_1_on_1")}</h2>
             </div>
             <div className="p-3 space-y-2">
               {upcomingOneOnOnes.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Aucune réunion prévue.</p>
+                <p className="text-xs text-muted-foreground italic px-1">{t("aucune_reunion_prevue")}</p>
               ) : upcomingOneOnOnes.map((m) => {
                 const other = m.admin.id === me.id ? m.manager : m.admin;
                 return (
@@ -571,17 +570,17 @@ export function MonEspaceDashboard({
             </div>
           </Card>
 
-          {/* Anniversaires équipe */}
+
           <Card>
             <div className="p-4 border-b">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <Cake className="h-4 w-4 text-[#0F2D52]" />
-                Anniversaires à venir
+                {t("anniversaires_venir")}
               </h2>
             </div>
             <div className="p-3 space-y-2">
               {upcomingBirthdays.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Pas d&apos;anniversaire dans les 14 jours.</p>
+                <p className="text-xs text-muted-foreground italic px-1">{t("pas_apos_anniversaire_14_jours")}</p>
               ) : upcomingBirthdays.map((b) => (
                 <div key={b.id} className="text-xs p-2 rounded-md bg-muted/40 flex items-center gap-2">
                   <div
@@ -594,7 +593,7 @@ export function MonEspaceDashboard({
                     <p className="font-medium truncate">{b.fullName || b.email}</p>
                     <p className="text-muted-foreground">
                       Le {new Date(b.nextBirthday).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}
-                      {b.daysUntil === 0 ? " (aujourd'hui)" : ` (dans ${b.daysUntil} j)`}
+                      {b.daysUntil === 0 ? t("aujourd_hui") : ` (dans ${b.daysUntil} j)`}
                       {" · "}aura {b.turningAge} ans
                     </p>
                   </div>
@@ -605,20 +604,20 @@ export function MonEspaceDashboard({
           </Card>
         </div>
 
-        {/* Colonne 3 : Finances et possessions (bulletins, equipement, docs fiscaux) */}
+
         <div className="space-y-4">
-          {/* Bulletins récents */}
+
           <Card>
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <Wallet className="h-4 w-4 text-[#0F2D52]" />
-                Bulletins récents
+                {t("bulletins_recents")}
               </h2>
-              <Link href="/admin/mon-espace/paie" className="text-xs text-[#0F2D52] hover:underline">Tous →</Link>
+              <Link href="/admin/mon-espace/paie" className="text-xs text-[#0F2D52] hover:underline">{t("tous")}</Link>
             </div>
             <div className="p-3 space-y-2">
               {recentPayStubs.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Aucun bulletin disponible.</p>
+                <p className="text-xs text-muted-foreground italic px-1">{t("aucun_bulletin_disponible")}</p>
               ) : recentPayStubs.map((s) => (
                 <div key={s.id} className="text-xs p-2 rounded-md bg-muted/40 flex items-center justify-between gap-2">
                   <div className="min-w-0">
@@ -648,18 +647,18 @@ export function MonEspaceDashboard({
             </div>
           </Card>
 
-          {/* Mon équipement */}
+
           <Card>
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <Briefcase className="h-4 w-4 text-[#0F2D52]" />
-                Mon équipement
+                {t("mon_equipement")}
               </h2>
-              <Link href="/admin/mon-espace/equipement" className="text-xs text-[#0F2D52] hover:underline">Tout →</Link>
+              <Link href="/admin/mon-espace/equipement" className="text-xs text-[#0F2D52] hover:underline">{t("tout")}</Link>
             </div>
             <div className="p-3 space-y-2">
               {myEquipment.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Aucun équipement assigné.</p>
+                <p className="text-xs text-muted-foreground italic px-1">{t("aucun_equipement_assigne")}</p>
               ) : myEquipment.map((eq) => {
                 const Icon = equipmentIcon(eq.category);
                 const sub = [eq.brand, eq.model].filter(Boolean).join(" ");
@@ -676,24 +675,24 @@ export function MonEspaceDashboard({
             </div>
           </Card>
 
-          {/* Documents fiscaux */}
+
           <Card>
             <div className="p-4 border-b flex items-center justify-between">
               <h2 className="font-bold text-sm flex items-center gap-2">
                 <FileBadge className="h-4 w-4 text-[#0F2D52]" />
-                Documents fiscaux
+                {t("documents_fiscaux")}
               </h2>
-              <Link href="/admin/mon-espace/documents" className="text-xs text-[#0F2D52] hover:underline">Tous →</Link>
+              <Link href="/admin/mon-espace/documents" className="text-xs text-[#0F2D52] hover:underline">{t("tous")}</Link>
             </div>
             <div className="p-3 space-y-2">
               {taxDocuments.length === 0 ? (
-                <p className="text-xs text-muted-foreground italic px-1">Aucun document fiscal disponible.</p>
+                <p className="text-xs text-muted-foreground italic px-1">{t("aucun_document_fiscal_disponible")}</p>
               ) : taxDocuments.map((d) => (
                 <div key={d.id} className="text-xs p-2 rounded-md bg-muted/40 flex items-center gap-2">
                   <FileText className="h-4 w-4 text-[#0F2D52] shrink-0" />
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">
-                      {taxDocLabel(d.type)}{d.taxYear ? ` · ${d.taxYear}` : ""}
+                      {taxDocLabel(d.type, t)}{d.taxYear ? ` · ${d.taxYear}` : ""}
                     </p>
                     <p className="text-muted-foreground truncate">{d.title}</p>
                   </div>
@@ -715,21 +714,20 @@ export function MonEspaceDashboard({
         </div>
       </div>
 
-      {/* Dialog : choix du code de tache au clock-in */}
+
       <Dialog open={showJobCodeDialog} onOpenChange={setShowJobCodeDialog}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Choisir un code de tâche</DialogTitle>
+            <DialogTitle>{t("choisir_code_tache")}</DialogTitle>
             <DialogDescription>
-              Sélectionnez la tâche sur laquelle vous allez travailler. Vous pourrez pointer
-              <strong> Pause</strong>, <strong>Reprendre</strong> ou <strong>Arrêter</strong> ensuite.
+              {t("selectionnez_tache_laquelle_vous_allez")}
+              <strong> {t("pause")}</strong>, <strong>{t("reprendre")}</strong> ou <strong>{t("arreter")}</strong> ensuite.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 py-2 max-h-[400px] overflow-y-auto">
             {availableJobCodes.length === 0 ? (
               <div className="text-sm text-muted-foreground text-center py-6">
-                Aucun code de tâche disponible pour votre poste.<br />
-                Demandez à votre superviseur d&apos;en créer dans <em>RH → Codes de tâche</em>.
+                {t("aucun_code_tache_poste")}<br />{t("dashboard_view_demandez_a_votre_superviseur_d_en_creer")}<em>{t("rh_codes_tache")}</em>.
               </div>
             ) : (
               availableJobCodes.map((jc) => (

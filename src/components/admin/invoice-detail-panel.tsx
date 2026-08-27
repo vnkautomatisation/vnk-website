@@ -41,6 +41,7 @@ export function InvoiceDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -70,16 +71,16 @@ export function InvoiceDetailPanel({
   const markPaid = async () => {
     if (!invoice) return;
     const ok = await confirm({
-      title: "Marquer comme payée ?",
+      title: t("marquer_comme_payee"),
       description: `La facture ${invoice.invoiceNumber} sera marquée comme payée.`,
-      confirmLabel: "Marquer payée",
+      confirmLabel: t("marquer_payee"),
     });
     if (!ok) return;
     setBusy(true);
     try {
       const res = await fetch(`/api/invoices/${invoice.id}/mark-paid`, { method: "POST" });
-      if (res.ok) { toast.success("Facture marquée payée"); await refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("facture_marquee_payee")); await refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
@@ -92,7 +93,7 @@ export function InvoiceDetailPanel({
         open={open}
         onOpenChange={onOpenChange}
         loading={loading || !invoice}
-        title={invoice?.title ?? "Facture"}
+        title={invoice?.title ?? t("facture")}
         subtitle={invoice ? `${invoice.invoiceNumber} · ${invoice.client.fullName}` : undefined}
         icon={<Receipt className="h-7 w-7 text-white" />}
         preventClose={pdfOpen}
@@ -113,13 +114,12 @@ export function InvoiceDetailPanel({
                 <Button size="sm" variant="secondary" disabled={busy}
                   className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                   onClick={markPaid}>
-                  <CreditCard className="h-3 w-3" />Marquer payée
-                </Button>
+                  <CreditCard className="h-3 w-3" />{t("invoice_detail_panel_marquer_payee")}</Button>
               )}
               <Button size="sm" variant="secondary" disabled={busy}
                 className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                 onClick={() => router.push(`/admin/messages?clientId=${invoice.client.id}`)}>
-                <Send className="h-3 w-3" />{isOverdue ? "Relancer" : "Message"}
+                <Send className="h-3 w-3" />{isOverdue ? t("relancer") : t("message")}
               </Button>
             </div>
           ) : undefined
@@ -128,8 +128,8 @@ export function InvoiceDetailPanel({
         {invoice && (
           <Tabs defaultValue="info">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="info">Infos</TabsTrigger>
-              <TabsTrigger value="amounts">Montants</TabsTrigger>
+              <TabsTrigger value="info">{t("infos")}</TabsTrigger>
+              <TabsTrigger value="amounts">{t("montants")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4 mt-4">
@@ -137,7 +137,7 @@ export function InvoiceDetailPanel({
                 <div className="rounded-lg border-2 border-red-300 bg-red-50 p-3 flex items-center gap-3">
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   <div>
-                    <p className="text-sm font-bold text-red-900">Paiement en retard</p>
+                    <p className="text-sm font-bold text-red-900">{t("paiement_retard")}</p>
                     <p className="text-xs text-red-700">Échéance depuis le {invoice.dueDate ? formatDate(new Date(invoice.dueDate)) : "?"}</p>
                   </div>
                 </div>
@@ -149,26 +149,25 @@ export function InvoiceDetailPanel({
                   <StatusBadge status={invoice.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Numero</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("numero")}</span>
                   <span className="text-sm font-mono">{invoice.invoiceNumber}</span>
                 </div>
                 {invoice.dueDate && (
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-xs uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />Échéance
-                    </span>
+                      <Calendar className="h-3 w-3" />{t("invoice_detail_panel_echeance")}</span>
                     <span className="text-sm">{formatDate(new Date(invoice.dueDate))}</span>
                   </div>
                 )}
                 {invoice.paidAt && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Payee le</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("payee")}</span>
                     <span className="text-sm">{formatDate(new Date(invoice.paidAt))}</span>
                   </div>
                 )}
                 {invoice.paymentMethod && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Methode</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("methode")}</span>
                     <span className="text-sm capitalize">{invoice.paymentMethod}</span>
                   </div>
                 )}
@@ -176,17 +175,17 @@ export function InvoiceDetailPanel({
 
               {invoice.description && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Description</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("description")}</p>
                   <p className="text-sm whitespace-pre-wrap">{invoice.description}</p>
                 </div>
               )}
             </TabsContent>
 
             <TabsContent value="amounts" className="space-y-2 mt-4">
-              <AmtRow label="Sous-total HT" value={formatCurrency(Number(invoice.amountHt))} />
+              <AmtRow label={t("sous_total_ht")} value={formatCurrency(Number(invoice.amountHt))} />
               <AmtRow label="TPS" value={formatCurrency(Number(invoice.tpsAmount))} muted />
               <AmtRow label="TVQ" value={formatCurrency(Number(invoice.tvqAmount))} muted />
-              <AmtRow label="Total TTC" value={formatCurrency(Number(invoice.amountTtc))} bold />
+              <AmtRow label={t("total_ttc")} value={formatCurrency(Number(invoice.amountTtc))} bold />
             </TabsContent>
           </Tabs>
         )}

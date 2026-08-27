@@ -2,5 +2,14 @@
   "site": "Site",
   "refresh": "Actualiser",
   "notifications": "Notifications",
-  "overdue_invoices": "{count, plural, =0 {Aucune facture en retard} =1 {1 facture en retard} other {# factures en retard}}"
+  "overdue_invoices": "{count, plural, =0 {Aucune facture en retard} =1 {1 facture en retard} other {# factures en retard}}",
+  "automatisation_inc": "Automatisation Inc.",
+  "value_network_knowledge": "VALUE · NETWORK · KNOWLEDGE",
+  "mon_profil": "Mon profil",
+  "parametres": "Paramètres",
+  "voir_site_public": "Voir le site public",
+  "deconnexion": "Déconnexion",
+  "menu_utilisateur": "Menu utilisateur",
+  "anglais": "Anglais",
+  "francais": "Français"
 }

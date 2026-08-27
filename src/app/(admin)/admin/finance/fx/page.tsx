@@ -1,8 +1,12 @@
 import { FxView } from "./fx-view";
+import { getTranslations } from "next-intl/server";
 import type { Metadata } from "next";
 import { SUPPORTED_CURRENCIES, getRate } from "@/lib/services/fx";
 
-export const metadata: Metadata = { title: "Devises (FX)" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("devises_fx") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function FxPage() {

@@ -1,11 +1,13 @@
 // Admin · Mandats — KPIs + table avec filtres + creation + edition
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { MandatesView } from "./mandates-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Mandats",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mandats") };
+}
 
 export default async function MandatesPage() {
   const [rawMandates, clients, activeCount, pendingCount, completedCount] = await Promise.all([

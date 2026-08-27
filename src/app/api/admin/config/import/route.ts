@@ -2,6 +2,7 @@
 // Mode "merge" : upsert sans toucher aux données existantes non listées.
 // Mode "replace" : ATTENTION — supprime les éléments non-système avant import.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -9,6 +10,7 @@ import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -23,14 +25,14 @@ export async function POST(request: NextRequest) {
     const { payload, mode = "merge" } = body;
 
     if (!payload || typeof payload !== "object" || payload.version !== 1) {
-      return NextResponse.json({ error: "Fichier de configuration invalide ou version non supportée" }, { status: 400 });
+      return NextResponse.json({ error: t("fichier_de_configuration_invalide_ou_version_non") }, { status: 400 });
     }
 
     // Seul super_admin peut faire replace (destructif)
     if (mode === "replace") {
       const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
       if (me?.customRole?.name !== "super_admin") {
-        return NextResponse.json({ error: "Seul un super-administrateur peut effectuer un import 'replace'" }, { status: 403 });
+        return NextResponse.json({ error: t("seul_un_super_administrateur_peut_effectuer_un") }, { status: 403 });
       }
     }
 

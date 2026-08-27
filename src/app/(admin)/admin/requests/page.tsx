@@ -1,10 +1,15 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { RequestsView } from "./requests-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Demandes de projet" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("demandes_projet") };
+}
 
 export default async function RequestsPage() {
+  const t = await getTranslations("admin.requests");
   const rawRequests = await prisma.projectRequest.findMany({
     orderBy: { createdAt: "desc" },
   });
@@ -24,7 +29,7 @@ export default async function RequestsPage() {
     return {
       id: r.id,
       clientId: r.clientId,
-      clientName: client?.fullName ?? "Client inconnu",
+      clientName: client?.fullName ?? t("client_inconnu"),
       companyName: client?.companyName ?? null,
       title: r.title,
       description: r.description,

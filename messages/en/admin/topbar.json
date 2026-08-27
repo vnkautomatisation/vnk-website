@@ -2,5 +2,14 @@
   "site": "Site",
   "refresh": "Refresh",
   "notifications": "Notifications",
-  "overdue_invoices": "{count, plural, =0 {No overdue invoices} =1 {1 overdue invoice} other {# overdue invoices}}"
+  "overdue_invoices": "{count, plural, =0 {No overdue invoices} =1 {1 overdue invoice} other {# overdue invoices}}",
+  "automatisation_inc": "Automatisation Inc.",
+  "value_network_knowledge": "VALUE · NETWORK · KNOWLEDGE",
+  "mon_profil": "My profile",
+  "parametres": "Settings",
+  "voir_site_public": "See the public site",
+  "deconnexion": "Sign out",
+  "menu_utilisateur": "User menu",
+  "anglais": "English",
+  "francais": "French"
 }

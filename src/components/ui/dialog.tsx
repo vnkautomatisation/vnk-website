@@ -1,5 +1,6 @@
 "use client";
 import * as React from "react";
+import { useTranslations } from "next-intl";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -27,7 +28,9 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+>(({ className, children, ...props }, ref) => {
+  const tc = useTranslations("common");
+  return (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -43,15 +46,16 @@ const DialogContent = React.forwardRef<
     >
       {children}
       <DialogPrimitive.Close
-        aria-label="Fermer"
+        aria-label={tc("close")}
         className="absolute right-3 top-3 z-50 inline-flex h-8 w-8 items-center justify-center rounded-full bg-white text-[#0F2D52] shadow-md ring-1 ring-black/10 transition-all hover:bg-white hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/40 focus:ring-offset-2 disabled:pointer-events-none"
       >
         <X className="h-4 w-4" strokeWidth={2.5} />
-        <span className="sr-only">Fermer</span>
+        <span className="sr-only">{tc("close")}</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </DialogPortal>
-));
+  );
+});
 DialogContent.displayName = DialogPrimitive.Content.displayName;
 
 const DialogHeader = ({
@@ -116,7 +120,7 @@ DialogDescription.displayName = DialogPrimitive.Description.displayName;
 //       header={<DialogHeader>...</DialogHeader>}
 //       footer={<DialogFooter>...</DialogFooter>}
 //     >
-//       <p>Contenu long qui scroll proprement…</p>
+//       <p>{tc("dialog_contenu_long_qui_scroll_proprement")}</p>
 //     </DialogScrollableShell>
 //   </DialogContent>
 const DialogScrollableShell = ({

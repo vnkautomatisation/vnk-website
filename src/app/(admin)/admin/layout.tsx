@@ -3,6 +3,7 @@
 export const dynamic = "force-dynamic";
 
 import { redirect } from "next/navigation";
+import { getTranslations } from "next-intl/server";
 import { cache, Suspense } from "react";
 import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -54,6 +55,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const t = await getTranslations("admin.ui");
   const session = await auth();
 
   if (!session?.user || session.user.role !== "admin") {
@@ -96,7 +98,7 @@ export default async function AdminLayout({
             href="#admin-main"
             className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:px-3 focus:py-2 focus:bg-[#0F2D52] focus:text-white focus:rounded-md focus:shadow-lg text-sm font-medium"
           >
-            Aller au contenu principal
+            {t("aller_contenu_principal")}
           </a>
 
           {/* Feedback navigation global VNK : barre top dès 200ms + overlay dès 300ms.

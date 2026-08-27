@@ -1,6 +1,7 @@
 // API publique v1 · Clients — list + create.
 // Auth : Bearer token (AdminApiToken) avec scope read:clients ou write:clients.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { authenticateApiToken } from "@/lib/api-auth";
@@ -14,13 +15,14 @@ const listSchema = z.object({
 });
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const auth = await authenticateApiToken(req, "read:clients");
   if (!auth.ok) return auth.response;
 
   const url = new URL(req.url);
   const parsed = listSchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const where = parsed.data.search
@@ -64,6 +66,7 @@ const createSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const auth = await authenticateApiToken(req, "write:clients");
   if (!auth.ok) return auth.response;
 
@@ -75,12 +78,12 @@ export async function POST(req: NextRequest) {
   }
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const existing = await prisma.client.findUnique({ where: { email: parsed.data.email } });
   if (existing) {
-    return NextResponse.json({ error: "Email déjà utilisé" }, { status: 409 });
+    return NextResponse.json({ error: t("email_deja_utilise") }, { status: 409 });
   }
 
   // Génère un mot de passe temporaire random

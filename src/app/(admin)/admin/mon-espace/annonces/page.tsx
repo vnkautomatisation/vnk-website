@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Megaphone, Pin } from "lucide-react";
@@ -7,12 +9,13 @@ import { Badge } from "@/components/ui/badge";
 import { AnnouncementReadTracker } from "./announcement-read-tracker";
 
 export default async function AnnouncementsPage() {
+  const t = await getTranslations("admin.announcements");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
   const today = new Date();
 
-  // Récupérer les annonces publiées (avec filtrage audience à faire côté serveur si besoin)
+
   const me = await prisma.admin.findUnique({ where: { id: adminId }, select: { teamId: true, roleId: true } });
   const announcements = await prisma.announcement.findMany({
     where: {
@@ -26,7 +29,7 @@ export default async function AnnouncementsPage() {
     },
   });
 
-  // Filtrer par audience
+
   const visible = announcements.filter((a) => {
     if (a.audienceType === "all") return true;
     if (a.audienceType === "team" && a.audienceTeamId === me?.teamId) return true;
@@ -40,11 +43,11 @@ export default async function AnnouncementsPage() {
         <h1 className="text-xl font-bold flex items-center gap-2">
           <Megaphone className="h-5 w-5 text-[#0F2D52]" />Annonces internes
         </h1>
-        <p className="text-sm text-muted-foreground">Communications de la direction et des RH.</p>
+        <p className="text-sm text-muted-foreground">{t("communications_direction_rh")}</p>
       </div>
 
       {visible.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">Aucune annonce en cours.</Card>
+        <Card className="p-10 text-center text-sm text-muted-foreground">{t("aucune_annonce_cours")}</Card>
       ) : (
         <div className="space-y-3">
           {visible.map((a) => (

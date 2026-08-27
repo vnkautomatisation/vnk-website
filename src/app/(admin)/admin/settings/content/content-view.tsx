@@ -56,9 +56,10 @@ export function ContentView({
   faqs: FaqRow[];
   testimonials: TestimonialRow[];
 }) {
+  const t = useTranslations("admin.content");
   const tc = useTranslations("common");
   const router = useRouter();
-  const [tab, setTab] = useState<Tab>("blog");
+  const [tabKey, setTab] = useState<Tab>("blog");
 
   const [postDialog, setPostDialog] = useState<{ open: boolean; post: PostRow | null }>({ open: false, post: null });
   const [faqDialog, setFaqDialog] = useState<{ open: boolean; faq: FaqRow | null }>({ open: false, faq: null });
@@ -71,8 +72,8 @@ export function ContentView({
     if (confirmDelete.kind === "post") r = await deletePostAction({ id: confirmDelete.id });
     else if (confirmDelete.kind === "faq") r = await deleteFaqAction({ id: confirmDelete.id });
     else r = await deleteTestimonialAction({ id: confirmDelete.id });
-    if (r.success) { toast.success("Supprimé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("supprime")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDelete(null);
   };
 
@@ -85,8 +86,8 @@ export function ContentView({
       status: next as "draft" | "published" | "archived",
       seoTitle: p.seoTitle, seoDescription: p.seoDescription,
     });
-    if (r.success) { toast.success(next === "published" ? "Publié" : "Dépublié"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(next === "published" ? t("publie") : t("depublie")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   const toggleFaqPublished = async (f: FaqRow) => {
@@ -94,34 +95,34 @@ export function ContentView({
       id: f.id, locale: f.locale as "fr" | "en", question: f.question,
       answer: f.answer, category: f.category, isPublished: !f.isPublished,
     });
-    if (r.success) { toast.success(f.isPublished ? "Masqué" : "Publié"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(f.isPublished ? t("masque") : t("publie")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
-  const toggleTestimonialApproved = async (t: TestimonialRow) => {
+  const toggleTestimonialApproved = async (row: TestimonialRow) => {
     const r = await updateTestimonialAction({
-      id: t.id, clientName: t.clientName, clientCompany: t.clientCompany, clientTitle: t.clientTitle,
-      content: t.content, rating: t.rating, avatarUrl: t.avatarUrl,
-      isFeatured: t.isFeatured, isApproved: !t.isApproved, locale: t.locale as "fr" | "en",
+      id: row.id, clientName: row.clientName, clientCompany: row.clientCompany, clientTitle: row.clientTitle,
+      content: row.content, rating: row.rating, avatarUrl: row.avatarUrl,
+      isFeatured: row.isFeatured, isApproved: !row.isApproved, locale: row.locale as "fr" | "en",
     });
-    if (r.success) { toast.success(t.isApproved ? "Non approuvé" : "Approuvé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(row.isApproved ? t("non_approuve") : t("approuve")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
-  const toggleTestimonialFeatured = async (t: TestimonialRow) => {
+  const toggleTestimonialFeatured = async (row: TestimonialRow) => {
     const r = await updateTestimonialAction({
-      id: t.id, clientName: t.clientName, clientCompany: t.clientCompany, clientTitle: t.clientTitle,
-      content: t.content, rating: t.rating, avatarUrl: t.avatarUrl,
-      isFeatured: !t.isFeatured, isApproved: t.isApproved, locale: t.locale as "fr" | "en",
+      id: row.id, clientName: row.clientName, clientCompany: row.clientCompany, clientTitle: row.clientTitle,
+      content: row.content, rating: row.rating, avatarUrl: row.avatarUrl,
+      isFeatured: !row.isFeatured, isApproved: row.isApproved, locale: row.locale as "fr" | "en",
     });
-    if (r.success) { toast.success(t.isFeatured ? "Retiré de la vitrine" : "Mis en vitrine"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(row.isFeatured ? t("retire_vitrine") : t("mis_vitrine")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; count: number }[] = [
-    { key: "blog", label: "Blog", icon: FileText, count: posts.length },
+    { key: "blog", label: t("blog"), icon: FileText, count: posts.length },
     { key: "faq", label: "FAQ", icon: HelpCircle, count: faqs.length },
-    { key: "testimonials", label: "Témoignages", icon: MessageSquareQuote, count: testimonials.length },
+    { key: "testimonials", label: t("temoignages"), icon: MessageSquareQuote, count: testimonials.length },
   ];
 
   return (
@@ -132,42 +133,42 @@ export function ContentView({
           <Newspaper className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Contenu public</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Articles de blog, foire aux questions et témoignages clients</p>
+          <h1 className="text-2xl font-bold tracking-tight">{t("contenu_public")}</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">{t("articles_blog_foire_questions_temoignages")}</p>
         </div>
       </div>
 
       <div className="border-b">
         <div className="flex gap-1">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.key;
+          {TABS.map((tab) => {
+            const Icon = tab.icon;
+            const active = tab.key === tabKey;
             return (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={tab.key}
+                onClick={() => setTab(tab.key)}
                 className={cn(
                   "px-4 py-2.5 text-sm font-medium border-b-2 -mb-px flex items-center gap-2",
                   active ? "border-[#0F2D52] text-[#0F2D52]" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                 )}
               >
-                <Icon className="h-4 w-4" />{t.label}
-                <Badge variant="secondary" className="text-[10px] ml-1">{t.count}</Badge>
+                <Icon className="h-4 w-4" />{tab.label}
+                <Badge variant="secondary" className="text-[10px] ml-1">{tab.count}</Badge>
               </button>
             );
           })}
         </div>
       </div>
 
-      {/* BLOG */}
-      {tab === "blog" && (
+
+      {tabKey === "blog" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {posts.filter((p) => p.status === "published").length} publié{posts.filter((p) => p.status === "published").length > 1 ? "s" : ""} · {posts.filter((p) => p.status === "draft").length} brouillon{posts.filter((p) => p.status === "draft").length > 1 ? "s" : ""}
+              {t("n_publies_n_brouillons", { published: posts.filter((p) => p.status === "published").length, drafts: posts.filter((p) => p.status === "draft").length })}
             </p>
             <Button onClick={() => setPostDialog({ open: true, post: null })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Nouvel article
+              <Plus className="h-4 w-4 mr-1.5" />{t("nouvel_article_btn")}
             </Button>
           </div>
           <Card>
@@ -176,7 +177,7 @@ export function ContentView({
                 <div key={p.id} className="flex items-start gap-4 p-4 hover:bg-muted/40">
                   <div className="h-12 w-16 rounded-md overflow-hidden bg-muted shrink-0 border">
                     {p.coverImageUrl ? (
-                      // eslint-disable-next-line @next/next/no-img-element
+
                       <img src={p.coverImageUrl} alt="" className="h-full w-full object-cover" />
                     ) : (
                       <div className="h-full w-full flex items-center justify-center"><FileText className="h-4 w-4 text-muted-foreground/40" /></div>
@@ -187,11 +188,11 @@ export function ContentView({
                       <p className="font-semibold text-sm">{p.title}</p>
                       <Badge variant="outline" className="text-[10px] uppercase">{p.locale}</Badge>
                       {p.status === "published" ? (
-                        <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600">Publié</Badge>
+                        <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600">{t("publie")}</Badge>
                       ) : p.status === "archived" ? (
-                        <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">Archivé</Badge>
+                        <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">{t("archive")}</Badge>
                       ) : (
-                        <Badge variant="secondary" className="text-[10px]">Brouillon</Badge>
+                        <Badge variant="secondary" className="text-[10px]">{t("brouillon")}</Badge>
                       )}
                       {p.category && <Badge variant="outline" className="text-[10px]">{p.category}</Badge>}
                     </div>
@@ -208,7 +209,7 @@ export function ContentView({
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setPostDialog({ open: true, post: p })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
                       <DropdownMenuItem onClick={() => togglePostStatus(p)}>
-                        {p.status === "published" ? (<><EyeOff className="h-4 w-4 mr-2" />Dépublier</>) : (<><Eye className="h-4 w-4 mr-2" />Publier</>)}
+                        {p.status === "published" ? (<><EyeOff className="h-4 w-4 mr-2" />{t("depublier")}</>) : (<><Eye className="h-4 w-4 mr-2" />{t("publier")}</>)}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "post", id: p.id, label: p.title })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
@@ -216,14 +217,14 @@ export function ContentView({
                   </DropdownMenu>
                 </div>
               ))}
-              {posts.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucun article. Cliquez sur « Nouvel article » pour commencer.</p>}
+              {posts.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucun_article_cliquez_nouvel_article")}</p>}
             </div>
           </Card>
         </div>
       )}
 
-      {/* FAQ */}
-      {tab === "faq" && (
+
+      {tabKey === "faq" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{faqs.filter((f) => f.isPublished).length} visible{faqs.filter((f) => f.isPublished).length > 1 ? "s" : ""} sur {faqs.length}</p>
@@ -242,7 +243,7 @@ export function ContentView({
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-semibold text-sm">{f.question}</p>
                       <Badge variant="outline" className="text-[10px] uppercase">{f.locale}</Badge>
-                      {!f.isPublished && <Badge variant="secondary" className="text-[10px]">Masqué</Badge>}
+                      {!f.isPublished && <Badge variant="secondary" className="text-[10px]">{t("masque")}</Badge>}
                       {f.category && <Badge variant="outline" className="text-[10px]">{f.category}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{f.answer.replace(/<[^>]+>/g, "")}</p>
@@ -251,86 +252,85 @@ export function ContentView({
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setFaqDialog({ open: true, faq: f })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toggleFaqPublished(f)}><Power className="h-4 w-4 mr-2" />{f.isPublished ? "Masquer" : "Publier"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleFaqPublished(f)}><Power className="h-4 w-4 mr-2" />{f.isPublished ? t("masquer") : t("publier")}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "faq", id: f.id, label: f.question })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               ))}
-              {faqs.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucune question. Ajoutez votre première FAQ.</p>}
+              {faqs.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucune_question_ajoutez_premiere_faq")}</p>}
             </div>
           </Card>
         </div>
       )}
 
-      {/* TESTIMONIALS */}
-      {tab === "testimonials" && (
+
+      {tabKey === "testimonials" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              {testimonials.filter((t) => t.isApproved).length} approuvé{testimonials.filter((t) => t.isApproved).length > 1 ? "s" : ""} · {testimonials.filter((t) => t.isFeatured).length} en vitrine
+              {t("temoignages_approuves_vitrine", { approved: testimonials.filter((r) => r.isApproved).length, featured: testimonials.filter((r) => r.isFeatured).length })}
             </p>
             <Button onClick={() => setTestimonialDialog({ open: true, t: null })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Nouveau témoignage
-            </Button>
+              <Plus className="h-4 w-4 mr-1.5" />{t("content_view_nouveau_temoignage")}</Button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {testimonials.map((t) => (
-              <Card key={t.id} className={cn(!t.isApproved && "opacity-60")}>
+            {testimonials.map((row) => (
+              <Card key={row.id} className={cn(!row.isApproved && "opacity-60")}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
                     <div className="h-10 w-10 rounded-full bg-[#0F2D52] text-white flex items-center justify-center font-semibold text-sm shrink-0">
-                      {t.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={t.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
+                      {row.avatarUrl ? (
+
+                        <img src={row.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
                       ) : (
-                        t.clientName.charAt(0).toUpperCase()
+                        row.clientName.charAt(0).toUpperCase()
                       )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-semibold text-sm">{t.clientName}</p>
-                        <Badge variant="outline" className="text-[10px] uppercase">{t.locale}</Badge>
-                        {t.isFeatured && <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500"><Star className="h-2.5 w-2.5 mr-0.5" />Vitrine</Badge>}
-                        {!t.isApproved && <Badge variant="secondary" className="text-[10px]">En attente</Badge>}
+                        <p className="font-semibold text-sm">{row.clientName}</p>
+                        <Badge variant="outline" className="text-[10px] uppercase">{row.locale}</Badge>
+                        {row.isFeatured && <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500"><Star className="h-2.5 w-2.5 mr-0.5" />{t("vitrine")}</Badge>}
+                        {!row.isApproved && <Badge variant="secondary" className="text-[10px]">{t("attente")}</Badge>}
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        {t.clientTitle && `${t.clientTitle} · `}{t.clientCompany}
+                        {row.clientTitle && `${row.clientTitle} · `}{row.clientCompany}
                       </p>
                       <div className="flex gap-0.5 mt-1">
                         {Array.from({ length: 5 }).map((_, i) => (
-                          <Star key={i} className={cn("h-3 w-3", i < t.rating ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30")} />
+                          <Star key={i} className={cn("h-3 w-3", i < row.rating ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30")} />
                         ))}
                       </div>
                     </div>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => setTestimonialDialog({ open: true, t })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleTestimonialApproved(t)}>
-                          {t.isApproved ? <><EyeOff className="h-4 w-4 mr-2" />Retirer</> : <><Eye className="h-4 w-4 mr-2" />Approuver</>}
+                        <DropdownMenuItem onClick={() => setTestimonialDialog({ open: true, t: row })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleTestimonialApproved(row)}>
+                          {row.isApproved ? <><EyeOff className="h-4 w-4 mr-2" />{t("retirer")}</> : <><Eye className="h-4 w-4 mr-2" />{t("approuver")}</>}
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleTestimonialFeatured(t)}>
-                          <Star className="h-4 w-4 mr-2" />{t.isFeatured ? "Retirer vitrine" : "Mettre en vitrine"}
+                        <DropdownMenuItem onClick={() => toggleTestimonialFeatured(row)}>
+                          <Star className="h-4 w-4 mr-2" />{row.isFeatured ? t("retirer_vitrine") : t("mettre_vitrine")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
-                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "testimonial", id: t.id, label: t.clientName })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "testimonial", id: row.id, label: row.clientName })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-2 line-clamp-3 italic">&laquo; {t.content} &raquo;</p>
+                  <p className="text-xs text-muted-foreground mt-2 line-clamp-3 italic">&laquo; {row.content} &raquo;</p>
                 </CardContent>
               </Card>
             ))}
             {testimonials.length === 0 && (
-              <p className="col-span-full p-8 text-center text-sm text-muted-foreground">Aucun témoignage.</p>
+              <p className="col-span-full p-8 text-center text-sm text-muted-foreground">{t("aucun_temoignage")}</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Dialogs */}
+
       <PostDialog
         open={postDialog.open}
         onOpenChange={(open) => setPostDialog({ open, post: open ? postDialog.post : null })}
@@ -354,7 +354,7 @@ export function ContentView({
         open={!!confirmDelete}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}

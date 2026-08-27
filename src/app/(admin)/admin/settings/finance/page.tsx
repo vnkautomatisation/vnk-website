@@ -1,13 +1,17 @@
 // Settings · Finance · Fiscalité · Loi 25
 // Charge tous les paramètres regroupés des catégories finance, fiscal, legal.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { FinanceView } from "./finance-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Finance & Fiscalité — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("finance_fiscalite_vnk") };
+}
 
 export default async function FinancePage() {
   const session = await auth();

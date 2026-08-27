@@ -3,6 +3,7 @@
 // dans sa periode. Utile si des factures ont ete ajoutees/modifiees apres creation.
 // Interdit sur declarations soumises.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -25,11 +27,11 @@ export async function POST(
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
   if (existing.status === "submitted" || existing.submittedAt) {
     return NextResponse.json(
-      { error: "Déclaration soumise — recalcul impossible" },
+      { error: t("declaration_soumise_recalcul_impossible") },
       { status: 409 },
     );
   }

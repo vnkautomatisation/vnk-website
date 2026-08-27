@@ -2,6 +2,7 @@
 // Vue Activité équipe — feed temps réel des actions admins + filtres.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -41,31 +42,31 @@ type AdminRow = {
   customRole: { name: string; color: string | null } | null;
 };
 
-const ACTION_META: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; label: string }> = {
-  create: { icon: Plus, color: "text-emerald-600", label: "Création" },
-  update: { icon: Edit, color: "text-blue-600", label: "Modification" },
-  delete: { icon: Trash2, color: "text-red-600", label: "Suppression" },
-  login: { icon: LogIn, color: "text-emerald-600", label: "Connexion" },
-  logout: { icon: LogOut, color: "text-gray-500", label: "Déconnexion" },
-  export: { icon: Download, color: "text-purple-600", label: "Export" },
-  view: { icon: Users, color: "text-gray-500", label: "Consultation" },
-  settings_update: { icon: SettingsIcon, color: "text-amber-600", label: "Paramètres" },
-  password_reset: { icon: KeyRound, color: "text-amber-700", label: "Mot de passe" },
-  role_change: { icon: Users, color: "text-purple-600", label: "Changement de rôle" },
-  impersonate: { icon: Users, color: "text-red-700", label: "Impersonation" },
+const ACTION_META: Record<string, { icon: React.ComponentType<{ className?: string }>; color: string; labelKey: string }> = {
+  create: { icon: Plus, color: "text-emerald-600", labelKey: "act_create" },
+  update: { icon: Edit, color: "text-blue-600", labelKey: "act_update" },
+  delete: { icon: Trash2, color: "text-red-600", labelKey: "act_delete" },
+  login: { icon: LogIn, color: "text-emerald-600", labelKey: "act_login" },
+  logout: { icon: LogOut, color: "text-gray-500", labelKey: "act_logout" },
+  export: { icon: Download, color: "text-purple-600", labelKey: "act_export" },
+  view: { icon: Users, color: "text-gray-500", labelKey: "act_view" },
+  settings_update: { icon: SettingsIcon, color: "text-amber-600", labelKey: "act_settings_update" },
+  password_reset: { icon: KeyRound, color: "text-amber-700", labelKey: "act_password_reset" },
+  role_change: { icon: Users, color: "text-purple-600", labelKey: "act_role_change" },
+  impersonate: { icon: Users, color: "text-red-700", labelKey: "act_impersonate" },
 };
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, t: (k: string, v?: Record<string, string | number | Date>) => string, locale: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "À l'instant";
-  if (min < 60) return `Il y a ${min} min`;
+  if (min < 1) return t("instant");
+  if (min < 60) return t("il_y_a_min", { count: min });
   const hours = Math.floor(min / 60);
-  if (hours < 24) return `Il y a ${hours} h`;
+  if (hours < 24) return t("il_y_a_h", { count: hours });
   const days = Math.floor(hours / 24);
-  if (days < 7) return `Il y a ${days} j`;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  if (days < 7) return t("il_y_a_j", { count: days });
+  return d.toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function TeamActivityView({
@@ -78,6 +79,9 @@ export function TeamActivityView({
   totalLogs: number;
   currentFilters: { admin?: number; entity?: string; action?: string };
 }) {
+  const t = useTranslations("admin.team_activity");
+  const ta = useTranslations("admin.audit");
+  const dateTag = useDateLocale();
   const tc = useTranslations("common");
   const router = useRouter();
   const [filterAdmin, setFilterAdmin] = useState<string>(currentFilters.admin?.toString() ?? "all");
@@ -105,14 +109,14 @@ export function TeamActivityView({
           <Users className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Activité de l&apos;équipe</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("activite_apos_equipe")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             Journal des actions effectuées par les administrateurs · {totalLogs.toLocaleString("fr-CA")} entrées au total
           </p>
         </div>
       </div>
 
-      {/* Cards admins (qui est en ligne) */}
+
       <div>
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
           Équipe active ({admins.length})
@@ -132,7 +136,7 @@ export function TeamActivityView({
                         style={{ backgroundColor: a.position?.color ?? a.customRole?.color ?? "#0F2D52" }}
                       >
                         {a.avatarUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
+
                           <img src={a.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
                         ) : (
                           (a.fullName || a.email).charAt(0).toUpperCase()
@@ -143,7 +147,7 @@ export function TeamActivityView({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-xs truncate">{a.fullName || a.email}</p>
                       <p className="text-[10px] text-muted-foreground truncate">
-                        {a.position?.name ?? a.customRole?.name ?? "Admin"}
+                        {a.position?.name ?? a.customRole?.name ?? t("admin")}
                       </p>
                     </div>
                   </div>
@@ -151,7 +155,7 @@ export function TeamActivityView({
                     onClick={() => { setFilterAdmin(a.id.toString()); router.push(`/admin/settings/activity?admin=${a.id}`); }}
                     className="text-[10px] text-muted-foreground hover:text-foreground mt-2 w-full text-left"
                   >
-                    {isOnline ? <span className="text-emerald-600">● En ligne</span> : a.lastLogin ? `Vu ${formatRelative(a.lastLogin)}` : "Jamais connecté"}
+                    {isOnline ? <span className="text-emerald-600">{t("ligne")}</span> : a.lastLogin ? t("vu_relative", { when: formatRelative(a.lastLogin, t, dateTag) }) : t("jamais_connecte")}
                   </button>
                 </CardContent>
               </Card>
@@ -160,58 +164,57 @@ export function TeamActivityView({
         </div>
       </div>
 
-      {/* Filtres */}
+
       <Card>
         <CardContent className="p-3">
           <div className="flex items-center gap-2 flex-wrap">
             <Filter className="h-4 w-4 text-muted-foreground" />
             <Select value={filterAdmin} onValueChange={setFilterAdmin}>
-              <SelectTrigger className="h-8 w-auto min-w-[160px]"><SelectValue placeholder="Admin" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-auto min-w-[160px]"><SelectValue placeholder={t("admin")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les admins</SelectItem>
+                <SelectItem value="all">{t("tous_admins")}</SelectItem>
                 {admins.map((a) => (
                   <SelectItem key={a.id} value={a.id.toString()}>{a.fullName || a.email}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={filterEntity} onValueChange={setFilterEntity}>
-              <SelectTrigger className="h-8 w-auto min-w-[160px]"><SelectValue placeholder="Type" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-auto min-w-[160px]"><SelectValue placeholder={t("type")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les entités</SelectItem>
+                <SelectItem value="all">{t("toutes_entites")}</SelectItem>
                 {entityTypes.map((e) => (
                   <SelectItem key={e} value={e}>{e}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={filterAction} onValueChange={setFilterAction}>
-              <SelectTrigger className="h-8 w-auto min-w-[140px]"><SelectValue placeholder="Action" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-auto min-w-[140px]"><SelectValue placeholder={t("action")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes les actions</SelectItem>
+                <SelectItem value="all">{t("toutes_actions")}</SelectItem>
                 {actions.map((a) => (
-                  <SelectItem key={a} value={a}>{ACTION_META[a]?.label ?? a}</SelectItem>
+                  <SelectItem key={a} value={a}>{ACTION_META[a] ? t(ACTION_META[a].labelKey) : a}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Button size="sm" onClick={applyFilters} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 h-8">Appliquer</Button>
+            <Button size="sm" onClick={applyFilters} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 h-8">{t("appliquer")}</Button>
             {hasFilters && (
               <Button size="sm" variant="ghost" onClick={resetFilters} className="h-8">
-                <X className="h-3.5 w-3.5 mr-1" />Réinitialiser
-              </Button>
+                <X className="h-3.5 w-3.5 mr-1" />{ta("team_activity_view_reinitialiser")}</Button>
             )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Feed timeline */}
+
       <Card>
         <div className="divide-y">
           {logs.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
-              Aucune action trouvée pour les filtres sélectionnés.
+              {t("aucune_action_trouvee_filtres_selectionnes")}
             </p>
           ) : (
             logs.map((log) => {
-              const meta = ACTION_META[log.action] ?? { icon: Circle, color: "text-gray-500", label: log.action };
+              const meta = ACTION_META[log.action] ?? { icon: Circle, color: "text-gray-500", labelKey: "" };
               const Icon = meta.icon;
               return (
                 <div key={log.id} className="flex items-start gap-4 p-4 hover:bg-muted/30">
@@ -220,20 +223,20 @@ export function TeamActivityView({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap text-sm">
-                      <span className="font-semibold">{log.admin?.fullName || log.admin?.email || "Système"}</span>
-                      <span className="text-muted-foreground">{ACTION_VERBS[log.action] ?? meta.label.toLowerCase()}</span>
+                      <span className="font-semibold">{log.admin?.fullName || log.admin?.email || t("systeme")}</span>
+                      <span className="text-muted-foreground">{(ACTION_VERBS[log.action] ? ta(ACTION_VERBS[log.action]) : null) ?? (meta.labelKey ? t(meta.labelKey).toLowerCase() : log.action)}</span>
                       <span className="text-muted-foreground">
-                        {entityLabelWithId(log.entityType, log.entityId)}
+                        {entityLabelWithId(ta, log.entityType, log.entityId)}
                       </span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
-                      <span>{formatRelative(log.createdAt)}</span>
+                      <span>{formatRelative(log.createdAt, t, dateTag)}</span>
                       <span>{new Date(log.createdAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}</span>
                       {log.ipAddress && <span className="font-mono">{log.ipAddress}</span>}
                     </div>
                     {log.changes && typeof log.changes === "object" && Object.keys(log.changes).length > 0 && (
                       <details className="mt-1.5">
-                        <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Voir les changements</summary>
+                        <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">{t("voir_changements")}</summary>
                         <pre className="mt-1 text-[10px] bg-muted/40 rounded p-2 overflow-x-auto max-w-full font-mono">
                           {JSON.stringify(log.changes, null, 2).slice(0, 1000)}
                         </pre>
@@ -249,7 +252,7 @@ export function TeamActivityView({
 
       {logs.length >= 100 && (
         <p className="text-center text-xs text-muted-foreground">
-          Affichage des 100 entrées les plus récentes. Affinez les filtres pour voir d&apos;autres résultats.
+          {t("affichage_100_entrees_plus_recentes")}
         </p>
       )}
     </div>

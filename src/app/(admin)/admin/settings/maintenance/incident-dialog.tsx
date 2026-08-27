@@ -24,6 +24,7 @@ export function IncidentDialog({
   incident: IncidentRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.maintenance");
   const tc = useTranslations("common");
   const mode = incident ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -56,7 +57,7 @@ export function IncidentDialog({
         ? await createIncidentAction(payload)
         : await updateIncidentAction({ id: incident!.id, ...payload });
       if (r.success) {
-        toast.success(mode === "create" ? "Incident créé" : "Incident mis à jour");
+        toast.success(mode === "create" ? t("incident_cree") : t("incident_mis_jour"));
         onSaved(); onOpenChange(false);
       } else {
         toast.error(r.error);
@@ -73,30 +74,30 @@ export function IncidentDialog({
           </div>
           <div>
             <DialogTitle className="text-white text-base">
-              {mode === "create" ? "Nouvel incident" : incident?.title}
+              {mode === "create" ? t("nouvel_incident") : incident?.title}
             </DialogTitle>
-            <p className="text-xs text-white/70">Suivi d&apos;incident technique</p>
+            <p className="text-xs text-white/70">{t("suivi_apos_incident_technique")}</p>
           </div>
         </div>
 
         <div className="p-6 space-y-4">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Titre *</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Lenteurs sur le portail" className="mt-1" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("lenteurs_portail")} className="mt-1" />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description *</Label>
-            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={5000} placeholder="Symptômes, impact, mises à jour..." className="mt-1 text-sm" />
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description")}</Label>
+            <Textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={4} maxLength={5000} placeholder={t("symptomes_impact_mises_jour")} className="mt-1 text-sm" />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Sévérité</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("severite")}</Label>
               <Select value={severity} onValueChange={(v) => setSeverity(v as typeof severity)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="minor">Mineur</SelectItem>
-                  <SelectItem value="major">Majeur</SelectItem>
-                  <SelectItem value="critical">Critique</SelectItem>
+                  <SelectItem value="minor">{t("mineur")}</SelectItem>
+                  <SelectItem value="major">{t("majeur")}</SelectItem>
+                  <SelectItem value="critical">{t("critique")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -105,18 +106,18 @@ export function IncidentDialog({
               <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
                 <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="investigating">Investigation</SelectItem>
-                  <SelectItem value="identified">Identifié</SelectItem>
-                  <SelectItem value="monitoring">Surveillance</SelectItem>
-                  <SelectItem value="resolved">Résolu</SelectItem>
+                  <SelectItem value="investigating">{t("investigation")}</SelectItem>
+                  <SelectItem value="identified">{t("identifie")}</SelectItem>
+                  <SelectItem value="monitoring">{t("surveillance")}</SelectItem>
+                  <SelectItem value="resolved">{t("resolu")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <p className="text-sm font-medium">Visible publiquement</p>
-              <p className="text-xs text-muted-foreground">Affiché sur la page de statut publique</p>
+              <p className="text-sm font-medium">{t("visible_publiquement")}</p>
+              <p className="text-xs text-muted-foreground">{t("affiche_page_statut_publique")}</p>
             </div>
             <Switch checked={isPublic} onCheckedChange={setIsPublic} />
           </div>
@@ -125,7 +126,7 @@ export function IncidentDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !title.trim() || !description.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : mode === "create" ? "Créer" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

@@ -52,7 +52,7 @@ export function useConfirm(): { confirm: (opts: ConfirmOptions) => Promise<boole
       title={state.title}
       description={state.description}
       confirmLabel={state.confirmLabel ?? "Confirmer"}
-      cancelLabel={state.cancelLabel ?? "Annuler"}
+      cancelLabel={state.cancelLabel}
       variant={state.variant ?? "default"}
       onConfirm={handleConfirm}
     />

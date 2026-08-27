@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -81,18 +82,18 @@ type SortMode = "date_desc" | "date_asc" | "name_asc" | "amount_desc";
 
 const COLUMNS: Array<{
   id: Step;
-  label: string;
+  labelKey: string;
   icon: React.ComponentType<{ className?: string }>;
   header: string;
   stripe: string;
   iconColor: string;
 }> = [
-  { id: "prospect", label: "Nouveau client", icon: UserPlus, header: "bg-slate-100 border-slate-300", stripe: "bg-slate-400", iconColor: "text-slate-600" },
-  { id: "mandate_active", label: "Mandat en cours", icon: Briefcase, header: "bg-blue-100 border-blue-300", stripe: "bg-blue-500", iconColor: "text-blue-600" },
-  { id: "quote_pending", label: "Devis envoyé", icon: FileText, header: "bg-amber-100 border-amber-300", stripe: "bg-amber-500", iconColor: "text-amber-600" },
-  { id: "contract_pending", label: "Contrat à signer", icon: FileSignature, header: "bg-violet-100 border-violet-300", stripe: "bg-violet-500", iconColor: "text-violet-600" },
-  { id: "invoice_unpaid", label: "Paiement en attente", icon: CreditCard, header: "bg-red-100 border-red-300", stripe: "bg-red-500", iconColor: "text-red-600" },
-  { id: "complete", label: "Complété", icon: CheckCircle2, header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
+  { id: "prospect", labelKey: "nouveau_client", icon: UserPlus, header: "bg-slate-100 border-slate-300", stripe: "bg-slate-400", iconColor: "text-slate-600" },
+  { id: "mandate_active", labelKey: "mandat_cours", icon: Briefcase, header: "bg-blue-100 border-blue-300", stripe: "bg-blue-500", iconColor: "text-blue-600" },
+  { id: "quote_pending", labelKey: "devis_envoye", icon: FileText, header: "bg-amber-100 border-amber-300", stripe: "bg-amber-500", iconColor: "text-amber-600" },
+  { id: "contract_pending", labelKey: "contrat_signer", icon: FileSignature, header: "bg-violet-100 border-violet-300", stripe: "bg-violet-500", iconColor: "text-violet-600" },
+  { id: "invoice_unpaid", labelKey: "paiement_attente", icon: CreditCard, header: "bg-red-100 border-red-300", stripe: "bg-red-500", iconColor: "text-red-600" },
+  { id: "complete", labelKey: "complete", icon: CheckCircle2, header: "bg-emerald-100 border-emerald-300", stripe: "bg-emerald-500", iconColor: "text-emerald-600" },
 ];
 
 // Etape "principale" du client — utilisee pour CSV, filtres et tri par defaut
@@ -118,7 +119,7 @@ function getSteps(c: ClientData): Set<Step> {
   if (c.contracts.length > 0) steps.add("contract_pending");
   if (c.invoices.some((i) => i.status === "unpaid" || i.status === "overdue")) steps.add("invoice_unpaid");
   if (c.invoices.some((i) => i.status === "paid")) steps.add("complete");
-  // Filet de securite : client avec mandats sans aucun autre etat
+
   if (steps.size === 0) steps.add("mandate_active");
   return steps;
 }
@@ -138,7 +139,7 @@ function getClientStageValue(c: ClientData, step: Step): number {
     case "prospect":
       return 0;
     case "mandate_active":
-      // Mandat actif = travail en cours, pas de $ direct (suivi sur quote/invoice)
+
       return 0;
     case "quote_pending":
       return c.quotes.filter((q) => q.status === "pending").reduce((s, q) => s + q.amountTtc, 0);
@@ -165,40 +166,40 @@ function getClientLastActivity(c: ClientData): string {
   return dates.reduce((a, b) => (a > b ? a : b), c.createdAt);
 }
 
-const SERVICE_TYPE_LABELS: Record<string, string> = {
-  "plc-support": "Support PLC",
-  "audit": "Audit",
-  "documentation": "Documentation",
-  "refactoring": "Refactorisation",
-  "modernization": "Modernisation",
-  "training": "Formation",
+const SERVICE_TYPE_KEYS: Record<string, string> = {
+  "plc-support": "support_plc",
+  "audit": "audit",
+  "documentation": "documentation",
+  "refactoring": "refactorisation",
+  "modernization": "modernisation",
+  "training": "formation",
 };
 
 function eventTypeIcon(type: string): React.ComponentType<{ className?: string }> {
-  if (type.startsWith("client_")) return UserPlus;
-  if (type.startsWith("mandate_")) return Briefcase;
-  if (type.startsWith("quote_")) return FileText;
-  if (type.startsWith("contract_")) return FileSignature;
-  if (type.startsWith("invoice_") || type.startsWith("payment_")) return CreditCard;
-  if (type.startsWith("message_")) return MessageSquare;
+  if (type.startsWith("client")) return UserPlus;
+  if (type.startsWith("mandate")) return Briefcase;
+  if (type.startsWith("quote")) return FileText;
+  if (type.startsWith("contract")) return FileSignature;
+  if (type.startsWith("invoice") || type.startsWith("payment")) return CreditCard;
+  if (type.startsWith("message")) return MessageSquare;
   return Activity;
 }
 
 function eventTypeColor(type: string): string {
-  if (type.startsWith("client_")) return "text-slate-600 bg-slate-100";
-  if (type.startsWith("mandate_")) return "text-blue-600 bg-blue-100";
-  if (type.startsWith("quote_")) return "text-amber-600 bg-amber-100";
-  if (type.startsWith("contract_")) return "text-violet-600 bg-violet-100";
-  if (type.startsWith("invoice_") || type.startsWith("payment_")) return "text-red-600 bg-red-100";
-  if (type.startsWith("message_")) return "text-sky-600 bg-sky-100";
+  if (type.startsWith("client")) return "text-slate-600 bg-slate-100";
+  if (type.startsWith("mandate")) return "text-blue-600 bg-blue-100";
+  if (type.startsWith("quote")) return "text-amber-600 bg-amber-100";
+  if (type.startsWith("contract")) return "text-violet-600 bg-violet-100";
+  if (type.startsWith("invoice") || type.startsWith("payment")) return "text-red-600 bg-red-100";
+  if (type.startsWith("message")) return "text-sky-600 bg-sky-100";
   return "text-muted-foreground bg-muted";
 }
 
-function timeAgo(iso: string): string {
+function timeAgo(iso: string, t: (k: string) => string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "À l'instant";
+  if (min < 1) return t("instant");
   if (min < 60) return `${min}min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
@@ -208,6 +209,7 @@ function timeAgo(iso: string): string {
 }
 
 export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]; events?: EventData[] }) {
+  const t = useTranslations("admin.workflow");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
@@ -215,7 +217,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [alertsOnly, setAlertsOnly] = useState(false);
   const [busyClientId, setBusyClientId] = useState<number | null>(null);
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -231,14 +233,14 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const [dragOverStep, setDragOverStep] = useState<Step | null>(null);
   const [signingContract, setSigningContract] = useState<{ id: number; number: string; title: string; amount: number | null } | null>(null);
 
-  // Filtres avances
+
   const [filterServiceTypes, setFilterServiceTypes] = useState<Set<string>>(new Set());
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
   const [filterAmountMin, setFilterAmountMin] = useState("");
   const [filterAmountMax, setFilterAmountMax] = useState("");
 
-  // Tri par colonne
+
   const [sortMode, setSortMode] = useState<Record<Step, SortMode>>({
     prospect: "date_desc",
     mandate_active: "date_desc",
@@ -248,10 +250,10 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     complete: "date_desc",
   });
 
-  // Mobile: colonne active
+
   const [mobileColumn, setMobileColumn] = useState<Step>("mandate_active");
 
-  // Service types distincts
+
   const availableServiceTypes = useMemo(() => {
     const set = new Set<string>();
     for (const c of clients) for (const m of c.mandates) if (m.serviceType) set.add(m.serviceType);
@@ -292,33 +294,33 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       prospect: [], mandate_active: [], quote_pending: [],
       contract_pending: [], invoice_unpaid: [], complete: [],
     };
-    // Un client peut apparaitre dans plusieurs colonnes selon ses entites
+
     for (const c of filtered) {
       for (const step of getSteps(c)) {
         grouped[step].push(c);
       }
     }
-    // Tri per colonne
+
     for (const step of Object.keys(grouped) as Step[]) {
       const mode = sortMode[step];
       grouped[step].sort((a, b) => {
         if (mode === "name_asc") return a.fullName.localeCompare(b.fullName);
         if (mode === "date_asc") return getClientLastActivity(a).localeCompare(getClientLastActivity(b));
         if (mode === "amount_desc") return getClientStageValue(b, step) - getClientStageValue(a, step);
-        // date_desc (default)
+
         return getClientLastActivity(b).localeCompare(getClientLastActivity(a));
       });
     }
     return grouped;
   }, [filtered, sortMode]);
 
-  // KPIs
+
   const alertCount = clients.filter(hasAlert).length;
-  // Impaye total = unpaid + overdue (tout ce qui n'a pas encore ete paye)
+
   const overdueTotal = clients.flatMap((c) => c.invoices)
     .filter((i) => i.status === "unpaid" || i.status === "overdue")
     .reduce((s, i) => s + i.amountTtc, 0);
-  // Forecast = revenu projete (en cours) — exclut les factures deja payees
+
   const pipelineForecast = filtered.reduce((sum, c) => {
     let total = 0;
     for (const step of getSteps(c)) {
@@ -328,7 +330,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     return sum + total;
   }, 0);
 
-  // Stats conversion — "paid" = clients ayant recu au moins un paiement (pas "tout paye")
+
   const totals = useMemo(() => {
     const result = { prospect: 0, mandate: 0, quote: 0, contract: 0, paid: 0, total: clients.length };
     for (const c of clients) {
@@ -343,25 +345,25 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
   const conversion = (a: number, b: number) => (b === 0 ? 0 : Math.round((a / b) * 100));
 
-  // Actions API
+
   const acceptQuote = async (clientId: number, quoteId: number, num: string) => {
     const ok = await confirm({
-      title: "Accepter ce devis ?",
+      title: t("accepter_devis"),
       description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
-      confirmLabel: "Accepter",
+      confirmLabel: t("accepter"),
     });
     if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/quotes/${quoteId}/accept`, { method: "POST" });
-      if (res.ok) { toast.success("Devis accepté, contrat généré"); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("devis_accepte_contrat_genere")); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusyClientId(null); }
   };
 
   const signContract = (c: ClientData) => {
     const contract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
-    if (!contract) { toast.error("Aucun contrat à signer"); return; }
+    if (!contract) { toast.error(t("aucun_contrat_signer")); return; }
     setSigningContract({
       id: contract.id,
       number: contract.contractNumber,
@@ -372,51 +374,51 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
   const markInvoicePaid = async (clientId: number, invoiceId: number, num: string) => {
     const ok = await confirm({
-      title: "Marquer comme payée ?",
+      title: t("marquer_comme_payee"),
       description: `La facture ${num} sera marquée comme payée.`,
-      confirmLabel: "Marquer payée",
+      confirmLabel: t("marquer_payee"),
     });
     if (!ok) return;
     setBusyClientId(clientId);
     try {
       const res = await fetch(`/api/invoices/${invoiceId}/mark-paid`, { method: "POST" });
-      if (res.ok) { toast.success("Facture marquée comme payée"); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("facture_marquee_comme_payee")); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusyClientId(null); }
   };
 
   const getCardActions = (c: ClientData, step: Step) => {
     const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean }> = [
-      { label: "Voir le client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
+      { label: t("voir_client"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     ];
     if (step === "prospect") {
       actions.push(
-        { label: "Créer un mandat", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/mandates?newFor=${c.id}`) },
-        { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
+        { label: t("creer_mandat"), icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/mandates?newFor=${c.id}`) },
+        { label: t("envoyer_message"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
       );
     } else if (step === "mandate_active") {
       actions.push(
-        { label: "Créer un devis", icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/quotes?newFor=${c.id}`) },
-        { label: "Envoyer un message", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
+        { label: t("creer_devis"), icon: <Plus className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/quotes?newFor=${c.id}`) },
+        { label: t("envoyer_message"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) },
       );
     } else if (step === "quote_pending") {
       const pendingQuote = c.quotes.find((q) => q.status === "pending");
       if (pendingQuote) {
-        actions.push({ label: "Marquer accepté", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(c.id, pendingQuote.id, pendingQuote.quoteNumber) });
+        actions.push({ label: t("marquer_accepte"), icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => acceptQuote(c.id, pendingQuote.id, pendingQuote.quoteNumber) });
       }
-      actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+      actions.push({ label: t("relancer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     } else if (step === "contract_pending") {
       const pendingContract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
       if (pendingContract) {
-        actions.push({ label: "Signer admin", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => signContract(c) });
+        actions.push({ label: t("signer_admin"), icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => signContract(c) });
       }
-      actions.push({ label: "Relancer client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+      actions.push({ label: t("relancer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     } else if (step === "invoice_unpaid") {
       const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
       if (unpaid) {
-        actions.push({ label: "Marquer payée", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markInvoicePaid(c.id, unpaid.id, unpaid.invoiceNumber) });
+        actions.push({ label: t("marquer_payee"), icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => markInvoicePaid(c.id, unpaid.id, unpaid.invoiceNumber) });
       }
-      actions.push({ label: "Envoyer relance", icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
+      actions.push({ label: t("envoyer_relance"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => router.push(`/admin/messages?clientId=${c.id}`) });
     }
     return actions;
   };
@@ -434,7 +436,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     setFilterAmountMax("");
   };
 
-  // Drag-drop entre colonnes — declenche la transition d'etat
+
   const handleDrop = async (targetStep: Step) => {
     setDragOverStep(null);
     if (draggedClientId === null || draggedFromStep === null) return;
@@ -445,12 +447,12 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     if (!c) return;
     if (fromStep === targetStep) return;
 
-    // Transitions supportees
+
     if (fromStep === "prospect" && targetStep === "mandate_active") {
       const ok = await confirm({
-        title: "Créer un mandat ?",
+        title: t("creer_mandat_2"),
         description: `Vous allez ouvrir la création d'un nouveau mandat pour ${c.fullName} (passage Prospect → Mandat).`,
-        confirmLabel: "Continuer",
+        confirmLabel: t("continuer"),
       });
       if (!ok) return;
       router.push(`/admin/mandates?newFor=${c.id}`);
@@ -459,9 +461,9 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
     if (fromStep === "mandate_active" && targetStep === "quote_pending") {
       const ok = await confirm({
-        title: "Créer un devis ?",
+        title: t("creer_devis_2"),
         description: `Vous allez ouvrir la création d'un nouveau devis pour ${c.fullName} (passage Mandat → Devis).`,
-        confirmLabel: "Continuer",
+        confirmLabel: t("continuer"),
       });
       if (!ok) return;
       router.push(`/admin/quotes?newFor=${c.id}`);
@@ -470,25 +472,25 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
     if (fromStep === "quote_pending" && targetStep === "contract_pending") {
       const quote = c.quotes.find((q) => q.status === "pending");
-      if (!quote) { toast.error("Aucun devis en attente"); return; }
+      if (!quote) { toast.error(t("aucun_devis_attente")); return; }
       const ok = await confirm({
-        title: "Accepter le devis ?",
+        title: t("accepter_devis_2"),
         description: `Le devis ${quote.quoteNumber} sera accepté (passage Devis → Contrat).`,
-        confirmLabel: "Accepter",
+        confirmLabel: t("accepter"),
       });
       if (!ok) return;
       setBusyClientId(c.id);
       try {
         const res = await fetch(`/api/quotes/${quote.id}/accept`, { method: "POST" });
-        if (res.ok) { toast.success("Devis accepté"); router.refresh(); }
-        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+        if (res.ok) { toast.success(t("devis_accepte")); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error || t("erreur")); }
       } finally { setBusyClientId(null); }
       return;
     }
 
     if (fromStep === "contract_pending" && targetStep === "invoice_unpaid") {
       const contract = c.contracts.find((ct) => (ct.status === "pending" || ct.status === "draft") && !ct.adminSigned);
-      if (!contract) { toast.error("Aucun contrat à signer"); return; }
+      if (!contract) { toast.error(t("aucun_contrat_signer")); return; }
       setSigningContract({
         id: contract.id,
         number: contract.contractNumber,
@@ -500,26 +502,26 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
     if (fromStep === "invoice_unpaid" && targetStep === "complete") {
       const unpaid = c.invoices.find((i) => i.status === "unpaid" || i.status === "overdue");
-      if (!unpaid) { toast.error("Aucune facture impayée"); return; }
+      if (!unpaid) { toast.error(t("aucune_facture_impayee")); return; }
       const ok = await confirm({
-        title: "Marquer payée ?",
+        title: t("marquer_payee_2"),
         description: `La facture ${unpaid.invoiceNumber} sera marquée comme payée (passage Paiement → Complété).`,
-        confirmLabel: "Marquer payée",
+        confirmLabel: t("marquer_payee"),
       });
       if (!ok) return;
       setBusyClientId(c.id);
       try {
         const res = await fetch(`/api/invoices/${unpaid.id}/mark-paid`, { method: "POST" });
-        if (res.ok) { toast.success("Facture marquée payée"); router.refresh(); }
-        else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+        if (res.ok) { toast.success(t("facture_marquee_payee")); router.refresh(); }
+        else { const d = await res.json(); toast.error(d.error || t("erreur")); }
       } finally { setBusyClientId(null); }
       return;
     }
 
-    toast.info("Transition non supportée — utilisez le menu actions de la carte");
+    toast.info(t("transition_non_supportee_utilisez_menu"));
   };
 
-  // Step suivant qui est une transition valide depuis le step source de la carte draggee
+
   const isValidDropTarget = (clientId: number | null, fromStep: Step | null, targetStep: Step): boolean => {
     if (clientId === null || fromStep === null) return false;
     if (fromStep === targetStep) return false;
@@ -532,17 +534,17 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     );
   };
 
-  // Export CSV des clients filtres avec leur etape pipeline
+
   const exportCsv = () => {
     const stepLabels: Record<Step, string> = {
-      prospect: "Nouveau client",
-      mandate_active: "Mandat en cours",
-      quote_pending: "Devis envoyé",
-      contract_pending: "Contrat à signer",
-      invoice_unpaid: "Paiement en attente",
-      complete: "Complété",
+      prospect: t("nouveau_client"),
+      mandate_active: t("mandat_cours"),
+      quote_pending: t("devis_envoye"),
+      contract_pending: t("contrat_signer"),
+      invoice_unpaid: t("paiement_attente"),
+      complete: t("complete"),
     };
-    const headers = ["Client", "Entreprise", "Étape", "Montant pipeline (CAD)", "Mandats", "Devis", "Contrats", "Factures", "Impayé (CAD)", "Alerte", "Messages non lus", "Dernière activité"];
+    const headers = [t("client_2"), t("entreprise"), t("etape"), t("montant_pipeline_cad"), t("mandats"), t("devis"), t("contrats"), t("factures"), t("impaye_cad"), t("alerte"), t("messages_non_lus"), t("derniere_activite")];
     const rows = filtered.map((c) => {
       const step = getStep(c);
       const unpaid = c.invoices.filter((i) => i.status === "unpaid" || i.status === "overdue").reduce((s, i) => s + i.amountTtc, 0);
@@ -556,7 +558,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         String(c.contracts.length),
         String(c.invoices.length),
         unpaid.toFixed(2),
-        hasAlert(c) ? "Oui" : "Non",
+        hasAlert(c) ? t("oui") : t("non"),
         String(c.unreadMessages),
         new Date(getClientLastActivity(c)).toISOString().slice(0, 10),
       ];
@@ -575,81 +577,81 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2 sm:gap-3">
             <Workflow className="h-5 w-5 sm:h-6 sm:w-6" />
-            Pipeline workflow
+            {t("pipeline_workflow")}
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Cycle de vie complet de chaque client — de la prospection au paiement
+            {t("cycle_vie_complet_chaque_client")}
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          <Button variant="outline" size="sm" onClick={exportCsv} title="Exporter en CSV">
+          <Button variant="outline" size="sm" onClick={exportCsv} title={t("exporter_csv")}>
             <Download className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Export CSV</span>
+            <span className="hidden sm:inline">{t("export_csv")}</span>
           </Button>
           <Button variant="outline" size="sm" onClick={() => setActivityOpen(true)}>
             <Activity className="h-4 w-4 sm:mr-1.5" />
-            <span className="hidden sm:inline">Activité</span>
+            <span className="hidden sm:inline">{t("activite")}</span>
             {events.length > 0 && <Badge variant="secondary" className="ml-1.5">{events.length}</Badge>}
           </Button>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total clients" value={clients.length} icon={UserPlus} accent="bg-blue-500" />
+        <StatCard label={t("total_clients")} value={clients.length} icon={UserPlus} accent="bg-blue-500" />
         <StatCard
-          label="Forecast pipeline"
+          label={t("forecast_pipeline")}
           value={formatCurrency(pipelineForecast)}
           icon={TrendingUp}
           accent="bg-violet-500"
           deltaLabel={filtered.length < clients.length ? `Filtre: ${filtered.length}/${clients.length}` : undefined}
         />
-        <StatCard label="Alertes" value={alertCount} icon={AlertTriangle} accent="bg-red-500" />
-        <StatCard label="Impayé total" value={formatCurrency(overdueTotal)} icon={CreditCard} accent="bg-amber-500" />
+        <StatCard label={t("alertes")} value={alertCount} icon={AlertTriangle} accent="bg-red-500" />
+        <StatCard label={t("impaye_total")} value={formatCurrency(overdueTotal)} icon={CreditCard} accent="bg-amber-500" />
       </div>
 
-      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Activity className="h-4 w-4" />
-              Workflow
+              {t("workflow")}
             </span>
             <span className="font-semibold">{filtered.length}/{clients.length} clients</span>
-            <span className="text-muted-foreground">Pipeline <span className="font-semibold text-violet-600">{formatCurrency(pipelineForecast)}</span></span>
-            {alertCount > 0 && <span className="text-muted-foreground">Alertes <span className="font-semibold text-red-600">{alertCount}</span></span>}
-            <span className="ml-auto text-muted-foreground">Impayé <span className="font-semibold text-amber-600">{formatCurrency(overdueTotal)}</span></span>
+            <span className="text-muted-foreground">{t("pipeline")} <span className="font-semibold text-violet-600">{formatCurrency(pipelineForecast)}</span></span>
+            {alertCount > 0 && <span className="text-muted-foreground">{t("alertes")} <span className="font-semibold text-red-600">{alertCount}</span></span>}
+            <span className="ml-auto text-muted-foreground">{t("impaye")} <span className="font-semibold text-amber-600">{formatCurrency(overdueTotal)}</span></span>
           </div>
         </div>
       )}
 
-      {/* Stats conversion */}
+
       <div className="rounded-lg border bg-card p-3">
-        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Taux de conversion</p>
+        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">{t("taux_conversion")}</p>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <ConversionStat label="Prospect → Mandat" pct={conversion(totals.mandate, totals.total)} hint={`${totals.mandate}/${totals.total}`} />
-          <ConversionStat label="Mandat → Devis" pct={conversion(totals.quote, totals.mandate)} hint={`${totals.quote}/${totals.mandate}`} />
-          <ConversionStat label="Devis → Contrat" pct={conversion(totals.contract, totals.quote)} hint={`${totals.contract}/${totals.quote}`} />
-          <ConversionStat label="Contrat → Payé" pct={conversion(totals.paid, totals.contract)} hint={`${totals.paid}/${totals.contract}`} />
+          <ConversionStat label={t("prospect_mandat")} pct={conversion(totals.mandate, totals.total)} hint={`${totals.mandate}/${totals.total}`} />
+          <ConversionStat label={t("mandat_devis")} pct={conversion(totals.quote, totals.mandate)} hint={`${totals.quote}/${totals.mandate}`} />
+          <ConversionStat label={t("devis_contrat")} pct={conversion(totals.contract, totals.quote)} hint={`${totals.contract}/${totals.quote}`} />
+          <ConversionStat label={t("contrat_paye")} pct={conversion(totals.paid, totals.contract)} hint={`${totals.paid}/${totals.contract}`} />
         </div>
       </div>
 
-      {/* Toolbar */}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[180px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Rechercher un client..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("rechercher_client")} className="pl-9" />
         </div>
         <Button variant={alertsOnly ? "default" : "outline"} size="sm" onClick={() => setAlertsOnly(!alertsOnly)} className="gap-1.5">
           <AlertTriangle className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Alertes</span>
+          <span className="hidden sm:inline">{t("alertes")}</span>
           {alertCount > 0 && (
             <Badge variant={alertsOnly ? "secondary" : "destructive"} className="text-[9px] h-4 min-w-4 px-1">{alertCount}</Badge>
           )}
@@ -659,15 +661,15 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[320px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
-            {/* Service types */}
+
             {availableServiceTypes.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Type de service</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("type_service")}</p>
                 <div className="flex flex-wrap gap-1">
                   {availableServiceTypes.map((s) => {
                     const isOn = filterServiceTypes.has(s);
@@ -685,33 +687,32 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                           isOn ? "border-[#0F2D52] bg-[#0F2D52] text-white" : "border-input hover:bg-muted"
                         )}
                       >
-                        {SERVICE_TYPE_LABELS[s] ?? s}
+                        {SERVICE_TYPE_KEYS[s] ?? s}
                       </button>
                     );
                   })}
                 </div>
               </div>
             )}
-            {/* Periode */}
+
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période (dernière activité)</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_derniere_activite")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
-            {/* Montant */}
+
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Montant pipeline ($)</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("montant_pipeline")}</p>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="number" placeholder="Min" value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
-                <Input type="number" placeholder="Max" value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("min")} value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("max")} value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("workflow_kanban_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -723,7 +724,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         )}
       </div>
 
-      {/* Mobile: selecteur de colonne */}
+
       <div className="lg:hidden">
         <Select value={mobileColumn} onValueChange={(v) => setMobileColumn(v as Step)}>
           <SelectTrigger>
@@ -734,7 +735,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
               <SelectItem key={col.id} value={col.id}>
                 <span className="flex items-center gap-2">
                   <span className={cn("h-2 w-2 rounded-full", col.stripe)} />
-                  {col.label} ({columns[col.id].length})
+                  {t(col.labelKey)} ({columns[col.id].length})
                 </span>
               </SelectItem>
             ))}
@@ -742,7 +743,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         </Select>
       </div>
 
-      {/* Kanban responsive */}
+
       <div className="grid grid-cols-1 lg:grid-cols-6 gap-3">
         {COLUMNS.map((col) => {
           const ColIcon = col.icon;
@@ -769,7 +770,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                 if (dragOverStep !== col.id) setDragOverStep(col.id);
               }}
               onDragLeave={(e) => {
-                // Seulement si on quitte vraiment la colonne (pas un enfant)
+
                 if (e.currentTarget.contains(e.relatedTarget as Node)) return;
                 if (dragOverStep === col.id) setDragOverStep(null);
               }}
@@ -778,31 +779,31 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                 handleDrop(col.id);
               }}
             >
-              {/* Column header */}
+
               <div className={cn("rounded-lg border p-3 space-y-2", col.header)}>
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
                     <ColIcon className={cn("h-3.5 w-3.5 shrink-0", col.iconColor)} />
-                    <span className="text-xs font-semibold truncate">{col.label}</span>
+                    <span className="text-xs font-semibold truncate">{t(col.labelKey)}</span>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">
                     <Badge variant="secondary" className="text-[10px] bg-white">{items.length}</Badge>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <button className="h-5 w-5 rounded hover:bg-white/50 flex items-center justify-center" aria-label="Trier">
+                        <button className="h-5 w-5 rounded hover:bg-white/50 flex items-center justify-center" aria-label={t("trier_2")}>
                           <ArrowDownUp className="h-3 w-3" />
                         </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuLabel className="text-xs">Trier par</DropdownMenuLabel>
+                        <DropdownMenuLabel className="text-xs">{t("trier")}</DropdownMenuLabel>
                         <DropdownMenuRadioGroup
                           value={sortMode[col.id]}
                           onValueChange={(v) => setSortMode({ ...sortMode, [col.id]: v as SortMode })}
                         >
-                          <DropdownMenuRadioItem value="date_desc" className="text-xs">Plus récent</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="date_asc" className="text-xs">Plus ancien</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="amount_desc" className="text-xs">Montant décroissant</DropdownMenuRadioItem>
-                          <DropdownMenuRadioItem value="name_asc" className="text-xs">Nom A→Z</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="date_desc" className="text-xs">{t("plus_recent")}</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="date_asc" className="text-xs">{t("plus_ancien")}</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="amount_desc" className="text-xs">{t("montant_decroissant")}</DropdownMenuRadioItem>
+                          <DropdownMenuRadioItem value="name_asc" className="text-xs">{t("nom_z")}</DropdownMenuRadioItem>
                         </DropdownMenuRadioGroup>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -815,12 +816,12 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                 )}
               </div>
 
-              {/* Cards */}
+
               <div className="space-y-2 min-h-[80px]">
                 {items.length === 0 ? (
                   <div className="rounded-lg border-2 border-dashed py-8 px-3 text-center">
                     <ColIcon className={cn("h-5 w-5 mx-auto opacity-30", col.iconColor)} />
-                    <p className="text-[10px] text-muted-foreground/60 mt-1.5">Aucun client</p>
+                    <p className="text-[10px] text-muted-foreground/60 mt-1.5">{t("aucun_client")}</p>
                   </div>
                 ) : (
                   items.map((c) => {
@@ -832,7 +833,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     const alert = hasAlert(c);
                     const actions = getCardActions(c, col.id);
                     const busy = busyClientId === c.id;
-                    // Onglet du panel client a ouvrir selon la colonne de la carte
+
                     const clientTab: "info" | "mandates" | "quotes" | "invoices" | "contracts" =
                       col.id === "mandate_active" ? "mandates" :
                       col.id === "quote_pending" ? "quotes" :
@@ -973,31 +974,30 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
         })}
       </div>
 
-      {/* Activite recente — slide-out */}
+
       <Sheet open={activityOpen} onOpenChange={setActivityOpen}>
         <SheetContent className="w-full sm:max-w-md overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />Activité récente
-            </SheetTitle>
+              <Activity className="h-5 w-5" />{t("workflow_kanban_activite_recente")}</SheetTitle>
             <SheetDescription>
               Les {events.length} derniers événements du pipeline workflow.
             </SheetDescription>
           </SheetHeader>
           <div className="mt-4 space-y-2">
             {events.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">Aucun événement</p>
+              <p className="text-sm text-muted-foreground text-center py-8">{t("aucun_evenement")}</p>
             ) : events.map((e) => {
               const Icon = eventTypeIcon(e.eventType);
               const colorCls = eventTypeColor(e.eventType);
-              // Routing intelligent : messages → page messages, rdv → calendrier, sinon panel entite
+
               const handleClick = () => {
                 setActivityOpen(false);
-                if (e.eventType.startsWith("message_")) {
+                if (e.eventType.startsWith(t("message"))) {
                   router.push(`/admin/messages?clientId=${e.clientId}`);
                   return;
                 }
-                if (e.eventType.startsWith("appointment_")) {
+                if (e.eventType.startsWith(t("appointment"))) {
                   router.push("/admin/calendar");
                   return;
                 }
@@ -1022,7 +1022,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
                       {e.clientName}{e.clientCompany ? ` · ${e.clientCompany}` : ""}
                     </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{timeAgo(e.createdAt)} · {e.triggeredBy}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{timeAgo(e.createdAt, t)} · {e.triggeredBy}</p>
                   </div>
                 </button>
               );

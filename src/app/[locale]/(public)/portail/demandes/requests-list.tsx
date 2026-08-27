@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Inbox, Hash, Sparkles, Loader, CheckCircle, Plus } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
@@ -44,22 +45,23 @@ const SERVICE_LABELS: Record<string, string> = {
 };
 
 // ── Filter options ───────────────────────────────────────
-const filterOptions: FilterOption[] = [
-  { value: "new", label: "Nouvelle" },
-  { value: "in_progress", label: "En cours" },
-  { value: "converted", label: "Convertie" },
-  { value: "closed", label: "Fermee" },
+const filterOptions: { value: string; labelKey: string }[] = [
+  { value: "new", labelKey: "opt_nouvelle" },
+  { value: "in_progress", labelKey: "opt_en_cours" },
+  { value: "converted", labelKey: "opt_convertie" },
+  { value: "closed", labelKey: "opt_fermee" },
 ];
 
 // ── Component ────────────────────────────────────────────
 export function PortalRequestsList({ requests }: { requests: Request[] }) {
+  const t = useTranslations("portal");
   const router = useRouter();
   const [modalOpen, setModalOpen] = useState(false);
-  // ── Columns ──────────────────────────────────────────
+
   const columns: Column<Request>[] = [
     {
       key: "service",
-      header: "Service",
+      header: t("service"),
       accessor: (r) => (
         <span className="font-medium">
           {r.serviceType ? (SERVICE_LABELS[r.serviceType] ?? r.serviceType) : "--"}
@@ -70,7 +72,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
     },
     {
       key: "description",
-      header: "Description",
+      header: t("description"),
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
           {truncate(r.description, 60)}
@@ -79,7 +81,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
     },
     {
       key: "urgency",
-      header: "Urgence",
+      header: t("urgence"),
       accessor: (r) => {
         const config = URGENCY_CONFIG[r.urgencyLevel];
         if (!config) return <Badge variant="outline">{r.urgencyLevel}</Badge>;
@@ -95,12 +97,12 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => formatDate(r.createdAt),
       sortable: true,
       sortBy: (r) => new Date(r.createdAt),
@@ -108,7 +110,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
     },
   ];
 
-  // ── Card renderer ────────────────────────────────────
+
   const renderCard = (req: Request) => {
     const urgencyConfig = URGENCY_CONFIG[req.urgencyLevel];
     return (
@@ -134,7 +136,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
           <p className="font-semibold text-sm">
             {req.serviceType
               ? (SERVICE_LABELS[req.serviceType] ?? req.serviceType)
-              : "Demande de projet"}
+              : t("demande_projet")}
           </p>
 
           <p className="text-sm text-muted-foreground line-clamp-2">
@@ -161,15 +163,15 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                   <Inbox className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <h1 className="portal-title">Demandes</h1>
+                  <h1 className="portal-title">{t("demandes")}</h1>
                   <p className="text-sm text-muted-foreground">
-                    Suivez vos demandes de projet
+                    {t("suivez_demandes_projet")}
                   </p>
                 </div>
               </div>
               <Button size="sm" onClick={() => setModalOpen(true)}>
                 <Plus className="h-4 w-4 mr-1" />
-                Nouvelle demande
+                {t("nouvelle_demande")}
               </Button>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
@@ -179,7 +181,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                     <Hash className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Total demandes</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("total_demandes")}</p>
                     <p className="portal-kpi-number">{totalCount}</p>
                   </div>
                 </div>
@@ -190,7 +192,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                     <Sparkles className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-[#0F2D52]">Nouvelles</p>
+                    <p className="portal-kpi-label text-[#0F2D52]">{t("nouvelles")}</p>
                     <p className="portal-kpi-number">{newCount}</p>
                   </div>
                 </div>
@@ -201,7 +203,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                     <Loader className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-amber-600">En cours</p>
+                    <p className="portal-kpi-label text-amber-600">{t("cours")}</p>
                     <p className="portal-kpi-number">{inProgressCount}</p>
                   </div>
                 </div>
@@ -212,7 +214,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-emerald-600">Converties</p>
+                    <p className="portal-kpi-label text-emerald-600">{t("converties")}</p>
                     <p className="portal-kpi-number">{convertedCount}</p>
                   </div>
                 </div>
@@ -225,13 +227,13 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
         getRowId={(r) => r.id}
         renderCard={renderCard}
         storageKey="portal-requests"
-        searchPlaceholder="Rechercher une demande..."
+        searchPlaceholder={t("rechercher_demande")}
         searchFn={(r) => `${r.serviceType ?? ""} ${r.description}`}
-        filterOptions={filterOptions}
+        filterOptions={filterOptions.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
         filterFn={(r) => r.status}
-        filterLabel="Tous les statuts"
+        filterLabel={t("tous_statuts")}
         exportFilename="demandes"
-        emptyMessage="Aucune demande"
+        emptyMessage={t("aucune_demande")}
         emptyIcon={
           <Inbox className="h-12 w-12 text-muted-foreground/40 mb-4" />
         }

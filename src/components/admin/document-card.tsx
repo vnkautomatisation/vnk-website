@@ -94,13 +94,14 @@ export function DocumentCard({
   primaryAction,
   className,
 }: DocumentCardProps) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const tone = ICON_TONE[iconTone];
   const hasActions = Boolean(onPreview || onDownload || onSign || onEdit || onDelete);
 
-  // `line-clamp-2 leading-snug break-words` : autorise jusqu'a 2 lignes
-  // avant troncature (au lieu de couper brutalement). break-words evite
-  // l'overflow horizontal sur les titres très longs sans espaces.
+
+
+
   const titleNode = href ? (
     <Link
       href={href}
@@ -116,7 +117,7 @@ export function DocumentCard({
     <Card className={cn("vnk-card-hover overflow-hidden", className)}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start gap-3">
-          {/* Pastille icône */}
+
           <div
             className={cn(
               "h-10 w-10 rounded-lg flex items-center justify-center shrink-0 ring-1",
@@ -127,7 +128,7 @@ export function DocumentCard({
             <Icon className={cn("h-5 w-5", tone.fg)} />
           </div>
 
-          {/* Titre + sous-titre + badges */}
+
           <div className="min-w-0 flex-1">
             {titleNode}
             {subtitle && (
@@ -145,18 +146,18 @@ export function DocumentCard({
             )}
           </div>
 
-          {/* Boutons icônes à droite */}
+
           {hasActions && (
             <div className="flex items-center gap-0.5 shrink-0">
               {onPreview && (
-                <ActionTooltip label="Aperçu">
+                <ActionTooltip label={t("apercu")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onPreview}
-                    aria-label="Aperçu"
+                    aria-label={t("apercu")}
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -177,14 +178,14 @@ export function DocumentCard({
                 </ActionTooltip>
               )}
               {onSign && (
-                <ActionTooltip label="Signer">
+                <ActionTooltip label={t("signer")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-[#0F2D52]"
                     onClick={onSign}
-                    aria-label="Signer"
+                    aria-label={t("signer")}
                   >
                     <FileSignature className="h-4 w-4" />
                   </Button>
@@ -222,7 +223,7 @@ export function DocumentCard({
           )}
         </div>
 
-        {/* Métadonnées (date + taille) */}
+
         {(date || size) && (
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground border-t pt-2">
             {date && (
@@ -240,7 +241,7 @@ export function DocumentCard({
           </div>
         )}
 
-        {/* Action principale (ex: "Signer maintenant") */}
+
         {primaryAction && (
           <Button
             type="button"

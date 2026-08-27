@@ -1,6 +1,7 @@
 "use client";
 // Editeur markdown avec toggle preview. Pas de WYSIWYG — saisie raw + onglet prévisualisation.
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Eye, Edit3 } from "lucide-react";
 import { MarkdownView } from "./markdown-view";
 
@@ -13,6 +14,7 @@ type Props = {
 };
 
 export function MarkdownEditor({ value, onChange, placeholder, rows = 8, helpText }: Props) {
+  const t = useTranslations("admin.ui");
   const [mode, setMode] = useState<"edit" | "preview">("edit");
 
   return (
@@ -23,16 +25,14 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8, helpTex
           onClick={() => setMode("edit")}
           className={`px-2 py-1 rounded transition ${mode === "edit" ? "bg-[#0F2D52] text-white" : "bg-muted text-muted-foreground hover:bg-muted/70"}`}
         >
-          <Edit3 className="h-3 w-3 inline mr-1" />Édition
-        </button>
+          <Edit3 className="h-3 w-3 inline mr-1" />{t("markdown_editor_edition")}</button>
         <button
           type="button"
           onClick={() => setMode("preview")}
           disabled={!value.trim()}
           className={`px-2 py-1 rounded transition ${mode === "preview" ? "bg-[#0F2D52] text-white" : "bg-muted text-muted-foreground hover:bg-muted/70 disabled:opacity-50"}`}
         >
-          <Eye className="h-3 w-3 inline mr-1" />Prévisualisation
-        </button>
+          <Eye className="h-3 w-3 inline mr-1" />{t("markdown_editor_previsualisation")}</button>
       </div>
 
       {mode === "edit" ? (
@@ -48,7 +48,7 @@ export function MarkdownEditor({ value, onChange, placeholder, rows = 8, helpTex
           {value.trim() ? (
             <MarkdownView>{value}</MarkdownView>
           ) : (
-            <p className="text-xs text-muted-foreground italic">Aucun contenu à prévisualiser.</p>
+            <p className="text-xs text-muted-foreground italic">{t("aucun_contenu_previsualiser")}</p>
           )}
         </div>
       )}

@@ -1,12 +1,16 @@
 // Settings · Activité équipe — qui fait quoi sur le portail.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { TeamActivityView } from "./team-activity-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Activité équipe — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("activite_equipe_vnk") };
+}
 
 export default async function TeamActivityPage({
   searchParams,

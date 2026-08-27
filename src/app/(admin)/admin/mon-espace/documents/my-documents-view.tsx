@@ -239,18 +239,18 @@ const TAX_TYPE_LABEL: Record<string, string> = {
   t2200: "T2200",
   other: "Autre",
 };
-const CONTRACT_STATUS_LABEL: Record<string, { label: string; tone: "success" | "warning" | "neutral" | "info" }> = {
-  draft: { label: "Brouillon", tone: "neutral" },
-  sent: { label: "Envoye", tone: "info" },
-  signed_employee: { label: "Signe par moi", tone: "warning" },
-  signed_employer: { label: "Signe par l'employeur", tone: "warning" },
-  active: { label: "Actif", tone: "success" },
-  terminated: { label: "Termine", tone: "neutral" },
-  expired: { label: "Expire", tone: "neutral" },
+const CONTRACT_STATUS_LABEL: Record<string, { labelKey: string; tone: "success" | "warning" | "neutral" | "info" }> = {
+  draft: { labelKey: "cs_draft", tone: "neutral" },
+  sent: { labelKey: "cs_sent", tone: "info" },
+  signed_employee: { labelKey: "cs_signed_employee", tone: "warning" },
+  signed_employer: { labelKey: "cs_signed_employer", tone: "warning" },
+  active: { labelKey: "cs_active", tone: "success" },
+  terminated: { labelKey: "cs_terminated", tone: "neutral" },
+  expired: { labelKey: "cs_expired", tone: "neutral" },
 };
 
 function formatDate(iso: string | null | undefined): string {
-  // Retour "—" (em dash) plus lisible que "-" pour distinguer date manquante.
+
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
@@ -315,10 +315,11 @@ export function MyDocumentsView({
   handbooksToSign?: HandbookToSign[];
   myHandbookSignatures?: HandbookSignature[];
 }) {
+  const t = useTranslations("admin.my_documents");
   const tc = useTranslations("common");
   const router = useRouter();
 
-  // --- Derived datasets --------------------------------------
+
   const signedMap = useMemo(() => {
     const m = new Map<number, Signature>();
     for (const s of mySignatures) {
@@ -335,11 +336,11 @@ export function MyDocumentsView({
     });
   }, [legalDocs, signedMap]);
 
-  // Filtre les demandes ciblees :
-  //   - pas de signature -> on garde
-  //   - signature anterieure a la demande -> RH veut re-signing -> on garde
-  //   - signature POSTERIEURE a la demande sur la version courante -> deja fait -> on cache
-  //   - version differente -> on garde (nouvelle version a signer)
+
+
+
+
+
   const pendingSignatureRequests = useMemo(() => {
     return signatureRequests.filter((r) => {
       const sig = signedMap.get(r.template.id);
@@ -347,7 +348,7 @@ export function MyDocumentsView({
       if (sig.version !== r.template.version) return true;
       const sigTime = new Date(sig.signedAt).getTime();
       const reqTime = new Date(r.requestedAt).getTime();
-      // Signe AVANT la demande = re-signing requis -> on garde la demande visible
+
       return sigTime < reqTime;
     });
   }, [signatureRequests, signedMap]);
@@ -380,20 +381,20 @@ export function MyDocumentsView({
     (r) => !legalToSign.some((d) => d.id === r.template.id)
   ).length;
 
-  // --- State ---------------------------------------------------
+
   const [tab, setTab] = useState<TabKey>(toSignTotal > 0 ? "to-sign" : "contracts");
   const [signDialog, setSignDialog] = useState<SignaturePadDialogDoc & { templateId: number } | null>(null);
   const [letterDialog, setLetterDialog] = useState(false);
   const [responseDialog, setResponseDialog] = useState<UploadResponseRequest | null>(null);
   const [previewPdf, setPreviewPdf] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
   const [confirmDelDoc, setConfirmDelDoc] = useState<PersonalDoc | null>(null);
-  // Cahier (handbook) : dialog de signature integrale du livre
+
   const [handbookDialog, setHandbookDialog] = useState<HandbookSignatureDialogHandbook | null>(null);
 
   const openResponseFor = (requestId: number) => {
     const r = pendingUploadRequests.find((x) => x.id === requestId);
     if (!r) {
-      toast.error("Demande introuvable");
+      toast.error(t("demande_introuvable"));
       return;
     }
     setResponseDialog({
@@ -417,10 +418,10 @@ export function MyDocumentsView({
     createdAt: r.createdAt,
   }));
 
-  // --- Sticky bar (pattern Finance) ---------------------------------
-  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le
-  // sentinel est considere "out" des qu'il passe SOUS le topbar, pas
-  // seulement hors viewport. Sans ca, la barre apparait trop tard.
+
+
+
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -434,11 +435,11 @@ export function MyDocumentsView({
     return () => io.disconnect();
   }, []);
 
-  // --- Portal target pour KPIs dans la module-nav mobile -----------
-  // Le slot #vnk-module-nav-extra est defini dans module-sidebar-nav.tsx.
-  // On porte les KPIs (A signer / Contrats / Dossier) dedans quand scrolled,
-  // sur la MEME ligne que "Mon espace" → une seule bande compacte au scroll.
-  // mounted = true uniquement apres hydration cote client (createPortal SSR-safe).
+
+
+
+
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -447,11 +448,11 @@ export function MyDocumentsView({
   const openSignByTemplateId = (templateId: number) => {
     const tpl = legalDocs.find((d) => d.id === templateId);
     if (!tpl) {
-      toast.error("Document introuvable");
+      toast.error(t("document_introuvable"));
       return;
     }
-    // Recherche la demande de signature ciblee associee pour passer son
-    // requestId au PDF preview (-> applique customFieldValues remplis par RH).
+
+
     const req = signatureRequests.find((r) => r.template.id === templateId);
     setSignDialog({
       templateId: tpl.id,
@@ -459,7 +460,7 @@ export function MyDocumentsView({
       title: tpl.title,
       version: tpl.version,
       bodyMarkdown: tpl.bodyMarkdown,
-      subtitle: tpl.isRequired ? "Document obligatoire" : "Document optionnel",
+      subtitle: tpl.isRequired ? t("document_obligatoire") : t("document_optionnel"),
       signatureScope: tpl.signatureScope ?? "employee_only",
       acknowledgmentMode: tpl.acknowledgmentMode ?? "reading_only",
       employeeId,
@@ -471,9 +472,9 @@ export function MyDocumentsView({
     checkboxStates: Record<string | number, unknown>,
   ) => {
     if (!signDialog) return;
-    // Extrait `__employeeFieldValues` (objet Record<string,string>) si present
-    // — encode par signature-pad-dialog pour transporter les valeurs `[CHAMP]`
-    // remplies par l'employe (numero de membre OIQ/CPA, permis...).
+
+
+
     let employeeFieldValues: Record<string, string> | undefined;
     const checkboxStatesStr: Record<string, boolean> = {};
     for (const [k, v] of Object.entries(checkboxStates)) {
@@ -494,7 +495,7 @@ export function MyDocumentsView({
       employeeFieldValues,
     });
     if (r.success) {
-      toast.success("Document signe");
+      toast.success(t("document_signe"));
       setSignDialog(null);
       router.refresh();
     } else {
@@ -512,18 +513,18 @@ export function MyDocumentsView({
   const TABS: TabItem<TabKey>[] = [
     {
       key: "to-sign",
-      label: "A signer",
+      label: t("signer_2"),
       icon: FileSignature,
       count: toSignTotal,
       dot: toSignTotal > 0,
     },
-    { key: "contracts", label: "Contrats", icon: FileCheck, count: contracts.length },
-    { key: "payroll", label: "Paie & fiscal", icon: Receipt, count: payStubs.length + taxDocs.length },
-    { key: "letters", label: "Lettres", icon: Mail, count: letterRequests.length },
-    { key: "personal", label: "Mon dossier", icon: Award, count: personalDocs.length },
+    { key: "contracts", label: t("contrats_2"), icon: FileCheck, count: contracts.length },
+    { key: "payroll", label: t("paie_fiscal"), icon: Receipt, count: payStubs.length + taxDocs.length },
+    { key: "letters", label: t("lettres"), icon: Mail, count: letterRequests.length },
+    { key: "personal", label: t("mon_dossier"), icon: Award, count: personalDocs.length },
     {
       key: "signed",
-      label: "Signes",
+      label: t("signes"),
       icon: CheckCircle2,
       count:
         mySignatures.length
@@ -548,9 +549,9 @@ export function MyDocumentsView({
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-base sm:text-lg font-bold leading-tight">Mes documents</h1>
+              <h1 className="text-base sm:text-lg font-bold leading-tight">{t("mes_documents")}</h1>
               <p className="text-[11px] sm:text-xs text-white/80 leading-snug">
-                Contrats, paie, documents fiscaux, lettres et dossier personnel.
+                {t("contrats_paie_documents_fiscaux_lettres")}
               </p>
             </div>
           </div>
@@ -561,24 +562,24 @@ export function MyDocumentsView({
               className="h-8 text-[11px] sm:text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold w-full sm:w-auto"
             >
               <Mail className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-              <span className="truncate">Demander une lettre</span>
+              <span className="truncate">{t("demander_lettre")}</span>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3">
         <DocumentStatsCard
-          label="A signer"
+          label={t("signer_2")}
           value={toSignTotal}
           icon={FileSignature}
           accent={toSignTotal > 0 ? "warning" : "success"}
-          hint={toSignTotal > 0 ? "Documents en attente" : "Tout est a jour"}
+          hint={toSignTotal > 0 ? t("documents_attente") : t("tout_jour")}
           onClick={toSignTotal > 0 ? () => setTab("to-sign") : undefined}
         />
         <DocumentStatsCard
-          label="Contrats actifs"
+          label={t("contrats_actifs")}
           value={activeContracts}
           icon={FileCheck}
           accent="info"
@@ -586,7 +587,7 @@ export function MyDocumentsView({
           onClick={() => setTab("contracts")}
         />
         <DocumentStatsCard
-          label="Bulletins ce mois"
+          label={t("bulletins_mois")}
           value={payStubsThisMonth}
           icon={Receipt}
           accent="info"
@@ -594,7 +595,7 @@ export function MyDocumentsView({
           onClick={() => setTab("payroll")}
         />
         <DocumentStatsCard
-          label="Mon dossier"
+          label={t("mon_dossier")}
           value={personalDocs.length}
           icon={Award}
           accent={personalDocsExpired.length > 0 ? "danger" : personalDocsExpiring.length > 0 ? "warning" : "navy"}
@@ -603,29 +604,29 @@ export function MyDocumentsView({
               ? `${personalDocsExpired.length} expire${personalDocsExpired.length > 1 ? "s" : ""}`
               : personalDocsExpiring.length > 0
                 ? `${personalDocsExpiring.length} a renouveler`
-                : "Diplomes, permis, certifications"
+                : t("diplomes_permis_certifications")
           }
           onClick={() => setTab("personal")}
         />
       </div>
 
-      {/* Sentinel : detecte la sortie des KPIs pour activer le portal KPIs */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
       {/* Portal : on injecte les KPIs DANS la module-nav mobile (sur la
-          meme ligne que "Mon espace") au scroll. Plus de 2e bande !
+          meme ligne que t("mon_espace")) au scroll. Plus de 2e bande !
           Slot cible : #vnk-module-nav-extra (defini dans module-sidebar-nav).
           createPortal est SSR-safe (rendu seulement apres hydration).
           Labels compacts pour rentrer sur tres petits ecrans :
-          - <480px : "À sign / Contr / Doss"
-          - >=480px : "A signer / Contrats / Dossier" (complet) */}
+          - <480px : t("sign_contr_doss")
+          - >=480px : t("signer_contrats_dossier") (complet) */}
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">À sign :</span>
-                  <span className="hidden min-[480px]:inline">A signer :</span>
+                  <span className="min-[480px]:hidden">{t("sign")}</span>
+                  <span className="hidden min-[480px]:inline">{t("signer")}</span>
                 </span>
                 <span className={toSignTotal > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
                   {toSignTotal}
@@ -634,16 +635,16 @@ export function MyDocumentsView({
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Contr :</span>
-                  <span className="hidden min-[480px]:inline">Contrats :</span>
+                  <span className="min-[480px]:hidden">{t("contr")}</span>
+                  <span className="hidden min-[480px]:inline">{t("contrats")}</span>
                 </span>
                 <span className="font-semibold">{activeContracts}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Doss :</span>
-                  <span className="hidden min-[480px]:inline">Dossier :</span>
+                  <span className="min-[480px]:hidden">{t("doss")}</span>
+                  <span className="hidden min-[480px]:inline">{t("dossier")}</span>
                 </span>
                 <span className={personalDocsExpired.length > 0 ? "font-semibold text-red-600" : "font-semibold"}>
                   {personalDocs.length}
@@ -677,29 +678,29 @@ export function MyDocumentsView({
         >
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <FileText className="h-4 w-4" />
-            Mes documents
+            {t("mes_documents")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">A signer :</span>
+            <span className="text-muted-foreground">{t("signer")}</span>
             <span className={toSignTotal > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
               {toSignTotal}
             </span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Contrats :</span>
+            <span className="text-muted-foreground">{t("contrats")}</span>
             <span className="font-semibold">{activeContracts}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Dossier :</span>
+            <span className="text-muted-foreground">{t("dossier")}</span>
             <span className={personalDocsExpired.length > 0 ? "font-semibold text-red-600" : "font-semibold"}>
               {personalDocs.length}
             </span>
           </span>
         </div>
 
-        {/* Tabs : toujours sticky */}
+
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_documents")} />
         </div>
       </div>
 
@@ -708,7 +709,7 @@ export function MyDocumentsView({
           et "personal" (uploads en attente). Pas sur Contrats/Paie/Lettres/
           Signes pour ne pas polluer la lecture passive. */}
 
-      {/* Bandeau demandes upload RH : visible sur to-sign + personal */}
+
       {(tab === "to-sign" || tab === "personal") && (
         <MyUploadRequestsBanner
           requests={bannerUploadRequests}
@@ -716,7 +717,7 @@ export function MyDocumentsView({
         />
       )}
 
-      {/* ====== Cahiers a signer (PRIORITAIRE : avant les docs individuels) ====== */}
+
       {tab === "to-sign" && handbooksToSign.length > 0 && (
         <div className="rounded-md border border-[#0F2D52]/20 bg-gradient-to-br from-[#0F2D52]/5 to-[#15406d]/5 p-3 space-y-2">
           <div className="flex items-center gap-2">
@@ -725,17 +726,14 @@ export function MyDocumentsView({
               Cahier{handbooksToSign.length > 1 ? "s" : ""} a signer ({handbooksToSign.length})
             </h2>
           </div>
-          <p className="text-[11px] text-muted-foreground">
-            Ces cahiers regroupent plusieurs politiques internes. Signez-les en
-            une fois pour valider l&apos;ensemble.
-          </p>
+          <p className="text-[11px] text-muted-foreground">{t("my_documents_view_ces_cahiers_regroupent_plusieurs_politiques_internes_signez")}</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {handbooksToSign.map((hb) => (
               <div
                 key={hb.id}
                 className="rounded-md border bg-card p-3 flex flex-col gap-2.5"
               >
-                {/* Ligne 1 : icone + titre + meta (peut wrap sur 2 lignes) */}
+
                 <div className="flex items-start gap-2.5 min-w-0">
                   <div className="h-9 w-9 rounded-md bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
                     <BookOpen className="h-4 w-4 text-[#0F2D52]" />
@@ -755,7 +753,7 @@ export function MyDocumentsView({
                     </p>
                   </div>
                 </div>
-                {/* Ligne 2 : bouton full-width pour clic facile sur mobile */}
+
                 <Button
                   size="sm"
                   className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white w-full"
@@ -781,7 +779,7 @@ export function MyDocumentsView({
                   }}
                 >
                   <FileSignature className="h-3 w-3 mr-1" />
-                  Ouvrir le cahier
+                  {t("ouvrir_cahier")}
                 </Button>
               </div>
             ))}
@@ -789,7 +787,7 @@ export function MyDocumentsView({
         </div>
       )}
 
-      {/* ====== Bandeau signature urgent : uniquement sur "to-sign" ====== */}
+
       {tab === "to-sign" && (
         <SignatureRequestBanner requests={bannerRequests} onSign={(tplId) => openSignByTemplateId(tplId)} />
       )}
@@ -810,7 +808,7 @@ export function MyDocumentsView({
           contracts={contracts}
           onPreview={(c) => {
             if (!c.pdfUrl) {
-              toast.info("Aucun PDF disponible pour ce contrat");
+              toast.info(t("aucun_pdf_disponible_contrat"));
               return;
             }
             setPreviewPdf({
@@ -853,7 +851,7 @@ export function MyDocumentsView({
           onNew={() => setLetterDialog(true)}
           onPreview={(l) => {
             if (!l.letterUrl) {
-              toast.info("Cette lettre n'est pas encore disponible");
+              toast.info(t("lettre_n_pas_encore_disponible"));
               return;
             }
             setPreviewPdf({
@@ -900,13 +898,13 @@ export function MyDocumentsView({
                 filename: item.filename,
               });
             } else {
-              toast.info("PDF en cours de generation. Reessayez dans quelques instants.");
+              toast.info(t("pdf_cours_generation_reessayez_quelques"));
             }
           }}
         />
       )}
 
-      {/* ============== Modals ============== */}
+
       <SignaturePadDialog
         open={!!signDialog}
         doc={signDialog}
@@ -931,7 +929,7 @@ export function MyDocumentsView({
             checkboxStates: states,
           });
           if (r.success) {
-            toast.success("Cahier signe");
+            toast.success(t("cahier_signe"));
             setHandbookDialog(null);
             router.refresh();
           } else {
@@ -966,14 +964,14 @@ export function MyDocumentsView({
         open={!!confirmDelDoc}
         onOpenChange={(o) => !o && setConfirmDelDoc(null)}
         title={`Supprimer "${confirmDelDoc?.title ?? ""}" ?`}
-        description="Cette action est irreversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelDoc) return;
           const r = await deletePersonalDocAction({ id: confirmDelDoc.id });
           if (r.success) {
-            toast.success("Document supprime");
+            toast.success(t("document_supprime"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -999,9 +997,10 @@ function ToSignTab({
   allLegalDocs: LegalDoc[];
   onSign: (templateId: number) => void;
 }) {
-  // On combine les "obligatoires non signes" + les demandes ciblees
-  // qui pointent vers un document optionnel (ou un doc deja apparu dans
-  // legalToSign : on prefere ne pas dupliquer)
+  const t = useTranslations("admin.my_documents");
+
+
+
   const legalIds = new Set(legalToSign.map((d) => d.id));
   const extraFromRequests = signatureRequests
     .filter((r) => !legalIds.has(r.template.id))
@@ -1015,9 +1014,9 @@ function ToSignTab({
     return (
       <Card className="p-10 text-center space-y-3">
         <CheckCircle2 className="h-10 w-10 mx-auto text-emerald-600" />
-        <p className="text-sm font-semibold">Tout est a jour</p>
+        <p className="text-sm font-semibold">{t("tout_jour")}</p>
         <p className="text-xs text-muted-foreground">
-          Vous avez signe tous les documents obligatoires de leur version courante.
+          {t("vous_avez_signe_tous_documents")}
         </p>
       </Card>
     );
@@ -1028,7 +1027,7 @@ function ToSignTab({
       {legalToSign.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Documents obligatoires
+            {t("documents_obligatoires")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {legalToSign.map((d) => (
@@ -1036,7 +1035,7 @@ function ToSignTab({
                 key={d.id}
                 doc={d}
                 badge={{
-                  label: d.isRequired ? "Obligatoire" : "Optionnel",
+                  label: d.isRequired ? t("obligatoire") : t("optionnel"),
                   tone: d.isRequired ? "danger" : "neutral",
                 }}
                 iconTone="warning"
@@ -1050,7 +1049,7 @@ function ToSignTab({
       {extraFromRequests.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            Signatures demandees
+            {t("signatures_demandees")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {extraFromRequests.map(({ doc, request }) => {
@@ -1092,18 +1091,21 @@ function ContractsTab({
   contracts: Contract[];
   onPreview: (c: Contract) => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   if (contracts.length === 0) {
     return (
       <Card className="p-10 text-center text-sm text-muted-foreground">
-        Aucun contrat enregistre pour l'instant.
+        {t("aucun_contrat_enregistre")}
       </Card>
     );
   }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {contracts.map((c) => {
-        const meta = CONTRACT_STATUS_LABEL[c.status] ?? { label: c.status, tone: "neutral" as const };
-        const subtitle = `${c.contractType} - du ${formatDate(c.startDate)}${c.endDate ? ` au ${formatDate(c.endDate)}` : ""}`;
+        const meta = CONTRACT_STATUS_LABEL[c.status] ?? { labelKey: "", tone: "neutral" as const };
+        const subtitle = c.endDate
+          ? t("contrat_du_au", { type: c.contractType, from: formatDate(c.startDate), to: formatDate(c.endDate) })
+          : t("contrat_du", { type: c.contractType, from: formatDate(c.startDate) });
         return (
           <div key={c.id} className="space-y-1.5">
             <DocumentCard
@@ -1111,11 +1113,11 @@ function ContractsTab({
               title={c.title}
               subtitle={subtitle}
               iconTone="info"
-              status={{ label: meta.label, tone: meta.tone }}
+              status={{ label: meta.labelKey ? t(meta.labelKey) : c.status, tone: meta.tone }}
               date={formatDate(c.createdAt)}
               onPreview={c.pdfUrl ? () => onPreview(c) : undefined}
-              // Convention VNK : Download via PdfPreviewModal (downloadFilename
-              // est passe au modal qui a un bouton Telecharger interne).
+
+
               onDownload={c.pdfUrl ? () => onPreview(c) : undefined}
             />
             <div className="flex flex-wrap gap-1.5 pl-1">
@@ -1149,11 +1151,12 @@ function ToSignCard({
   urgent?: boolean;
   onSign: () => void;
 }) {
-  // Note : le bouton "Apercu avant signature" a ete retire — il rendait le
-  // template brut avec les placeholders `[A completer : XXX]` visibles
-  // (workflow admin/template builder), ce que l'employe ne doit JAMAIS voir.
-  // L'employe verra le document avec ses valeurs resolues directement dans
-  // le dialog "Lire et signer".
+  const t = useTranslations("admin.my_documents");
+
+
+
+
+
   return (
     <DocumentCard
       icon={FileSignature}
@@ -1162,7 +1165,7 @@ function ToSignCard({
       iconTone={iconTone}
       status={badge}
       primaryAction={{
-        label: "Lire et signer",
+        label: t("lire_signer"),
         icon: FileSignature,
         onClick: onSign,
         tone: urgent ? "danger" : "primary",
@@ -1185,16 +1188,17 @@ function PayrollTab({
   onPreviewStub: (s: PayStub) => void;
   onPreviewTax: (d: TaxDoc) => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   return (
     <div className="space-y-5">
       <section className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <Receipt className="h-3.5 w-3.5 text-[#0F2D52]" />
-          Bulletins de paie
+          {t("bulletins_paie")}
         </h2>
         {payStubs.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground">
-            Aucun bulletin disponible.
+            {t("aucun_bulletin_disponible")}
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1216,12 +1220,10 @@ function PayrollTab({
       <section className="space-y-2">
         <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
           <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
-          Documents fiscaux
+          {t("documents_fiscaux")}
         </h2>
         {taxDocs.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">
-            Aucun document fiscal pour l'instant.
-          </Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("my_documents_view_aucun_document_fiscal_pour_l_instant")}</Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {taxDocs.map((d) => (
@@ -1233,8 +1235,8 @@ function PayrollTab({
                 iconTone="success"
                 date={`Emis le ${formatDate(d.issuedAt)}`}
                 onPreview={() => onPreviewTax(d)}
-                // Convention VNK : Telecharger reutilise la PdfPreviewModal
-                // (qui contient son propre bouton Telecharger interne).
+
+
                 onDownload={() => onPreviewTax(d)}
               />
             ))}
@@ -1257,6 +1259,7 @@ function LettersTab({
   onNew: () => void;
   onPreview: (l: LetterRequest) => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1265,7 +1268,7 @@ function LettersTab({
         </p>
         <Button size="sm" onClick={onNew} className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Demander une nouvelle lettre
+          {t("demander_nouvelle_lettre")}
         </Button>
       </div>
 
@@ -1273,11 +1276,11 @@ function LettersTab({
         <Card className="p-10 text-center space-y-3">
           <Mail className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            Vous n'avez pas encore demande de lettre d'emploi.
+            {t("pas_encore_demande_lettre_emploi")}
           </p>
           <Button size="sm" onClick={onNew} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Premiere demande
+            {t("premiere_demande")}
           </Button>
         </Card>
       ) : (
@@ -1285,10 +1288,10 @@ function LettersTab({
           {letterRequests.map((l) => {
             const statusBadge =
               l.status === "issued"
-                ? { label: "Emise", tone: "success" as const }
+                ? { label: t("emise"), tone: "success" as const }
                 : l.status === "rejected"
-                  ? { label: "Refusee", tone: "danger" as const }
-                  : { label: "En attente", tone: "warning" as const };
+                  ? { label: t("refusee"), tone: "danger" as const }
+                  : { label: t("attente"), tone: "warning" as const };
             return (
               <DocumentCard
                 key={l.id}
@@ -1303,7 +1306,7 @@ function LettersTab({
                 status={statusBadge}
                 date={l.issuedAt ? `Emise le ${formatDate(l.issuedAt)}` : `Demande le ${formatDate(l.createdAt)}`}
                 onPreview={l.letterUrl ? () => onPreview(l) : undefined}
-                // Convention VNK : Telecharger via PdfPreviewModal.
+
                 onDownload={l.letterUrl ? () => onPreview(l) : undefined}
               />
             );
@@ -1332,6 +1335,7 @@ function PersonalTab({
   onPreview: (d: PersonalDoc) => void;
   onDelete: (d: PersonalDoc) => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   const tc = useTranslations("common");
   void employeeId;
   const [search, setSearch] = useState("");
@@ -1354,7 +1358,7 @@ function PersonalTab({
 
   return (
     <div className="space-y-4">
-      {/* Section : Demandes en attente côté employé */}
+
       {pendingUploadRequests.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -1389,7 +1393,7 @@ function PersonalTab({
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
                       <CalendarClock className="h-3 w-3" />
-                      {due ? (urgent && days! >= 0 ? `Échéance J-${days}` : `Avant le ${due}`) : "Sans échéance"}
+                      {due ? (urgent && days! >= 0 ? `Échéance J-${days}` : `Avant le ${due}`) : t("sans_echeance")}
                     </div>
                     <Button
                       size="sm"
@@ -1409,7 +1413,7 @@ function PersonalTab({
         </section>
       )}
 
-      {/* Section : documents validés */}
+
       <section className="space-y-2">
         {pendingUploadRequests.length > 0 && (
           <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
@@ -1421,7 +1425,7 @@ function PersonalTab({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un document..."
+            placeholder={t("rechercher_document")}
             className="h-9 text-sm flex-1"
           />
           <Select value={category} onValueChange={setCategory}>
@@ -1429,7 +1433,7 @@ function PersonalTab({
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les categories</SelectItem>
+              <SelectItem value="all">{t("toutes_categories")}</SelectItem>
               {categories.map((c) => (
                 <SelectItem key={c} value={c}>
                   {c}
@@ -1442,11 +1446,8 @@ function PersonalTab({
       {filtered.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <Award className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <p className="text-sm font-semibold">Aucun document</p>
-          <p className="text-xs text-muted-foreground">
-            Les RH ou votre superviseur vous demanderont au besoin de téléverser
-            vos permis, diplômes et certifications.
-          </p>
+          <p className="text-sm font-semibold">{t("aucun_document")}</p>
+          <p className="text-xs text-muted-foreground">{t("my_documents_view_les_rh_ou_votre_superviseur_vous_demanderont")}</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1477,7 +1478,7 @@ function PersonalTab({
                 {d.isVerified && (
                   <p className="text-[10px] text-emerald-700 pl-1 inline-flex items-center gap-1">
                     <CheckCircle2 className="h-2.5 w-2.5" />
-                    Verifie par les RH
+                    {t("verifie_rh")}
                   </p>
                 )}
               </div>
@@ -1528,12 +1529,13 @@ function SignedTab({
   legalDocs: LegalDoc[];
   onOpenPdf: (item: SignedItem) => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   const router = useRouter();
-  // Auto-regen silencieuse : si des signatures legales ont finalPdfUrl null
-  // (echec generation initiale, ex : storage R2 non configure), on les
-  // regenere en arriere-plan a l'ouverture du tab. L'employe ne voit RIEN
-  // de cassé, juste un loader bref puis les PDFs apparaissent.
-  // Flag pour eviter de re-tenter en boucle si une signature regen aussi.
+
+
+
+
+
   const autoRegenTriedRef = useRef<Set<number>>(new Set());
   const [autoRegenBusy, setAutoRegenBusy] = useState(false);
 
@@ -1548,7 +1550,7 @@ function SignedTab({
       broken.map((s) =>
         regenerateMyOwnSignedPdfAction({ signatureId: s.id }).catch(() => ({
           success: false as const,
-          error: "Echec silencieux",
+          error: t("echec_silencieux"),
         })),
       ),
     )
@@ -1564,11 +1566,11 @@ function SignedTab({
     return m;
   }, [legalDocs]);
 
-  // Construction d'une liste unifiee : politiques + cahiers + contrats signes.
+
   const items = useMemo<SignedItem[]>(() => {
     const result: SignedItem[] = [];
 
-    // 1) Signatures de documents legaux (politiques, NDA, etc.)
+
     for (const sig of signatures) {
       const tpl = tplMap.get(sig.templateId);
       const title = sig.template?.title ?? tpl?.title ?? `Document #${sig.templateId}`;
@@ -1585,7 +1587,7 @@ function SignedTab({
       });
     }
 
-    // 2) Signatures de cahiers (handbooks)
+
     for (const hs of handbookSignatures) {
       const title = hs.handbook?.title ?? `Cahier #${hs.handbookId}`;
       const keySuffix = hs.handbook?.key ?? "cahier";
@@ -1601,7 +1603,7 @@ function SignedTab({
       });
     }
 
-    // 3) Contrats d'emploi signes par l'employe
+
     for (const c of contracts) {
       if (!c.employeeSignedAt) continue;
       const fullySigned = !!c.employerSignedAt;
@@ -1619,7 +1621,7 @@ function SignedTab({
       });
     }
 
-    // Tri global par date desc
+
     result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     return result;
   }, [signatures, handbookSignatures, contracts, tplMap]);
@@ -1628,15 +1630,15 @@ function SignedTab({
     return (
       <Card className="p-10 text-center space-y-3">
         <CheckCircle2 className="h-10 w-10 mx-auto text-muted-foreground/40" />
-        <p className="text-sm font-semibold">Aucune signature enregistree</p>
+        <p className="text-sm font-semibold">{t("aucune_signature_enregistree")}</p>
         <p className="text-xs text-muted-foreground">
-          Vos signatures (politiques, cahiers, contrats) apparaitront ici une fois realisees.
+          {t("signatures_politiques_cahiers_contrats_apparaitront")}
         </p>
       </Card>
     );
   }
 
-  // Icone par type pour visuel distinctif
+
   const iconByType: Record<SignedItem["type"], typeof CheckCircle2> = {
     Politique: ScrollText,
     Cahier: BookOpen,
@@ -1652,21 +1654,21 @@ function SignedTab({
       {autoRegenBusy && (
         <div className="rounded-md border border-[#0F2D52]/20 bg-[#0F2D52]/5 px-3 py-2 text-xs text-[#0F2D52] inline-flex items-center gap-2">
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Generation des PDFs en cours...
+          {t("generation_pdfs_cours")}
         </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         {items.map((item) => {
           const Icon = iconByType[item.type];
-          // Si finalPdfUrl null pour une politique : auto-regen est en cours
-          // (voir useEffect ci-dessus). On affiche "Generation..." discret.
-          // Si null pour cahier/contrat : "Indisponible" sans alarmer.
+
+
+
           const isPolicy = item.legalSignatureId !== null;
           const statusLabel = item.pdfUrl
-            ? "PDF disponible"
+            ? t("pdf_disponible")
             : isPolicy
-              ? "Generation..."
-              : "Indisponible";
+              ? t("generation")
+              : t("indisponible");
           return (
             <DocumentCard
               key={item.key}
@@ -1678,7 +1680,7 @@ function SignedTab({
                 label: statusLabel,
                 tone: item.pdfUrl ? "success" : "neutral",
               }}
-              badges={[{ label: item.type, tone: "info" }]}
+              badges={[{ label: t(`type_${item.type.toLowerCase()}`), tone: "info" }]}
               date={formatDate(item.date)}
               onPreview={item.pdfUrl ? () => onOpenPdf(item) : undefined}
               onDownload={item.pdfUrl ? () => onOpenPdf(item) : undefined}
@@ -1702,6 +1704,7 @@ function RequestLetterDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.my_documents");
   const tc = useTranslations("common");
   const [purpose, setPurpose] = useState<"bank" | "rental" | "embassy" | "hypothec" | "other">("bank");
   const [recipient, setRecipient] = useState("");
@@ -1729,7 +1732,7 @@ function RequestLetterDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Demande envoyee aux RH");
+      toast.success(t("demande_envoyee_rh"));
       onSaved();
       onClose();
     } else {
@@ -1743,36 +1746,34 @@ function RequestLetterDialog({
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Demander une lettre d'emploi
-            </DialogTitle>
+              <Mail className="h-4 w-4" />{t("my_documents_view_demander_une_lettre_d_emploi")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Les RH la rediront et vous la mettront a disposition ici.
+              {t("rh_rediront_vous_mettront_disposition")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <FormSection icon={Mail} title="Details de la demande">
-            <Field label="Pour quel usage ?" required>
+          <FormSection icon={Mail} title={t("details_demande")}>
+            <Field label={t("quel_usage")} required>
               <Select value={purpose} onValueChange={(v) => setPurpose(v as typeof purpose)}>
                 <SelectTrigger className="h-9 text-sm">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="bank">Banque</SelectItem>
-                  <SelectItem value="rental">Location de logement</SelectItem>
-                  <SelectItem value="embassy">Ambassade / immigration</SelectItem>
-                  <SelectItem value="hypothec">Hypotheque</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
+                  <SelectItem value="bank">{t("banque")}</SelectItem>
+                  <SelectItem value="rental">{t("location_logement")}</SelectItem>
+                  <SelectItem value="embassy">{t("ambassade_immigration")}</SelectItem>
+                  <SelectItem value="hypothec">{t("hypotheque")}</SelectItem>
+                  <SelectItem value="other">{t("autre")}</SelectItem>
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Destinataire (optionnel)">
+            <Field label={t("destinataire_optionnel")}>
               <Input
                 value={recipient}
                 onChange={(e) => setRecipient(e.target.value)}
-                placeholder="Ex : Banque Royale, proprietaire X"
+                placeholder={t("ex_banque_royale_proprietaire_x")}
               />
             </Field>
             <label className="flex items-center gap-2 text-sm cursor-pointer pt-1">
@@ -1782,15 +1783,15 @@ function RequestLetterDialog({
                 onChange={(e) => setIncludeSalary(e.target.checked)}
                 className="h-4 w-4 rounded border-input accent-[#0F2D52]"
               />
-              Inclure le salaire annuel dans la lettre
+              {t("inclure_salaire_annuel_lettre")}
             </label>
-            <Field label="Notes pour les RH">
+            <Field label={t("notes_rh")}>
               <Textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
                 rows={3}
                 className="text-sm resize-y"
-                placeholder="Precisions, urgence, format particulier..."
+                placeholder={t("precisions_urgence_format_particulier")}
               />
             </Field>
           </FormSection>

@@ -43,6 +43,7 @@ export function DetailPanelBase({
   children: ReactNode;
   preventClose?: boolean;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -53,7 +54,7 @@ export function DetailPanelBase({
       >
         {/* Title/Description toujours presents pour a11y Radix */}
         <SheetTitle className="sr-only">{title}</SheetTitle>
-        <SheetDescription className="sr-only">{subtitle ?? "Détail"}</SheetDescription>
+        <SheetDescription className="sr-only">{subtitle ?? t("detail")}</SheetDescription>
 
         {loading ? (
           <div className="h-full flex items-center justify-center text-muted-foreground">

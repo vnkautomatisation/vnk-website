@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Award, Send, CheckCircle2, Lock } from "lucide-react";
@@ -22,6 +23,7 @@ type Review = {
 };
 
 export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: Review; isReviewer: boolean; isEmployee: boolean }) {
+  const t = useTranslations("admin.hr_nav");
   const router = useRouter();
   const [rating, setRating] = useState(review.rating?.toString() ?? "");
   const [strengths, setStrengths] = useState(review.strengths ?? "");
@@ -32,7 +34,7 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
   const [pending, setPending] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  // Sync states when review prop changes (e.g. after router.refresh)
+
   useEffect(() => {
     setRating(review.rating?.toString() ?? "");
     setStrengths(review.strengths ?? "");
@@ -43,7 +45,7 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
     setIsDirty(false);
   }, [review]);
 
-  // Warn user about unsaved changes when leaving the page
+
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -72,7 +74,7 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
     });
     setPending(false);
     if (r.success) {
-      toast.success(statusOverride === "submitted" ? "Soumise à l'employé" : statusOverride === "acknowledged" ? "Reconnue" : "Enregistré");
+      toast.success(statusOverride === "submitted" ? t("soumise_employe") : statusOverride === "acknowledged" ? t("reconnue") : t("enregistre"));
       setIsDirty(false);
       router.refresh();
     } else toast.error(r.error || "");
@@ -96,51 +98,48 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
       <Card className="p-5 space-y-4">
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Note globale (1-10)</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("note_globale_1_10")}</Label>
             <Input type="number" min="1" max="10" value={rating} onChange={(e) => { setRating(e.target.value); setIsDirty(true); }} disabled={!canEditManager} />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Forces / réussites</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("forces_reussites")}</Label>
           <textarea value={strengths} onChange={(e) => { setStrengths(e.target.value); setIsDirty(true); }} disabled={!canEditManager} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Axes d&apos;amélioration</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("axes_apos_amelioration")}</Label>
           <textarea value={improvements} onChange={(e) => { setImprovements(e.target.value); setIsDirty(true); }} disabled={!canEditManager} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Objectifs prochaine période</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("objectifs_prochaine_periode")}</Label>
           <textarea value={objectives} onChange={(e) => { setObjectives(e.target.value); setIsDirty(true); }} disabled={!canEditManager} rows={4} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Commentaires du manager</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("commentaires_manager")}</Label>
           <textarea value={managerComments} onChange={(e) => { setManagerComments(e.target.value); setIsDirty(true); }} disabled={!canEditManager} rows={3} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" />
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Commentaires de l&apos;employé</Label>
-          <textarea value={employeeComments} onChange={(e) => { setEmployeeComments(e.target.value); setIsDirty(true); }} disabled={!canEditEmployee} rows={3} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" placeholder="(Disponible après soumission)" />
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("commentaires_apos_employe")}</Label>
+          <textarea value={employeeComments} onChange={(e) => { setEmployeeComments(e.target.value); setIsDirty(true); }} disabled={!canEditEmployee} rows={3} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70" placeholder={t("disponible_apres_soumission")} />
         </div>
 
         <div className="flex justify-end gap-2 pt-3 border-t">
           {(canEditManager || canEditEmployee) && (
             <Button variant="outline" onClick={() => save()} disabled={pending}>
-              {pending ? "..." : "Enregistrer"}
+              {pending ? "..." : t("enregistrer")}
             </Button>
           )}
           {canEditManager && review.status === "draft" && (
             <Button onClick={() => save("submitted")} disabled={pending}>
-              <Send className="h-4 w-4 mr-1.5" />Soumettre à l&apos;employé
-            </Button>
+              <Send className="h-4 w-4 mr-1.5" />{t("editor_soumettre_a_l_employe")}</Button>
           )}
           {canEditEmployee && (review.status === "submitted" || review.status === "reviewed") && (
             <Button onClick={() => save("acknowledged")} disabled={pending}>
-              <CheckCircle2 className="h-4 w-4 mr-1.5" />J&apos;ai pris connaissance
-            </Button>
+              <CheckCircle2 className="h-4 w-4 mr-1.5" />{t("editor_j_ai_pris_connaissance")}</Button>
           )}
           {isReviewer && review.status === "acknowledged" && (
             <Button onClick={() => save("closed")} disabled={pending} variant="outline">
-              <Lock className="h-4 w-4 mr-1.5" />Clôturer
-            </Button>
+              <Lock className="h-4 w-4 mr-1.5" />{t("editor_cloturer")}</Button>
           )}
         </div>
       </Card>

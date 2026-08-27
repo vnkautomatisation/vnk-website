@@ -3,6 +3,7 @@
 // inaccessible and broken on mobile.
 // Usage: await promptDialog({...}) or await confirmDialog({...})
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,6 +54,7 @@ export function confirmDialog(opts: Omit<ConfirmOpts, "kind">): Promise<boolean>
 }
 
 export function PromptDialogHost() {
+  const t = useTranslations("admin.ui");
   const [, force] = useState(0);
   const [value, setValue] = useState("");
 
@@ -134,7 +136,7 @@ export function PromptDialogHost() {
           </div>
           <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button type="button" variant="outline" onClick={() => close(isConfirm ? false : null)}>
-              {state.cancelLabel || "Annuler"}
+              {state.cancelLabel || t("annuler")}
             </Button>
             <Button
               type="submit"
@@ -142,7 +144,7 @@ export function PromptDialogHost() {
               disabled={!canConfirm}
               autoFocus={isConfirm}
             >
-              {state.confirmLabel || (isConfirm ? "Confirmer" : "OK")}
+              {state.confirmLabel || (isConfirm ? t("confirmer") : "OK")}
             </Button>
           </DialogFooter>
         </form>

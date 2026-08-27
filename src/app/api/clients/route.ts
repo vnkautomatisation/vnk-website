@@ -1,6 +1,7 @@
 // GET /api/clients — liste clients (admin seulement)
 // POST /api/clients — créer un client (admin seulement, avec bcrypt + audit)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { randomBytes } from "crypto";
@@ -73,6 +74,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
   const parsed = createClientSchema.safeParse(body);
   if (!parsed.success) {
     return NextResponse.json(
-      { error: "Données invalides", details: parsed.error.flatten() },
+      { error: t("donnees_invalides"), details: parsed.error.flatten() },
       { status: 400 }
     );
   }
@@ -95,7 +97,7 @@ export async function POST(req: Request) {
   });
   if (existing) {
     return NextResponse.json(
-      { error: "Un client avec ce courriel existe déjà" },
+      { error: t("un_client_avec_ce_courriel_existe_deja") },
       { status: 409 }
     );
   }

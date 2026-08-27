@@ -23,7 +23,7 @@ export function EditModal({
   icon: Icon = Pencil,
   accent = "bg-amber-500",
   children,
-  submitLabel = "Enregistrer",
+  submitLabel,
   onSubmit,
   className,
 }: {
@@ -38,6 +38,7 @@ export function EditModal({
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
   className?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
 
@@ -45,10 +46,10 @@ export function EditModal({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success("Modifications enregistrées");
+        toast.success(t("modifications_enregistrees"));
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue");
+        toast.error(result.error || t("erreur_survenue"));
       }
     });
   };
@@ -79,7 +80,7 @@ export function EditModal({
                 </DialogDescription>
               ) : (
                 <DialogDescription className="sr-only">
-                  Formulaire de modification
+                  {t("formulaire_modification")}
                 </DialogDescription>
               )}
             </div>
@@ -99,7 +100,7 @@ export function EditModal({
             {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={pending}>
-            {pending ? "En cours..." : submitLabel}
+            {pending ? t("cours") : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

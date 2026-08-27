@@ -50,27 +50,28 @@ type Template = {
 };
 
 const CATEGORIES = [
-  { value: "greetings", label: "Salutations", color: "bg-blue-100 text-blue-700" },
-  { value: "followup", label: "Relance / Suivi", color: "bg-amber-100 text-amber-700" },
-  { value: "billing", label: "Facturation", color: "bg-emerald-100 text-emerald-700" },
-  { value: "scheduling", label: "Rendez-vous", color: "bg-violet-100 text-violet-700" },
-  { value: "technical", label: "Technique", color: "bg-indigo-100 text-indigo-700" },
-  { value: "other", label: "Autre", color: "bg-gray-100 text-gray-700" },
+  { value: "greetings", labelKey: "salutations", color: "bg-blue-100 text-blue-700" },
+  { value: "followup", labelKey: "relance_suivi", color: "bg-amber-100 text-amber-700" },
+  { value: "billing", labelKey: "facturation", color: "bg-emerald-100 text-emerald-700" },
+  { value: "scheduling", labelKey: "rendez_vous", color: "bg-violet-100 text-violet-700" },
+  { value: "technical", labelKey: "technique", color: "bg-indigo-100 text-indigo-700" },
+  { value: "other", labelKey: "autre", color: "bg-gray-100 text-gray-700" },
 ];
 
-function formatRelativeDate(iso: string | null): string {
-  if (!iso) return "Jamais";
+function formatRelativeDate(iso: string | null, t: (k: string) => string): string {
+  if (!iso) return t("jamais");
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const days = Math.floor(diff / 86400000);
-  if (days === 0) return "Aujourd'hui";
-  if (days === 1) return "Hier";
+  if (days === 0) return t("aujourd_hui");
+  if (days === 1) return t("hier");
   if (days < 7) return `Il y a ${days}j`;
   if (days < 30) return `Il y a ${Math.floor(days / 7)}sem`;
   return d.toLocaleDateString("fr-CA");
 }
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
+  const t = useTranslations("admin.message_templates");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -85,7 +86,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
   const [seedingDefaults, setSeedingDefaults] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  // Form state
+
   const [fShortcut, setFShortcut] = useState("");
   const [fTitle, setFTitle] = useState("");
   const [fBody, setFBody] = useState("");
@@ -142,8 +143,8 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
       });
-      if (res.ok) { toast.success("Template créé"); setCreateOpen(false); resetForm(); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("template_cree")); setCreateOpen(false); resetForm(); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
@@ -155,54 +156,54 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         method: "PATCH", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
       });
-      if (res.ok) { toast.success("Template modifié"); setEditing(null); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("template_modifie")); setEditing(null); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleting) return;
     const res = await fetch(`/api/message-templates/${deleting.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Template supprimé"); setDeleting(null); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("template_supprime")); setDeleting(null); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
-  const handleDuplicate = async (t: Template) => {
-    const res = await fetch(`/api/message-templates/${t.id}/duplicate`, { method: "POST" });
-    if (res.ok) { toast.success("Template dupliqué"); router.refresh(); }
-    else { toast.error("Erreur"); }
+  const handleDuplicate = async (tpl: Template) => {
+    const res = await fetch(`/api/message-templates/${tpl.id}/duplicate`, { method: "POST" });
+    if (res.ok) { toast.success(t("template_duplique")); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
-  const handleToggleActive = async (t: Template) => {
-    const res = await fetch(`/api/message-templates/${t.id}`, {
+  const handleToggleActive = async (tpl: Template) => {
+    const res = await fetch(`/api/message-templates/${tpl.id}`, {
       method: "PATCH", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ isActive: !t.isActive }),
+      body: JSON.stringify({ isActive: !tpl.isActive }),
     });
-    if (res.ok) { toast.success(t.isActive ? "Template désactivé" : "Template activé"); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(tpl.isActive ? t("template_desactive") : t("template_active")); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
-  const handleTestSend = async (t: Template) => {
+  const handleTestSend = async (tpl: Template) => {
     const ok = await confirm({
-      title: "Envoyer un test à votre adresse ?",
-      description: "Le template sera envoyé à votre courriel admin avec des données d'exemple (Jean Tremblay / ACME Inc.)",
-      confirmLabel: "Envoyer test",
+      title: t("envoyer_test_adresse"),
+      description: t("template_sera_envoye_courriel_admin"),
+      confirmLabel: t("envoyer_test"),
     });
     if (!ok) return;
-    const res = await fetch(`/api/message-templates/${t.id}/test-send`, {
+    const res = await fetch(`/api/message-templates/${tpl.id}/test-send`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
     if (res.ok) { const d = await res.json(); toast.success(`Test envoyé à ${d.sentTo}`); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur SMTP"); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur_smtp")); }
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} template(s) ?`,
-      description: "Action irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("action_irreversible"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -218,9 +219,9 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
 
   const handleSeedDefaults = async () => {
     const ok = await confirm({
-      title: "Installer les 15 templates par défaut ?",
-      description: "Idempotent : si un raccourci existe déjà, il sera ignoré. Aucun template existant ne sera écrasé.",
-      confirmLabel: "Installer",
+      title: t("installer_15_templates_defaut"),
+      description: t("idempotent_si_raccourci_existe_deja"),
+      confirmLabel: t("installer"),
     });
     if (!ok) return;
     setSeedingDefaults(true);
@@ -230,7 +231,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         const d = await res.json();
         toast.success(`${d.created} ajouté(s) · ${d.skipped} ignoré(s) (déjà existant)`);
         router.refresh();
-      } else { toast.error("Erreur"); }
+      } else { toast.error(t("erreur")); }
     } finally { setSeedingDefaults(false); }
   };
 
@@ -238,14 +239,14 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
     navigator.clipboard.writeText(`/${sc}`).then(() => toast.success(`/${sc} copié`));
   };
 
-  // Tags collecte
+
   const allTags = useMemo(() => {
     const set = new Set<string>();
     templates.forEach((t) => t.tags.forEach((tag) => set.add(tag)));
     return Array.from(set).sort();
   }, [templates]);
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -300,46 +301,45 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
               <Zap className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Templates de messages</h1>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("templates_messages")}</h1>
               <p className="text-white/70 text-sm mt-0.5">
-                <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded">/raccourci</span> · variables · markdown · pièces jointes · multi-canal
-              </p>
+                <span className="font-mono bg-white/10 px-1.5 py-0.5 rounded">/raccourci</span>{t("templates_view_variables_markdown_pieces_jointes_multi_canal")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {templates.length === 0 && (
               <Button variant="outline" className="bg-white/10 border-white/30 text-white hover:bg-white/20"
                 onClick={handleSeedDefaults} disabled={seedingDefaults}>
-                <Sparkles className="h-4 w-4" />Installer 15 templates par défaut
+                <Sparkles className="h-4 w-4" />{t("installer_15_templates_btn")}
               </Button>
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold" onClick={() => { resetForm(); setCreateOpen(true); }}>
-              <Plus className="h-4 w-4" />Nouveau template
+              <Plus className="h-4 w-4" />{t("nouveau_template")}
             </Button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total templates" value={templates.length} icon={Zap} accent="bg-indigo-500" deltaLabel={systemCount > 0 ? `${systemCount} par défaut` : undefined} />
-        <StatCard label="Utilisations" value={totalUses} icon={BarChart3} accent="bg-blue-500" />
-        <StatCard label="Utilisés (7j)" value={recentlyUsed} icon={Eye} accent="bg-emerald-500" />
-        <StatCard label="Étiquettes" value={allTags.length} icon={Tag} accent="bg-amber-500" />
+        <StatCard label={t("total_templates")} value={templates.length} icon={Zap} accent="bg-indigo-500" deltaLabel={systemCount > 0 ? t("n_par_defaut", { count: systemCount }) : undefined} />
+        <StatCard label={t("utilisations")} value={totalUses} icon={BarChart3} accent="bg-blue-500" />
+        <StatCard label={t("utilises_7j")} value={recentlyUsed} icon={Eye} accent="bg-emerald-500" />
+        <StatCard label={t("etiquettes")} value={allTags.length} icon={Tag} accent="bg-amber-500" />
       </div>
 
-      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Zap className="h-4 w-4" />
-              Templates
+              {t("templates")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Total <span className="font-semibold text-indigo-600">{templates.length}</span></span>
-            <span className="text-muted-foreground">Utilisations <span className="font-semibold text-blue-600">{totalUses}</span></span>
-            <span className="ml-auto text-muted-foreground">7 derniers jours <span className="font-semibold text-emerald-600">{recentlyUsed}</span></span>
+            <span className="text-muted-foreground">{t("total")} <span className="font-semibold text-indigo-600">{templates.length}</span></span>
+            <span className="text-muted-foreground">{t("utilisations")} <span className="font-semibold text-blue-600">{totalUses}</span></span>
+            <span className="ml-auto text-muted-foreground">{t("7_derniers_jours")} <span className="font-semibold text-emerald-600">{recentlyUsed}</span></span>
           </div>
         </div>
       )}
@@ -347,29 +347,29 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Raccourci, titre, contenu, étiquette..." className="pl-9" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("raccourci_titre_contenu_etiquette")} className="pl-9" />
         </div>
         <Select value={filterCat} onValueChange={setFilterCat}>
-          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Catégorie" /></SelectTrigger>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder={t("categorie")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toutes catégories</SelectItem>
-            {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+            <SelectItem value="all">{t("toutes_categories")}</SelectItem>
+            {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>))}
           </SelectContent>
         </Select>
         {allTags.length > 0 && (
           <Select value={filterTag} onValueChange={setFilterTag}>
-            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Étiquette" /></SelectTrigger>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder={t("etiquette")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes étiquettes</SelectItem>
+              <SelectItem value="all">{t("toutes_etiquettes")}</SelectItem>
               {allTags.map((t) => (<SelectItem key={t} value={t}>{t}</SelectItem>))}
             </SelectContent>
           </Select>
         )}
         <div className="flex bg-muted rounded-lg p-0.5">
           {[
-            { k: "all" as const, l: "Tous" },
-            { k: "active" as const, l: "Actifs" },
-            { k: "inactive" as const, l: "Désactivés" },
+            { k: "all" as const, l: t("tous") },
+            { k: "active" as const, l: t("actifs") },
+            { k: "inactive" as const, l: t("desactives") },
           ].map((tab) => (
             <button key={tab.k} onClick={() => setFilterStatus(tab.k)}
               className={cn("px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors whitespace-nowrap",
@@ -382,7 +382,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
           <button type="button" onClick={toggleSelectAll}
             className="text-xs px-2.5 py-1 rounded-md border hover:bg-muted transition-colors flex items-center gap-1">
             <CheckSquare className="h-3 w-3" />
-            {filtered.every((t) => selectedIds.has(t.id)) ? "Tout désélectionner" : "Tout sélectionner"}
+            {filtered.every((r) => selectedIds.has(r.id)) ? t("tout_deselectionner") : t("tout_selectionner")}
           </button>
         )}
       </div>
@@ -407,39 +407,39 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       {filtered.length === 0 ? (
         <Card className="p-12 text-center">
           <Zap className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground mb-4">{templates.length === 0 ? "Aucun template — créez votre premier ou installez les défauts !" : "Aucun template trouvé"}</p>
+          <p className="text-sm text-muted-foreground mb-4">{templates.length === 0 ? t("aucun_template_creez_premier_installez") : t("aucun_template_trouve")}</p>
           {templates.length === 0 && (
             <Button onClick={handleSeedDefaults} disabled={seedingDefaults} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-              <Sparkles className="h-4 w-4" />Installer les 15 templates par défaut
+              <Sparkles className="h-4 w-4" />{t("installer_les_15_templates_defaut")}
             </Button>
           )}
         </Card>
       ) : (
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-          {filtered.map((t) => {
-            const cat = CATEGORIES.find((c) => c.value === t.category);
-            const isSelected = selectedIds.has(t.id);
-            const attCount = t.defaultAttachmentsData?.length ?? 0;
+          {filtered.map((tpl) => {
+            const cat = CATEGORIES.find((c) => c.value === tpl.category);
+            const isSelected = selectedIds.has(tpl.id);
+            const attCount = tpl.defaultAttachmentsData?.length ?? 0;
             return (
-              <Card key={t.id} className={cn(
+              <Card key={tpl.id} className={cn(
                 "p-4 hover:shadow-md transition-all flex flex-col",
                 isSelected && "ring-2 ring-[#0F2D52]",
-                !t.isActive && "opacity-60 bg-muted/30"
+                !tpl.isActive && "opacity-60 bg-muted/30"
               )}>
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <div className="flex items-center gap-2">
-                    <Checkbox checked={isSelected} onCheckedChange={() => toggleSelectId(t.id)} aria-label="Sélectionner" />
-                    <button type="button" onClick={() => copyShortcut(t.shortcut)} title="Copier le raccourci"
+                    <Checkbox checked={isSelected} onCheckedChange={() => toggleSelectId(tpl.id)} aria-label={t("selectionner")} />
+                    <button type="button" onClick={() => copyShortcut(tpl.shortcut)} title={t("copier_raccourci")}
                       className="font-mono text-xs px-2 py-0.5 rounded bg-[#0F2D52] text-white hover:bg-[#1a3a66]">
-                      /{t.shortcut}
+                      /{tpl.shortcut}
                     </button>
-                    {t.isSystem && (
-                      <span title="Template système" className="text-amber-600">
+                    {tpl.isSystem && (
+                      <span title={t("template_systeme")} className="text-amber-600">
                         <Lock className="h-3 w-3" />
                       </span>
                     )}
-                    {!t.isActive && (
-                      <span title="Désactivé — n'apparaît pas dans le slash picker"
+                    {!tpl.isActive && (
+                      <span title={t("desactive_n_apparait_pas_slash")}
                         className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-0.5 rounded-full bg-destructive/10 text-destructive font-medium">
                         <PowerOff className="h-2.5 w-2.5" />Off
                       </span>
@@ -452,45 +452,44 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onSelect={() => copyShortcut(t.shortcut)}>
+                      <DropdownMenuItem onSelect={() => copyShortcut(tpl.shortcut)}>
                         <Copy className="h-3.5 w-3.5 mr-2" />Copier raccourci
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => openEdit(t)}>
+                      <DropdownMenuItem onSelect={() => openEdit(tpl)}>
                         <Pencil className="h-3.5 w-3.5 mr-2" />{tc("edit")}
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleDuplicate(t)}>
+                      <DropdownMenuItem onSelect={() => handleDuplicate(tpl)}>
                         <Copy className="h-3.5 w-3.5 mr-2" />Dupliquer
                       </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => handleTestSend(t)}>
-                        <Send className="h-3.5 w-3.5 mr-2" />M&apos;envoyer un test
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onSelect={() => setVersionsFor(t)}>
+                      <DropdownMenuItem onSelect={() => handleTestSend(tpl)}>
+                        <Send className="h-3.5 w-3.5 mr-2" />{t("templates_view_m_envoyer_un_test")}</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setVersionsFor(tpl)}>
                         <History className="h-3.5 w-3.5 mr-2" />Historique
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => handleToggleActive(t)}>
-                        {t.isActive
-                          ? <><PowerOff className="h-3.5 w-3.5 mr-2" />Désactiver</>
-                          : <><Power className="h-3.5 w-3.5 mr-2" />Activer</>}
+                      <DropdownMenuItem onSelect={() => handleToggleActive(tpl)}>
+                        {tpl.isActive
+                          ? <><PowerOff className="h-3.5 w-3.5 mr-2" />{t("desactiver")}</>
+                          : <><Power className="h-3.5 w-3.5 mr-2" />{t("activer")}</>}
                       </DropdownMenuItem>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem onSelect={() => setDeleting(t)} className="text-destructive">
+                      <DropdownMenuItem onSelect={() => setDeleting(tpl)} className="text-destructive">
                         <Trash2 className="h-3.5 w-3.5 mr-2" />{tc("delete")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
-                <h3 className="text-sm font-semibold mb-1">{t.title}</h3>
-                <p className="text-xs text-muted-foreground line-clamp-3 flex-1 whitespace-pre-wrap">{t.body}</p>
+                <h3 className="text-sm font-semibold mb-1">{tpl.title}</h3>
+                <p className="text-xs text-muted-foreground line-clamp-3 flex-1 whitespace-pre-wrap">{tpl.body}</p>
 
-                {t.tags.length > 0 && (
+                {tpl.tags.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-2">
-                    {t.tags.slice(0, 4).map((tag) => (
+                    {tpl.tags.slice(0, 4).map((tag) => (
                       <span key={tag} className="text-[9px] px-1.5 py-0.5 rounded-full bg-[#0F2D52]/10 text-[#0F2D52]">
                         {tag}
                       </span>
                     ))}
-                    {t.tags.length > 4 && <span className="text-[9px] text-muted-foreground">+{t.tags.length - 4}</span>}
+                    {tpl.tags.length > 4 && <span className="text-[9px] text-muted-foreground">+{tpl.tags.length - 4}</span>}
                   </div>
                 )}
 
@@ -498,16 +497,16 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                   <div className="flex items-center gap-1 flex-wrap">
                     {cat && (
                       <span className={`px-1.5 py-0.5 rounded-full font-medium ${cat.color}`}>
-                        {t.category === "other" && t.categoryCustom ? t.categoryCustom : cat.label}
+                        {tpl.category === "other" && tpl.categoryCustom ? tpl.categoryCustom : t(cat.labelKey)}
                       </span>
                     )}
-                    {t.defaultChannel === "chat" && <span title="Chat" className="text-emerald-600"><MessageCircle className="h-3 w-3" /></span>}
-                    {t.defaultChannel === "email" && <span title="Email" className="text-blue-600"><Mail className="h-3 w-3" /></span>}
-                    {t.defaultChannel === "both" && <span title="Chat+Email" className="text-violet-600 flex items-center gap-0.5"><MessageCircle className="h-3 w-3" /><Mail className="h-3 w-3" /></span>}
-                    {attCount > 0 && <span title="Pièces jointes" className="text-muted-foreground flex items-center gap-0.5"><Paperclip className="h-3 w-3" />{attCount}</span>}
-                    {t.locale === "en" && <span className="text-[8px] px-1 py-0 rounded bg-muted font-mono">EN</span>}
+                    {tpl.defaultChannel === "chat" && <span title={t("chat")} className="text-emerald-600"><MessageCircle className="h-3 w-3" /></span>}
+                    {tpl.defaultChannel === "email" && <span title={t("email")} className="text-blue-600"><Mail className="h-3 w-3" /></span>}
+                    {tpl.defaultChannel === "both" && <span title={t("chat_email_2")} className="text-violet-600 flex items-center gap-0.5"><MessageCircle className="h-3 w-3" /><Mail className="h-3 w-3" /></span>}
+                    {attCount > 0 && <span title={t("pieces_jointes")} className="text-muted-foreground flex items-center gap-0.5"><Paperclip className="h-3 w-3" />{attCount}</span>}
+                    {tpl.locale === "en" && <span className="text-[8px] px-1 py-0 rounded bg-muted font-mono">EN</span>}
                   </div>
-                  <span className="text-muted-foreground whitespace-nowrap">{t.usageCount}× · {formatRelativeDate(t.lastUsedAt)}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">{tpl.usageCount}× · {formatRelativeDate(tpl.lastUsedAt, t)}</span>
                 </div>
               </Card>
             );
@@ -537,7 +536,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       <ConfirmDialog
         open={!!deleting}
         onOpenChange={(o) => { if (!o) setDeleting(null); }}
-        title="Supprimer ce template ?"
+        title={t("supprimer_template")}
         description={`Le template /${deleting?.shortcut} sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -579,6 +578,7 @@ function TemplateFormDialog({
   setters: FormSetters;
   onSubmit: () => void;
 }) {
+  const t = useTranslations("admin.message_templates");
   const tc = useTranslations("common");
   const isCreate = mode === "create";
   const [showPreview, setShowPreview] = useState(false);
@@ -586,20 +586,20 @@ function TemplateFormDialog({
 
   const previewBody = useMemo(() => {
     return expandTemplateVariables(values.body, {
-      clientName: "Jean Tremblay",
-      clientFirstName: "Jean",
-      clientLastName: "Tremblay",
-      clientCompany: "ACME Inc.",
+      clientName: t("jean_tremblay"),
+      clientFirstName: t("jean"),
+      clientLastName: t("tremblay"),
+      clientCompany: t("acme_inc"),
       clientEmail: "jean@acme.com",
-      adminName: "Yan Verone",
+      adminName: t("yan_verone"),
       adminEmail: "yan@vnkautomatisation.ca",
       quoteNumber: "D-2026-001",
       quoteAmount: "1 250,00 $",
       invoiceNumber: "F-2026-042",
       invoiceAmount: "874,33 $",
-      invoiceDueDate: "15 juin 2026",
-      contractNumber: "CT-2026-007",
-      appointmentDate: "12 mai 2026",
+      invoiceDueDate: t("15_juin_2026"),
+      contractNumber: t("ct_2026_007"),
+      appointmentDate: t("12_mai_2026"),
       appointmentTime: "10:00",
     });
   }, [values.body]);
@@ -607,11 +607,11 @@ function TemplateFormDialog({
   const previewSubject = useMemo(() => {
     if (!values.subject) return "";
     return expandTemplateVariables(values.subject, {
-      clientName: "Jean Tremblay",
-      clientCompany: "ACME Inc.",
+      clientName: t("jean_tremblay"),
+      clientCompany: t("acme_inc"),
       quoteNumber: "D-2026-001",
       invoiceNumber: "F-2026-042",
-      contractNumber: "CT-2026-007",
+      contractNumber: t("ct_2026_007"),
     });
   }, [values.subject]);
 
@@ -631,50 +631,49 @@ function TemplateFormDialog({
               {isCreate ? <Plus className="h-6 w-6 text-white" /> : <Pencil className="h-6 w-6 text-white" />}
             </div>
             <div>
-              <DialogTitle className="text-white text-lg">{isCreate ? "Nouveau template" : "Modifier le template"}</DialogTitle>
-              <DialogDescription className="text-white/70 mt-0.5">
-                Le raccourci s&apos;utilise dans le chat avec <span className="font-mono">/raccourci</span>
+              <DialogTitle className="text-white text-lg">{isCreate ? t("nouveau_template") : t("modifier_template")}</DialogTitle>
+              <DialogDescription className="text-white/70 mt-0.5">{t("templates_view_le_raccourci_s_utilise_dans_le_chat")}<span className="font-mono">/raccourci</span>
               </DialogDescription>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          <FormSection title="Identité" icon={<Zap className="h-3.5 w-3.5" />}>
+          <FormSection title={t("identite")} icon={<Zap className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Raccourci *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("raccourci")}</Label>
                 <Input
                   value={values.shortcut}
                   onChange={(e) => setters.setShortcut(e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, ""))}
                   placeholder="devis_pret" className="font-mono"
                 />
-                <p className="text-[10px] text-muted-foreground">Lettres, chiffres, _ et - uniquement</p>
+                <p className="text-[10px] text-muted-foreground">{t("lettres_chiffres_uniquement")}</p>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Catégorie</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("categorie")}</Label>
                 <Select value={values.category} onValueChange={setters.setCategory}>
-                  <SelectTrigger><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                    {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{t(c.labelKey)}</SelectItem>))}
                   </SelectContent>
                 </Select>
                 {values.category === "other" && (
                   <Input
                     value={values.categoryCustom}
                     onChange={(e) => setters.setCategoryCustom(e.target.value)}
-                    placeholder="Nom personnalisé (ex: Onboarding)"
+                    placeholder={t("nom_personnalise_ex_onboarding")}
                     className="mt-2"
                   />
                 )}
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
-              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Devis prêt à signer" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("titre")}</Label>
+              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder={t("devis_pret_signer")} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Étiquettes</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("etiquettes")}</Label>
               <div className="flex gap-1 flex-wrap mb-1">
                 {values.tags.map((tag) => (
                   <span key={tag} className="text-xs px-2 py-0.5 rounded-full bg-[#0F2D52]/10 text-[#0F2D52] flex items-center gap-1">
@@ -688,7 +687,7 @@ function TemplateFormDialog({
                   value={tagInput}
                   onChange={(e) => setTagInput(e.target.value.toLowerCase())}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addTag(tagInput); } }}
-                  placeholder="onboarding, devis, urgent…"
+                  placeholder={t("onboarding_devis_urgent")}
                   className="h-8 text-xs"
                 />
                 <Button type="button" size="sm" variant="outline" onClick={() => addTag(tagInput)} disabled={!tagInput.trim()}>+</Button>
@@ -696,68 +695,66 @@ function TemplateFormDialog({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-end">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Canal par défaut</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("canal_defaut")}</Label>
                 <Select value={values.channel || "none"} onValueChange={(v) => setters.setChannel(v === "none" ? "" : v as "chat" | "email" | "both")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{tc("none")}</SelectItem>
-                    <SelectItem value="chat">Chat (portail)</SelectItem>
-                    <SelectItem value="email">Email</SelectItem>
-                    <SelectItem value="both">Chat + Email</SelectItem>
+                    <SelectItem value="chat">{t("chat_portail")}</SelectItem>
+                    <SelectItem value="email">{t("email")}</SelectItem>
+                    <SelectItem value="both">{t("chat_email")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground"><Globe className="h-3 w-3 inline mr-1" />Langue</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground"><Globe className="h-3 w-3 inline mr-1" />{t("langue")}</Label>
                 <Select value={values.locale} onValueChange={(v) => setters.setLocale(v as "fr" | "en")}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="fr">Français</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="fr">{t("francais")}</SelectItem>
+                    <SelectItem value="en">{t("english")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex items-center gap-2 pb-1">
                 <Switch id="append-sig" checked={values.appendSig} onCheckedChange={setters.setAppendSig} />
-                <Label htmlFor="append-sig" className="text-xs cursor-pointer">Ajouter signature auto</Label>
+                <Label htmlFor="append-sig" className="text-xs cursor-pointer">{t("ajouter_signature_auto")}</Label>
               </div>
             </div>
           </FormSection>
 
           {(values.channel === "email" || values.channel === "both") && (
-            <FormSection title="Email" icon={<Mail className="h-3.5 w-3.5" />}>
+            <FormSection title={t("email")} icon={<Mail className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sujet de l&apos;email</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("sujet_apos_email")}</Label>
                 <Input
                   value={values.subject}
                   onChange={(e) => setters.setSubject(e.target.value)}
-                  placeholder="Votre devis {{quote_number}} est prêt"
+                  placeholder={t("devis_quote_number_pret")}
                 />
-                <p className="text-[10px] text-muted-foreground">Variables supportées dans le sujet</p>
+                <p className="text-[10px] text-muted-foreground">{t("variables_supportees_sujet")}</p>
               </div>
             </FormSection>
           )}
 
-          <FormSection title="Contenu (markdown + variables)" icon={<Pencil className="h-3.5 w-3.5" />}>
+          <FormSection title={t("contenu_markdown_variables")} icon={<Pencil className="h-3.5 w-3.5" />}>
             <div className="flex items-center justify-between">
               <p className="text-[10px] text-muted-foreground">
-                Tape <span className="font-mono">{`{{`}</span> pour autocomplete · <span className="font-mono">**gras**</span> · <span className="font-mono">*italique*</span> · <span className="font-mono">{`{{#if x}}…{{/if}}`}</span> bloc conditionnel
+                Tape <span className="font-mono">{`{{`}</span> {t("autocomplete")} <span className="font-mono">{t("gras")}</span> · <span className="font-mono">{t("italique")}</span> · <span className="font-mono">{`{{#if x}}…{{/if}}`}</span> bloc conditionnel
               </p>
               <button type="button" onClick={() => setShowPreview((v) => !v)}
                 className={`text-[10px] px-2 py-1 rounded border flex items-center gap-1 transition-colors ${showPreview ? "bg-[#0F2D52] text-white border-[#0F2D52]" : "hover:bg-muted"}`}>
-                <Eye className="h-3 w-3" />Aperçu
-              </button>
+                <Eye className="h-3 w-3" />{t("templates_view_apercu")}</button>
             </div>
             <TemplateBodyEditor value={values.body} onChange={setters.setBody} />
 
             {showPreview && (
               <div className="rounded-lg border-2 border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3">
                 <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52] mb-2 flex items-center gap-1">
-                  <Eye className="h-3 w-3" />Aperçu (Jean Tremblay / ACME Inc.)
-                </p>
+                  <Eye className="h-3 w-3" />{t("templates_view_apercu_jean_tremblay_acme_inc")}</p>
                 {previewSubject && (
                   <div className="mb-2 px-2 py-1 bg-white border rounded text-xs">
-                    <span className="text-muted-foreground">Sujet : </span>
+                    <span className="text-muted-foreground">{t("sujet")} </span>
                     <span className="font-medium">{previewSubject}</span>
                   </div>
                 )}
@@ -765,14 +762,14 @@ function TemplateFormDialog({
                   <div
                     className="text-sm prose prose-sm max-w-none"
                     style={{ whiteSpace: "pre-wrap" }}
-                    dangerouslySetInnerHTML={{ __html: markdownToHtml(previewBody) || "<em style='color:#94a3b8'>(Le corps est vide)</em>" }}
+                    dangerouslySetInnerHTML={{ __html: markdownToHtml(previewBody) || "<em style='color:#94a3b8'>Corps vide</em>" }}
                   />
                 </div>
               </div>
             )}
           </FormSection>
 
-          <FormSection title="Pièces jointes par défaut" icon={<Paperclip className="h-3.5 w-3.5" />}>
+          <FormSection title={t("pieces_jointes_defaut")} icon={<Paperclip className="h-3.5 w-3.5" />}>
             <TemplateAttachmentsInput attachments={values.attachments} onChange={setters.setAttachments} />
           </FormSection>
         </div>
@@ -784,7 +781,7 @@ function TemplateFormDialog({
             disabled={submitting || !values.shortcut.trim() || !values.title.trim() || !values.body.trim()}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer le template" : "Enregistrer")}
+            {submitting ? t("enregistrement_cours") : (isCreate ? t("creer_template") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -792,8 +789,9 @@ function TemplateFormDialog({
   );
 }
 
-// ─── Versions dialog ───────────────────────────────────────
+
 function VersionsDialog({ template, onClose, onRestored }: { template: Template; onClose: () => void; onRestored: () => void }) {
+  const t = useTranslations("admin.message_templates");
   const tc = useTranslations("common");
   const [versions, setVersions] = useState<{ id: number; body: string; emailSubject: string | null; editedBy: string | null; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
@@ -809,8 +807,8 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ versionId }),
     });
-    if (res.ok) { toast.success("Version restaurée"); onRestored(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("version_restauree")); onRestored(); }
+    else { toast.error(t("erreur")); }
   };
 
   return (
@@ -821,20 +819,20 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
             <History className="h-5 w-5" />Historique — /{template.shortcut}
           </DialogTitle>
           <DialogDescription className="text-white/70 mt-0.5 text-xs">
-            La version actuelle est sauvegardée avant chaque restauration
+            {t("version_actuelle_sauvegardee_avant_chaque")}
           </DialogDescription>
         </div>
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
           {loading ? (
             <p className="text-sm text-muted-foreground text-center py-8">{tc("loading")}</p>
           ) : versions.length === 0 ? (
-            <p className="text-sm text-muted-foreground text-center py-8">Aucune version antérieure</p>
+            <p className="text-sm text-muted-foreground text-center py-8">{t("aucune_version_anterieure")}</p>
           ) : (
             versions.map((v) => (
               <div key={v.id} className="rounded-lg border p-3 bg-muted/20">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="text-[11px] text-muted-foreground">
-                    {new Date(v.createdAt).toLocaleString("fr-CA")} · par {v.editedBy ?? "système"}
+                    {new Date(v.createdAt).toLocaleString("fr-CA")} · par {v.editedBy ?? t("systeme")}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => restore(v.id)} className="h-7 text-xs">
                     <Download className="h-3 w-3 mr-1" />Restaurer

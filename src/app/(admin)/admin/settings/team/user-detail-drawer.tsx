@@ -67,10 +67,10 @@ type UserDetail = {
   }>;
 };
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, t: (k: string) => string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
-  if (min < 1) return "à l'instant";
+  if (min < 1) return t("instant");
   if (min < 60) return `il y a ${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `il y a ${h} h`;
@@ -89,6 +89,8 @@ export function UserDetailDrawer({
   onEdit: () => void;
   onResetPassword: () => void;
 }) {
+  const t = useTranslations("admin.team");
+  const ta = useTranslations("admin.audit");
   const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<UserDetail | null>(null);
@@ -98,7 +100,7 @@ export function UserDetailDrawer({
   const [confirmLock, setConfirmLock] = useState(false);
   const [confirmAnonymize, setConfirmAnonymize] = useState(false);
 
-  // Édition inline des notes internes
+
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
@@ -119,8 +121,8 @@ export function UserDetailDrawer({
     setPendingAction(true);
     const r = await disable2FAAction({ id: userId });
     setPendingAction(false);
-    if (r.success) { toast.success("2FA désactivée"); reload(); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("2fa_desactivee")); reload(); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDisable2FA(false);
   };
 
@@ -129,8 +131,8 @@ export function UserDetailDrawer({
     setPendingAction(true);
     const r = await unlockUserAction({ id: userId });
     setPendingAction(false);
-    if (r.success) { toast.success("Compte débloqué"); reload(); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("compte_debloque")); reload(); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   const handleLock = async (hours: number) => {
@@ -139,7 +141,7 @@ export function UserDetailDrawer({
     const r = await lockUserAction({ id: userId, hours });
     setPendingAction(false);
     if (r.success) { toast.success(`Compte bloqué pour ${hours}h`); reload(); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    else toast.error(r.error || t("erreur"));
     setConfirmLock(false);
   };
 
@@ -156,7 +158,7 @@ export function UserDetailDrawer({
       a.download = `user-${userId}-${data.admin.email}-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export téléchargé (Loi 25)");
+      toast.success(t("export_telecharge_loi_25"));
     } else if (!r.success) {
       toast.error(r.error);
     }
@@ -168,11 +170,11 @@ export function UserDetailDrawer({
     const r = await anonymizeUserAction({ id: userId });
     setPendingAction(false);
     if (r.success) {
-      toast.success("Compte anonymisé");
+      toast.success(t("compte_anonymise"));
       router.refresh();
       onOpenChange(false);
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
     setConfirmAnonymize(false);
   };
@@ -183,11 +185,11 @@ export function UserDetailDrawer({
     const r = await updateUserAction({ id: userId, internalNotes: notesValue });
     setNotesSaving(false);
     if (r.success) {
-      toast.success("Notes enregistrées");
+      toast.success(t("notes_enregistrees"));
       setEditingNotes(false);
       reload();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -209,7 +211,7 @@ export function UserDetailDrawer({
           setEditingNotes(false);
         }
       })
-      .catch(() => toast.error("Erreur de chargement"))
+      .catch(() => toast.error(t("erreur_chargement")))
       .finally(() => setLoading(false));
   }, [open, userId, onOpenChange]);
 
@@ -218,7 +220,7 @@ export function UserDetailDrawer({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-xl p-0 gap-0 flex flex-col">
-        <SheetTitle className="sr-only">Détails utilisateur</SheetTitle>
+        <SheetTitle className="sr-only">{t("details_utilisateur")}</SheetTitle>
 
         {loading || !data ? (
           <div className="flex-1 flex items-center justify-center">
@@ -226,7 +228,7 @@ export function UserDetailDrawer({
           </div>
         ) : (
           <>
-            {/* Hero header navy avec avatar */}
+
             <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-6 py-5 shrink-0">
               <div className="flex items-start gap-4">
                 <div
@@ -234,7 +236,7 @@ export function UserDetailDrawer({
                   style={{ backgroundColor: data.admin.position?.color ?? data.admin.customRole?.color ?? "#1A5FB4" }}
                 >
                   {data.admin.avatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
+
                     <img src={data.admin.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
                   ) : (
                     (data.admin.fullName || data.admin.email).charAt(0).toUpperCase()
@@ -264,8 +266,7 @@ export function UserDetailDrawer({
                     )}
                     {data.admin.lockedUntil && new Date(data.admin.lockedUntil) > new Date() && (
                       <Badge className="text-[10px] bg-red-500/90 hover:bg-red-500/90 text-white border-0">
-                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />Bloqué
-                      </Badge>
+                        <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{ta("user_detail_drawer_bloque")}</Badge>
                     )}
                     {data.admin.position && (
                       <Badge variant="outline" className="text-[10px] bg-white/10 text-white border-white/20">
@@ -276,7 +277,7 @@ export function UserDetailDrawer({
                 </div>
               </div>
 
-              {/* Actions header */}
+
               <div className="flex gap-2 mt-4">
                 <Button
                   size="sm"
@@ -292,46 +293,45 @@ export function UserDetailDrawer({
                   onClick={onResetPassword}
                   className="bg-white/15 hover:bg-white/25 text-white border-white/20 backdrop-blur"
                 >
-                  <KeyRound className="h-3.5 w-3.5 mr-1.5" />Réinit. mot de passe
-                </Button>
+                  <KeyRound className="h-3.5 w-3.5 mr-1.5" />{ta("user_detail_drawer_reinit_mot_de_passe")}</Button>
               </div>
             </div>
 
-            {/* Contenu scrollable */}
+
             <div className="flex-1 overflow-y-auto">
-              {/* Stats globales */}
+
               <div className="grid grid-cols-3 border-b bg-muted/30">
-                <StatCell icon={Activity} label="Sessions" value={data.stats.sessionsCount} />
+                <StatCell icon={Activity} label={t("sessions")} value={data.stats.sessionsCount} />
                 <StatCell icon={History} label={tc("actions")} value={data.stats.auditCount} />
-                <StatCell icon={Briefcase} label="Paiements assignés" value={data.stats.assignedPayments} />
+                <StatCell icon={Briefcase} label={t("paiements_assignes")} value={data.stats.assignedPayments} />
               </div>
 
-              {/* KPI productivité — 30 derniers jours */}
+
               {data.stats.kpi30d && (
                 <div className="border-b bg-gradient-to-br from-[#0F2D52]/[0.03] to-transparent">
                   <div className="px-4 pt-3 pb-2 flex items-center justify-between">
                     <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                      Productivité — 30 derniers jours
+                      {t("productivite_30_derniers_jours")}
                     </span>
                   </div>
                   <div className="grid grid-cols-4 gap-px bg-border">
-                    <KpiCell label="Heures saisies" value={data.stats.kpi30d.hoursLogged} suffix="h" />
-                    <KpiCell label="Saisies temps" value={data.stats.kpi30d.timeEntries} />
+                    <KpiCell label={t("heures_saisies")} value={data.stats.kpi30d.hoursLogged} suffix="h" />
+                    <KpiCell label={t("saisies_temps")} value={data.stats.kpi30d.timeEntries} />
                     <KpiCell label={tc("actions")} value={data.stats.kpi30d.actions} />
-                    <KpiCell label="Connexions" value={data.stats.kpi30d.logins} />
+                    <KpiCell label={t("connexions")} value={data.stats.kpi30d.logins} />
                   </div>
                 </div>
               )}
 
-              {/* Coordonnées */}
-              <DrawerSection icon={User} title="Coordonnées">
-                <Row icon={Mail} label="Courriel" value={data.admin.email} />
-                {data.admin.phone && <Row icon={Phone} label="Téléphone" value={data.admin.phone} />}
-                {data.admin.department && <Row icon={Building2} label="Département" value={data.admin.department} />}
+
+              <DrawerSection icon={User} title={t("coordonnees")}>
+                <Row icon={Mail} label={t("courriel_2")} value={data.admin.email} />
+                {data.admin.phone && <Row icon={Phone} label={t("telephone")} value={data.admin.phone} />}
+                {data.admin.department && <Row icon={Building2} label={t("departement_2")} value={data.admin.department} />}
                 {data.admin.position && (
                   <Row
                     icon={Briefcase}
-                    label="Poste"
+                    label={t("poste")}
                     value={data.admin.position.name}
                     valueColor={data.admin.position.color}
                   />
@@ -339,7 +339,7 @@ export function UserDetailDrawer({
                 {data.admin.customRole && (
                   <Row
                     icon={Shield}
-                    label="Rôle d'accès"
+                    label={t("role_acces")}
                     value={data.admin.customRole.name}
                     valueColor={data.admin.customRole.color}
                     mono
@@ -347,35 +347,35 @@ export function UserDetailDrawer({
                 )}
               </DrawerSection>
 
-              {/* Dates clés */}
-              <DrawerSection icon={Calendar} title="Activité">
+
+              <DrawerSection icon={Calendar} title={t("activite")}>
                 <Row
                   icon={Calendar}
-                  label="Dernière connexion"
-                  value={data.admin.lastLogin ? `${formatRelative(data.admin.lastLogin)} · ${new Date(data.admin.lastLogin).toLocaleDateString("fr-CA")}` : "Jamais connecté"}
+                  label={t("derniere_connexion")}
+                  value={data.admin.lastLogin ? `${formatRelative(data.admin.lastLogin, t)} · ${new Date(data.admin.lastLogin).toLocaleDateString("fr-CA")}` : t("jamais_connecte")}
                 />
                 <Row
                   icon={KeyRound}
-                  label="Mot de passe modifié"
-                  value={data.admin.passwordChangedAt ? formatRelative(data.admin.passwordChangedAt) : "Jamais modifié"}
+                  label={t("mot_passe_modifie")}
+                  value={data.admin.passwordChangedAt ? formatRelative(data.admin.passwordChangedAt, t) : t("jamais_modifie")}
                 />
                 <Row
                   icon={Calendar}
-                  label="Compte créé"
+                  label={t("compte_cree")}
                   value={new Date(data.admin.createdAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}
                 />
                 {data.admin.startDate && (
                   <Row
                     icon={Calendar}
-                    label="Date d'embauche"
+                    label={t("date_embauche")}
                     value={new Date(data.admin.startDate).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}
                   />
                 )}
               </DrawerSection>
 
-              {/* Permissions effectives */}
+
               {data.admin.customRole && (
-                <DrawerSection icon={Shield} title="Permissions effectives" count={Object.keys(data.admin.customRole.permissions ?? {}).length}>
+                <DrawerSection icon={Shield} title={t("permissions_effectives")} count={Object.keys(data.admin.customRole.permissions ?? {}).length}>
                   <div className="rounded-md border bg-card overflow-hidden">
                     <div className="px-3 py-2 border-b bg-muted/30 flex items-center gap-2">
                       <Shield className="h-3.5 w-3.5" style={{ color: data.admin.customRole.color ?? "#0F2D52" }} />
@@ -383,7 +383,7 @@ export function UserDetailDrawer({
                         {data.admin.customRole.name}
                       </span>
                       {data.admin.customRole.isSystem && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Système</Badge>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{t("systeme_2")}</Badge>
                       )}
                     </div>
                     <div className="divide-y">
@@ -410,31 +410,30 @@ export function UserDetailDrawer({
                         </div>
                       ))}
                       {Object.keys(data.admin.customRole.permissions ?? {}).length === 0 && (
-                        <p className="px-3 py-2 text-xs text-muted-foreground italic">Aucune permission accordée</p>
+                        <p className="px-3 py-2 text-xs text-muted-foreground italic">{t("aucune_permission_accordee")}</p>
                       )}
                     </div>
                   </div>
                   <Link
                     href="/admin/settings/team"
                     className="inline-flex items-center gap-1 text-[10px] text-[#0F2D52] hover:underline mt-1.5"
-                  >
-                    Modifier les permissions du rôle <ExternalLink className="h-2.5 w-2.5" />
+                  >{ta("user_detail_drawer_modifier_les_permissions_du_role")}<ExternalLink className="h-2.5 w-2.5" />
                   </Link>
                 </DrawerSection>
               )}
 
-              {/* Sessions actives */}
+
               {data.activeSessions.length > 0 && (
-                <DrawerSection icon={Globe} title="Sessions actives" count={data.activeSessions.length}>
+                <DrawerSection icon={Globe} title={t("sessions_actives")} count={data.activeSessions.length}>
                   <div className="space-y-2">
                     {data.activeSessions.map((s) => (
                       <div key={s.id} className="rounded-md border bg-card p-2.5">
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className="text-xs font-medium">
-                            {s.label ?? s.browser ?? "Navigateur"} {s.os && `· ${s.os}`}
+                            {s.label ?? s.browser ?? t("navigateur")} {s.os && `· ${s.os}`}
                           </span>
                           {s.isCurrent && (
-                            <Badge className="text-[9px] bg-emerald-600 hover:bg-emerald-600">Actuelle</Badge>
+                            <Badge className="text-[9px] bg-emerald-600 hover:bg-emerald-600">{t("actuelle")}</Badge>
                           )}
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
@@ -444,7 +443,7 @@ export function UserDetailDrawer({
                               <MapPin className="h-2.5 w-2.5" />{s.city}, {s.country}
                             </span>
                           )}
-                          {s.lastActiveAt && <span>Vu {formatRelative(s.lastActiveAt)}</span>}
+                          {s.lastActiveAt && <span>Vu {formatRelative(s.lastActiveAt, t)}</span>}
                         </div>
                       </div>
                     ))}
@@ -452,9 +451,9 @@ export function UserDetailDrawer({
                 </DrawerSection>
               )}
 
-              {/* Événements sécurité */}
+
               {data.recentEvents.length > 0 && (
-                <DrawerSection icon={AlertTriangle} title="Événements sécurité" count={data.recentEvents.length}>
+                <DrawerSection icon={AlertTriangle} title={t("evenements_securite")} count={data.recentEvents.length}>
                   <div className="space-y-1.5">
                     {data.recentEvents.map((e) => {
                       const sevColor =
@@ -465,12 +464,12 @@ export function UserDetailDrawer({
                         <div key={e.id} className="flex items-start gap-2 text-xs">
                           <CircleDot className={cn("h-3 w-3 mt-1 shrink-0", sevColor)} />
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium line-clamp-1">{securityEventLabel(e.type)}</p>
-                            {e.message && e.message !== securityEventLabel(e.type) && (
+                            <p className="font-medium line-clamp-1">{securityEventLabel(ta, e.type)}</p>
+                            {e.message && e.message !== securityEventLabel(ta, e.type) && (
                               <p className="text-[11px] text-muted-foreground line-clamp-1">{e.message}</p>
                             )}
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {formatRelative(e.createdAt)}
+                              {formatRelative(e.createdAt, t)}
                               {e.ipAddress && ` · ${e.ipAddress}`}
                               {e.city && ` · ${e.city}, ${e.country}`}
                             </p>
@@ -482,18 +481,17 @@ export function UserDetailDrawer({
                 </DrawerSection>
               )}
 
-              {/* Audit log récent */}
+
               {data.recentAudits.length > 0 && (
                 <DrawerSection
                   icon={History}
-                  title="Actions récentes"
+                  title={t("actions_recentes")}
                   count={data.recentAudits.length}
                   action={
                     <Link
                       href={`/admin/audit-trail?adminId=${data.admin.id}`}
                       className="text-[11px] text-[#0F2D52] hover:underline inline-flex items-center gap-1"
-                    >
-                      Voir tout <ExternalLink className="h-3 w-3" />
+                    >{ta("user_detail_drawer_voir_tout")}<ExternalLink className="h-3 w-3" />
                     </Link>
                   }
                 >
@@ -501,21 +499,21 @@ export function UserDetailDrawer({
                     {data.recentAudits.map((a) => (
                       <div key={a.id} className="flex items-start gap-2 text-xs py-1.5 border-b last:border-0">
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 shrink-0">
-                          {ACTION_LABELS[a.action] ?? a.action}
+                          {ACTION_LABELS[a.action] ? ta(ACTION_LABELS[a.action]) : a.action}
                         </Badge>
                         <span className="flex-1 min-w-0 text-xs">
-                          {entityLabelWithId(a.entityType, a.entityId)}
+                          {entityLabelWithId(ta, a.entityType, a.entityId)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{formatRelative(a.createdAt)}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{formatRelative(a.createdAt, t)}</span>
                       </div>
                     ))}
                   </div>
                 </DrawerSection>
               )}
 
-              {/* Actions sécurité — pas pour soi-même */}
+
               {data.admin.id !== currentAdminId && (
-                <DrawerSection icon={Shield} title="Actions sécurité">
+                <DrawerSection icon={Shield} title={t("actions_securite")}>
                   <div className="space-y-2">
                     {data.admin.twoFactorEnabled && (
                       <Button
@@ -526,7 +524,7 @@ export function UserDetailDrawer({
                         className="w-full justify-start text-amber-700 border-amber-300 hover:bg-amber-50"
                       >
                         <ShieldOff className="h-3.5 w-3.5 mr-2" />
-                        Désactiver la 2FA
+                        {t("desactiver_2fa")}
                       </Button>
                     )}
                     {data.admin.lockedUntil && new Date(data.admin.lockedUntil) > new Date() ? (
@@ -538,7 +536,7 @@ export function UserDetailDrawer({
                         className="w-full justify-start text-emerald-700 border-emerald-300 hover:bg-emerald-50"
                       >
                         <Unlock className="h-3.5 w-3.5 mr-2" />
-                        Débloquer le compte
+                        {t("debloquer_compte")}
                       </Button>
                     ) : (
                       <Button
@@ -549,7 +547,7 @@ export function UserDetailDrawer({
                         className="w-full justify-start text-red-700 border-red-300 hover:bg-red-50"
                       >
                         <Lock className="h-3.5 w-3.5 mr-2" />
-                        Bloquer temporairement (1 heure)
+                        {t("bloquer_temporairement_1_heure")}
                       </Button>
                     )}
                     {data.admin.failedLoginAttempts > 0 && (
@@ -561,10 +559,10 @@ export function UserDetailDrawer({
                 </DrawerSection>
               )}
 
-              {/* Internal notes — éditable inline */}
+
               <DrawerSection
                 icon={FileText}
-                title="Notes internes"
+                title={t("notes_internes")}
                 action={
                   !editingNotes && (
                     <button
@@ -572,7 +570,7 @@ export function UserDetailDrawer({
                       onClick={() => setEditingNotes(true)}
                       className="text-[10px] text-[#0F2D52] hover:underline inline-flex items-center gap-1"
                     >
-                      {data.admin.internalNotes ? "Modifier" : "Ajouter"}
+                      {data.admin.internalNotes ? t("modifier") : t("ajouter")}
                       <Edit className="h-2.5 w-2.5" />
                     </button>
                   )
@@ -584,7 +582,7 @@ export function UserDetailDrawer({
                       value={notesValue}
                       onChange={(e) => setNotesValue(e.target.value)}
                       rows={4}
-                      placeholder="Notes confidentielles visibles uniquement par les admins ayant accès..."
+                      placeholder={t("notes_confidentielles_visibles_uniquement_admins")}
                       maxLength={2000}
                       className="text-xs"
                     />
@@ -607,30 +605,30 @@ export function UserDetailDrawer({
                     {data.admin.internalNotes}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">Aucune note interne</p>
+                  <p className="text-xs text-muted-foreground italic">{t("aucune_note_interne")}</p>
                 )}
               </DrawerSection>
             </div>
 
-            {/* Footer actions liens + Loi 25 */}
+
             <div className="border-t bg-muted/30 px-5 py-3 space-y-2 shrink-0">
               <div className="grid grid-cols-3 gap-2">
                 <Button size="sm" variant="outline" asChild>
                   <Link href={`/admin/audit-trail?adminId=${data.admin.id}`}>
                     <History className="h-3.5 w-3.5 mr-1" />
-                    <span className="text-xs">Audit</span>
+                    <span className="text-xs">{t("audit")}</span>
                   </Link>
                 </Button>
                 <Button size="sm" variant="outline" asChild>
                   <Link href={`mailto:${data.admin.email}`}>
                     <Mail className="h-3.5 w-3.5 mr-1" />
-                    <span className="text-xs">Email</span>
+                    <span className="text-xs">{t("email")}</span>
                   </Link>
                 </Button>
                 <Button size="sm" variant="outline" asChild>
                   <Link href="/admin/settings/security">
                     <LogOut className="h-3.5 w-3.5 mr-1" />
-                    <span className="text-xs">Sécurité</span>
+                    <span className="text-xs">{t("securite")}</span>
                   </Link>
                 </Button>
               </div>
@@ -642,17 +640,16 @@ export function UserDetailDrawer({
                     onClick={handleExportData}
                     disabled={pendingAction}
                     className="flex-1 text-[10px] text-muted-foreground hover:text-[#0F2D52]"
-                    title="Télécharger toutes les données de cet utilisateur (Loi 25 - Article 27)"
+                    title={t("telecharger_toutes_donnees_cet_utilisateur")}
                   >
-                    <FileText className="h-3 w-3 mr-1" />Export données
-                  </Button>
+                    <FileText className="h-3 w-3 mr-1" />{ta("user_detail_drawer_export_donnees")}</Button>
                   <Button
                     size="sm"
                     variant="ghost"
                     onClick={() => setConfirmAnonymize(true)}
                     disabled={pendingAction}
                     className="flex-1 text-[10px] text-red-600 hover:bg-red-50 hover:text-red-700"
-                    title="Anonymiser le compte (droit à l'oubli Loi 25)"
+                    title={t("anonymiser_compte_droit_oubli_loi")}
                   >
                     <AlertTriangle className="h-3 w-3 mr-1" />Anonymiser
                   </Button>
@@ -663,31 +660,31 @@ export function UserDetailDrawer({
         )}
       </SheetContent>
 
-      {/* Confirmations sécurité */}
+
       <ConfirmDialog
         open={confirmDisable2FA}
         onOpenChange={setConfirmDisable2FA}
-        title="Désactiver la 2FA ?"
-        description="L'utilisateur n'aura plus besoin de code 2FA à la connexion. Toutes ses sessions seront fermées. Il devra ré-activer la 2FA depuis son profil pour sécuriser à nouveau son compte."
-        confirmLabel="Désactiver la 2FA"
+        title={t("desactiver_2fa_2")}
+        description={t("utilisateur_plus_besoin_code_2fa")}
+        confirmLabel={t("desactiver_2fa")}
         variant="destructive"
         onConfirm={handleDisable2FA}
       />
       <ConfirmDialog
         open={confirmLock}
         onOpenChange={setConfirmLock}
-        title="Bloquer ce compte temporairement ?"
-        description="Le compte sera inaccessible pendant 1 heure. Toutes les sessions actives seront fermées. Utile en cas de suspicion de compromission."
-        confirmLabel="Bloquer 1 heure"
+        title={t("bloquer_compte_temporairement")}
+        description={t("compte_sera_inaccessible_pendant_1")}
+        confirmLabel={t("bloquer_1_heure")}
         variant="destructive"
         onConfirm={() => handleLock(1)}
       />
       <ConfirmDialog
         open={confirmAnonymize}
         onOpenChange={setConfirmAnonymize}
-        title="Anonymiser ce compte ?"
-        description="Conformité Loi 25 — Droit à l'oubli. Toutes les données personnelles seront effacées (email, nom, téléphone, photo, etc.) mais l'ID est conservé pour préserver l'intégrité des logs et de l'historique métier. Cette action est IRRÉVERSIBLE. Exportez d'abord les données si nécessaire."
-        confirmLabel="Anonymiser définitivement"
+        title={t("anonymiser_compte")}
+        description={t("conformite_loi_25_droit_oubli")}
+        confirmLabel={t("anonymiser_definitivement")}
         variant="destructive"
         onConfirm={handleAnonymize}
       />

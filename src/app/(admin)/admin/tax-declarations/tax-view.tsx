@@ -95,16 +95,16 @@ type Kpis = {
 };
 
 const TYPE_OPTIONS = [
-  { value: "tps_tvq_trimestrielle", label: "Trimestrielle TPS/TVQ" },
-  { value: "annuelle_impots", label: "Annuelle impôts" },
+  { value: "tps_tvq_trimestrielle", labelKey: "trimestrielle_tps_tvq" },
+  { value: "annuelle_impots", labelKey: "annuelle_impots" },
 ];
 
-function typeLabel(v: string): string {
-  return TYPE_OPTIONS.find((t) => t.value === v)?.label ?? v.replace(/_/g, " ");
+function typeKey(v: string): string | null {
+  return TYPE_OPTIONS.find((o) => o.value === v)?.labelKey ?? null;
 }
 
-function statusLabel(s: string): string {
-  return s === "draft" ? "Brouillon" : s === "submitted" ? "Soumise" : s === "confirmed" ? "Confirmée" : s;
+function statusKey(s: string): string | null {
+  return s === "draft" ? "brouillon" : s === "submitted" ? "soumise" : s === "confirmed" ? "confirmee" : null;
 }
 
 function csvEscape(v: string | number | null): string {
@@ -135,6 +135,7 @@ export function TaxView({
   declarations: TaxDeclaration[];
   kpis: Kpis;
 }) {
+  const t = useTranslations("admin.tax_decl");
   const tc = useTranslations("common");
   const router = useRouter();
   const [view, setView] = useViewMode("tax-declarations", "list");
@@ -143,7 +144,7 @@ export function TaxView({
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [createOpen, setCreateOpen] = useState(false);
 
-  // Sticky scroll detection
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -157,27 +158,27 @@ export function TaxView({
     return () => obs.disconnect();
   }, []);
 
-  // Create form state
+
   const [newType, setNewType] = useState("tps_tvq_trimestrielle");
   const [newLabel, setNewLabel] = useState("");
   const [newStart, setNewStart] = useState("");
   const [newEnd, setNewEnd] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
-  // Edit form state
+
   const [editDecl, setEditDecl] = useState<TaxDeclaration | null>(null);
   const [editLabel, setEditLabel] = useState("");
   const [editStatus, setEditStatus] = useState("draft");
   const [editNotes, setEditNotes] = useState("");
 
-  // Delete
+
   const [deleteDecl, setDeleteDecl] = useState<TaxDeclaration | null>(null);
 
-  // Submit confirm
+
   const [submitDecl, setSubmitDecl] = useState<TaxDeclaration | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // Recalculate confirm
+
   const [recalcDecl, setRecalcDecl] = useState<TaxDeclaration | null>(null);
   const [recalculating, setRecalculating] = useState(false);
 
@@ -197,7 +198,7 @@ export function TaxView({
   };
 
   const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!editDecl || !editLabel.trim()) return { success: false, error: "Période requise" };
+    if (!editDecl || !editLabel.trim()) return { success: false, error: t("periode_requise") };
     try {
       const res = await fetch(`/api/tax-declarations/${editDecl.id}`, {
         method: "PATCH",
@@ -210,15 +211,15 @@ export function TaxView({
       });
       if (res.ok) { router.refresh(); return { success: true }; }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: data.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
   const handleDelete = async () => {
     if (!deleteDecl) return;
     const res = await fetch(`/api/tax-declarations/${deleteDecl.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Déclaration supprimée"); setDeleteDecl(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("declaration_supprimee")); setDeleteDecl(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSubmit = async () => {
@@ -227,15 +228,15 @@ export function TaxView({
     try {
       const res = await fetch(`/api/tax-declarations/${submitDecl.id}/submit`, { method: "POST" });
       if (res.ok) {
-        toast.success(`Déclaration "${submitDecl.periodLabel}" marquée comme soumise`);
+        toast.success(t("declaration_marquee_soumise", { label: submitDecl.periodLabel }));
         setSubmitDecl(null);
         router.refresh();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setSubmitting(false);
     }
@@ -252,10 +253,10 @@ export function TaxView({
         router.refresh();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setRecalculating(false);
     }
@@ -263,7 +264,7 @@ export function TaxView({
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newType || !newLabel.trim() || !newStart || !newEnd) {
-      return { success: false, error: "Type, période, début et fin requis" };
+      return { success: false, error: t("type_periode_debut_fin_requis") };
     }
     try {
       const res = await fetch("/api/tax-declarations", {
@@ -283,9 +284,9 @@ export function TaxView({
         return { success: true };
       }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
+      return { success: false, error: data.error || t("erreur") };
     } catch {
-      return { success: false, error: "Erreur réseau" };
+      return { success: false, error: t("erreur_reseau") };
     }
   };
 
@@ -298,7 +299,7 @@ export function TaxView({
       result = result.filter(
         (d) =>
           d.periodLabel.toLowerCase().includes(q) ||
-          typeLabel(d.periodType).toLowerCase().includes(q)
+          (typeKey(d.periodType) ? t(typeKey(d.periodType)!) : d.periodType).toLowerCase().includes(q)
       );
     }
     return result;
@@ -306,9 +307,9 @@ export function TaxView({
 
   const hasActiveFilter = !!(searchQuery || statusFilter !== "all" || typeFilter !== "all");
 
-  // Export PDF de la liste (filtres serveur : type + statut)
-  // Pas de window.open (onglet vide) : anchor invisible → le navigateur déclenche le download
-  // grâce au Content-Disposition: attachment côté API.
+
+
+
   const exportListPdf = () => {
     const params = new URLSearchParams();
     if (typeFilter !== "all") params.set("type", typeFilter);
@@ -320,7 +321,7 @@ export function TaxView({
     a.click();
   };
 
-  // PDF formel d'une déclaration individuelle
+
   const downloadDeclarationPdf = (id: number) => {
     const a = document.createElement("a");
     a.href = `/api/tax-declarations/${id}/pdf`;
@@ -328,33 +329,33 @@ export function TaxView({
     a.click();
   };
 
-  // Export CSV des déclarations filtrées
+
   const exportCsv = () => {
     const headers = [
-      "Période",
-      "Type",
-      "Début",
-      "Fin",
-      "Revenu HT",
-      "TPS collectée",
-      "TVQ collectée",
-      "Total taxes",
-      "Statut",
-      "Date soumission",
-      "Notes",
+      t("periode"),
+      t("type"),
+      t("debut"),
+      t("fin"),
+      t("revenu_ht"),
+      t("tps_collectee"),
+      t("tvq_collectee"),
+      t("total_taxes_plain"),
+      t("statut"),
+      t("date_soumission"),
+      t("notes"),
     ];
     const lines = [headers.map(csvEscape).join(",")];
     filtered.forEach((d) => {
       lines.push([
         d.periodLabel,
-        typeLabel(d.periodType),
+        typeKey(d.periodType) ? t(typeKey(d.periodType)!) : d.periodType,
         shortDate(d.periodStart),
         shortDate(d.periodEnd),
         d.totalRevenueHt.toFixed(2),
         d.totalTps.toFixed(2),
         d.totalTvq.toFixed(2),
         d.totalTaxes.toFixed(2),
-        statusLabel(d.status),
+        statusKey(d.status) ? t(statusKey(d.status)!) : d.status,
         d.submittedAt ? shortDate(d.submittedAt) : "",
         d.notes ?? "",
       ].map(csvEscape).join(","));
@@ -369,19 +370,19 @@ export function TaxView({
     URL.revokeObjectURL(url);
   };
 
-  // Actions menu pour EntityCard (grid view)
+
   const getActions = useCallback((d: TaxDeclaration) => {
     const editable = d.status !== "submitted" && !d.submittedAt;
     return [
-      { label: "Télécharger PDF", icon: <FileDown className="h-3.5 w-3.5" />, onClick: () => downloadDeclarationPdf(d.id) },
-      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) }] : []),
-      ...(editable ? [{ label: "Recalculer les montants", icon: <RefreshCw className="h-3.5 w-3.5" />, onClick: () => setRecalcDecl(d) }] : []),
-      ...(editable ? [{ label: "Marquer soumise", icon: <Send className="h-3.5 w-3.5" />, onClick: () => setSubmitDecl(d) }] : []),
-      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDecl(d), separator: true, variant: "destructive" as const }] : []),
+      { label: t("telecharger_pdf"), icon: <FileDown className="h-3.5 w-3.5" />, onClick: () => downloadDeclarationPdf(d.id) },
+      ...(editable ? [{ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) }] : []),
+      ...(editable ? [{ label: t("recalculer_montants_2"), icon: <RefreshCw className="h-3.5 w-3.5" />, onClick: () => setRecalcDecl(d) }] : []),
+      ...(editable ? [{ label: t("marquer_soumise"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => setSubmitDecl(d) }] : []),
+      ...(editable ? [{ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDecl(d), separator: true, variant: "destructive" as const }] : []),
     ];
   }, []);
 
-  // Appliquer un trimestre preview vers le formulaire Create
+
   const applyQuarterPreset = (q: QuarterPreview) => {
     setNewType("tps_tvq_trimestrielle");
     setNewLabel(q.label);
@@ -391,22 +392,22 @@ export function TaxView({
   };
 
   const columns: Column<TaxDeclaration>[] = [
-    { key: "period", header: "Période", accessor: (r) => <span className="font-semibold">{r.periodLabel}</span>, sortable: true, sortBy: (r) => r.periodLabel },
+    { key: "period", header: t("periode"), accessor: (r) => <span className="font-semibold">{r.periodLabel}</span>, sortable: true, sortBy: (r) => r.periodLabel },
     {
       key: "type",
-      header: "Type",
-      accessor: (r) => <span className="text-xs">{typeLabel(r.periodType)}</span>,
+      header: t("type"),
+      accessor: (r) => <span className="text-xs">{typeKey(r.periodType) ? t(typeKey(r.periodType)!) : r.periodType}</span>,
       hiddenOnMobile: true,
     },
     {
       key: "dates",
-      header: "Dates",
+      header: t("dates"),
       accessor: (r) => <span className="text-xs text-muted-foreground whitespace-nowrap">{shortDate(r.periodStart)} → {shortDate(r.periodEnd)}</span>,
       hiddenOnMobile: true,
     },
     {
       key: "revenue",
-      header: "Revenu HT",
+      header: t("revenu_ht"),
       accessor: (r) => <span className="tabular-nums">{formatCurrency(r.totalRevenueHt)}</span>,
       sortable: true,
       sortBy: (r) => r.totalRevenueHt,
@@ -425,15 +426,15 @@ export function TaxView({
     },
     {
       key: "taxes",
-      header: "Total taxes",
+      header: t("total_taxes_plain"),
       accessor: (r) => <span className="font-semibold tabular-nums text-amber-600">{formatCurrency(r.totalTaxes)}</span>,
       sortable: true,
       sortBy: (r) => r.totalTaxes,
     },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     {
       key: "submitted",
-      header: "Soumise le",
+      header: t("soumise_le"),
       accessor: (r) => r.submittedAt ? <span className="text-xs">{formatDate(new Date(r.submittedAt))}</span> : <span className="text-muted-foreground italic text-xs">—</span>,
       hiddenOnMobile: true,
     },
@@ -445,12 +446,12 @@ export function TaxView({
         if (!editable) {
           return (
             <div className="flex items-center gap-1" onClick={(ev) => ev.stopPropagation()}>
-              <ActionTooltip label="Télécharger le PDF officiel de la déclaration">
-                <button onClick={() => downloadDeclarationPdf(r.id)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-[#0F2D52]" aria-label="Télécharger PDF">
+              <ActionTooltip label={t("telecharger_pdf_officiel_declaration")}>
+                <button onClick={() => downloadDeclarationPdf(r.id)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-[#0F2D52]" aria-label={t("telecharger_pdf")}>
                   <FileDown className="h-3.5 w-3.5" />
                 </button>
               </ActionTooltip>
-              <ActionTooltip label="Déclaration soumise — verrouillée">
+              <ActionTooltip label={t("declaration_soumise_verrouillee")}>
                 <span className="inline-flex items-center justify-center h-7 w-7 text-muted-foreground/60 cursor-help">
                   <Lock className="h-3.5 w-3.5" />
                 </span>
@@ -460,27 +461,27 @@ export function TaxView({
         }
         return (
           <div className="flex items-center gap-1" onClick={(ev) => ev.stopPropagation()}>
-            <ActionTooltip label="Télécharger le PDF officiel de la déclaration">
-              <button onClick={() => downloadDeclarationPdf(r.id)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-[#0F2D52]" aria-label="Télécharger PDF">
+            <ActionTooltip label={t("telecharger_pdf_officiel_declaration")}>
+              <button onClick={() => downloadDeclarationPdf(r.id)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-[#0F2D52]" aria-label={t("telecharger_pdf")}>
                 <FileDown className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
-            <ActionTooltip label="Modifier (label, statut, notes)">
+            <ActionTooltip label={t("modifier_label_statut_notes")}>
               <button onClick={() => openEdit(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground" aria-label={tc("edit")}>
                 <Pencil className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
-            <ActionTooltip label="Recalculer revenu et taxes depuis les factures payées">
-              <button onClick={() => setRecalcDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-blue-600" aria-label="Recalculer">
+            <ActionTooltip label={t("recalculer_revenu_taxes_depuis_factures")}>
+              <button onClick={() => setRecalcDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-blue-600" aria-label={t("recalculer")}>
                 <RefreshCw className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
-            <ActionTooltip label="Marquer comme soumise (irréversible)">
-              <button onClick={() => setSubmitDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-emerald-600" aria-label="Marquer soumise">
+            <ActionTooltip label={t("marquer_comme_soumise_irreversible")}>
+              <button onClick={() => setSubmitDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-emerald-600" aria-label={t("marquer_soumise")}>
                 <Send className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
-            <ActionTooltip label="Supprimer la déclaration">
+            <ActionTooltip label={t("supprimer_declaration")}>
               <button onClick={() => setDeleteDecl(r)} className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-red-600" aria-label={tc("delete")}>
                 <Trash2 className="h-3.5 w-3.5" />
               </button>
@@ -491,30 +492,30 @@ export function TaxView({
     },
   ];
 
-  // Empty state full-page si aucune déclaration
+
   if (declarations.length === 0) {
     return (
       <div className="space-y-5">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
           <h1 className="text-xl font-bold flex items-center gap-2">
             <FileBarChart className="h-5 w-5" />
-            Déclarations fiscales
+            {t("declarations_fiscales")}
           </h1>
-          <p className="text-white/70 text-xs mt-0.5">Suivi des déclarations TPS/TVQ et impôts</p>
+          <p className="text-white/70 text-xs mt-0.5">{t("suivi_declarations_tps_tvq_impots")}</p>
         </div>
 
-        {/* Section aperçu trimestres — utile même sans déclaration créée */}
+
         <QuarterPreviewSection year={kpis.year} quarters={kpis.quarterPreviews} onCreate={applyQuarterPreset} />
 
         <div className="rounded-xl border bg-card p-10 text-center">
           <FileBarChart className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-          <p className="font-semibold text-base">Aucune déclaration fiscale</p>
+          <p className="font-semibold text-base">{t("aucune_declaration_fiscale")}</p>
           <p className="text-sm text-muted-foreground mt-1 max-w-md mx-auto">
-            Créez votre première déclaration pour archiver les montants TPS/TVQ collectés et payés sur une période donnée.
+            {t("creez_premiere_declaration_archiver_montants")}
           </p>
           <Button onClick={() => { resetForm(); setCreateOpen(true); }} className="mt-4">
             <Plus className="h-4 w-4 mr-1.5" />
-            Créer ma première déclaration
+            {t("creer_ma_premiere_declaration")}
           </Button>
         </div>
 
@@ -540,53 +541,53 @@ export function TaxView({
 
   return (
     <div className="space-y-5">
-      {/* Hero VNK */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <FileBarChart className="h-5 w-5" />
-              Déclarations fiscales
+              {t("declarations_fiscales")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Suivi des déclarations TPS/TVQ et impôts · {declarations.length} déclaration{declarations.length > 1 ? "s" : ""} · {kpis.countDraft} brouillon{kpis.countDraft > 1 ? "s" : ""}, {kpis.countSubmitted} soumise{kpis.countSubmitted > 1 ? "s" : ""}
+              {t("suivi_declarations_resume", { total: declarations.length, drafts: kpis.countDraft, submitted: kpis.countSubmitted })}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <ActionTooltip label="Exporter le rapport annuel en PDF (KPI + liste + net à remettre)">
+            <ActionTooltip label={t("exporter_rapport_annuel_pdf_kpi")}>
               <Button onClick={exportListPdf} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
                 <FileDown className="h-3.5 w-3.5 mr-1.5" />
-                Exporter PDF
+                {t("exporter_pdf")}
               </Button>
             </ActionTooltip>
-            <ActionTooltip label="Exporter en CSV pour Excel / comptable">
+            <ActionTooltip label={t("exporter_csv_excel_comptable")}>
               <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
                 <Download className="h-3.5 w-3.5 mr-1.5" />
-                Exporter CSV
+                {t("exporter_csv")}
               </Button>
             </ActionTooltip>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }} size="sm" variant="secondary" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Nouvelle déclaration
+              {t("nouvelle_declaration")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs YTD */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Revenu brut HT</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("revenu_brut_ht")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatCurrency(kpis.revenueHt)}</p>
           <p className="text-[10px] text-muted-foreground">factures payées {kpis.year}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Taxes collectées</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("taxes_collectees")}</p>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(kpis.totalTaxesCollected)}</p>
           <p className="text-[10px] text-muted-foreground">TPS {formatCurrency(kpis.tpsCollected)} · TVQ {formatCurrency(kpis.tvqCollected)}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Taxes payées (dépenses)</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("taxes_payees_depenses")}</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{formatCurrency(kpis.tpsPaid + kpis.tvqPaid)}</p>
           <p className="text-[10px] text-muted-foreground">TPS {formatCurrency(kpis.tpsPaid)} · TVQ {formatCurrency(kpis.tvqPaid)}</p>
         </div>
@@ -595,61 +596,61 @@ export function TaxView({
           kpis.netToRemit >= 0 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200",
         )}>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            {kpis.netToRemit >= 0 ? "Net à remettre" : "Remboursement attendu"}
+            {kpis.netToRemit >= 0 ? t("net_remettre") : t("remboursement_attendu")}
           </p>
           <p className={cn("text-lg font-bold tabular-nums", kpis.netToRemit >= 0 ? "text-amber-700" : "text-emerald-700")}>
             {formatCurrency(Math.abs(kpis.netToRemit))}
           </p>
-          <p className="text-[10px] text-muted-foreground">collectées − payées</p>
+          <p className="text-[10px] text-muted-foreground">{t("collectees_payees")}</p>
         </div>
       </div>
 
-      {/* Aperçu trimestres année courante */}
+
       <QuarterPreviewSection year={kpis.year} quarters={kpis.quarterPreviews} onCreate={applyQuarterPreset} />
 
-      {/* Sentinel — détecte quand contenu sort viewport */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky bar (rendue uniquement quand scrollée) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 bg-background/95 backdrop-blur -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 shadow-sm border-b">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs mb-2 pt-1">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileBarChart className="h-4 w-4" />
-              Déclarations fiscales
+              {t("declarations_fiscales")}
             </span>
             <span className="font-semibold">{filtered.length} affichée{filtered.length > 1 ? "s" : ""}</span>
-            <span className="text-muted-foreground">Revenu HT <span className="font-semibold text-emerald-600">{formatCurrency(kpis.revenueHt)}</span></span>
-            <span className="text-muted-foreground">Collectées <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalTaxesCollected)}</span></span>
+            <span className="text-muted-foreground">{t("revenu_ht")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.revenueHt)}</span></span>
+            <span className="text-muted-foreground">{t("collectees")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalTaxesCollected)}</span></span>
             <span className={cn("text-muted-foreground ml-auto", kpis.netToRemit >= 0 ? "" : "")}>
-              {kpis.netToRemit >= 0 ? "Net à remettre" : "Remboursement"} <span className={cn("font-semibold", kpis.netToRemit >= 0 ? "text-amber-700" : "text-emerald-700")}>{formatCurrency(Math.abs(kpis.netToRemit))}</span>
+              {kpis.netToRemit >= 0 ? t("net_remettre") : t("remboursement")} <span className={cn("font-semibold", kpis.netToRemit >= 0 ? "text-amber-700" : "text-emerald-700")}>{formatCurrency(Math.abs(kpis.netToRemit))}</span>
             </span>
           </div>
         </div>
       )}
 
-      {/* Filtres */}
+
       <div className="flex flex-wrap items-end gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Label className="text-[10px]">Recherche</Label>
+          <Label className="text-[10px]">{t("recherche")}</Label>
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Période, type…"
+              placeholder={t("periode_type")}
               className="h-9 pl-8 text-xs"
             />
           </div>
         </div>
         <div>
-          <Label className="text-[10px]">Type</Label>
+          <Label className="text-[10px]">{t("type")}</Label>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="h-9 w-[180px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous types</SelectItem>
-              {TYPE_OPTIONS.map((t) => (
-                <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+              <SelectItem value="all">{t("tous_types")}</SelectItem>
+              {TYPE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -659,7 +660,7 @@ export function TaxView({
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-9 w-[160px] text-xs"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous statuts</SelectItem>
+              <SelectItem value="all">{t("tous_statuts")}</SelectItem>
               <SelectItem value="draft">Brouillon ({kpis.countDraft})</SelectItem>
               <SelectItem value="submitted">Soumise ({kpis.countSubmitted})</SelectItem>
               <SelectItem value="confirmed">Confirmée ({kpis.countConfirmed})</SelectItem>
@@ -669,21 +670,21 @@ export function TaxView({
         <ViewToggle storageKey="tax-declarations" defaultView="list" onChange={setView} />
       </div>
 
-      {/* Vue grille ou table */}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((d) => (
             <EntityCard
               key={d.id}
               title={d.periodLabel}
-              subtitle={typeLabel(d.periodType)}
+              subtitle={typeKey(d.periodType) ? t(typeKey(d.periodType)!) : d.periodType}
               icon={<FileBarChart className="h-5 w-5 text-muted-foreground" />}
               badges={[
-                { label: statusLabel(d.status), variant: d.status === "confirmed" ? "secondary" : d.status === "submitted" ? "outline" : "destructive" },
+                { label: statusKey(d.status) ? t(statusKey(d.status)!) : d.status, variant: d.status === "confirmed" ? "secondary" : d.status === "submitted" ? "outline" : "destructive" },
               ]}
               stats={[
-                { label: "Revenu HT", value: formatCurrency(d.totalRevenueHt) },
-                { label: "Total taxes", value: formatCurrency(d.totalTaxes) },
+                { label: t("revenu_ht"), value: formatCurrency(d.totalRevenueHt) },
+                { label: t("total_taxes_plain"), value: formatCurrency(d.totalTaxes) },
               ]}
               actions={getActions(d)}
               footer={
@@ -696,7 +697,7 @@ export function TaxView({
           ))}
           {filtered.length === 0 && (
             <div className="col-span-full text-center py-12 text-sm text-muted-foreground">
-              {hasActiveFilter ? "Aucune déclaration ne correspond aux filtres" : "Aucune déclaration"}
+              {hasActiveFilter ? t("aucune_declaration_ne_correspond_filtres") : t("aucune_declaration")}
             </div>
           )}
         </div>
@@ -705,14 +706,14 @@ export function TaxView({
           data={filtered}
           columns={columns}
           getRowId={(r) => r.id}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           storageKey="admin-tax-declarations"
           onRowClick={(r) => { if (r.status !== "submitted" && !r.submittedAt) openEdit(r); }}
-          emptyMessage={hasActiveFilter ? "Aucune déclaration ne correspond aux filtres" : "Aucune déclaration"}
+          emptyMessage={hasActiveFilter ? t("aucune_declaration_ne_correspond_filtres") : t("aucune_declaration")}
         />
       )}
 
-      {/* Edit modal VNK */}
+
       <TaxFormDialog
         mode="edit"
         open={!!editDecl}
@@ -730,7 +731,7 @@ export function TaxView({
         onSubmit={handleEdit}
       />
 
-      {/* Create modal VNK */}
+
       <TaxFormDialog
         mode="create"
         open={createOpen}
@@ -748,44 +749,44 @@ export function TaxView({
         onSubmit={handleCreate}
       />
 
-      {/* Delete confirm */}
+
       <ConfirmDialog
         open={!!deleteDecl}
         onOpenChange={(o) => { if (!o) setDeleteDecl(null); }}
-        title="Supprimer cette déclaration ?"
+        title={t("supprimer_declaration_2")}
         description={`La déclaration "${deleteDecl?.periodLabel}" sera supprimée définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
 
-      {/* Submit confirm */}
+
       <ConfirmDialog
         open={!!submitDecl}
         onOpenChange={(o) => { if (!o) setSubmitDecl(null); }}
         variant="default"
-        title="Marquer comme soumise ?"
+        title={t("marquer_comme_soumise")}
         description={
           submitDecl
             ? `"${submitDecl.periodLabel}" sera verrouillée et ne pourra plus être modifiée ni supprimée. Total à remettre : ${formatCurrency(submitDecl.totalTaxes)}.`
             : ""
         }
-        confirmLabel={submitting ? "Soumission…" : "Confirmer la soumission"}
+        confirmLabel={submitting ? t("soumission") : t("confirmer_soumission")}
         onConfirm={handleSubmit}
         loading={submitting}
       />
 
-      {/* Recalculate confirm */}
+
       <ConfirmDialog
         open={!!recalcDecl}
         onOpenChange={(o) => { if (!o) setRecalcDecl(null); }}
         variant="default"
-        title="Recalculer les montants ?"
+        title={t("recalculer_montants")}
         description={
           recalcDecl
             ? `Revenu HT, TPS et TVQ seront recalculés depuis les factures payées entre le ${shortDate(recalcDecl.periodStart)} et le ${shortDate(recalcDecl.periodEnd)}.`
             : ""
         }
-        confirmLabel={recalculating ? "Recalcul…" : "Recalculer"}
+        confirmLabel={recalculating ? t("recalcul") : t("recalculer")}
         onConfirm={handleRecalculate}
         loading={recalculating}
       />
@@ -803,6 +804,7 @@ function QuarterPreviewSection({
   quarters: QuarterPreview[];
   onCreate: (q: QuarterPreview) => void;
 }) {
+  const t = useTranslations("admin.tax_decl");
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -812,7 +814,7 @@ function QuarterPreviewSection({
         </h3>
         <p className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
           <Info className="h-3 w-3" />
-          Clic sur un trimestre pour pré-remplir une nouvelle déclaration
+          {t("clic_trimestre_pre_remplir_nouvelle")}
         </p>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
@@ -837,10 +839,10 @@ function QuarterPreviewSection({
                 <span className="text-[9px] text-muted-foreground">{q.invoiceCount} facture{q.invoiceCount > 1 ? "s" : ""}</span>
               </div>
               <p className="text-base font-bold tabular-nums">{formatCurrency(q.revenueHt)}</p>
-              <p className="text-[9px] text-muted-foreground">Revenu HT</p>
+              <p className="text-[9px] text-muted-foreground">{t("revenu_ht")}</p>
               {totalCollected > 0 && (
                 <div className="mt-1.5 pt-1.5 border-t flex items-baseline justify-between text-[10px]">
-                  <span className="text-muted-foreground">Net à remettre</span>
+                  <span className="text-muted-foreground">{t("net_remettre")}</span>
                   <span className={cn("font-semibold", netToRemit >= 0 ? "text-amber-700" : "text-emerald-700")}>
                     {formatCurrency(Math.abs(netToRemit))}
                   </span>
@@ -879,31 +881,32 @@ function TaxFormDialog({
   quarterPresets: QuarterPreview[];
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const t = useTranslations("admin.tax_decl");
   const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const isCreate = mode === "create";
 
-  // Reset preview when dialog closes
+
   useEffect(() => {
     if (!open) {
       setPreview(null);
     }
   }, [open]);
 
-  // Reset preview quand start/end changent (sera recalculé sur clic)
+
   useEffect(() => {
     setPreview(null);
   }, [values.start, values.end]);
 
   const fetchPreview = async () => {
     if (!values.start || !values.end) {
-      toast.error("Renseigner les dates de début et fin");
+      toast.error(t("renseigner_dates_debut_fin"));
       return;
     }
     if (new Date(values.end) < new Date(values.start)) {
-      toast.error("La date de fin doit être après la date de début");
+      toast.error(t("date_fin_doit_etre_apres_2"));
       return;
     }
     setPreviewing(true);
@@ -914,10 +917,10 @@ function TaxFormDialog({
         setPreview(data);
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur de prévisualisation");
+        toast.error(d.error || t("erreur_previsualisation"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setPreviewing(false);
     }
@@ -940,10 +943,10 @@ function TaxFormDialog({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success(isCreate ? "Déclaration créée" : "Déclaration mise à jour");
+        toast.success(isCreate ? t("declaration_creee") : t("declaration_mise_jour"));
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue");
+        toast.error(result.error || t("erreur_survenue"));
       }
     });
   };
@@ -951,7 +954,7 @@ function TaxFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
-        {/* Header navy gradient VNK */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-5 text-white relative shrink-0">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" aria-hidden />
           <div className="relative flex items-center gap-4">
@@ -960,23 +963,23 @@ function TaxFormDialog({
             </div>
             <div className="min-w-0">
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouvelle déclaration fiscale" : "Modifier la déclaration"}
+                {isCreate ? t("nouvelle_declaration_fiscale") : t("modifier_declaration")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5 truncate">
                 {isCreate
-                  ? "Archive les montants TPS/TVQ collectés et payés pour une période donnée"
-                  : (editDecl?.periodLabel || "Modification")}
+                  ? t("archive_montants_tps_tvq_collectes")
+                  : (editDecl?.periodLabel || t("modification"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
-        {/* Body */}
+
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          {/* Presets trimestres (création seulement) */}
+
           {isCreate && quarterPresets.length > 0 && (
-            <FormSection title="Préremplissage rapide" icon={<Calendar className="h-3.5 w-3.5" />}>
-              <p className="text-[10px] text-muted-foreground -mt-1">Cliquer un trimestre pour remplir automatiquement le label et les dates :</p>
+            <FormSection title={t("preremplissage_rapide")} icon={<Calendar className="h-3.5 w-3.5" />}>
+              <p className="text-[10px] text-muted-foreground -mt-1">{t("cliquer_trimestre_remplir_automatiquement_label")}</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {quarterPresets.map((q) => (
                   <button
@@ -1001,34 +1004,34 @@ function TaxFormDialog({
             </FormSection>
           )}
 
-          {/* Section 1 : Détails période */}
-          <FormSection title="Période" icon={<Calendar className="h-3.5 w-3.5" />}>
+
+          <FormSection title={t("periode")} icon={<Calendar className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de déclaration *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_declaration")}</Label>
                 {isCreate ? (
                   <Select value={values.type} onValueChange={values.setType}>
-                    <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                     <SelectContent>
-                      {TYPE_OPTIONS.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                      {TYPE_OPTIONS.map((o) => (
+                        <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 ) : (
                   <div className="h-9 px-3 rounded-md border bg-muted flex items-center text-sm text-muted-foreground">
-                    {typeLabel(values.type)}
+                    {typeKey(values.type) ? t(typeKey(values.type)!) : values.type}
                   </div>
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Libellé période *</Label>
-                <Input value={values.label} onChange={(e) => values.setLabel(e.target.value)} placeholder="ex : T1 2026" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("libelle_periode")}</Label>
+                <Input value={values.label} onChange={(e) => values.setLabel(e.target.value)} placeholder={t("ex_t1_2026")} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Début *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("debut")}</Label>
                 {isCreate ? (
                   <Input type="date" value={values.start} onChange={(e) => values.setStart(e.target.value)} />
                 ) : (
@@ -1039,7 +1042,7 @@ function TaxFormDialog({
                 )}
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fin *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("fin")}</Label>
                 {isCreate ? (
                   <Input type="date" value={values.end} onChange={(e) => values.setEnd(e.target.value)} min={values.start || undefined} />
                 ) : (
@@ -1053,17 +1056,17 @@ function TaxFormDialog({
             {isCreate && !datesValid && values.start && values.end && (
               <p className="text-[11px] text-red-600 inline-flex items-center gap-1">
                 <Info className="h-3 w-3" />
-                La date de fin doit être après la date de début.
+                {t("date_fin_doit_etre_apres")}
               </p>
             )}
           </FormSection>
 
-          {/* Section 2 (Create) : Aperçu calculé */}
+
           {isCreate && (
-            <FormSection title="Aperçu des montants" icon={<Calculator className="h-3.5 w-3.5" />}>
+            <FormSection title={t("apercu_montants")} icon={<Calculator className="h-3.5 w-3.5" />}>
               <div className="flex items-center justify-between">
                 <p className="text-[11px] text-muted-foreground">
-                  Calcule revenu, TPS et TVQ collectés et payés pour la période sélectionnée — avant de créer la déclaration.
+                  {t("calcule_revenu_tps_tvq_collectes")}
                 </p>
                 <Button
                   type="button"
@@ -1074,28 +1077,28 @@ function TaxFormDialog({
                   className="shrink-0"
                 >
                   <Calculator className="h-3 w-3 mr-1" />
-                  {previewing ? "Calcul…" : "Calculer"}
+                  {previewing ? t("calcul") : t("calculer")}
                 </Button>
               </div>
               {preview && (
                 <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 space-y-2 text-xs">
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Factures payées</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("factures_payees")}</p>
                       <div className="space-y-0.5">
-                        <div className="flex justify-between"><span className="text-muted-foreground">Nombre</span><span className="tabular-nums">{preview.invoices.count}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Revenu HT</span><span className="tabular-nums font-semibold text-emerald-600">{formatCurrency(preview.invoices.revenueHt)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">TPS collectée</span><span className="tabular-nums text-blue-600">{formatCurrency(preview.invoices.tpsCollected)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">TVQ collectée</span><span className="tabular-nums text-indigo-600">{formatCurrency(preview.invoices.tvqCollected)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("nombre")}</span><span className="tabular-nums">{preview.invoices.count}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("revenu_ht")}</span><span className="tabular-nums font-semibold text-emerald-600">{formatCurrency(preview.invoices.revenueHt)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_collectee")}</span><span className="tabular-nums text-blue-600">{formatCurrency(preview.invoices.tpsCollected)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_collectee")}</span><span className="tabular-nums text-indigo-600">{formatCurrency(preview.invoices.tvqCollected)}</span></div>
                       </div>
                     </div>
                     <div>
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">Dépenses</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">{t("depenses")}</p>
                       <div className="space-y-0.5">
-                        <div className="flex justify-between"><span className="text-muted-foreground">Nombre</span><span className="tabular-nums">{preview.expenses.count}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">Dépenses HT</span><span className="tabular-nums">{formatCurrency(preview.expenses.expensesHt)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">TPS payée</span><span className="tabular-nums text-blue-600">{formatCurrency(preview.expenses.tpsPaid)}</span></div>
-                        <div className="flex justify-between"><span className="text-muted-foreground">TVQ payée</span><span className="tabular-nums text-indigo-600">{formatCurrency(preview.expenses.tvqPaid)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("nombre")}</span><span className="tabular-nums">{preview.expenses.count}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("depenses_ht")}</span><span className="tabular-nums">{formatCurrency(preview.expenses.expensesHt)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_payee")}</span><span className="tabular-nums text-blue-600">{formatCurrency(preview.expenses.tpsPaid)}</span></div>
+                        <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_payee")}</span><span className="tabular-nums text-indigo-600">{formatCurrency(preview.expenses.tvqPaid)}</span></div>
                       </div>
                     </div>
                   </div>
@@ -1104,7 +1107,7 @@ function TaxFormDialog({
                     preview.netToRemit.total >= 0 ? "bg-amber-50 border-amber-200" : "bg-emerald-50 border-emerald-200",
                   )}>
                     <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
-                      {preview.netToRemit.total >= 0 ? "Net à remettre" : "Remboursement attendu"}
+                      {preview.netToRemit.total >= 0 ? t("net_remettre") : t("remboursement_attendu")}
                     </p>
                     <p className={cn("text-xl font-bold tabular-nums", preview.netToRemit.total >= 0 ? "text-amber-700" : "text-emerald-700")}>
                       {formatCurrency(Math.abs(preview.netToRemit.total))}
@@ -1116,71 +1119,68 @@ function TaxFormDialog({
                 </div>
               )}
               {!preview && datesValid && (
-                <p className="text-[11px] text-muted-foreground italic">Cliquer sur Calculer pour voir l&apos;aperçu.</p>
+                <p className="text-[11px] text-muted-foreground italic">{t("cliquer_calculer_voir_apos_apercu")}</p>
               )}
             </FormSection>
           )}
 
-          {/* Section 2 (Edit) : Montants archivés */}
+
           {!isCreate && editDecl && (
-            <FormSection title="Montants archivés" icon={<Calculator className="h-3.5 w-3.5" />}>
+            <FormSection title={t("montants_archives")} icon={<Calculator className="h-3.5 w-3.5" />}>
               <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Revenu HT</span><span className="tabular-nums font-semibold text-emerald-600">{formatCurrency(editDecl.totalRevenueHt)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TPS collectée</span><span className="tabular-nums text-blue-600">{formatCurrency(editDecl.totalTps)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TVQ collectée</span><span className="tabular-nums text-indigo-600">{formatCurrency(editDecl.totalTvq)}</span></div>
-                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>Total taxes collectées</span><span className="tabular-nums">{formatCurrency(editDecl.totalTaxes)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("revenu_ht")}</span><span className="tabular-nums font-semibold text-emerald-600">{formatCurrency(editDecl.totalRevenueHt)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_collectee")}</span><span className="tabular-nums text-blue-600">{formatCurrency(editDecl.totalTps)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_collectee")}</span><span className="tabular-nums text-indigo-600">{formatCurrency(editDecl.totalTvq)}</span></div>
+                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>{t("total_taxes_collectees")}</span><span className="tabular-nums">{formatCurrency(editDecl.totalTaxes)}</span></div>
               </div>
-              <p className="text-[10px] text-muted-foreground">
-                Ces montants ont été calculés au moment de la création. Utiliser <strong>Recalculer</strong> dans la liste si des factures ont été ajoutées/modifiées.
-              </p>
+              <p className="text-[10px] text-muted-foreground">{t("tax_view_ces_montants_ont_ete_calcules_au_moment")}<strong>{t("recalculer")}</strong>{t("tax_view_dans_la_liste_si_des_factures_ont")}</p>
             </FormSection>
           )}
 
-          {/* Section 3 (Edit) : Statut */}
+
           {!isCreate && (
             <FormSection title={tc("status")} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Statut actuel</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("statut_actuel")}</Label>
                 <Select value={values.status} onValueChange={values.setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="submitted">Soumise (verrouille la déclaration)</SelectItem>
-                    <SelectItem value="confirmed">Confirmée par l&apos;ARC / Revenu Québec</SelectItem>
+                    <SelectItem value="draft">{t("brouillon")}</SelectItem>
+                    <SelectItem value="submitted">{t("soumise_verrouille_declaration")}</SelectItem>
+                    <SelectItem value="confirmed">{t("confirmee_apos_arc_revenu_quebec")}</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground">
-                  Une fois marquée comme <strong>soumise</strong>, la déclaration ne peut plus être modifiée ni supprimée.
+                  {t.rich("une_fois_marquee_soumise", { b: (c) => <strong>{c}</strong> })}
                 </p>
               </div>
             </FormSection>
           )}
 
-          {/* Notes */}
-          <FormSection title="Notes internes" icon={<Tag className="h-3.5 w-3.5" />}>
+
+          <FormSection title={t("notes_internes")} icon={<Tag className="h-3.5 w-3.5" />}>
             <Textarea
               value={values.notes}
               onChange={(e) => values.setNotes(e.target.value)}
               rows={3}
-              placeholder="N° de soumission ARC, accusé de réception, commentaire interne…"
+              placeholder={t("n_soumission_arc_accuse_reception")}
             />
           </FormSection>
 
-          {/* Aide pédagogique (Create) */}
+
           {isCreate && (
             <div className="rounded-lg border bg-blue-50 p-3 text-xs text-blue-900 flex items-start gap-2">
               <Info className="h-4 w-4 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <p className="font-semibold">Comment ça fonctionne</p>
-                <p>
-                  À la création, le système calcule automatiquement le revenu HT, la TPS et la TVQ collectées depuis toutes les factures <strong>payées</strong> entre les dates de début et fin (inclusif). Les dépenses ne sont pas archivées mais leurs taxes payées sont visibles dans l&apos;aperçu pour calculer le <strong>net à remettre</strong>.
+                <p className="font-semibold">{t("comment_ca_fonctionne")}</p>
+                <p>{t("tax_view_a_la_creation_le_systeme_calcule_automatiquement")}<strong>{t("payees")}</strong> {t("entre_dates_debut_fin_inclusif")} <strong>{t("net_remettre_2")}</strong>.
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer */}
+
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button
@@ -1188,7 +1188,7 @@ function TaxFormDialog({
             disabled={pending || !canSubmit}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {pending ? "Enregistrement…" : (isCreate ? "Créer la déclaration" : "Enregistrer")}
+            {pending ? t("enregistrement") : (isCreate ? t("creer_declaration") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

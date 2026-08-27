@@ -1,0 +1,12 @@
+{
+  "n_resultats": "{count, plural, =0 {0 résultat} one {# résultat} other {# résultats}}",
+  "plage_sur_total": "{from}–{to} sur {total}",
+  "filtrer_par_statut": "Filtrer par statut",
+  "tous_statuts": "Tous les statuts",
+  "aucun_resultat": "Aucun résultat",
+  "rien_a_afficher": "Il n'y a rien à afficher pour le moment.",
+  "lignes_par_page": "Lignes par page",
+  "lignes": "Lignes :",
+  "rechercher": "Rechercher",
+  "rechercher_points": "Rechercher..."
+}

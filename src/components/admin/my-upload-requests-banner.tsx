@@ -40,8 +40,8 @@ const CATEGORY_ICON: Record<DocRequestCategory, React.ComponentType<{ className?
   other: FileQuestion,
 };
 
-function getCategoryLabel(value: string): string {
-  return DOC_REQUEST_CATEGORIES.find((c) => c.value === value)?.label ?? "Document";
+function getCategoryKey(value: string): string | null {
+  return DOC_REQUEST_CATEGORIES.find((c) => c.value === value)?.labelKey ?? null;
 }
 
 function getCategoryIcon(value: string): React.ComponentType<{ className?: string }> {
@@ -73,10 +73,11 @@ export function MyUploadRequestsBanner({
   onUpload: (requestId: number) => void;
   className?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const sorted = useMemo(() => {
     return [...requests].sort((a, b) => {
-      // dueDate asc (nulls last), puis createdAt desc
+
       const ad = a.dueDate ? new Date(a.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       const bd = b.dueDate ? new Date(b.dueDate).getTime() : Number.MAX_SAFE_INTEGER;
       if (ad !== bd) return ad - bd;
@@ -135,7 +136,7 @@ export function MyUploadRequestsBanner({
       <div className="flex-1 min-w-0">
         <p className={cn("text-sm font-bold", palette.title)}>
           {requests.length === 1
-            ? "1 document à téléverser"
+            ? t("1_document_televerser")
             : `${requests.length} documents à téléverser`}
           {isUrgent && urgentCount > 0 && (
             <span className="ml-2 text-xs font-medium">
@@ -145,18 +146,19 @@ export function MyUploadRequestsBanner({
         </p>
         <p className={cn("text-xs mt-0.5", palette.sub)}>
           {isUrgent
-            ? "Au moins une demande arrive à échéance — merci de téléverser rapidement."
-            : "Les RH vous demandent de téléverser les documents listés ci-dessous."}
+            ? t("moins_demande_arrive_echeance_merci")
+            : t("rh_vous_demandent_televerser_documents")}
         </p>
 
-        {/* Liste compacte des demandes */}
+
         <div className="mt-2 flex flex-col gap-1.5">
           {sorted.slice(0, 4).map((r) => {
             const days = daysUntil(r.dueDate);
             const due = formatDate(r.dueDate);
             const itemUrgent = days !== null && days <= URGENT_THRESHOLD_DAYS;
             const CatIcon = getCategoryIcon(r.category);
-            const catLabel = getCategoryLabel(r.category);
+            const catKey = getCategoryKey(r.category);
+            const catLabel = catKey ? t(catKey) : t("document");
             return (
               <div
                 key={r.id}
@@ -170,7 +172,7 @@ export function MyUploadRequestsBanner({
                   <span className="truncate">{r.title}</span>
                   {r.isRequired && (
                     <span className="text-[10px] text-red-700 font-semibold">
-                      · obligatoire
+                      {t("obligatoire")}
                     </span>
                   )}
                 </span>

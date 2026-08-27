@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { X, Download, Loader2, FileText, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ export function PdfViewerModal({
   downloadName,
   refreshKey,
 }: Props) {
+  const tc = useTranslations("common");
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export function PdfViewerModal({
       })
       .catch(() => {
         if (cancelled) return;
-        setError("Le PDF n'est pas disponible pour le moment.");
+        setError(tc("pdf_indisponible"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -127,7 +129,7 @@ export function PdfViewerModal({
           <button
             onClick={onClose}
             className="h-7 w-7 sm:h-8 sm:w-8 rounded-md hover:bg-white/10 flex items-center justify-center shrink-0"
-            aria-label="Fermer"
+            aria-label={tc("close")}
           >
             <X className="h-4 w-4 sm:h-5 sm:w-5" />
           </button>
@@ -138,7 +140,7 @@ export function PdfViewerModal({
           {loading && (
             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3">
               <Loader2 className="h-10 w-10 animate-spin text-white/40" />
-              <p className="text-sm text-white/50">Chargement du document…</p>
+              <p className="text-sm text-white/50">{tc("chargement_document")}</p>
             </div>
           )}
           {error && (
@@ -168,9 +170,7 @@ export function PdfViewerModal({
             onClick={handleDownload}
             disabled={!blobUrl}
           >
-            <Download className="h-4 w-4 mr-1.5" />
-            Télécharger
-          </Button>
+            <Download className="h-4 w-4 mr-1.5" />{tc("pdf_viewer_modal_telecharger")}</Button>
         </div>
       </div>
     </div>,

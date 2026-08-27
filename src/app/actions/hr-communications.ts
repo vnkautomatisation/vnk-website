@@ -1,6 +1,7 @@
 "use server";
 // Annonces internes + politiques RH.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -36,10 +37,11 @@ const announcementSchema = z.object({
 });
 
 export async function upsertAnnouncementAction(input: z.infer<typeof announcementSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const authorId = await requireHrWrite();
   if (!authorId) return unauthorized();
   const parsed = announcementSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     authorId,
@@ -135,10 +137,11 @@ const policySchema = z.object({
 });
 
 export async function upsertHrPolicyAction(input: z.infer<typeof policySchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const publishedBy = await requireHrWrite();
   if (!publishedBy) return unauthorized();
   const parsed = policySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     key: parsed.data.key,
@@ -162,6 +165,7 @@ export async function upsertHrPolicyAction(input: z.infer<typeof policySchema>):
 
 // Duplique une politique RH : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateHrPolicyAction(input: { id: number }): Promise<Result<{ id: number; title: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const publishedBy = await requireHrWrite();
   if (!publishedBy) return unauthorized();
 
@@ -174,7 +178,7 @@ export async function duplicateHrPolicyAction(input: { id: number }): Promise<Re
   let n = 2;
   while (await prisma.hrPolicy.findUnique({ where: { key: newKey }, select: { id: true } })) {
     newKey = `${baseKey}_${n++}`;
-    if (n > 50) return { success: false, error: "Trop de copies existantes" };
+    if (n > 50) return { success: false, error: t("trop_de_copies_existantes") };
   }
 
   const newTitle = `${src.title} (copie)`;

@@ -146,23 +146,23 @@ const NAVY = "#0F2D52";
 const NAVY_HOVER = "#1a3a66";
 
 // Types de conge — palette restreinte (uniquement teintes pour barres calendrier)
-const TYPE_META: Record<string, { label: string; icon: typeof Sun; bar: string; barDark: string }> = {
-  vacation:    { label: "Vacances",   icon: Sun,          bar: "#bcd2eb", barDark: "#3b6fb0" },
-  sick:        { label: "Maladie",    icon: Bandage,      bar: "#f8c8c8", barDark: "#c44545" },
-  parental:    { label: "Parental",   icon: Baby,         bar: "#e0d4f0", barDark: "#7a5dab" },
-  unpaid:      { label: "Sans solde", icon: Home,         bar: "#dde1e7", barDark: "#5a6678" },
-  bereavement: { label: "Deces",      icon: Home,         bar: "#d4d4d4", barDark: "#525252" },
-  other:       { label: "Autre",      icon: CalendarDays, bar: "#f5e0b8", barDark: "#a07729" },
+const TYPE_META: Record<string, { labelKey: string; icon: typeof Sun; bar: string; barDark: string }> = {
+  vacation:    { labelKey: "type_vacation",   icon: Sun,          bar: "#bcd2eb", barDark: "#3b6fb0" },
+  sick:        { labelKey: "type_sick",    icon: Bandage,      bar: "#f8c8c8", barDark: "#c44545" },
+  parental:    { labelKey: "type_parental",   icon: Baby,         bar: "#e0d4f0", barDark: "#7a5dab" },
+  unpaid:      { labelKey: "type_unpaid", icon: Home,         bar: "#dde1e7", barDark: "#5a6678" },
+  bereavement: { labelKey: "type_bereavement",      icon: Home,         bar: "#d4d4d4", barDark: "#525252" },
+  other:       { labelKey: "type_other",      icon: CalendarDays, bar: "#f5e0b8", barDark: "#a07729" },
 };
 function typeMeta(t: string) {
   return TYPE_META[t] ?? TYPE_META.other;
 }
 
-const STATUS_META: Record<string, { label: string; cls: string }> = {
-  pending:   { label: "En attente", cls: "bg-amber-50 text-amber-800 border border-amber-200" },
-  approved:  { label: "Approuvee", cls: "bg-emerald-50 text-emerald-800 border border-emerald-200" },
-  rejected:  { label: "Refusee",   cls: "bg-red-50 text-red-800 border border-red-200" },
-  cancelled: { label: "Annulee",   cls: "bg-slate-100 text-slate-700 border border-slate-200" },
+const STATUS_META: Record<string, { labelKey: string; cls: string }> = {
+  pending:   { labelKey: "status_pending", cls: "bg-amber-50 text-amber-800 border border-amber-200" },
+  approved:  { labelKey: "status_approved", cls: "bg-emerald-50 text-emerald-800 border border-emerald-200" },
+  rejected:  { labelKey: "status_rejected",   cls: "bg-red-50 text-red-800 border border-red-200" },
+  cancelled: { labelKey: "status_cancelled",   cls: "bg-slate-100 text-slate-700 border border-slate-200" },
 };
 
 function fmtDate(s: string): string {
@@ -203,6 +203,7 @@ export function LeavesAdminView({
   activeWindows?: ActiveWindow[];
   activePendingAppealsTotal?: number;
 }) {
+  const t = useTranslations("admin.leaves");
   const [tab, setTab] = useState<TabKey>("overview");
   const [createForOpen, setCreateForOpen] = useState(false);
   const [createForEmp, setCreateForEmp] = useState<EmployeeRow | null>(null);
@@ -210,9 +211,9 @@ export function LeavesAdminView({
   const [closureOpen, setClosureOpen] = useState(false);
   const [peekDialogOpen, setPeekDialogOpen] = useState(false);
   const [appealsWindow, setAppealsWindow] = useState<ActiveWindow | null>(null);
-  // Sticky compress-on-scroll : sentinel + IntersectionObserver (pattern Finance).
-  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le sentinel est
-  // considéré "out" dès qu'il passe SOUS le topbar, pas seulement hors viewport.
+
+
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -225,24 +226,24 @@ export function LeavesAdminView({
     obs.observe(sentinel);
     return () => obs.disconnect();
   }, []);
-  // Mode edit d'une demande existante (depuis drill-down)
+
   const [editingRequest, setEditingRequest] = useState<{
     employee: { id: number; fullName: string | null; email: string };
     request: { id: number; type: string; startDate: string; endDate: string; halfDay: string | null; reason: string | null };
   } | null>(null);
   const router = useRouter();
 
-  // P2-3 : badge "A approuver" inclut les appels pending sur fenetres allocated
+
   const reviewBadge = kpis.pendingCount + (activePendingAppealsTotal ?? 0);
   const baseTabs: TabItem<TabKey>[] = [
-    { key: "overview", label: "Vue d'ensemble", icon: LayoutDashboard },
-    ...(isReviewer ? [{ key: "review" as const, label: "A approuver", icon: CheckCircle2, count: reviewBadge }] : []),
-    { key: "calendar", label: "Calendrier equipe", icon: CalendarRange },
-    { key: "by-employee", label: "Par employe", icon: Users, count: employees.length },
-    { key: "analytics", label: "Analytics", icon: BarChart3 },
+    { key: "overview", label: t("vue_ensemble"), icon: LayoutDashboard },
+    ...(isReviewer ? [{ key: "review" as const, label: t("approuver_action"), icon: CheckCircle2, count: reviewBadge }] : []),
+    { key: "calendar", label: t("calendrier_equipe"), icon: CalendarRange },
+    { key: "by-employee", label: t("employe_2"), icon: Users, count: employees.length },
+    { key: "analytics", label: t("analytics"), icon: BarChart3 },
   ];
 
-  // Helper : ouvrir le modal de creation pour un employe specifique
+
   const openCreateForEmployee = (emp: EmployeeRow) => {
     setCreateForEmp(emp);
     setCreateForOpen(false);
@@ -250,7 +251,7 @@ export function LeavesAdminView({
 
   return (
     <div className="space-y-4">
-      {/* Header navy gradient — scroll naturellement (pattern Finance hero non-sticky) */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-5 py-4 text-white relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" aria-hidden />
         <div className="relative flex items-start justify-between gap-3 flex-wrap">
@@ -259,18 +260,18 @@ export function LeavesAdminView({
               <ShieldCheck className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold flex items-center gap-2">Gestion des conges</h1>
+              <h1 className="text-lg font-bold flex items-center gap-2">{t("gestion_conges")}</h1>
               <p className="text-xs text-white/80">
                 Vue d&apos;ensemble equipe ·{" "}
                 {scope.isFounder
-                  ? "Tous les employes"
+                  ? t("tous_employes")
                   : scope.isHr
                     ? `${kpis.activeScopeCount} employes (RH)`
                     : `${kpis.activeScopeCount} subordonne${kpis.activeScopeCount > 1 ? "s" : ""}`}
               </p>
             </div>
           </div>
-          {/* Actions header : 2 boutons principaux visibles, le reste dans dropdown "Plus" */}
+
           <div className="flex gap-2 flex-wrap shrink-0">
             <Button
               variant="secondary"
@@ -278,10 +279,10 @@ export function LeavesAdminView({
               className="h-8 text-xs bg-white/15 hover:bg-white/25 text-white border-white/20"
               onClick={() => setCreateForOpen(true)}
             >
-              <UserCheck className="h-3.5 w-3.5 mr-1.5" />Creer pour…
+              <UserCheck className="h-3.5 w-3.5 mr-1.5" />{t("creer_pour")}
             </Button>
             {isReviewer && (
-              <ActionTooltip label="Fermeture obligatoire d'entreprise (ex : Noel) — cree un conge approuve pour tous">
+              <ActionTooltip label={t("fermeture_obligatoire_entreprise_ex_noel")}>
                 <Button
                   variant="secondary"
                   size="sm"
@@ -292,7 +293,7 @@ export function LeavesAdminView({
                 </Button>
               </ActionTooltip>
             )}
-            {/* Overflow menu : Politiques, Fenetres, CSV — toujours dispo, mobile-friendly */}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
@@ -300,8 +301,7 @@ export function LeavesAdminView({
                   size="sm"
                   className="h-8 text-xs bg-white/15 hover:bg-white/25 text-white border-white/20"
                 >
-                  <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />Plus
-                </Button>
+                  <MoreHorizontal className="h-3.5 w-3.5 mr-1.5" />{t("leaves_admin_view_plus")}</Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem asChild>
@@ -340,7 +340,7 @@ export function LeavesAdminView({
         </div>
       </div>
 
-      {/* Sentinel : detecte la sortie du hero pour activer la mini-barre sticky */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
       {/* Mini-barre + tabs sticky.
@@ -360,13 +360,13 @@ export function LeavesAdminView({
           flux + d'eventuels arrondis sub-pixel mobile. */}
       <div
         className={cn(
-          // Sticky aligne sur le contenu (pas de -mx). Mobile : extension -mx-4 sm:-mx-5
-          // pour pleine largeur (sub-header etend aussi). Desktop : reste aligne contenu.
+
+
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background -mx-4 sm:-mx-5 lg:mx-0 transition-shadow",
           scrolled ? "shadow-sm border-b" : "border-b border-transparent",
         )}
       >
-        {/* Mini-barre compacte : visible uniquement au scroll (display switch, pas transition) */}
+
         <div
           className={cn(
             "px-4 sm:px-5 lg:px-4 items-center gap-3 flex-wrap py-2",
@@ -375,8 +375,8 @@ export function LeavesAdminView({
         >
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 shrink-0">
             <ShieldCheck className="h-4 w-4" />
-            <span className="hidden sm:inline">Gestion des conges</span>
-            <span className="sm:hidden">Conges</span>
+            <span className="hidden sm:inline">{t("gestion_conges")}</span>
+            <span className="sm:hidden">{t("conges")}</span>
           </span>
           <div className="flex items-center gap-1.5 ml-auto">
             <Button
@@ -385,8 +385,8 @@ export function LeavesAdminView({
               onClick={() => setCreateForOpen(true)}
             >
               <UserCheck className="h-3.5 w-3.5 mr-1.5" />
-              <span className="hidden sm:inline">Creer pour…</span>
-              <span className="sm:hidden">Creer</span>
+              <span className="hidden sm:inline">{t("creer")}</span>
+              <span className="sm:hidden">{t("creer_2")}</span>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -430,7 +430,7 @@ export function LeavesAdminView({
           </div>
         </div>
 
-        {/* Tabs : toujours sticky avec le mini-header */}
+
         <div className="px-4 sm:px-5 lg:px-4">
           <SettingsTabs tabs={baseTabs} active={tab} onChange={setTab} />
         </div>
@@ -473,7 +473,7 @@ export function LeavesAdminView({
             onClickEmptyCell={(empId, dateIso) => {
               const emp = employees.find((e) => e.id === empId);
               if (emp) {
-                // Stocker la date pre-remplie via createForEmp avec init dates
+
                 setCreateForEmp({ ...emp, __initDate: dateIso } as EmployeeRow & { __initDate: string });
               }
             }}
@@ -501,14 +501,13 @@ export function LeavesAdminView({
         />
       )}
 
-      {/* ─── Modal "Creer pour..." — Etape 1 : selectionner l'employe (scalable) ───── */}
+
       <Dialog open={createForOpen && !createForEmp} onOpenChange={(o) => { if (!o) setCreateForOpen(false); }}>
         <DialogContent className="max-w-xl p-0 overflow-hidden flex flex-col max-h-[85vh]">
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-white flex items-center gap-2">
-                <UserCheck className="h-4 w-4" />Creer un conge pour un employe
-              </DialogTitle>
+                <UserCheck className="h-4 w-4" />{t("leaves_admin_view_creer_un_conge_pour_un_employe")}</DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
                 Recherchez l&apos;employe concerne. {employees.length > 50 && <span>{employees.length} employes dans votre scope.</span>}
               </DialogDescription>
@@ -521,7 +520,7 @@ export function LeavesAdminView({
         </DialogContent>
       </Dialog>
 
-      {/* ─── Modal "Creer pour..." — Etape 2 : calendrier admin pour l'employe ───── */}
+
       {createForEmp && (
         <LeaveRequestCalendar
           open={true}
@@ -569,7 +568,7 @@ export function LeavesAdminView({
         />
       )}
 
-      {/* ─── Drill-down panel employe ───── */}
+
       <EmployeeDrillDownPanel
         employeeId={drillEmployeeId}
         open={drillEmployeeId !== null}
@@ -588,13 +587,13 @@ export function LeavesAdminView({
           });
         }}
         onCreateForEmployee={(emp) => {
-          // emp ici n'est pas un EmployeeRow complet ; on retombe sur l'id pour retrouver
+
           const full = employees.find((e) => e.id === emp.id);
           if (full) setCreateForEmp(full);
         }}
       />
 
-      {/* ─── Modal "Fermeture entreprise" ───── */}
+
       {closureOpen && (
         <MandatoryClosureDialog
           employees={employees}
@@ -603,7 +602,7 @@ export function LeavesAdminView({
         />
       )}
 
-      {/* ─── Modal d'edition d'une demande pending ───── */}
+
       {editingRequest && (
         <LeaveRequestCalendar
           open={true}
@@ -631,7 +630,7 @@ export function LeavesAdminView({
               reason: payload.reason,
             });
             if (r.success) {
-              toast.success("Demande mise a jour");
+              toast.success(t("demande_mise_jour"));
               setEditingRequest(null);
               router.refresh();
             } else {
@@ -642,14 +641,14 @@ export function LeavesAdminView({
         />
       )}
 
-      {/* TÂCHE 17 (P2-8) : "Voir equipe" — calendrier 6 mois global */}
+
       {peekDialogOpen && (
         <TeamOverviewDialog
           onClose={() => setPeekDialogOpen(false)}
         />
       )}
 
-      {/* TÂCHE 14.2 : reviser les appels d'une fenetre allocated */}
+
       {appealsWindow && (
         <WindowAppealsDialog
           window={appealsWindow}
@@ -665,6 +664,7 @@ export function LeavesAdminView({
 function EmployeePicker({
   employees, onPick,
 }: { employees: EmployeeRow[]; onPick: (emp: EmployeeRow) => void }) {
+  const t = useTranslations("admin.leaves");
   const [rawSearch, setRawSearch] = useState("");
   const [search, setSearch] = useState("");
   const [teamFilter, setTeamFilter] = useState<string>("all");
@@ -672,7 +672,7 @@ function EmployeePicker({
   const [visibleCount, setVisibleCount] = useState(20);
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // Debounce 300ms
+
   useEffect(() => {
     const t = setTimeout(() => setSearch(rawSearch), 300);
     return () => clearTimeout(t);
@@ -712,20 +712,20 @@ function EmployeePicker({
     return arr;
   }, [employees, search, teamFilter, sortBy]);
 
-  // Reset visible count quand les filtres changent
+
   useEffect(() => { setVisibleCount(20); }, [search, teamFilter, sortBy]);
 
   const visible = filtered.slice(0, visibleCount);
 
   return (
     <>
-      {/* Toolbar filtres */}
+
       <div className="px-4 py-3 border-b bg-muted/30 shrink-0 space-y-2">
         <div className="flex items-center gap-2">
           <Search className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
           <Input
             autoFocus
-            placeholder="Rechercher nom, email ou equipe…"
+            placeholder={t("rechercher_nom_email_equipe")}
             value={rawSearch}
             onChange={(e) => setRawSearch(e.target.value)}
             className="h-8 text-xs"
@@ -733,10 +733,10 @@ function EmployeePicker({
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <Select value={teamFilter} onValueChange={setTeamFilter}>
-            <SelectTrigger className="h-7 w-36 text-[11px]"><SelectValue placeholder="Equipe" /></SelectTrigger>
+            <SelectTrigger className="h-7 w-36 text-[11px]"><SelectValue placeholder={t("equipe")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes equipes</SelectItem>
-              <SelectItem value="none">Sans equipe</SelectItem>
+              <SelectItem value="all">{t("toutes_equipes")}</SelectItem>
+              <SelectItem value="none">{t("sans_equipe")}</SelectItem>
               {teams.map((t) => (
                 <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
               ))}
@@ -745,9 +745,9 @@ function EmployeePicker({
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
             <SelectTrigger className="h-7 w-40 text-[11px]"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="name">Tri : Nom</SelectItem>
-              <SelectItem value="remaining">Tri : Solde restant</SelectItem>
-              <SelectItem value="recent">Tri : Derniere demande</SelectItem>
+              <SelectItem value="name">{t("tri_nom")}</SelectItem>
+              <SelectItem value="remaining">{t("tri_solde_restant")}</SelectItem>
+              <SelectItem value="recent">{t("tri_derniere_demande")}</SelectItem>
             </SelectContent>
           </Select>
           <span className="text-[10px] text-muted-foreground ml-auto">
@@ -760,11 +760,11 @@ function EmployeePicker({
           </div>
         )}
       </div>
-      {/* Liste */}
+
       <div ref={scrollRef} className="overflow-y-auto flex-1">
         {filtered.length === 0 ? (
           <p className="text-xs text-muted-foreground italic text-center py-12">
-            {search ? "Aucun employe ne correspond a la recherche." : "Aucun employe dans votre scope."}
+            {search ? t("aucun_employe_ne_correspond_recherche") : t("aucun_employe_scope")}
           </p>
         ) : (
           <>
@@ -787,7 +787,7 @@ function EmployeePicker({
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium truncate">{emp.fullName || emp.email}</p>
                         <p className="text-[11px] text-muted-foreground truncate">
-                          {emp.team?.name ?? "Sans equipe"}
+                          {emp.team?.name ?? t("sans_equipe")}
                           {emp.title && <> · {emp.title}</>}
                         </p>
                       </div>
@@ -834,6 +834,7 @@ function OverviewTab({
   activeWindows: ActiveWindow[];
   onOpenAppeals: (w: ActiveWindow) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const absentTodayRatio = kpis.activeScopeCount > 0
     ? Math.round((kpis.absentToday / kpis.activeScopeCount) * 100)
@@ -843,38 +844,38 @@ function OverviewTab({
 
   return (
     <div className="space-y-4">
-      {/* KPIs executive — palette restreinte */}
+
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
         <ExecKpi
           icon={ClipboardList}
-          label="A approuver"
+          label={t("approuver_action")}
           value={kpis.pendingCount}
           tone={kpis.pendingCount > 0 ? "warning" : "neutral"}
-          sub={kpis.pendingCount > 0 ? "Demandes en attente" : "Aucune en attente"}
+          sub={kpis.pendingCount > 0 ? t("demandes_attente") : t("aucune_attente")}
           onClick={isReviewer ? onJumpReview : undefined}
         />
         <ExecKpi
           icon={UserCheck}
-          label="Absents aujourd'hui"
+          label={t("absents_aujourd_hui")}
           value={`${kpis.absentToday}${kpis.activeScopeCount > 0 ? ` / ${kpis.activeScopeCount}` : ""}`}
           tone={absentTodayRatio > 30 ? "danger" : "neutral"}
           sub={`${absentTodayRatio}% du scope`}
         />
         <ExecKpi
           icon={CalendarDays}
-          label="Jours-personne semaine"
+          label={t("jours_personne_semaine")}
           value={kpis.absentDaysThisWeek}
           tone="neutral"
-          sub="Cumul absences ouvrees"
+          sub={t("cumul_absences_ouvrees")}
         />
         <ExecKpi
           icon={TrendingUp}
-          label="Taux absenteisme (mois)"
+          label={t("taux_absenteisme_mois")}
           value={`${kpis.absenteeismRate}%`}
           tone={kpis.absenteeismRate > 10 ? "danger" : kpis.absenteeismRate > 5 ? "warning" : "neutral"}
           sub={
             rateDelta === 0
-              ? "Identique au mois dernier"
+              ? t("identique_mois_dernier")
               : rateDelta > 0
                 ? `+${rateDelta}% vs mois precedent`
                 : `${rateDelta}% vs mois precedent`
@@ -883,17 +884,17 @@ function OverviewTab({
         />
         <ExecKpi
           icon={Sun}
-          label="Solde total equipe"
+          label={t("solde_total_equipe")}
           value={kpis.totalRemainingDays.toFixed(1)}
           tone="neutral"
-          sub="Jours dispo cumules"
+          sub={t("jours_dispo_cumules")}
         />
         <ExecKpi
           icon={AlertTriangle}
-          label="Conflits detectes"
+          label={t("conflits_detectes")}
           value={kpis.conflictDays}
           tone={kpis.conflictDays > 0 ? "danger" : "neutral"}
-          sub={kpis.conflictDays > 0 ? "Jours > 30% absent" : "Aucun conflit"}
+          sub={kpis.conflictDays > 0 ? t("jours_30_absent") : t("aucun_conflit")}
           onClick={onJumpCalendar}
         />
       </div>
@@ -916,16 +917,15 @@ function OverviewTab({
             <Link
               href="/admin/employes/conges/fenetres"
               className="text-xs text-[#0F2D52] hover:underline flex items-center gap-1 font-semibold"
-            >
-              Gérer toutes les fenêtres <ExternalLink className="h-3 w-3" />
+            >{t("leaves_admin_view_gerer_toutes_les_fenetres")}<ExternalLink className="h-3 w-3" />
             </Link>
           </div>
           <ul className="divide-y">
             {activeWindows.map((w) => {
               const statusMeta: Record<string, { label: string; cls: string }> = {
-                open: { label: "Ouverte", cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-                closed: { label: "Fermée", cls: "bg-amber-50 text-amber-800 border-amber-200" },
-                in_review: { label: "En revue", cls: "bg-[#0F2D52]/10 text-[#0F2D52] border-[#0F2D52]/20" },
+                open: { label: t("ouverte"), cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+                closed: { label: t("fermee"), cls: "bg-amber-50 text-amber-800 border-amber-200" },
+                in_review: { label: t("revue"), cls: "bg-[#0F2D52]/10 text-[#0F2D52] border-[#0F2D52]/20" },
               };
               const sm = statusMeta[w.status] ?? { label: w.status, cls: "bg-slate-100 text-slate-700 border-slate-200" };
               return (
@@ -943,7 +943,7 @@ function OverviewTab({
                         </span>
                       )}
                       {w.pendingAppealsCount > 0 && (
-                        <ActionTooltip label="Examiner les appels en attente">
+                        <ActionTooltip label={t("examiner_appels_attente")}>
                           <button
                             type="button"
                             onClick={() => onOpenAppeals(w)}
@@ -960,13 +960,12 @@ function OverviewTab({
                       <strong className="text-foreground tabular-nums">{new Date(w.closingDate).toLocaleDateString("fr-CA")}</strong>
                     </p>
                   </div>
-                  <ActionTooltip label="Voir préférences soumises + actions">
+                  <ActionTooltip label={t("voir_preferences_soumises_actions")}>
                     <Link
                       href={`/admin/employes/conges/fenetres#window-${w.id}`}
                       className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-[#0F2D52] text-[#0F2D52] hover:bg-[#0F2D52] hover:text-white transition-colors shrink-0 font-semibold"
                     >
-                      <Eye className="h-3 w-3" />Voir préférences
-                    </Link>
+                      <Eye className="h-3 w-3" />{t("leaves_admin_view_voir_preferences")}</Link>
                   </ActionTooltip>
                 </li>
               );
@@ -975,14 +974,14 @@ function OverviewTab({
         </Card>
       )}
 
-      {/* Tableau prochaines absences */}
+
       <Card className="overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
             <CalendarDays className="h-4 w-4" />Prochaines absences (30 jours)
           </h3>
           <button type="button" onClick={onJumpCalendar} className="text-xs text-[#0F2D52] hover:underline flex items-center gap-1">
-            Voir calendrier <ExternalLink className="h-3 w-3" />
+            {t("voir_calendrier")} <ExternalLink className="h-3 w-3" />
           </button>
         </div>
         {upcomingNext30.length === 0 ? (
@@ -990,9 +989,9 @@ function OverviewTab({
             <div className="mx-auto h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
               <CalendarDays className="h-5 w-5 text-slate-400" />
             </div>
-            <p className="text-sm font-medium text-foreground">Equipe au complet</p>
+            <p className="text-sm font-medium text-foreground">{t("equipe_complet")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">
-              Aucune absence approuvee dans les 30 prochains jours.
+              {t("aucune_absence_approuvee_30_prochains")}
             </p>
           </div>
         ) : (
@@ -1001,9 +1000,9 @@ function OverviewTab({
             <thead className="bg-muted/20 text-[10px] uppercase tracking-wider text-muted-foreground">
               <tr>
                 <th className="px-4 py-2 text-left font-semibold">{tc("date")}</th>
-                <th className="px-4 py-2 text-left font-semibold">Employe</th>
-                <th className="px-4 py-2 text-left font-semibold">Type</th>
-                <th className="px-4 py-2 text-right font-semibold">Duree</th>
+                <th className="px-4 py-2 text-left font-semibold">{t("employe")}</th>
+                <th className="px-4 py-2 text-left font-semibold">{t("type")}</th>
+                <th className="px-4 py-2 text-right font-semibold">{t("duree")}</th>
                 <th className="px-4 py-2 text-right font-semibold w-12"></th>
               </tr>
             </thead>
@@ -1028,13 +1027,13 @@ function OverviewTab({
                     <td className="px-4 py-2">
                       <span className="inline-flex items-center gap-1.5 text-xs">
                         <span className="h-2 w-2 rounded-sm" style={{ background: meta.barDark }} />
-                        {meta.label}
+                        {t(meta.labelKey)}
                         {l.halfDay && <span className="text-muted-foreground">· ½ {l.halfDay === "AM" ? "matin" : "PM"}</span>}
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right text-xs tabular-nums">{Number(l.daysCount)}j</td>
                     <td className="px-4 py-2 text-right">
-                      <ActionTooltip label="Voir details employe">
+                      <ActionTooltip label={t("voir_details_employe")}>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1054,12 +1053,11 @@ function OverviewTab({
         )}
       </Card>
 
-      {/* Heatmap 4 semaines */}
+
       <Card className="overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <CalendarRange className="h-4 w-4" />Densite d&apos;absents (4 semaines)
-          </h3>
+            <CalendarRange className="h-4 w-4" />{t("leaves_admin_view_densite_d_absents_4_semaines")}</h3>
           <button type="button" onClick={onJumpCalendar} className="text-xs text-[#0F2D52] hover:underline flex items-center gap-1">
             Vue complete <ExternalLink className="h-3 w-3" />
           </button>
@@ -1126,15 +1124,16 @@ function ExecKpi({
 
 // ─── Heatmap mensuelle compacte ──────────────────────────────────
 function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date: string) => void }) {
+  const t = useTranslations("admin.leaves");
   if (days.length === 0) {
-    return <div className="p-6 text-center text-xs text-muted-foreground">Aucune donnee.</div>;
+    return <div className="p-6 text-center text-xs text-muted-foreground">{t("aucune_donnee")}</div>;
   }
 
-  // Organise les jours en semaines (commencant dimanche — convention projet)
-  // On affiche 4 lignes (semaines) x 7 colonnes (jours)
+
+
   const weeks: Array<Array<HeatmapDay | null>> = [];
   let currentWeek: Array<HeatmapDay | null> = [];
-  // Padding pour aligner sur dimanche
+
   if (days.length > 0) {
     const first = new Date(days[0].date);
     const pad = first.getDay(); // 0 = dimanche
@@ -1156,8 +1155,8 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
   const dowLabels = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first
   const todayKey = isoDay(new Date());
 
-  // Mini calendar compact : ~250px max, cellules carrees fixees a 28px de cote.
-  // Chaque case = numero du jour + petite pastille de densite (pas un gros bloc plein).
+
+
   return (
     <div className="px-4 py-3 max-h-[260px]">
       <div className="grid gap-0.5" style={{ gridTemplateColumns: "16px repeat(7, 1fr)" }}>
@@ -1175,7 +1174,7 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
             {w.map((d, di) => {
               if (!d) return <div key={`${wi}-${di}`} className="h-7" />;
               const intensity = d.count / maxCount;
-              // Pastille de densite : taille proportionnelle a l'intensite (navy uni)
+
               const dotSize = d.count === 0
                 ? 0
                 : intensity < 0.34 ? 4
@@ -1215,7 +1214,7 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
         ))}
       </div>
       <div className="mt-2 flex items-center gap-2 justify-end text-[9px] text-muted-foreground">
-        <span>Densite :</span>
+        <span>{t("densite")}</span>
         <span className="flex items-center gap-1">
           <span className="rounded-full bg-[#0F2D52]" style={{ width: 4, height: 3 }} />faible
         </span>
@@ -1238,6 +1237,7 @@ function ReviewTab({
   pagination?: PendingPagination;
   onOpenDrill: (id: number) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const router = useRouter();
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
@@ -1281,10 +1281,10 @@ function ReviewTab({
     if (decision === "rejected") {
       const n = await promptDialog({
         title: `Refuser ${selectedIds.size} demande${selectedIds.size > 1 ? "s" : ""}`,
-        label: "Motif du refus (optionnel)",
+        label: t("motif_refus_optionnel"),
         multiline: true,
         variant: "destructive",
-        confirmLabel: "Refuser",
+        confirmLabel: t("refuser"),
       });
       if (n === null) return;
       notes = n.trim() || undefined;
@@ -1293,7 +1293,7 @@ function ReviewTab({
     const res = await bulkReviewLeavesAction({ ids: Array.from(selectedIds), decision, notes });
     setBulkBusy(false);
     if (res.success) {
-      // TÂCHE 21 : afficher detail erreurs si presentes
+
       const baseMsg = `${res.data.processed} traitee${res.data.processed > 1 ? "s" : ""}${res.data.skipped > 0 ? ` · ${res.data.skipped} ignoree${res.data.skipped > 1 ? "s" : ""}` : ""}`;
       toast.success(baseMsg);
       if (res.data.errors && res.data.errors.length > 0) {
@@ -1303,7 +1303,7 @@ function ReviewTab({
       }
       clearSelection();
       router.refresh();
-    } else toast.error(res.error || "Erreur lors du traitement");
+    } else toast.error(res.error || t("erreur_lors_traitement"));
   };
 
   const reviewOne = async (id: number, decision: "approved" | "rejected") => {
@@ -1311,12 +1311,12 @@ function ReviewTab({
     let notes: string | undefined;
     if (decision === "rejected") {
       const n = await promptDialog({
-        title: "Refuser la demande de conge",
-        label: "Motif du refus (optionnel)",
-        placeholder: "Ex : periode chargee, equipe sous-effectif…",
+        title: t("refuser_demande_conge"),
+        label: t("motif_refus_optionnel"),
+        placeholder: t("ex_periode_chargee_equipe_sous"),
         multiline: true,
         variant: "destructive",
-        confirmLabel: "Refuser",
+        confirmLabel: t("refuser"),
       });
       if (n === null) return;
       notes = n.trim() || undefined;
@@ -1324,18 +1324,18 @@ function ReviewTab({
     markBusy(id, true);
     const res = await reviewLeaveRequestAction({ id, decision, notes });
     markBusy(id, false);
-    if (res.success) { toast.success(decision === "approved" ? "Approuvee" : "Refusee"); router.refresh(); }
-    else toast.error(res.error || "Erreur lors du traitement");
+    if (res.success) { toast.success(decision === "approved" ? t("approuvee") : t("refusee")); router.refresh(); }
+    else toast.error(res.error || t("erreur_lors_traitement"));
   };
 
   return (
     <div className="space-y-3">
-      {/* Filtres */}
+
       <Card className="p-3 flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-1 min-w-[180px]">
           <Search className="h-3.5 w-3.5 text-muted-foreground" />
           <Input
-            placeholder="Rechercher un employe…"
+            placeholder={t("rechercher_employe")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-8 text-xs"
@@ -1344,18 +1344,18 @@ function ReviewTab({
         <div className="flex items-center gap-2 flex-wrap">
           <Filter className="h-3.5 w-3.5 text-muted-foreground" />
           <Select value={filterType} onValueChange={setFilterType}>
-            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+            <SelectTrigger className="h-8 w-32 text-xs"><SelectValue placeholder={t("type")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous types</SelectItem>
+              <SelectItem value="all">{t("tous_types")}</SelectItem>
               {Object.entries(TYPE_META).map(([k, v]) => (
-                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                <SelectItem key={k} value={k}>{t(v.labelKey)}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={filterEmployee} onValueChange={setFilterEmployee}>
-            <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Employe" /></SelectTrigger>
+            <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder={t("employe")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous employes</SelectItem>
+              <SelectItem value="all">{t("tous_employes")}</SelectItem>
               {employees.map(([id, name]) => (
                 <SelectItem key={id} value={String(id)}>{name}</SelectItem>
               ))}
@@ -1369,9 +1369,9 @@ function ReviewTab({
           <div className="mx-auto h-12 w-12 rounded-full bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-3">
             <CheckCircle2 className="h-6 w-6 text-emerald-700" />
           </div>
-          <p className="text-sm font-medium">Aucune demande en attente</p>
+          <p className="text-sm font-medium">{t("aucune_demande_attente")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            {pendingReviews.length > 0 ? "Aucune demande ne correspond aux filtres." : "Toutes les demandes ont ete traitees."}
+            {pendingReviews.length > 0 ? t("aucune_demande_ne_correspond_filtres") : t("toutes_demandes_ont_ete_traitees")}
           </p>
         </Card>
       ) : (
@@ -1390,13 +1390,13 @@ function ReviewTab({
               </span>
               <div className="flex gap-2 flex-wrap">
                 <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30" onClick={clearSelection}>
-                  Deselectionner
+                  {t("deselectionner")}
                 </Button>
                 <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90" onClick={() => bulk("approved")}>
-                  <CheckCircle2 className="h-3 w-3 mr-1" />{bulkBusy ? "..." : "Approuver selection"}
+                  <CheckCircle2 className="h-3 w-3 mr-1" />{bulkBusy ? "..." : t("approuver_selection")}
                 </Button>
                 <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white border-0" onClick={() => bulk("rejected")}>
-                  <XCircle className="h-3 w-3 mr-1" />{bulkBusy ? "..." : "Refuser selection"}
+                  <XCircle className="h-3 w-3 mr-1" />{bulkBusy ? "..." : t("refuser_selection")}
                 </Button>
               </div>
             </Card>
@@ -1424,7 +1424,7 @@ function ReviewTab({
             ))}
           </div>
 
-          {/* P2-4 : pagination back-end */}
+
           {pagination && pagination.pages > 1 && (
             <Card className="p-3 flex items-center justify-between gap-2 flex-wrap">
               <span className="text-xs text-muted-foreground tabular-nums">
@@ -1477,18 +1477,19 @@ function PendingRow({
   busy?: boolean;
   onOpenDrill?: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const meta = typeMeta(request.type);
   const Icon = meta.icon;
-  const halfLabel = request.halfDay === "AM" ? "½ matin" : request.halfDay === "PM" ? "½ apres-midi" : null;
+  const halfLabel = request.halfDay === "AM" ? t("1_2_matin") : request.halfDay === "PM" ? t("1_2_apres_midi") : null;
   const team = request.admin?.team;
   const sameDay = request.startDate.slice(0, 10) === request.endDate.slice(0, 10);
 
   return (
     <Card className="p-3 sm:p-4 hover:ring-1 hover:ring-[#0F2D52]/20 transition">
       <div className="flex items-start gap-3">
-        <ActionTooltip label={selected ? "Deselectionner" : "Selectionner pour bulk action"}>
+        <ActionTooltip label={selected ? t("deselectionner") : t("selectionner_bulk_action")}>
           <div className="pt-1.5">
-            <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label="Selectionner" />
+            <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label={t("selectionner")} />
           </div>
         </ActionTooltip>
         <div className="h-10 w-10 rounded-lg flex items-center justify-center shrink-0 bg-[#0F2D52]/10 text-[#0F2D52]">
@@ -1505,7 +1506,7 @@ function PendingRow({
             </button>
             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
               <span className="h-1.5 w-1.5 rounded-sm" style={{ background: meta.barDark }} />
-              {meta.label}
+              {t(meta.labelKey)}
             </span>
             {team && (
               <span
@@ -1521,8 +1522,8 @@ function PendingRow({
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {sameDay
-              ? <>Le <strong className="text-foreground">{fmtDateLong(request.startDate)}</strong></>
-              : <>Du <strong className="text-foreground">{fmtDate(request.startDate)}</strong> au <strong className="text-foreground">{fmtDate(request.endDate)}</strong></>
+              ? <>{t("le")} <strong className="text-foreground">{fmtDateLong(request.startDate)}</strong></>
+              : <>{t("du")} <strong className="text-foreground">{fmtDate(request.startDate)}</strong> au <strong className="text-foreground">{fmtDate(request.endDate)}</strong></>
             }
             {" · "}
             <strong className="tabular-nums text-foreground">{Number(request.daysCount)}</strong> jour{Number(request.daysCount) > 1 ? "s" : ""}
@@ -1530,7 +1531,7 @@ function PendingRow({
           {request.reason && <p className="text-xs italic text-muted-foreground mt-1">« {request.reason} »</p>}
         </div>
         <div className="flex gap-1 shrink-0">
-          <ActionTooltip label="Voir details employe">
+          <ActionTooltip label={t("voir_details_employe")}>
             <Button
               size="sm"
               variant="ghost"
@@ -1546,7 +1547,7 @@ function PendingRow({
             className="h-7 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             onClick={() => onReview("approved")}
           >
-            <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : "Approuver"}
+            <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : t("approuver_action")}
           </Button>
           <Button
             size="sm"
@@ -1555,7 +1556,7 @@ function PendingRow({
             className="h-7 text-xs text-red-700 border-red-200 hover:bg-red-50 hover:text-red-800"
             onClick={() => onReview("rejected")}
           >
-            <XCircle className="h-3 w-3 mr-1" />{busy ? "..." : "Refuser"}
+            <XCircle className="h-3 w-3 mr-1" />{busy ? "..." : t("refuser")}
           </Button>
         </div>
       </div>
@@ -1573,6 +1574,7 @@ function CalendarTab({
   onClickLeave: (leave: UpcomingLeave) => void;
   onClickEmptyCell: (empId: number, dateIso: string) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const today = useMemo(() => { const d = new Date(nowIso); d.setHours(0, 0, 0, 0); return d; }, [nowIso]);
   const [offset, setOffset] = useState(0); // jours d'offset
   const [filterType, setFilterType] = useState<string>("all");
@@ -1599,7 +1601,7 @@ function CalendarTab({
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name));
   }, [employees]);
 
-  // Filtrer les employes visibles selon filtres (et toujours afficher tous, meme sans absence)
+
   const visibleEmployees = useMemo(() => {
     return employees.filter((e) => {
       if (filterTeam !== "all") {
@@ -1619,7 +1621,7 @@ function CalendarTab({
     });
   }, [leaves, filterType, visibleEmployees]);
 
-  // Grouper conges par employe
+
   const leavesByEmp = useMemo(() => {
     const m = new Map<number, UpcomingLeave[]>();
     for (const l of filteredLeaves) {
@@ -1630,7 +1632,7 @@ function CalendarTab({
     return m;
   }, [filteredLeaves]);
 
-  // Compteur par jour (entete)
+
   const dayCounts = useMemo(() => {
     return days.map((d) => {
       const set = new Set<number>();
@@ -1648,25 +1650,25 @@ function CalendarTab({
 
   return (
     <div className="space-y-3">
-      {/* Toolbar pro */}
+
       <Card className="p-3 space-y-2">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-1">
-            <ActionTooltip label="2 semaines avant">
+            <ActionTooltip label={t("2_semaines_avant")}>
               <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setOffset((o) => Math.max(-180, o - 14))}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
             </ActionTooltip>
             <Button variant={offset === 0 ? "default" : "outline"} size="sm" className={`h-8 text-xs ${offset === 0 ? "bg-[#0F2D52] hover:bg-[#1a3a66]" : ""}`} onClick={() => setOffset(0)}>
-              Aujourd&apos;hui
+              {t("aujourd_apos_hui")}
             </Button>
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setOffset((o) => o + 7)}>
-              +1 sem
+              {t("1_sem")}
             </Button>
             <Button variant="outline" size="sm" className="h-8 text-xs" onClick={() => setOffset((o) => o + 30)}>
-              +1 mois
+              {t("1_mois")}
             </Button>
-            <ActionTooltip label="2 semaines apres">
+            <ActionTooltip label={t("2_semaines_apres")}>
               <Button variant="outline" size="sm" className="h-8 w-8 p-0" onClick={() => setOffset((o) => Math.min(365, o + 14))}>
                 <ChevronRight className="h-4 w-4" />
               </Button>
@@ -1677,26 +1679,26 @@ function CalendarTab({
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Select value={filterType} onValueChange={setFilterType}>
-              <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-28 text-xs"><SelectValue placeholder={t("type")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous types</SelectItem>
+                <SelectItem value="all">{t("tous_types")}</SelectItem>
                 {Object.entries(TYPE_META).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  <SelectItem key={k} value={k}>{t(v.labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
             <Select value={filterTeam} onValueChange={setFilterTeam}>
-              <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder="Equipe" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-36 text-xs"><SelectValue placeholder={t("equipe")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Toutes equipes</SelectItem>
-                <SelectItem value="none">Sans equipe</SelectItem>
+                <SelectItem value="all">{t("toutes_equipes")}</SelectItem>
+                <SelectItem value="none">{t("sans_equipe")}</SelectItem>
                 {teams.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}
               </SelectContent>
             </Select>
             <Select value={filterEmp} onValueChange={setFilterEmp}>
-              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder="Employe" /></SelectTrigger>
+              <SelectTrigger className="h-8 w-40 text-xs"><SelectValue placeholder={t("employe")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous employes</SelectItem>
+                <SelectItem value="all">{t("tous_employes")}</SelectItem>
                 {employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -1704,21 +1706,21 @@ function CalendarTab({
         </div>
       </Card>
 
-      {/* Gantt */}
+
       {visibleEmployees.length === 0 ? (
         <Card className="p-10 text-center">
           <div className="mx-auto h-12 w-12 rounded-full bg-slate-100 flex items-center justify-center mb-3">
             <Users className="h-6 w-6 text-slate-400" />
           </div>
-          <p className="text-sm font-medium">Aucun employe dans le filtre</p>
+          <p className="text-sm font-medium">{t("aucun_employe_filtre")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Ajustez les filtres pour voir les employes.
+            {t("ajustez_filtres_voir_employes")}
           </p>
         </Card>
       ) : (
         <Card className="overflow-x-auto">
           <div className="grid" style={{ gridTemplateColumns: `220px repeat(28, minmax(28px, 1fr))`, minWidth: 1100 }}>
-            {/* Header */}
+
             <div className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground bg-[#0F2D52]/5 border-b border-r sticky left-0 z-20">
               Employe ({visibleEmployees.length})
             </div>
@@ -1729,7 +1731,7 @@ function CalendarTab({
               const count = dayCounts[i];
               const highRatio = visibleEmployees.length > 0 && count / visibleEmployees.length > 0.3;
               const dayLetter = ["D", "L", "M", "M", "J", "V", "S"][d.getDay()];
-              // Style header net (pattern PeekColleaguesDialog) : weekend gris franc, today ring navy
+
               let headerBg = "bg-muted/30";
               if (isWeekend) headerBg = "bg-slate-100 text-slate-500";
               return (
@@ -1747,7 +1749,7 @@ function CalendarTab({
               );
             })}
 
-            {/* Rows */}
+
             {visibleEmployees.map((emp) => (
               <GanttRow
                 key={emp.id}
@@ -1763,26 +1765,26 @@ function CalendarTab({
         </Card>
       )}
 
-      {/* Légende propre style Excel : couleurs par type + indicateurs spéciaux */}
+
       <div className="flex items-center justify-between flex-wrap gap-3 text-[10px] text-muted-foreground px-1">
         <div className="flex items-center gap-x-3 gap-y-1 flex-wrap">
           {Object.entries(TYPE_META).map(([k, v]) => (
             <span key={k} className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm border" style={{ backgroundColor: v.bar, borderColor: v.barDark }} />
-              {v.label}
+              {t(v.labelKey)}
             </span>
           ))}
           <span className="inline-flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-sm bg-slate-100 border border-slate-200" />
-            Weekend
+            {t("weekend")}
           </span>
           <span className="inline-flex items-center gap-1">
             <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-[#0F2D52] bg-white" />
-            Aujourd&apos;hui
+            {t("aujourd_apos_hui")}
           </span>
         </div>
         <p className="text-[10px] text-muted-foreground italic">
-          Cliquez une cellule vide pour créer un congé · Survolez pour le détail
+          {t("cliquez_cellule_vide_creer_conge")}
         </p>
       </div>
     </div>
@@ -1799,6 +1801,7 @@ function GanttRow({
   onClickLeave: (leave: UpcomingLeave) => void;
   onClickEmptyCell: (empId: number, dateIso: string) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   return (
     <>
       <div className="px-3 py-2 text-xs border-r border-b bg-background sticky left-0 z-10 truncate flex items-center gap-2">
@@ -1826,14 +1829,14 @@ function GanttRow({
         const isMonday = d.getDay() === 1;
         const meta = leaveOnDay ? typeMeta(leaveOnDay.type) : null;
 
-        // Style Excel : cellule pleine couleur, border-left coloré pour la barre de congé
+
         const isStart = leaveOnDay && dIso === leaveOnDay.startDate.slice(0, 10);
 
         const tooltipLabel = leaveOnDay && meta
-          ? `${meta.label} : ${fmtDate(leaveOnDay.startDate)} → ${fmtDate(leaveOnDay.endDate)}${leaveOnDay.halfDay ? ` (½ ${leaveOnDay.halfDay})` : ""} — Cliquer pour détails`
+          ? `${t(meta.labelKey)} : ${fmtDate(leaveOnDay.startDate)} → ${fmtDate(leaveOnDay.endDate)}${leaveOnDay.halfDay ? ` (½ ${leaveOnDay.halfDay})` : ""} — Cliquer pour détails`
           : `Cliquer pour créer un congé le ${d.toLocaleDateString("fr-CA", { weekday: "long", day: "2-digit", month: "short" })}`;
 
-        // Fond cellule : weekend gris, today ring, congé = couleur pleine du type
+
         let cellStyle: React.CSSProperties = {};
         let cellBg = "";
         if (!leaveOnDay && isWeekend) cellBg = "bg-slate-100";
@@ -1844,7 +1847,7 @@ function GanttRow({
             borderLeftColor: meta.barDark,
           };
         }
-        // Today : ring contrasté (amber sur congé, navy sinon)
+
         const ringCls = isToday
           ? leaveOnDay
             ? "ring-2 ring-amber-400 ring-inset"
@@ -1876,6 +1879,7 @@ function ByEmployeeTab({
   onOpenDrill: (id: number) => void;
   onCreateForEmp: (emp: EmployeeRow) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<"name" | "remaining" | "taken" | "pending">("name");
@@ -1913,7 +1917,7 @@ function ByEmployeeTab({
     return arr;
   }, [employees, search, teamFilter, sortBy, filterPending, filterLowBalance]);
 
-  // Reset page quand filtres changent
+
   useEffect(() => { setPage(1); }, [search, teamFilter, sortBy, filterPending, filterLowBalance]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -1924,13 +1928,13 @@ function ByEmployeeTab({
       <Card className="p-3 flex items-center gap-2 flex-wrap">
         <div className="flex items-center gap-2 flex-1 min-w-[180px]">
           <Search className="h-3.5 w-3.5 text-muted-foreground" />
-          <Input placeholder="Rechercher…" value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 text-xs" />
+          <Input placeholder={t("rechercher")} value={search} onChange={(e) => setSearch(e.target.value)} className="h-8 text-xs" />
         </div>
         <Select value={teamFilter} onValueChange={setTeamFilter}>
-          <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder="Equipe" /></SelectTrigger>
+          <SelectTrigger className="h-8 w-44 text-xs"><SelectValue placeholder={t("equipe")} /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toutes equipes</SelectItem>
-            <SelectItem value="none">Sans equipe</SelectItem>
+            <SelectItem value="all">{t("toutes_equipes")}</SelectItem>
+            <SelectItem value="none">{t("sans_equipe")}</SelectItem>
             {teams.map((t) => (
               <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
             ))}
@@ -1939,19 +1943,19 @@ function ByEmployeeTab({
         <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
           <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="name">Trier par nom</SelectItem>
-            <SelectItem value="remaining">Solde restant ↓</SelectItem>
-            <SelectItem value="taken">Jours pris ↓</SelectItem>
-            <SelectItem value="pending">Demandes en attente ↓</SelectItem>
+            <SelectItem value="name">{t("trier_nom")}</SelectItem>
+            <SelectItem value="remaining">{t("solde_restant")}</SelectItem>
+            <SelectItem value="taken">{t("jours_pris")}</SelectItem>
+            <SelectItem value="pending">{t("demandes_attente")}</SelectItem>
           </SelectContent>
         </Select>
         <Label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
           <Checkbox checked={filterPending} onCheckedChange={(v) => setFilterPending(!!v)} />
-          Avec demandes en attente
+          {t("demandes_attente_2")}
         </Label>
         <Label className="flex items-center gap-1.5 text-[11px] cursor-pointer">
           <Checkbox checked={filterLowBalance} onCheckedChange={(v) => setFilterLowBalance(!!v)} />
-          Solde &lt; 2j
+          {t("solde_lt_2j")}
         </Label>
       </Card>
 
@@ -1959,13 +1963,13 @@ function ByEmployeeTab({
         <table className="w-full text-sm">
           <thead className="bg-[#0F2D52]/5 text-[10px] uppercase tracking-wider text-[#0F2D52]">
             <tr>
-              <th className="px-3 py-2 text-left font-semibold">Employe</th>
-              <th className="px-3 py-2 text-left font-semibold hidden sm:table-cell">Equipe</th>
-              <th className="px-3 py-2 text-right font-semibold">Solde dispo</th>
-              <th className="px-3 py-2 text-right font-semibold hidden md:table-cell">Pris</th>
-              <th className="px-3 py-2 text-right font-semibold hidden md:table-cell">Planifies</th>
-              <th className="px-3 py-2 text-center font-semibold">En attente</th>
-              <th className="px-3 py-2 text-left font-semibold hidden lg:table-cell">Derniere demande</th>
+              <th className="px-3 py-2 text-left font-semibold">{t("employe")}</th>
+              <th className="px-3 py-2 text-left font-semibold hidden sm:table-cell">{t("equipe")}</th>
+              <th className="px-3 py-2 text-right font-semibold">{t("solde_dispo")}</th>
+              <th className="px-3 py-2 text-right font-semibold hidden md:table-cell">{t("pris")}</th>
+              <th className="px-3 py-2 text-right font-semibold hidden md:table-cell">{t("planifies")}</th>
+              <th className="px-3 py-2 text-center font-semibold">{t("attente")}</th>
+              <th className="px-3 py-2 text-left font-semibold hidden lg:table-cell">{t("derniere_demande")}</th>
               <th className="px-3 py-2 text-right font-semibold">{tc("actions")}</th>
             </tr>
           </thead>
@@ -1976,8 +1980,8 @@ function ByEmployeeTab({
                   <div className="mx-auto h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center mb-2">
                     <Users className="h-5 w-5 text-slate-400" />
                   </div>
-                  <p className="text-sm font-medium text-foreground">Aucun employe</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Ajustez les filtres ou videz la recherche.</p>
+                  <p className="text-sm font-medium text-foreground">{t("aucun_employe")}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{t("ajustez_filtres_videz_recherche")}</p>
                 </td>
               </tr>
             ) : (
@@ -2038,19 +2042,19 @@ function ByEmployeeTab({
                     {emp.lastRequest ? (
                       <div className="text-[11px]">
                         <span className={`inline-block text-[9px] px-1 py-0.5 rounded ${STATUS_META[emp.lastRequest.status]?.cls ?? ""}`}>
-                          {STATUS_META[emp.lastRequest.status]?.label ?? emp.lastRequest.status}
+                          {STATUS_META[emp.lastRequest.status] ? t(STATUS_META[emp.lastRequest.status].labelKey) : emp.lastRequest.status}
                         </span>
                         <span className="text-muted-foreground ml-1">
-                          {typeMeta(emp.lastRequest.type).label} · {fmtDate(emp.lastRequest.startDate)}
+                          {t(typeMeta(emp.lastRequest.type).labelKey)} · {fmtDate(emp.lastRequest.startDate)}
                         </span>
                       </div>
                     ) : (
-                      <span className="text-[10px] text-muted-foreground">Aucune</span>
+                      <span className="text-[10px] text-muted-foreground">{t("aucune")}</span>
                     )}
                   </td>
                   <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1">
-                      <ActionTooltip label="Voir details">
+                      <ActionTooltip label={t("voir_details")}>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -2060,7 +2064,7 @@ function ByEmployeeTab({
                           <Eye className="h-3.5 w-3.5 text-[#0F2D52]" />
                         </Button>
                       </ActionTooltip>
-                      <ActionTooltip label="Creer une demande pour cet employe">
+                      <ActionTooltip label={t("creer_demande_cet_employe")}>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -2077,7 +2081,7 @@ function ByEmployeeTab({
             )}
           </tbody>
         </table>
-        {/* Pagination */}
+
         {totalPages > 1 && (
           <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/20 text-xs">
             <span className="text-muted-foreground tabular-nums">
@@ -2112,6 +2116,7 @@ function AnalyticsTab({
   teamStats: TeamStat[];
   next8WeeksForecast: ForecastWeek[];
 }) {
+  const t = useTranslations("admin.leaves");
   const totalDays = absencesByType.reduce((s, t) => s + t.daysCount, 0);
   const topRemaining = employees.slice().sort((a, b) => b.vacationDaysRemaining - a.vacationDaysRemaining).slice(0, 5);
   const lowRemaining = employees.slice().filter((e) => e.vacationDaysRemaining > 0).sort((a, b) => a.vacationDaysRemaining - b.vacationDaysRemaining).slice(0, 5);
@@ -2119,20 +2124,20 @@ function AnalyticsTab({
 
   const rateDelta = +(kpis.absenteeismRate - prevMonthRate).toFixed(1);
 
-  // Donut data : palette navy + accents
+
   const donutPalette = ["#0F2D52", "#3b6fb0", "#7ea0c4", "#bcd2eb", "#d97706", "#dc2626"];
   const donutData = absencesByType
-    .filter((t) => t.daysCount > 0)
+    .filter((row) => row.daysCount > 0)
     .sort((a, b) => b.daysCount - a.daysCount)
-    .map((t, i) => ({ name: typeMeta(t.type).label, value: t.daysCount, fill: donutPalette[i % donutPalette.length] }));
+    .map((row, i) => ({ name: t(typeMeta(row.type).labelKey), value: row.daysCount, fill: donutPalette[i % donutPalette.length] }));
 
   return (
     <div className="space-y-3 min-w-0">
-      {/* KPIs analytics */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <ExecKpi
           icon={TrendingUp}
-          label="Taux absent. (mois)"
+          label={t("taux_absent_mois")}
           value={`${kpis.absenteeismRate}%`}
           tone={kpis.absenteeismRate > 10 ? "danger" : kpis.absenteeismRate > 5 ? "warning" : "neutral"}
           sub={`Mois precedent : ${prevMonthRate}%`}
@@ -2140,35 +2145,34 @@ function AnalyticsTab({
         />
         <ExecKpi
           icon={CalendarDays}
-          label="Jours pris (annee)"
+          label={t("jours_pris_annee")}
           value={totalDays}
           tone="neutral"
           sub={`${absencesByType.reduce((s, t) => s + t.requestsCount, 0)} demandes`}
         />
         <ExecKpi
           icon={Sun}
-          label="Solde total"
+          label={t("solde_total")}
           value={kpis.totalRemainingDays.toFixed(1)}
           tone="neutral"
-          sub="Jours dispo equipe"
+          sub={t("jours_dispo_equipe")}
         />
         <ExecKpi
           icon={AlertTriangle}
-          label="Conflits (mois)"
+          label={t("conflits_mois")}
           value={kpis.conflictDays}
           tone={kpis.conflictDays > 0 ? "danger" : "neutral"}
-          sub="Jours > 30% absent"
+          sub={t("jours_30_absent")}
         />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-3 min-w-0">
-        {/* Taux absenteisme 12 mois */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <TrendingUp className="h-4 w-4" />Taux d&apos;absenteisme — 12 mois glissants
-          </h3>
+            <TrendingUp className="h-4 w-4" />{t("leaves_admin_view_taux_d_absenteisme_12_mois_glissants")}</h3>
           {trailing12Months.length === 0 || trailing12Months.every((m) => m.rate === 0) ? (
-            <EmptyChart text="Aucune donnee suffisante." />
+            <EmptyChart text={t("aucune_donnee_suffisante")} />
           ) : (
             <div className="h-56 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -2178,7 +2182,7 @@ function AnalyticsTab({
                   <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={{ stroke: "#cbd5e1" }} tickLine={false} unit="%" />
                   <RTooltip
                     contentStyle={{ fontSize: 11, borderRadius: 6, border: "1px solid #e2e8f0" }}
-                    formatter={(v) => [`${v}%`, "Taux"] as [string, string]}
+                    formatter={(v) => [`${v}%`, t("taux")] as [string, string]}
                   />
                   <Line type="monotone" dataKey="rate" stroke={NAVY} strokeWidth={2} dot={{ fill: NAVY, r: 3 }} activeDot={{ r: 5 }} />
                 </LineChart>
@@ -2187,13 +2191,12 @@ function AnalyticsTab({
           )}
         </Card>
 
-        {/* Repartition par type (donut) */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <BarChart3 className="h-4 w-4" />Repartition par type (annee)
-          </h3>
+            <BarChart3 className="h-4 w-4" />{t("leaves_admin_view_repartition_par_type_annee")}</h3>
           {donutData.length === 0 ? (
-            <EmptyChart text="Aucune absence approuvee cette annee." />
+            <EmptyChart text={t("aucune_absence_approuvee_annee")} />
           ) : (
             <div className="h-56 flex items-center gap-4 min-w-0">
               <div className="flex-1 h-full min-w-0">
@@ -2228,13 +2231,12 @@ function AnalyticsTab({
           )}
         </Card>
 
-        {/* Jours pris par equipe */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <Users className="h-4 w-4" />Jours pris par equipe (12 mois)
-          </h3>
+            <Users className="h-4 w-4" />{t("leaves_admin_view_jours_pris_par_equipe_12_mois")}</h3>
           {teamStats.length === 0 ? (
-            <EmptyChart text="Aucune equipe avec absences." />
+            <EmptyChart text={t("aucune_equipe_absences")} />
           ) : (
             <div className="h-56 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -2246,7 +2248,7 @@ function AnalyticsTab({
                     contentStyle={{ fontSize: 11, borderRadius: 6 }}
                     formatter={(v, _n, item) => {
                       const emp = (item as unknown as { payload?: { employees?: number } } | undefined)?.payload?.employees ?? 0;
-                      return [`${v}j (${emp} emp.)`, "Jours pris"] as [string, string];
+                      return [`${v}j (${emp} emp.)`, t("jours_pris")] as [string, string];
                     }}
                   />
                   <Bar dataKey="days" fill={NAVY} radius={[4, 4, 0, 0]} />
@@ -2256,13 +2258,13 @@ function AnalyticsTab({
           )}
         </Card>
 
-        {/* Prevision 8 semaines */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
             <CalendarRange className="h-4 w-4" />Prevision 8 prochaines semaines
           </h3>
           {next8WeeksForecast.every((w) => w.absents === 0) ? (
-            <EmptyChart text="Aucune absence planifiee." />
+            <EmptyChart text={t("aucune_absence_planifiee")} />
           ) : (
             <div className="h-56 w-full min-w-0">
               <ResponsiveContainer width="100%" height="100%">
@@ -2272,24 +2274,23 @@ function AnalyticsTab({
                   <YAxis tick={{ fontSize: 10, fill: "#64748b" }} axisLine={{ stroke: "#cbd5e1" }} tickLine={false} allowDecimals={false} />
                   <RTooltip
                     contentStyle={{ fontSize: 11, borderRadius: 6 }}
-                    formatter={(v, n) => [v, n === "absents" ? "Absents" : "Jours"] as [string | number, string]}
+                    formatter={(v, n) => [v, n === "absents" ? t("absents") : t("jours")] as [string | number, string]}
                   />
                   <Legend wrapperStyle={{ fontSize: 10 }} />
                   <Line type="monotone" dataKey="absents" stroke={NAVY} strokeWidth={2} dot={{ fill: NAVY, r: 3 }} name="Employes absents" />
-                  <Line type="monotone" dataKey="days" stroke="#d97706" strokeWidth={2} strokeDasharray="4 2" dot={{ fill: "#d97706", r: 3 }} name="Jours-personne" />
+                  <Line type="monotone" dataKey="days" stroke="#d97706" strokeWidth={2} strokeDasharray="4 2" dot={{ fill: "#d97706", r: 3 }} name={t("jours_personne")} />
                 </LineChart>
               </ResponsiveContainer>
             </div>
           )}
         </Card>
 
-        {/* Top 5 plus de jours */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <Sun className="h-4 w-4" />Top 5 — Plus de jours disponibles
-          </h3>
+            <Sun className="h-4 w-4" />{t("leaves_admin_view_top_5_plus_de_jours_disponibles")}</h3>
           {topRemaining.length === 0 ? (
-            <EmptyChart text="Aucune donnee." />
+            <EmptyChart text={t("aucune_donnee")} />
           ) : (
             <ul className="space-y-2">
               {topRemaining.map((emp) => (
@@ -2307,13 +2308,12 @@ function AnalyticsTab({
           )}
         </Card>
 
-        {/* Bottom 5 solde bas */}
+
         <Card className="p-4 space-y-3 min-w-0 overflow-hidden">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <AlertTriangle className="h-4 w-4 text-amber-600" />Top 5 — Solde le plus bas
-          </h3>
+            <AlertTriangle className="h-4 w-4 text-amber-600" />{t("leaves_admin_view_top_5_solde_le_plus_bas")}</h3>
           {lowRemaining.length === 0 ? (
-            <EmptyChart text="Aucune donnee." />
+            <EmptyChart text={t("aucune_donnee")} />
           ) : (
             <ul className="space-y-2">
               {lowRemaining.map((emp) => (
@@ -2356,10 +2356,11 @@ function MandatoryClosureDialog({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [reason, setReason] = useState("Fermeture annuelle des Fetes");
+  const [reason, setReason] = useState(t("fermeture_annuelle_fetes"));
   const [type, setType] = useState<"vacation" | "unpaid" | "other">("other");
   const [excludedIds, setExcludedIds] = useState<Set<number>>(new Set());
   const [pending, setPending] = useState(false);
@@ -2386,7 +2387,7 @@ function MandatoryClosureDialog({
 
   const submit = async () => {
     if (!startDate || !endDate || !reason.trim()) {
-      toast.error("Date debut, date fin et raison obligatoires.");
+      toast.error(t("date_debut_date_fin_raison"));
       return;
     }
     setPending(true);
@@ -2415,39 +2416,38 @@ function MandatoryClosureDialog({
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Building2 className="h-4 w-4" />Fermeture obligatoire d&apos;entreprise
-            </DialogTitle>
+              <Building2 className="h-4 w-4" />{t("leaves_admin_view_fermeture_obligatoire_d_entreprise")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Cree un conge approuve pour tous les employes actifs sur la plage donnee (ex : Noel). Vous pouvez exempter certains employes essentiels.
+              {t("cree_conge_approuve_tous_employes")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4 flex-1 overflow-y-auto">
-          <FormSection icon={CalendarRange} title="Periode">
+          <FormSection icon={CalendarRange} title={t("periode")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Du" required>
+              <Field label={t("du")} required>
                 <DatePopover value={startDate} onChange={setStartDate} />
               </Field>
-              <Field label="Au" required>
+              <Field label={t("au")} required>
                 <DatePopover value={endDate} onChange={setEndDate} min={startDate} />
               </Field>
             </div>
           </FormSection>
 
-          <FormSection icon={ClipboardList} title="Type et raison">
+          <FormSection icon={ClipboardList} title={t("type_raison")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Type">
+              <Field label={t("type")}>
                 <Select value={type} onValueChange={(v) => setType(v as typeof type)}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="other">Autre (non deduit du solde)</SelectItem>
-                    <SelectItem value="vacation">Vacances (deduit du solde)</SelectItem>
-                    <SelectItem value="unpaid">Sans solde</SelectItem>
+                    <SelectItem value="other">{t("autre_non_deduit_solde")}</SelectItem>
+                    <SelectItem value="vacation">{t("vacances_deduit_solde")}</SelectItem>
+                    <SelectItem value="unpaid">{t("sans_solde")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Raison (visible employes)" required>
-                <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Fermeture annuelle des Fetes" maxLength={300} />
+              <Field label={t("raison_visible_employes")} required>
+                <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("fermeture_annuelle_fetes")} maxLength={300} />
               </Field>
             </div>
           </FormSection>
@@ -2457,7 +2457,7 @@ function MandatoryClosureDialog({
               <div className="flex items-center gap-2">
                 <Search className="h-3.5 w-3.5 text-muted-foreground" />
                 <Input
-                  placeholder="Rechercher pour exempter…"
+                  placeholder={t("rechercher_exempter")}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="h-8 text-xs"
@@ -2492,20 +2492,20 @@ function MandatoryClosureDialog({
                 </ul>
               </div>
               <p className="text-[10px] text-muted-foreground">
-                Decochez les employes essentiels qui doivent rester actifs (ex : astreinte, securite).
+                {t("decochez_employes_essentiels_doivent_rester")}
               </p>
             </div>
           </FormSection>
 
           <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-900">
             <AlertTriangle className="h-3.5 w-3.5 inline mr-1.5 -mt-0.5" />
-            <strong>Attention :</strong> Crée immediatement des conges approuves pour <strong>{targetCount}</strong> employe{targetCount > 1 ? "s" : ""}. Les conflits existants (autres demandes sur la meme periode) seront ignores.
+            <strong>{t("attention")}</strong> {t("cree_immediatement_conges_approuves")} <strong>{targetCount}</strong> employe{targetCount > 1 ? "s" : ""}. Les conflits existants (autres demandes sur la meme periode) seront ignores.
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || targetCount === 0} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
-            <Building2 className="h-4 w-4 mr-1.5" />{pending ? "Creation..." : `Creer pour ${targetCount} employe${targetCount > 1 ? "s" : ""}`}
+            <Building2 className="h-4 w-4 mr-1.5" />{pending ? t("creation") : `Creer pour ${targetCount} employe${targetCount > 1 ? "s" : ""}`}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -2540,6 +2540,7 @@ function WindowAppealsDialog({
   onClose: () => void;
   onChanged: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [filter, setFilter] = useState<"pending" | "all">("pending");
   const [appeals, setAppeals] = useState<AppealItem[]>([]);
@@ -2551,7 +2552,7 @@ function WindowAppealsDialog({
     fetch(`/api/admin/vacation-windows/${w.id}/appeals?status=${filter}`)
       .then((r) => (r.ok ? r.json() : { appeals: [] }))
       .then((d) => setAppeals(d.appeals ?? []))
-      .catch(() => toast.error("Impossible de charger les appels"))
+      .catch(() => toast.error(t("impossible_charger_appels")))
       .finally(() => setLoading(false));
   }, [w.id, filter]);
 
@@ -2566,7 +2567,7 @@ function WindowAppealsDialog({
               <Megaphone className="h-4 w-4" />Appels d&apos;attribution — {w.name}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Examiner les appels soumis par les employes sur cette fenetre.
+              {t("examiner_appels_soumis_employes_fenetre")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -2575,8 +2576,8 @@ function WindowAppealsDialog({
             <Select value={filter} onValueChange={(v) => setFilter(v as "pending" | "all")}>
               <SelectTrigger className="h-8 w-44 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">En attente uniquement</SelectItem>
-                <SelectItem value="all">Tous les appels</SelectItem>
+                <SelectItem value="pending">{t("attente_uniquement")}</SelectItem>
+                <SelectItem value="all">{t("tous_appels")}</SelectItem>
               </SelectContent>
             </Select>
             <span className="text-[11px] text-muted-foreground ml-auto">
@@ -2584,24 +2585,24 @@ function WindowAppealsDialog({
             </span>
           </div>
           {loading ? (
-            <InlineLoader label="Chargement des appels..." />
+            <InlineLoader label={t("chargement_appels")} />
           ) : appeals.length === 0 ? (
             <div className="rounded-md border bg-muted/10 p-6 text-center">
               <Megaphone className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-              <p className="text-sm font-medium">Aucun appel {filter === "pending" ? "en attente" : ""}</p>
+              <p className="text-sm font-medium">{filter === "pending" ? t("aucun_appel_attente") : t("aucun_appel")}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {filter === "pending"
-                  ? "Aucun employe n'a soumis d'appel pour cette attribution."
-                  : "Cette fenetre n'a recu aucun appel."}
+                  ? t("aucun_employe_n_soumis_appel")
+                  : t("fenetre_n_recu_aucun_appel")}
               </p>
             </div>
           ) : (
             <ul className="divide-y rounded-md border bg-background">
               {appeals.map((a) => {
                 const statusMeta: Record<string, { label: string; cls: string }> = {
-                  pending: { label: "En attente", cls: "bg-amber-50 text-amber-800 border-amber-200" },
-                  approved: { label: "Accorde", cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
-                  rejected: { label: "Refuse", cls: "bg-red-50 text-red-800 border-red-200" },
+                  pending: { label: t("attente"), cls: "bg-amber-50 text-amber-800 border-amber-200" },
+                  approved: { label: t("accorde"), cls: "bg-emerald-50 text-emerald-800 border-emerald-200" },
+                  rejected: { label: t("refuse"), cls: "bg-red-50 text-red-800 border-red-200" },
                 };
                 const sm = statusMeta[a.appealStatus ?? "pending"] ?? statusMeta.pending;
                 return (
@@ -2610,7 +2611,7 @@ function WindowAppealsDialog({
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="text-sm font-semibold text-[#0F2D52] truncate">
-                            {a.employee?.fullName || a.employee?.email || "Employe inconnu"}
+                            {a.employee?.fullName || a.employee?.email || t("employe_inconnu")}
                           </p>
                           <span className={`inline-flex items-center text-[10px] px-1.5 py-0.5 rounded border font-semibold ${sm.cls}`}>
                             {sm.label}
@@ -2629,13 +2630,13 @@ function WindowAppealsDialog({
                           className="h-7 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white shrink-0"
                           onClick={() => setReviewTarget(a)}
                         >
-                          Examiner
+                          {t("examiner")}
                         </Button>
                       )}
                     </div>
                     {a.appealReason && (
                       <div className="rounded-md border bg-amber-50/40 border-amber-200 p-2 text-[11px] text-amber-900 whitespace-pre-wrap">
-                        <strong className="block text-[10px] uppercase tracking-wider font-bold mb-0.5">Motif</strong>
+                        <strong className="block text-[10px] uppercase tracking-wider font-bold mb-0.5">{t("motif")}</strong>
                         {a.appealReason}
                       </div>
                     )}
@@ -2661,8 +2662,8 @@ function WindowAppealsDialog({
           onClose={() => setReviewTarget(null)}
           appeal={{
             preferenceId: reviewTarget.preferenceId,
-            employeeName: reviewTarget.employee?.fullName || reviewTarget.employee?.email || "Employe",
-            reason: reviewTarget.appealReason || "(aucun motif fourni)",
+            employeeName: reviewTarget.employee?.fullName || reviewTarget.employee?.email || t("employe"),
+            reason: reviewTarget.appealReason || t("aucun_motif_fourni"),
             prefDetails: `Rang #${reviewTarget.rank} (${reviewTarget.preferenceStatus}) — ${new Date(reviewTarget.startDate).toLocaleDateString("fr-CA")} → ${new Date(reviewTarget.endDate).toLocaleDateString("fr-CA")} (${reviewTarget.daysCount}j)`,
           }}
           onReviewed={() => {
@@ -2678,6 +2679,7 @@ function WindowAppealsDialog({
 
 // ─── TÂCHE 17 (P2-8) : "Voir equipe" — heatmap glissante reutilisable ─────
 function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
@@ -2688,7 +2690,7 @@ function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
               <Users className="h-4 w-4" />Vue equipe — 4 prochaines semaines
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Heatmap des absences approuvees et en attente dans votre perimetre.
+              {t("heatmap_absences_approuvees_attente_perimetre")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -2709,6 +2711,7 @@ function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
 // des LeaveRequest et n'apparaissent donc pas dans les listes classiques).
 // Lien direct vers la fenêtre concernée pour agir immédiatement.
 function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWindow[] }) {
+  const t = useTranslations("admin.leaves");
   const windowsWithSubs = activeWindows.filter((w) => w.submittedAdmins > 0);
   if (windowsWithSubs.length === 0) return null;
   const totalSubs = windowsWithSubs.reduce((s, w) => s + w.submittedAdmins, 0);
@@ -2722,7 +2725,7 @@ function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWind
               {totalSubs} préférence{totalSubs > 1 ? "s" : ""} de vacances à traiter
             </p>
             <p className="text-[11px] text-amber-800/80 truncate">
-              Sur {windowsWithSubs.length} fenêtre{windowsWithSubs.length > 1 ? "s" : ""} active{windowsWithSubs.length > 1 ? "s" : ""}. À attribuer une fois la période de soumission fermée.
+              {t("sur_fenetres_actives_attribuer", { count: windowsWithSubs.length })}
             </p>
           </div>
         </div>
@@ -2730,8 +2733,7 @@ function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWind
           href="/admin/employes/conges/fenetres"
           className="inline-flex items-center gap-1 text-xs px-3 py-1.5 rounded border border-amber-500 bg-amber-500 text-white hover:bg-amber-600 font-semibold shrink-0"
         >
-          <Eye className="h-3.5 w-3.5" />Gérer les préférences
-        </Link>
+          <Eye className="h-3.5 w-3.5" />{t("leaves_admin_view_gerer_les_preferences")}</Link>
       </div>
       <ul className="divide-y divide-amber-100">
         {windowsWithSubs.map((w) => (
@@ -2749,7 +2751,7 @@ function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWind
               href={`/admin/employes/conges/fenetres#window-${w.id}`}
               className="text-amber-800 hover:underline font-semibold shrink-0"
             >
-              Voir →
+              {t("voir")}
             </Link>
           </li>
         ))}

@@ -1,5 +1,6 @@
 // GET /api/payments/[id]/receipt — telecharge le PDF du recu (PDF distinct de la facture)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generateReceiptPdf, localeToDocLang } from "@/lib/services/pdf";
@@ -9,6 +10,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -27,7 +29,7 @@ export async function GET(
     return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
   }
   if (!payment.client) {
-    return NextResponse.json({ error: "Client lié introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("client_lie_introuvable") }, { status: 404 });
   }
 
   if (session.user.role === "client" && payment.clientId !== session.user.clientId) {
@@ -36,7 +38,7 @@ export async function GET(
 
   // Seuls les paiements reussis ont un recu
   if (payment.status !== "succeeded" && payment.status !== "paid") {
-    return NextResponse.json({ error: "Aucun reçu — paiement non confirmé" }, { status: 400 });
+    return NextResponse.json({ error: t("aucun_recu_paiement_non_confirme") }, { status: 400 });
   }
 
   const receiptNumber = `R-${new Date(payment.paidAt ?? payment.createdAt).getFullYear()}-${String(payment.id).padStart(5, "0")}`;

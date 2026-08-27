@@ -1,22 +1,25 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Briefcase, Laptop, Smartphone, Wrench, HardHat, Car, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 
-const CAT_META: Record<string, { label: string; icon: typeof Briefcase }> = {
-  laptop: { label: "Ordinateur", icon: Laptop },
-  phone: { label: "Téléphone", icon: Smartphone },
-  tool: { label: "Outil", icon: Wrench },
-  epi: { label: "EPI", icon: HardHat },
-  vehicle: { label: "Véhicule", icon: Car },
-  card: { label: "Carte corpo", icon: CreditCard },
-  license: { label: "Licence logiciel", icon: Briefcase },
-  other: { label: "Autre", icon: Briefcase },
+const CAT_META: Record<string, { labelKey: string; icon: typeof Briefcase }> = {
+  laptop: { labelKey: "cat_laptop", icon: Laptop },
+  phone: { labelKey: "cat_phone", icon: Smartphone },
+  tool: { labelKey: "cat_tool", icon: Wrench },
+  epi: { labelKey: "cat_epi", icon: HardHat },
+  vehicle: { labelKey: "cat_vehicle", icon: Car },
+  card: { labelKey: "cat_card", icon: CreditCard },
+  license: { labelKey: "cat_license", icon: Briefcase },
+  other: { labelKey: "cat_other", icon: Briefcase },
 };
 
 export default async function MyEquipmentPage() {
+  const t = await getTranslations("admin.equipment");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
@@ -33,10 +36,9 @@ export default async function MyEquipmentPage() {
     <div className="space-y-4">
       <div>
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <Briefcase className="h-5 w-5 text-[#0F2D52]" />Mon équipement
-        </h1>
+          <Briefcase className="h-5 w-5 text-[#0F2D52]" />{t("page_mon_equipement")}</h1>
         <p className="text-sm text-muted-foreground">
-          Matériel d&apos;entreprise sous votre responsabilité. À retourner lors de votre départ.
+          {t("materiel_apos_entreprise_sous_responsabilite")}
         </p>
       </div>
 
@@ -45,7 +47,7 @@ export default async function MyEquipmentPage() {
           En ma possession ({current.length})
         </h2>
         {current.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">Aucun équipement attribué.</Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("aucun_equipement_attribue")}</Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {current.map((eq) => {
@@ -58,7 +60,7 @@ export default async function MyEquipmentPage() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-bold text-sm">{eq.name}</h3>
-                        <Badge variant="outline" className="text-[10px]">{meta.label}</Badge>
+                        <Badge variant="outline" className="text-[10px]">{t(meta.labelKey)}</Badge>
                       </div>
                       {(eq.brand || eq.model) && <p className="text-xs text-muted-foreground">{[eq.brand, eq.model].filter(Boolean).join(" · ")}</p>}
                       {eq.serialNumber && <p className="text-[11px] font-mono text-muted-foreground">S/N : {eq.serialNumber}</p>}
@@ -101,7 +103,7 @@ export default async function MyEquipmentPage() {
       )}
 
       <p className="text-[11px] text-muted-foreground italic">
-        Pour ajouter ou modifier un équipement : contactez les RH. L&apos;attribution est gérée par eux.
+        {t("ajouter_modifier_equipement_contactez_rh")}
       </p>
     </div>
   );

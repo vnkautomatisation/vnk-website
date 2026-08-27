@@ -1,12 +1,16 @@
 // Mes contrats - vue mon-espace dediee (employe).
 // Refonte VNK : header navy + KPIs + bandeau urgent + cartes contrats.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { MesContratsView } from "./mes-contrats-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Mon espace - Mes contrats" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mon_espace_mes_contrats") };
+}
 
 export default async function MyContratsPage() {
   const session = await auth();

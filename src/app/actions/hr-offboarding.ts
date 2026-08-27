@@ -1,6 +1,7 @@
 "use server";
 // Offboarding wizard complet : checklist IT, retour matériel, RE, exit interview.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -19,27 +20,27 @@ async function requireHrWrite(): Promise<number | null> {
   return (me.customRole?.name === "super_admin" || (perms.hr ?? []).includes("write") || (perms.users ?? []).includes("write")) ? id : null;
 }
 
-const DEFAULT_CHECKLIST = [
-  { key: "exit_interview", label: "Entrevue de départ effectuée" },
-  { key: "return_laptop", label: "Retour ordinateur portable" },
-  { key: "return_phone", label: "Retour téléphone / cellulaire corpo" },
-  { key: "return_badge", label: "Retour badge d'accès / clés" },
-  { key: "return_vehicle", label: "Retour véhicule de fonction (si applicable)" },
-  { key: "return_credit_card", label: "Retour carte de crédit corpo / essence" },
-  { key: "return_tools", label: "Retour outils & équipement spécialisé" },
-  { key: "return_epi", label: "Retour équipement protection individuel (EPI)" },
-  { key: "revoke_email", label: "Révoquer accès courriel + transférer vers successeur" },
-  { key: "revoke_sso", label: "Révoquer SSO externes (Google, Microsoft, GitHub)" },
-  { key: "revoke_shared_accounts", label: "Reprendre comptes partagés (Stripe, Dropbox, Sentry)" },
-  { key: "revoke_portal", label: "Désactiver compte du portail VNK" },
-  { key: "transfer_files", label: "Transférer documents / dossiers en cours" },
-  { key: "transfer_clients", label: "Communiquer changement aux clients concernés" },
-  { key: "handover_meeting", label: "Réunion de passation avec successeur" },
-  { key: "issue_record_employment", label: "Émettre Relevé d'emploi (RE) — EDSC dans 5 jours" },
-  { key: "issue_final_paystub", label: "Émettre dernier bulletin de paie + vacances accumulées" },
-  { key: "issue_t4_release", label: "Confirmer émission T4 / Relevé 1 en fin d'année" },
-  { key: "hr_documentation", label: "Archiver dossier RH employé" },
-  { key: "remove_directory", label: "Retirer de l'annuaire interne + site web" },
+export const DEFAULT_CHECKLIST = [
+  { key: "exit_interview", labelKey: "off_entrevue_de_depart_effectuee" },
+  { key: "return_laptop", labelKey: "off_retour_ordinateur_portable" },
+  { key: "return_phone", labelKey: "off_retour_telephone_cellulaire_corpo" },
+  { key: "return_badge", labelKey: "off_retour_badge_d_acces_cles" },
+  { key: "return_vehicle", labelKey: "off_retour_vehicule_de_fonction_si_applicable" },
+  { key: "return_credit_card", labelKey: "off_retour_carte_de_credit_corpo_essence" },
+  { key: "return_tools", labelKey: "off_retour_outils_equipement_specialise" },
+  { key: "return_epi", labelKey: "off_retour_equipement_protection_individuel_epi" },
+  { key: "revoke_email", labelKey: "off_revoquer_acces_courriel_transferer_vers_successeur" },
+  { key: "revoke_sso", labelKey: "off_revoquer_sso_externes_google_microsoft_github" },
+  { key: "revoke_shared_accounts", labelKey: "off_reprendre_comptes_partages_stripe_dropbox_sentry" },
+  { key: "revoke_portal", labelKey: "off_desactiver_compte_du_portail_vnk" },
+  { key: "transfer_files", labelKey: "off_transferer_documents_dossiers_en_cours" },
+  { key: "transfer_clients", labelKey: "off_communiquer_changement_aux_clients_concernes" },
+  { key: "handover_meeting", labelKey: "off_reunion_de_passation_avec_successeur" },
+  { key: "issue_record_employment", labelKey: "off_emettre_releve_d_emploi_re_edsc" },
+  { key: "issue_final_paystub", labelKey: "off_emettre_dernier_bulletin_de_paie_vacances" },
+  { key: "issue_t4_release", labelKey: "off_confirmer_emission_t4_releve_1_en" },
+  { key: "hr_documentation", labelKey: "off_archiver_dossier_rh_employe" },
+  { key: "remove_directory", labelKey: "off_retirer_de_l_annuaire_interne_site" },
 ];
 
 const startSchema = z.object({
@@ -50,10 +51,11 @@ const startSchema = z.object({
 });
 
 export async function startOffboardingAction(input: z.infer<typeof startSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   const parsed = startSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const items = DEFAULT_CHECKLIST.map((it) => ({ ...it, done: false, doneAt: null, doneBy: null }));
 
@@ -93,7 +95,7 @@ export async function startOffboardingAction(input: z.infer<typeof startSchema>)
         recipientType: "admin",
         recipientId: parsed.data.adminId,
         type: "info",
-        title: "Processus de départ démarré",
+        title: t("processus_de_depart_demarre"),
         body: `Votre dernier jour est fixé au ${new Date(parsed.data.lastDay).toLocaleDateString("fr-CA")}. Consultez les étapes restantes.`,
         link: "/admin/mon-espace",
         icon: "log-out",
@@ -112,7 +114,7 @@ export async function toggleOffboardingItemAction(input: { adminId: number; item
   const checklist = await prisma.offboardingChecklist.findUnique({ where: { adminId: input.adminId } });
   if (!checklist) return { success: false, error: "Checklist introuvable" };
 
-  const items = Array.isArray(checklist.items) ? checklist.items as Array<{ key: string; label: string; done: boolean; doneAt: string | null; doneBy: number | null }> : [];
+  const items = Array.isArray(checklist.items) ? checklist.items as Array<{ key: string; labelKey?: string; label?: string; done: boolean; doneAt: string | null; doneBy: number | null }> : [];
   const idx = items.findIndex((it) => it.key === input.itemKey);
   if (idx === -1) return { success: false, error: "Item introuvable" };
 
@@ -173,6 +175,7 @@ export async function markRecordOfEmploymentSentAction(input: { adminId: number 
 
 // Clôture définitive : marque l'offboarding complete + désactive le compte admin + invalide ses sessions.
 export async function completeOffboardingAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
 
@@ -182,7 +185,7 @@ export async function completeOffboardingAction(input: { id: number }): Promise<
       include: { admin: { select: { id: true, fullName: true, email: true, isActive: true, internalNotes: true } } },
     });
     if (!offboarding) return { success: false, error: "Offboarding introuvable" };
-    if (offboarding.status === "completed") return { success: false, error: "Déjà complété" };
+    if (offboarding.status === "completed") return { success: false, error: t("deja_complete") };
 
     const prefix = "[OFFBOARDED]";
     const existingNotes = offboarding.admin.internalNotes ?? "";

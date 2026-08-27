@@ -3,6 +3,7 @@
 // Un poste pré-remplit le rôle, le département et la couleur par défaut lors
 // de la création d'un nouvel utilisateur.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -39,13 +40,14 @@ const createSchema = z.object({
 });
 
 export async function createPositionAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePositionsWrite();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const existing = await prisma.position.findUnique({ where: { name: parsed.data.name } });
-  if (existing) return { success: false, error: "Un poste avec ce nom existe déjà" };
+  if (existing) return { success: false, error: t("un_poste_avec_ce_nom_existe_deja") };
 
   const created = await prisma.position.create({
     data: {
@@ -80,10 +82,11 @@ const updateSchema = z.object({
 });
 
 export async function updatePositionAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePositionsWrite();
   if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const before = await prisma.position.findUnique({ where: { id: parsed.data.id } });
   if (!before) return { success: false, error: "Poste introuvable" };
@@ -91,7 +94,7 @@ export async function updatePositionAction(input: z.infer<typeof updateSchema>):
   // Postes système : on peut éditer description/rôle/département mais pas renommer
   const { id, name, ...rest } = parsed.data;
   if (before.isSystem && name && name !== before.name) {
-    return { success: false, error: "Le nom d'un poste système ne peut être modifié" };
+    return { success: false, error: t("le_nom_d_un_poste_systeme_ne") };
   }
 
   await prisma.position.update({
@@ -111,17 +114,18 @@ export async function updatePositionAction(input: z.infer<typeof updateSchema>):
 // ═══════════════════════════════════════════════════════════
 const deleteSchema = z.object({ id: z.number().int() });
 export async function deletePositionAction(input: z.infer<typeof deleteSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePositionsWrite();
   if (!adminId) return unauthorized();
   const parsed = deleteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   const position = await prisma.position.findUnique({
     where: { id: parsed.data.id },
     include: { _count: { select: { admins: true } } },
   });
   if (!position) return { success: false, error: "Poste introuvable" };
-  if (position.isSystem) return { success: false, error: "Les postes système ne peuvent être supprimés" };
+  if (position.isSystem) return { success: false, error: t("les_postes_systeme_ne_peuvent_etre_supprimes") };
   if (position._count.admins > 0) return { success: false, error: `Ce poste est attribué à ${position._count.admins} utilisateur(s).` };
 
   await prisma.position.delete({ where: { id: parsed.data.id } });
@@ -140,10 +144,11 @@ const reorderSchema = z.object({
 });
 
 export async function reorderPositionsAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePositionsWrite();
   if (!adminId) return unauthorized();
   const parsed = reorderSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   await prisma.$transaction(
     parsed.data.orderedIds.map((id, idx) =>

@@ -56,15 +56,16 @@ export function PickEmployeeForPreviewDialog({
   onClose,
   onPick,
   employees,
-  title = "Choisir un employe pour l'apercu",
-  description = "Selectionnez un employe pour resoudre les variables du template (nom, poste, salaire...).",
-  confirmLabel = "Apercu PDF",
+  title,
+  description,
+  confirmLabel,
 }: PickEmployeeForPreviewDialogProps) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
-  // Reset a chaque ouverture
+
   useEffect(() => {
     if (open) {
       setSearch("");
@@ -89,38 +90,38 @@ export function PickEmployeeForPreviewDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-md sm:h-auto sm:max-h-[80vh] sm:rounded-lg">
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Users className="h-4 w-4 shrink-0" />
-              <span className="truncate">{title}</span>
+              <span className="truncate">{title ?? t("choisir_employe_apercu")}</span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
-              {description}
+              {description ?? t("selectionnez_employe_resoudre_variables_template")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Search */}
+
         <div className="p-3 sm:p-4 border-b shrink-0">
           <div className="relative">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher par nom ou poste..."
+              placeholder={t("rechercher_nom_poste")}
               className="h-9 text-sm pl-7"
               autoFocus
             />
           </div>
         </div>
 
-        {/* List */}
+
         <div className="flex-1 overflow-y-auto p-3 space-y-1.5 min-h-0">
           {filtered.length === 0 ? (
             <p className="text-xs text-muted-foreground text-center py-6">
-              Aucun employe trouve.
+              {t("aucun_employe_trouve")}
             </p>
           ) : (
             filtered.map((e) => {
@@ -150,7 +151,7 @@ export function PickEmployeeForPreviewDialog({
                       {e.fullName ?? `Employe #${e.id}`}
                     </p>
                     <p className="text-[11px] text-muted-foreground truncate">
-                      {e.position ?? "Poste non defini"}
+                      {e.position ?? t("poste_non_defini")}
                     </p>
                   </div>
                   {isSelected && (
@@ -162,7 +163,7 @@ export function PickEmployeeForPreviewDialog({
           )}
         </div>
 
-        {/* Footer */}
+
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2">
           <Button type="button" variant="outline" onClick={onClose}>
             {tc("cancel")}
@@ -174,7 +175,7 @@ export function PickEmployeeForPreviewDialog({
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
             <FileText className="h-3.5 w-3.5 mr-1.5" />
-            {confirmLabel}
+            {confirmLabel ?? t("apercu_pdf")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -7,6 +7,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { useTranslations } from "next-intl";
 import { AlertTriangle, ShieldCheck, HelpCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -16,7 +17,7 @@ export function ConfirmDialog({
   title,
   description,
   confirmLabel = "Confirmer",
-  cancelLabel = "Annuler",
+  cancelLabel,
   variant = "destructive",
   loading = false,
   disableConfirm = false,
@@ -35,6 +36,7 @@ export function ConfirmDialog({
   onConfirm: () => void;
   children?: React.ReactNode;
 }) {
+  const tc = useTranslations("common");
   const isDestructive = variant === "destructive";
 
   return (
@@ -77,7 +79,7 @@ export function ConfirmDialog({
             onClick={() => onOpenChange(false)}
             disabled={loading}
           >
-            {cancelLabel}
+            {cancelLabel ?? tc("cancel")}
           </Button>
           <Button
             className={cn(

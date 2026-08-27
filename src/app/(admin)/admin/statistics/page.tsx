@@ -1,12 +1,16 @@
 // Admin · Statistiques avancées avec graphiques temps réel.
 // Charge les agrégats côté serveur, délègue le rendu graphique au client.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { StatisticsView } from "./statistics-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Statistiques — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("statistiques_vnk") };
+}
 
 function startOfMonth(d: Date) { return new Date(d.getFullYear(), d.getMonth(), 1); }
 function addMonths(d: Date, n: number) { return new Date(d.getFullYear(), d.getMonth() + n, 1); }
@@ -16,6 +20,7 @@ export default async function StatisticsPage({
 }: {
   searchParams: Promise<{ range?: string }>;
 }) {
+  const t = await getTranslations("admin.statistics");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
 
@@ -135,7 +140,7 @@ export default async function StatisticsPage({
     status: r.status, count: Number(r.count), total: Number(r.total),
   }));
   const serviceRows = serviceBreakdown.map((r) => ({
-    service: r.service ?? "Non catégorisé", count: Number(r.count), total: Number(r.total),
+    service: r.service ?? t("non_categorise"), count: Number(r.count), total: Number(r.total),
   }));
 
   return (

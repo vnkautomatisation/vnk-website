@@ -44,7 +44,7 @@ export function TabSecurite({
   const tCommon = useTranslations("admin.profile.common");
   const router = useRouter();
 
-  // ── Password change (en modal dédié) ────────────────
+
   const [pwDialog, setPwDialog] = useState(false);
   const [oldPw, setOldPw] = useState("");
   const [newPw, setNewPw] = useState("");
@@ -84,8 +84,8 @@ export function TabSecurite({
   };
 
   const doChangePassword = async (bypassBreachCheck: boolean) => {
-    if (newPw !== confirmPw) { toast.error("Les mots de passe ne correspondent pas"); return; }
-    if (newPw.length < 12) { toast.error("Minimum 12 caractères"); return; }
+    if (newPw !== confirmPw) { toast.error(t("mots_passe_ne_correspondent_pas")); return; }
+    if (newPw.length < 12) { toast.error(t("minimum_12_caracteres")); return; }
     setPwLoading(true);
     try {
       const res = await fetch("/api/auth/change-password", {
@@ -99,22 +99,22 @@ export function TabSecurite({
         return;
       }
       if (res.ok) {
-        toast.success("Mot de passe modifié");
+        toast.success(t("mot_passe_modifie"));
         resetPwForm();
         setPwDialog(false);
         setBreachWarningOpen(false);
         router.refresh();
       } else {
-        toast.error(data.error || data.message || "Erreur");
+        toast.error(data.error || data.message || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setPwLoading(false);
     }
   };
 
-  // ── 2FA ─────────────────────────────────────────────
+
   const [is2FAEnabled, setIs2FAEnabled] = useState(twoFactorEnabled);
   const [setupDialog, setSetupDialog] = useState(false);
   const [disableDialog, setDisableDialog] = useState(false);
@@ -130,12 +130,12 @@ export function TabSecurite({
       const data = await res.json();
       if (res.ok) { setQrCode(data.qrCode); setSecret(data.secret); setSetupDialog(true); }
       else toast.error(data.error);
-    } catch { toast.error("Erreur réseau"); }
+    } catch { toast.error(t("erreur_reseau")); }
     finally { setTfaLoading(false); }
   };
 
   const handleVerify2FA = async () => {
-    if (totpCode.length !== 6) { toast.error("Entrez un code à 6 chiffres"); return; }
+    if (totpCode.length !== 6) { toast.error(t("entrez_code_6_chiffres")); return; }
     setTfaLoading(true);
     try {
       const res = await fetch("/api/auth/two-factor/verify", {
@@ -143,14 +143,14 @@ export function TabSecurite({
         body: JSON.stringify({ code: totpCode }),
       });
       const data = await res.json();
-      if (res.ok) { toast.success("2FA activée"); setIs2FAEnabled(true); setSetupDialog(false); setTotpCode(""); router.refresh(); }
+      if (res.ok) { toast.success(t("2fa_activee")); setIs2FAEnabled(true); setSetupDialog(false); setTotpCode(""); router.refresh(); }
       else toast.error(data.error);
-    } catch { toast.error("Erreur réseau"); }
+    } catch { toast.error(t("erreur_reseau")); }
     finally { setTfaLoading(false); }
   };
 
   const handleDisable2FA = async () => {
-    if (totpCode.length !== 6) { toast.error("Entrez un code"); return; }
+    if (totpCode.length !== 6) { toast.error(t("entrez_code")); return; }
     setTfaLoading(true);
     try {
       const res = await fetch("/api/auth/two-factor/disable", {
@@ -158,13 +158,13 @@ export function TabSecurite({
         body: JSON.stringify({ code: totpCode }),
       });
       const data = await res.json();
-      if (res.ok) { toast.success("2FA désactivée"); setIs2FAEnabled(false); setDisableDialog(false); setTotpCode(""); router.refresh(); }
+      if (res.ok) { toast.success(t("2fa_desactivee")); setIs2FAEnabled(false); setDisableDialog(false); setTotpCode(""); router.refresh(); }
       else toast.error(data.error);
-    } catch { toast.error("Erreur réseau"); }
+    } catch { toast.error(t("erreur_reseau")); }
     finally { setTfaLoading(false); }
   };
 
-  // ── Backup codes ────────────────────────────────────
+
   const [backupCodes, setBackupCodes] = useState<string[]>([]);
   const [backupDialog, setBackupDialog] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -176,7 +176,7 @@ export function TabSecurite({
       if (result.success && "data" in result) {
         setBackupCodes(result.data.codes);
         setBackupDialog(true);
-        toast.success("10 codes générés");
+        toast.success(t("10_codes_generes"));
       } else if (!result.success) {
         toast.error(result.error);
       }
@@ -189,7 +189,7 @@ export function TabSecurite({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // ── Trusted devices ──────────────────────────────────
+
   const [trustedPending, startTrusted] = useTransition();
   const handleRemoveTrusted = (id: number) => {
     startTrusted(async () => {
@@ -204,14 +204,14 @@ export function TabSecurite({
     : null;
   const pwExpired = pwDaysSince !== null && pwDaysSince > 180;
 
-  // ── Delegation d'approbation de congés ───────────────
+
   const [delegateSel, setDelegateSel] = useState<string>(currentDelegate ? String(currentDelegate.id) : "");
   const [delPending, startDel] = useTransition();
   const saveDelegation = (delegateId: number | null) => {
     startDel(async () => {
       const r = await delegateLeaveApprovalAction({ delegateId });
       if (r.success) {
-        toast.success(delegateId === null ? "Délégation désactivée" : "Délégation enregistrée");
+        toast.success(delegateId === null ? t("delegation_desactivee") : t("delegation_enregistree"));
         router.refresh();
       } else {
         toast.error(r.error);
@@ -219,7 +219,7 @@ export function TabSecurite({
     });
   };
   const handleActivateDelegation = () => {
-    if (!delegateSel) { toast.error("Sélectionnez un délégué"); return; }
+    if (!delegateSel) { toast.error(t("selectionnez_delegue")); return; }
     saveDelegation(Number(delegateSel));
   };
   const handleClearDelegation = () => {
@@ -229,7 +229,7 @@ export function TabSecurite({
 
   return (
     <div className="space-y-4">
-      {/* ─── Banner score sécurité ─── */}
+
       <Card className={securityScore >= 80 ? "border-emerald-200 bg-emerald-50/30" : securityScore >= 50 ? "border-amber-200 bg-amber-50/30" : "border-red-200 bg-red-50/30"}>
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className={`flex items-center justify-center h-12 w-12 rounded-full ${securityScore >= 80 ? "bg-emerald-100 text-emerald-700" : securityScore >= 50 ? "bg-amber-100 text-amber-700" : "bg-red-100 text-red-700"}`}>
@@ -250,7 +250,7 @@ export function TabSecurite({
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ─── Carte Mot de passe (lecture seule + bouton modifier) ─── */}
+
         <Card>
           <CardHeader className="pb-4">
             <div className="flex items-start justify-between gap-3">
@@ -297,7 +297,7 @@ export function TabSecurite({
           </CardContent>
         </Card>
 
-        {/* ─── Carte 2FA + Backup codes (lecture + actions) ─── */}
+
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
@@ -328,7 +328,7 @@ export function TabSecurite({
               </div>
             </div>
 
-            {/* Backup codes */}
+
             <div className="pt-3 border-t space-y-2">
               <div className="flex items-center justify-between">
                 <div>
@@ -347,7 +347,7 @@ export function TabSecurite({
               </p>
             </div>
 
-            {/* Login alerts */}
+
             <div className="pt-3 border-t flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium">{t("login_alerts.title")}</p>
@@ -360,7 +360,7 @@ export function TabSecurite({
           </CardContent>
         </Card>
 
-        {/* ─── Trusted devices ─── */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
@@ -405,20 +405,17 @@ export function TabSecurite({
           </CardContent>
         </Card>
 
-        {/* ─── Délégation d'approbation de congés ─── */}
+
         <Card className="lg:col-span-2">
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
               Délégation d&apos;approbation
               {currentDelegate && (
-                <Badge className="ml-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Active</Badge>
+                <Badge className="ml-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{t("active")}</Badge>
               )}
             </CardTitle>
-            <p className="text-xs text-muted-foreground mt-1">
-              En cas d&apos;absence, désignez un collègue qui pourra approuver les demandes de congé à votre place.
-              Le routage s&apos;active automatiquement quand vous êtes en congé approuvé.
-            </p>
+            <p className="text-xs text-muted-foreground mt-1">{t("tab_securite_en_cas_d_absence_designez_un_collegue")}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {currentDelegate ? (
@@ -440,26 +437,26 @@ export function TabSecurite({
                     className="border-destructive/30 text-destructive hover:bg-destructive/10"
                   >
                     <UserMinus className="h-3.5 w-3.5" />
-                    <span className="hidden sm:inline ml-1">Désactiver</span>
+                    <span className="hidden sm:inline ml-1">{t("desactiver")}</span>
                   </Button>
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground italic">Aucune délégation configurée.</p>
+              <p className="text-xs text-muted-foreground italic">{t("aucune_delegation_configuree")}</p>
             )}
 
             <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-2 items-end">
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">
-                  {currentDelegate ? "Changer le délégué" : "Désigner un délégué"}
+                  {currentDelegate ? t("changer_delegue") : t("designer_delegue")}
                 </Label>
                 <Select value={delegateSel} onValueChange={setDelegateSel}>
                   <SelectTrigger className="h-9 mt-1.5">
-                    <SelectValue placeholder="Sélectionner un administrateur" />
+                    <SelectValue placeholder={t("selectionner_administrateur")} />
                   </SelectTrigger>
                   <SelectContent>
                     {delegationCandidates.length === 0 ? (
-                      <div className="px-2 py-3 text-xs text-muted-foreground italic">Aucun candidat éligible</div>
+                      <div className="px-2 py-3 text-xs text-muted-foreground italic">{t("aucun_candidat_eligible")}</div>
                     ) : delegationCandidates.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
                         {(c.fullName || c.email)}
@@ -475,18 +472,15 @@ export function TabSecurite({
                 className="bg-[#0F2D52] hover:bg-[#0a223e] text-white"
               >
                 <UserPlus className="h-4 w-4" />
-                <span className="ml-1">{currentDelegate ? "Mettre à jour" : "Activer"}</span>
+                <span className="ml-1">{currentDelegate ? t("mettre_jour") : t("activer")}</span>
               </Button>
             </div>
-            <p className="text-[10px] text-muted-foreground">
-              Seuls les admins avec droit de revue des congés sont éligibles. Un cron quotidien
-              déclenche le routage des demandes en attente vers le délégué quand vous êtes absent.
-            </p>
+            <p className="text-[10px] text-muted-foreground">{t("tab_securite_seuls_les_admins_avec_droit_de_revue")}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* ─── Dialog Changement mot de passe ─── */}
+
       <Dialog open={pwDialog} onOpenChange={(o) => { setPwDialog(o); if (!o) resetPwForm(); }}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -556,7 +550,7 @@ export function TabSecurite({
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog Setup 2FA ─── */}
+
       <Dialog open={setupDialog} onOpenChange={setSetupDialog}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -568,7 +562,7 @@ export function TabSecurite({
           <div className="p-5 space-y-4">
             {qrCode && (
               <div className="flex justify-center">
-                <img src={qrCode} alt="QR Code 2FA" className="w-48 h-48 rounded-lg border" />
+                <img src={qrCode} alt={t("qr_code_2fa")} className="w-48 h-48 rounded-lg border" />
               </div>
             )}
             {secret && (
@@ -591,7 +585,7 @@ export function TabSecurite({
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog Disable 2FA ─── */}
+
       <Dialog open={disableDialog} onOpenChange={setDisableDialog}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -613,7 +607,7 @@ export function TabSecurite({
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog Backup codes ─── */}
+
       <Dialog open={backupDialog} onOpenChange={setBackupDialog}>
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -642,7 +636,7 @@ export function TabSecurite({
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog Breach warning ─── */}
+
       <Dialog open={breachWarningOpen} onOpenChange={setBreachWarningOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-red-600 text-white p-5">

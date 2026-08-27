@@ -10,6 +10,7 @@
 //   - Mobile : Sheet drawer dédié
 //   - A11y : aria-current="page", role="navigation", aria-expanded
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import { useEffect, useState, useMemo } from "react";
 import { ChevronDown, Menu, X } from "lucide-react";
@@ -36,27 +37,28 @@ type Props = {
 };
 
 export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTagline, sections, storageKey }: Props) {
+  const t = useTranslations("admin.ui");
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  // Logique ACCORDEON : un seul groupe ouvert a la fois.
-  // Ouvrir un groupe ferme automatiquement les autres. Le groupe contenant
-  // la page active reste toujours visible (force-ouvert via isGroupOpen).
-  // v3 = nouvelle cle pour invalider tout ancien state d'une version multi-open.
+
+
+
+
   const accordionKey = `${storageKey}.v3`;
 
   const allGroupNames = useMemo(() => sections.map((s) => s.group), [sections]);
 
-  // Page active + groupe actif.
-  // On calcule UN SEUL activeHref pour tout le module (single source of truth).
-  // Sans ca, "/admin/employes" (Liste) matche aussi quand on est sur /admin/employes/anniversaires
-  // car le check "moreSpecific" interne a isActive ne voit que les items du meme groupe.
+
+
+
+
   const allItems = useMemo(() => sections.flatMap((s) => s.items), [sections]);
   const activeHref = useMemo(() => {
-    // 1. Exact match prioritaire
+
     const exact = allItems.find((it) => it.href === pathname);
     if (exact) return exact.href;
-    // 2. Sinon : prefix le plus long qui matche pathname
+
     let best: string | null = null;
     for (const it of allItems) {
       if (pathname === it.href || pathname.startsWith(it.href + "/")) {
@@ -68,13 +70,13 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
   const activeItem = allItems.find((it) => it.href === activeHref);
   const activeGroup = sections.find((s) => s.items.some((it) => it.href === activeHref));
 
-  // Init : aucun groupe explicitement ouvert. Le groupe ACTIF est force-ouvert
-  // par isGroupOpen() (UX : on doit toujours voir ou on est).
-  // Server-stable (vide -> meme rendu cote serveur et client avant hydration).
+
+
+
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
-  // Hydratation : charger preference user depuis localStorage
+
   useEffect(() => {
     setHydrated(true);
     try {
@@ -84,14 +86,14 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
         if (parsed && allGroupNames.includes(parsed)) setOpenGroup(parsed);
       }
     } catch { /* ignore */ }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [accordionKey]);
 
   const persist = (next: string | null) => {
     try { localStorage.setItem(accordionKey, JSON.stringify(next)); } catch { /* ignore */ }
   };
 
-  // ACCORDEON : ouvrir un groupe ferme tous les autres. Re-cliquer ferme.
+
   const toggleGroup = (group: string) => {
     setOpenGroup((prev) => {
       const next = prev === group ? null : group;
@@ -100,17 +102,17 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
     });
   };
 
-  // Le groupe ACTIF est toujours visiblement ouvert (UX : on doit voir ou on est).
-  // Sinon, seul le groupe explicitement ouvert l'est.
+
+
   const isGroupOpen = (group: string, section: NavSection) => {
     if (section === activeGroup) return true;
     return openGroup === group;
   };
 
-  // Fermer le drawer mobile à la navigation
+
   useEffect(() => { setMobileOpen(false); }, [pathname]);
 
-  // Lock body scroll quand drawer ouvert
+
   useEffect(() => {
     if (mobileOpen) {
       document.body.style.overflow = "hidden";
@@ -134,14 +136,14 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
           type="button"
           onClick={() => setMobileOpen(true)}
           className="inline-flex items-center gap-2 text-sm font-medium hover:text-[#0F2D52] transition shrink-0"
-          aria-label={`Ouvrir le menu ${moduleLabel}`}
+          aria-label={t("ouvrir_menu", { module: moduleLabel })}
         >
           <Menu className="h-4 w-4" />
           <ModuleIcon className="h-4 w-4 text-[#0F2D52]" />
           <span className="font-semibold">{moduleLabel}</span>
         </button>
         {/* Slot extras (KPIs page-specific via portal).
-            justify-start : les KPIs flow naturellement apres "Mon espace".
+            justify-start : les KPIs flow naturellement apres t("mon_espace").
             overflow-x-auto + min-w-0 : scroll horizontal si depasse. */}
         <div
           id="vnk-module-nav-extra"
@@ -158,7 +160,7 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
         )}
       </div>
 
-      {/* ─── Mobile drawer ─── */}
+
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-[60] flex">
           <div
@@ -180,13 +182,13 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
               <button
                 onClick={() => setMobileOpen(false)}
                 className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
-                aria-label="Fermer le menu"
+                aria-label={t("fermer_menu")}
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
             <nav
-              aria-label={`Navigation ${moduleLabel}`}
+              aria-label={t("navigation_module", { module: moduleLabel })}
               className="flex-1 overflow-y-auto p-2 overscroll-contain"
             >
               {sections.map((section, idx) => (
@@ -205,9 +207,9 @@ export function ModuleSidebarNav({ moduleLabel, moduleIcon: ModuleIcon, moduleTa
         </div>
       )}
 
-      {/* ─── Desktop sidebar ─── */}
+
       <nav
-        aria-label={`Navigation ${moduleLabel}`}
+        aria-label={t("navigation_module", { module: moduleLabel })}
         className="hidden lg:block lg:sticky lg:top-[80px] lg:self-start"
       >
         <div className="rounded-lg border bg-card overflow-hidden flex flex-col lg:max-h-[calc(100vh-6rem)]">
@@ -250,22 +252,23 @@ function NavGroup({
   onToggle: () => void;
   isFirst: boolean;
 }) {
+  const t = useTranslations("admin.ui");
   const GroupIcon = section.groupIcon;
   const itemCount = section.items.length;
 
   return (
     <div className={cn(
-      // Separateur horizontal au-dessus de chaque groupe (sauf le premier)
-      // pour bien distinguer ou un groupe finit et ou l'autre commence.
+
+
       !isFirst && "mt-2 pt-2 border-t border-border/50",
     )}>
-      {/* ─── Header de GROUPE : style nettement distinct des items ─── */}
+
       <button
         type="button"
         onClick={onToggle}
         className={cn(
           "w-full flex items-center gap-2 px-1.5 py-1 rounded-md transition group/header",
-          // Typo distinctive : tres petit, ALLCAPS, letter-spacing tres large, gras
+
           "text-[10px] uppercase tracking-[0.14em] font-bold",
           isActiveGroup
             ? "text-[#0F2D52]"
@@ -291,7 +294,7 @@ function NavGroup({
         )} />
       </button>
 
-      {/* ─── Sous-pages : nettement indentees + bordure verticale claire ─── */}
+
       {open && (
         <ul className="mt-1 ml-[7px] pl-2 border-l border-border space-y-0.5">
           {section.items.map((item) => {
@@ -299,7 +302,7 @@ function NavGroup({
             const Icon = item.icon;
             return (
               <li key={item.href} className="relative">
-                {/* Barre verticale navy qui CHEVAUCHE la border-l du <ul> quand actif */}
+
                 {active && (
                   <span
                     aria-hidden

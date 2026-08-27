@@ -5,6 +5,7 @@
 // le fichier (la demande passe en "uploaded"), puis le RH valide ou rejette.
 // Si validé : crée un EmployeePersonalDocument officiel rattaché à la demande.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -119,8 +120,9 @@ const createSchema = z.object({
 export async function createUploadRequestAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const guard = await requireRequesterAccess(parsed.data.targetAdminId);
   if (!guard) return unauthorized();
@@ -130,12 +132,12 @@ export async function createUploadRequestAction(
     select: { id: true, isActive: true, fullName: true, email: true },
   });
   if (!target || !target.isActive) {
-    return { success: false, error: "Employé introuvable ou inactif" };
+    return { success: false, error: t("employe_introuvable_ou_inactif") };
   }
 
   const dueDate = parseDateOnly(parsed.data.dueDate ?? null);
   if (dueDate && dueDate.getTime() < Date.now() - 24 * 3600 * 1000) {
-    return { success: false, error: "L'échéance ne peut pas être dans le passé" };
+    return { success: false, error: t("l_echeance_ne_peut_pas_etre_dans") };
   }
 
   const row = await prisma.documentUploadRequest.create({
@@ -170,7 +172,7 @@ export async function createUploadRequestAction(
         recipientType: "admin",
         recipientId: parsed.data.targetAdminId,
         type: "warning",
-        title: "Document demandé",
+        title: t("document_demande"),
         body:
           parsed.data.title
           + (parsed.data.description ? ` — ${parsed.data.description}` : "")
@@ -188,6 +190,7 @@ export async function createUploadRequestAction(
 
 // ─── cancelUploadRequestAction ─────────────────────────────────
 export async function cancelUploadRequestAction(id: number): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   if (!Number.isFinite(id)) return { success: false, error: "ID invalide" };
 
   const req = await prisma.documentUploadRequest.findUnique({
@@ -200,7 +203,7 @@ export async function cancelUploadRequestAction(id: number): Promise<Result> {
   if (!guard) return unauthorized();
 
   if (req.status === "approved" || req.status === "cancelled") {
-    return { success: false, error: "Demande déjà clôturée" };
+    return { success: false, error: t("demande_deja_cloturee") };
   }
 
   await prisma.documentUploadRequest.update({
@@ -222,7 +225,7 @@ export async function cancelUploadRequestAction(id: number): Promise<Result> {
         recipientType: "admin",
         recipientId: req.targetAdminId,
         type: "info",
-        title: "Demande annulée",
+        title: t("demande_annulee"),
         body: `La demande « ${req.title} » a été annulée.`,
         link: "/admin/mon-espace/documents",
         icon: "x-circle",
@@ -237,6 +240,7 @@ export async function cancelUploadRequestAction(id: number): Promise<Result> {
 
 // ─── remindUploadRequestAction ─────────────────────────────────
 export async function remindUploadRequestAction(id: number): Promise<Result<{ notified: number }>> {
+  const t = await getTranslations("admin.action_errors");
   if (!Number.isFinite(id)) return { success: false, error: "ID invalide" };
 
   const req = await prisma.documentUploadRequest.findUnique({
@@ -245,7 +249,7 @@ export async function remindUploadRequestAction(id: number): Promise<Result<{ no
   });
   if (!req) return { success: false, error: "Demande introuvable" };
   if (req.status !== "pending") {
-    return { success: false, error: "La demande n'est plus en attente" };
+    return { success: false, error: t("la_demande_n_est_plus_en_attente") };
   }
 
   const guard = await requireRequesterAccess(req.targetAdminId);
@@ -265,7 +269,7 @@ export async function remindUploadRequestAction(id: number): Promise<Result<{ no
         recipientType: "admin",
         recipientId: req.targetAdminId,
         type: "warning",
-        title: "Rappel : document à téléverser",
+        title: t("rappel_document_a_televerser"),
         body: req.title,
         link: "/admin/mon-espace/documents",
         icon: "bell",
@@ -295,9 +299,10 @@ export async function approveUploadRequestAction(
   id: number,
   opts: z.infer<typeof approveSchema> = {},
 ): Promise<Result<{ personalDocId: number | null }>> {
+  const t = await getTranslations("admin.action_errors");
   if (!Number.isFinite(id)) return { success: false, error: "ID invalide" };
   const parsed = approveSchema.safeParse(opts);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const guard = await requireHrWrite();
   if (!guard) return unauthorized();
@@ -305,7 +310,7 @@ export async function approveUploadRequestAction(
   const req = await prisma.documentUploadRequest.findUnique({ where: { id } });
   if (!req) return { success: false, error: "Demande introuvable" };
   if (req.status !== "uploaded") {
-    return { success: false, error: "Le fichier n'a pas encore été téléversé" };
+    return { success: false, error: t("le_fichier_n_a_pas_encore_ete") };
   }
   if (!req.fileUrl) {
     return { success: false, error: "Fichier manquant" };
@@ -372,7 +377,7 @@ export async function approveUploadRequestAction(
         recipientType: "admin",
         recipientId: req.targetAdminId,
         type: "success",
-        title: "Document approuvé",
+        title: t("document_approuve"),
         body: `Le document « ${req.title} » a été validé par les RH.`,
         link: "/admin/mon-espace/documents",
         icon: "check-circle",
@@ -387,16 +392,17 @@ export async function approveUploadRequestAction(
 
 // ─── rejectUploadRequestAction ────────────────────────────────
 const rejectSchema = z.object({
-  notes: z.string().min(1, "Le motif est requis").max(1000),
+  notes: z.string().min(1, "le_motif_est_requis").max(1000),
 });
 
 export async function rejectUploadRequestAction(
   id: number,
   notes: string,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   if (!Number.isFinite(id)) return { success: false, error: "ID invalide" };
   const parsed = rejectSchema.safeParse({ notes });
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const guard = await requireHrWrite();
   if (!guard) return unauthorized();
@@ -407,7 +413,7 @@ export async function rejectUploadRequestAction(
   });
   if (!req) return { success: false, error: "Demande introuvable" };
   if (req.status !== "uploaded") {
-    return { success: false, error: "Le fichier n'a pas encore été téléversé" };
+    return { success: false, error: t("le_fichier_n_a_pas_encore_ete") };
   }
   // Org-chart rule: cannot review an upload that targets yourself.
   {
@@ -451,7 +457,7 @@ export async function rejectUploadRequestAction(
         recipientType: "admin",
         recipientId: req.targetAdminId,
         type: "error",
-        title: "Document refusé",
+        title: t("document_refuse"),
         body: `« ${req.title} » : ${parsed.data.notes}. Veuillez en téléverser un nouveau.`,
         link: "/admin/mon-espace/documents",
         icon: "x-circle",
@@ -480,18 +486,19 @@ const submitSchema = z.object({
 export async function submitUploadResponseAction(
   input: z.infer<typeof submitSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   try {
     const parsed = submitSchema.safeParse(input);
     if (!parsed.success) {
       console.error("[submitUploadResponseAction] Zod fail:", parsed.error.errors);
-      return { success: false, error: parsed.error.errors[0].message };
+      return { success: false, error: t(parsed.error.errors[0].message) };
     }
 
     const guard = await requireSelf(parsed.data.requestId);
     if (!guard) return unauthorized();
 
     if (guard.request.status !== "pending") {
-      return { success: false, error: "La demande n'accepte plus de téléversement" };
+      return { success: false, error: t("la_demande_n_accepte_plus_de_televersement") };
     }
 
     await prisma.documentUploadRequest.update({
@@ -532,7 +539,7 @@ export async function submitUploadResponseAction(
             recipientType: "admin",
             recipientId: reqWithRequester.requestedById,
             type: "info",
-            title: "Document téléversé",
+            title: t("document_televerse"),
             body: `${empName} a téléversé « ${reqWithRequester.title} ». À valider.`,
             link: "/admin/employes/documents",
             icon: "upload",
@@ -556,7 +563,7 @@ export async function submitUploadResponseAction(
     console.error("[submitUploadResponseAction] UNEXPECTED:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Erreur serveur lors du téléversement",
+      error: err instanceof Error ? err.message : t("erreur_serveur_televersement"),
     };
   }
 }

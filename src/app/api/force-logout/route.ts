@@ -2,14 +2,16 @@
 // Quand le user est coince dans un redirect loop a cause d'un JWT corrompu/legacy.
 // Visiter cette URL clear tous les cookies authjs et redirige vers /admin/login frais.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 
 export async function GET() {
+  const t = await getTranslations("api_errors");
   const html = `<!DOCTYPE html>
-<html><head><meta charset="utf-8"><title>Deconnexion forcee</title></head>
+<html><head><meta charset="utf-8"><title>${t("deconnexion_forcee")}</title></head>
 <body style="font-family:system-ui;max-width:500px;margin:40px auto;padding:20px;background:#f4f6fa">
-<h2 style="color:#0F2D52">Cookies effaces</h2>
-<p>Votre session a ete reinitialisee. Cliquez ci-dessous pour vous reconnecter.</p>
-<a href="/admin/login" style="display:inline-block;background:#0F2D52;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">Aller a la page de connexion</a>
+<h2 style="color:#0F2D52">${t("cookies_effaces")}</h2>
+<p>${t("session_reinitialisee")}</p>
+<a href="/admin/login" style="display:inline-block;background:#0F2D52;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">${t("aller_page_connexion")}</a>
 </body></html>`;
 
   const res = new NextResponse(html, {

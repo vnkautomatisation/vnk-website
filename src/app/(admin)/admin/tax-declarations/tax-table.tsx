@@ -31,14 +31,14 @@ export function TaxDeclarationsTable({
   const t = useTranslations("admin.tax_decl");
 
   const columns: Column<TD>[] = [
-    { key: "period", header: "Période", accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodStart.getTime() },
-    { key: "type", header: "Type", accessor: (r) => r.periodType, hiddenOnMobile: true },
-    { key: "revenue", header: "Revenus HT", accessor: (r) => formatCurrency(Number(r.totalRevenueHt)), hiddenOnMobile: true },
+    { key: "period", header: t("periode"), accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodStart.getTime() },
+    { key: "type", header: t("type"), accessor: (r) => r.periodType, hiddenOnMobile: true },
+    { key: "revenue", header: t("revenus_ht"), accessor: (r) => formatCurrency(Number(r.totalRevenueHt)), hiddenOnMobile: true },
     { key: "tps", header: "TPS", accessor: (r) => formatCurrency(Number(r.totalTps)), hiddenOnMobile: true },
     { key: "tvq", header: "TVQ", accessor: (r) => formatCurrency(Number(r.totalTvq)), hiddenOnMobile: true },
-    { key: "total", header: "Total taxes", accessor: (r) => <span className="font-semibold">{formatCurrency(Number(r.totalTaxes))}</span> },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "submitted", header: "Soumise le", accessor: (r) => formatDate(r.submittedAt), hiddenOnMobile: true },
+    { key: "total", header: t("total_taxes_col"), accessor: (r) => <span className="font-semibold">{formatCurrency(Number(r.totalTaxes))}</span> },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "submitted", header: t("soumise"), accessor: (r) => formatDate(r.submittedAt), hiddenOnMobile: true },
   ];
 
   return (
@@ -62,14 +62,14 @@ export function TaxDeclarationsTable({
               <p className="text-xl font-bold mt-1">{formatCurrency(summary.tvq)}</p>
             </div>
             <div>
-              <p className="text-xs text-muted-foreground uppercase">{t("total_taxes")}</p>
+              <p className="text-xs text-muted-foreground uppercase">{t("total_taxes_col")}</p>
               <p className="text-xl font-bold mt-1 text-primary">{formatCurrency(summary.totalTaxes)}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <DataTable data={declarations} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher une déclaration…" exportFilename="declarations" />
+      <DataTable data={declarations} columns={columns} getRowId={(r) => r.id} searchPlaceholder={t("rechercher_declaration")} exportFilename="declarations" />
     </div>
   );
 }

@@ -3,6 +3,7 @@
 // Permet de créer/modifier des rôles sur mesure avec une matrice de permissions
 // cochable (ressource × action). Protège les 7 rôles système (isSystem=true).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,20 +35,21 @@ const permissionsSchema = z.record(z.array(z.enum(ACTIONS)));
 // CRÉER UN RÔLE
 // ═══════════════════════════════════════════════════════════
 const createSchema = z.object({
-  name: z.string().min(2, "Nom trop court").max(50).regex(/^[a-z][a-z0-9_]*$/, "Code en minuscules, sans espaces (ex: gestionnaire_ventes)"),
+  name: z.string().min(2, "Nom trop court").max(50).regex(/^[a-z][a-z0-9_]*$/, "code_en_minuscules_sans_espaces_ex_gestionnaire"),
   description: z.string().max(500).nullable().optional(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Couleur hex invalide").optional(),
   permissions: permissionsSchema,
 });
 
 export async function createRoleAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireRolesWrite();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const existing = await prisma.role.findUnique({ where: { name: parsed.data.name } });
-  if (existing) return { success: false, error: "Un rôle avec ce nom existe déjà" };
+  if (existing) return { success: false, error: t("un_role_avec_ce_nom_existe_deja") };
 
   const created = await prisma.role.create({
     data: {
@@ -79,19 +81,20 @@ const updateSchema = z.object({
 });
 
 export async function updateRoleAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireRolesWrite();
   if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const before = await prisma.role.findUnique({ where: { id: parsed.data.id } });
-  if (!before) return { success: false, error: "Rôle introuvable" };
+  if (!before) return { success: false, error: t("role_introuvable") };
 
   // Rôles système : seul super_admin peut éditer (et même là, on bloque le renommage)
   if (before.isSystem) {
     const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
     if (me?.customRole?.name !== "super_admin") {
-      return { success: false, error: "Ce rôle est protégé et ne peut être modifié que par un super-administrateur" };
+      return { success: false, error: t("ce_role_est_protege_et_ne_peut") };
     }
   }
 
@@ -116,17 +119,18 @@ export async function updateRoleAction(input: z.infer<typeof updateSchema>): Pro
 // ═══════════════════════════════════════════════════════════
 const deleteSchema = z.object({ id: z.number().int() });
 export async function deleteRoleAction(input: z.infer<typeof deleteSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireRolesWrite();
   if (!adminId) return unauthorized();
   const parsed = deleteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   const role = await prisma.role.findUnique({
     where: { id: parsed.data.id },
     include: { _count: { select: { admins: true, positions: true } } },
   });
-  if (!role) return { success: false, error: "Rôle introuvable" };
-  if (role.isSystem) return { success: false, error: "Les rôles système ne peuvent être supprimés" };
+  if (!role) return { success: false, error: t("role_introuvable") };
+  if (role.isSystem) return { success: false, error: t("les_roles_systeme_ne_peuvent_etre_supprimes") };
   if (role._count.admins > 0) return { success: false, error: `Ce rôle est attribué à ${role._count.admins} utilisateur(s). Réassignez-les avant de supprimer.` };
   if (role._count.positions > 0) return { success: false, error: `Ce rôle est utilisé par défaut pour ${role._count.positions} poste(s).` };
 
@@ -143,20 +147,21 @@ export async function deleteRoleAction(input: z.infer<typeof deleteSchema>): Pro
 // ═══════════════════════════════════════════════════════════
 const duplicateSchema = z.object({
   sourceId: z.number().int(),
-  newName: z.string().min(2).max(50).regex(/^[a-z][a-z0-9_]*$/, "Code en minuscules sans espaces"),
+  newName: z.string().min(2).max(50).regex(/^[a-z][a-z0-9_]*$/, "code_en_minuscules_sans_espaces"),
 });
 
 export async function duplicateRoleAction(input: z.infer<typeof duplicateSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireRolesWrite();
   if (!adminId) return unauthorized();
   const parsed = duplicateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const source = await prisma.role.findUnique({ where: { id: parsed.data.sourceId } });
-  if (!source) return { success: false, error: "Rôle source introuvable" };
+  if (!source) return { success: false, error: t("role_source_introuvable") };
 
   const existing = await prisma.role.findUnique({ where: { name: parsed.data.newName } });
-  if (existing) return { success: false, error: "Un rôle avec ce nom existe déjà" };
+  if (existing) return { success: false, error: t("un_role_avec_ce_nom_existe_deja") };
 
   const created = await prisma.role.create({
     data: {
@@ -188,10 +193,11 @@ const reorderSchema = z.object({
 });
 
 export async function reorderRolesAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireRolesWrite();
   if (!adminId) return unauthorized();
   const parsed = reorderSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   await prisma.$transaction(
     parsed.data.orderedIds.map((id, idx) =>

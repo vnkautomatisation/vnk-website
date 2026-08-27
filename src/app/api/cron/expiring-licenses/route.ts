@@ -11,6 +11,8 @@
 // Appel attendu : Railway cron une fois par jour.
 // ─────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
+import { dateLocale } from "@/lib/i18n-format";
+import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
@@ -77,6 +79,8 @@ async function notifyOnce(data: {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
+  const dl = dateLocale(await getLocale());
   const secret = process.env.CRON_SECRET;
   if (!secret) return NextResponse.json({ error: "CRON_SECRET non configure" }, { status: 500 });
   const auth = req.headers.get("authorization");
@@ -124,7 +128,7 @@ export async function POST(req: Request) {
       if (days === NOTIFY_SUPER_ADMIN_AT) {
         for (const sa of superAdmins) {
           const titleSa = `Permis employé expire dans 7 jours`;
-          const bodySa = `${lic.admin.fullName ?? "Employé"} · ${label} · échéance ${lic.expiresAt?.toLocaleDateString("fr-CA")}`;
+          const bodySa = t("licence_echeance", { nom: lic.admin.fullName ?? t("employe"), libelle: label, date: lic.expiresAt?.toLocaleDateString(dl) ?? "" });
           const ok = await notifyOnce({
             recipientId: sa.id,
             type: "warning",
@@ -163,7 +167,7 @@ export async function POST(req: Request) {
       if (days === NOTIFY_SUPER_ADMIN_AT) {
         for (const sa of superAdmins) {
           const titleSa = `Formation employé expire dans 7 jours`;
-          const bodySa = `${tr.admin.fullName ?? "Employé"} · ${tr.title} · échéance ${tr.expiresAt?.toLocaleDateString("fr-CA")}`;
+          const bodySa = t("licence_echeance", { nom: tr.admin.fullName ?? t("employe"), libelle: tr.title, date: tr.expiresAt?.toLocaleDateString(dl) ?? "" });
           const ok = await notifyOnce({
             recipientId: sa.id,
             type: "warning",

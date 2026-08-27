@@ -1,6 +1,7 @@
 "use server";
 // Actions évaluations performance + 1-on-1.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -31,14 +32,15 @@ const reviewCreateSchema = z.object({
 });
 
 export async function createPerformanceReviewAction(input: z.infer<typeof reviewCreateSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const me = await getMe();
   if (!me || !me.isHr) return unauthorized();
   const parsed = reviewCreateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Org-chart rule: the reviewer can never be the reviewed employee.
   if (parsed.data.adminId === parsed.data.reviewerId) {
-    return { success: false, error: "L'évaluateur ne peut pas être l'employé évalué" };
+    return { success: false, error: t("l_evaluateur_ne_peut_pas_etre_l") };
   }
 
   const r = await prisma.performanceReview.create({
@@ -68,10 +70,11 @@ const reviewUpdateSchema = z.object({
 });
 
 export async function updatePerformanceReviewAction(input: z.infer<typeof reviewUpdateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const me = await getMe();
   if (!me) return unauthorized();
   const parsed = reviewUpdateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const review = await prisma.performanceReview.findUnique({ where: { id: parsed.data.id } });
   if (!review) return { success: false, error: "Introuvable" };
@@ -111,7 +114,7 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
       await prisma.notification.create({
         data: {
           recipientType: "admin", recipientId: review.reviewerId,
-          type: "success", title: "Évaluation reconnue",
+          type: "success", title: t("evaluation_reconnue"),
           body: `L'employé a pris connaissance de l'évaluation`,
           link: `/admin/employes/evaluations`,
         },
@@ -150,10 +153,11 @@ const oneOnOneSchema = z.object({
 });
 
 export async function upsertOneOnOneAction(input: z.infer<typeof oneOnOneSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const me = await getMe();
   if (!me) return unauthorized();
   const parsed = oneOnOneSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Auth : manager OU employé du meeting
   const isParticipant = me.id === parsed.data.managerId || me.id === parsed.data.adminId;
@@ -196,10 +200,11 @@ const salarySchema = z.object({
 });
 
 export async function addSalaryHistoryAction(input: z.infer<typeof salarySchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const me = await getMe();
-  if (!me || !me.isHr) return { success: false, error: "Non autorisé (réservé RH/super-admin)" };
+  if (!me || !me.isHr) return { success: false, error: t("non_autorise_reserve_rh_super_admin") };
   const parsed = salarySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const row = await prisma.salaryHistory.create({
     data: {
@@ -227,10 +232,11 @@ const bonusSchema = z.object({
 });
 
 export async function addBonusAction(input: z.infer<typeof bonusSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const me = await getMe();
   if (!me || !me.isHr) return unauthorized();
   const parsed = bonusSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const row = await prisma.bonusRecord.create({
     data: {
@@ -248,7 +254,7 @@ export async function addBonusAction(input: z.infer<typeof bonusSchema>): Promis
   await prisma.notification.create({
     data: {
       recipientType: "admin", recipientId: parsed.data.adminId,
-      type: "success", title: "Bonus accordé",
+      type: "success", title: t("bonus_accorde"),
       body: `Un bonus de ${parsed.data.amount.toFixed(2)} $ vous a été accordé`,
       link: "/admin/mon-espace/paie",
       icon: "gift",

@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion du catalogue de services offerts (ServiceCatalog).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,14 +35,15 @@ const createSchema = z.object({
 });
 
 export async function createServiceAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const key = slugify(parsed.data.name);
   const existing = await prisma.serviceCatalog.findUnique({ where: { key } });
-  if (existing) return { success: false, error: "Un service avec ce nom existe déjà" };
+  if (existing) return { success: false, error: t("un_service_avec_ce_nom_existe_deja") };
 
   const max = await prisma.serviceCatalog.aggregate({ _max: { sortOrder: true } });
   const created = await prisma.serviceCatalog.create({
@@ -71,10 +73,11 @@ const updateSchema = createSchema.partial().extend({
 });
 
 export async function updateServiceAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const { id, currency, ...rest } = parsed.data;
   const before = await prisma.serviceCatalog.findUnique({ where: { id } });
@@ -114,14 +117,15 @@ const promoSchema = z.object({
 });
 
 export async function createPromoAction(input: z.infer<typeof promoSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = promoSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const code = parsed.data.code.toUpperCase();
   const existing = await prisma.discountCode.findUnique({ where: { code } });
-  if (existing) return { success: false, error: "Ce code promo existe déjà" };
+  if (existing) return { success: false, error: t("ce_code_promo_existe_deja") };
 
   const created = await prisma.discountCode.create({
     data: {

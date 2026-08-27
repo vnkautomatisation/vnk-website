@@ -3,6 +3,7 @@
 // Categories : general | discipline | commendation | observation | medical | onboarding | exit.
 // Severity (optionnel, surtout discipline) : info | warning | critical.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -58,11 +59,12 @@ const createSchema = z.object({
 export async function createEmployeeNoteAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
 
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Verifier que la cible existe (et recuperer pour la notification)
   const target = await prisma.admin.findUnique({
@@ -106,7 +108,7 @@ export async function createEmployeeNoteAction(
           recipientType: "admin",
           recipientId: parsed.data.adminId,
           type: "warning",
-          title: "Note disciplinaire ajoutee a votre dossier",
+          title: t("note_disciplinaire_ajoutee_a_votre_dossier"),
           body: parsed.data.title,
           link: "/admin/mon-espace",
           icon: "alert-triangle",
@@ -135,11 +137,12 @@ const updateSchema = z.object({
 export async function updateEmployeeNoteAction(
   input: z.infer<typeof updateSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actor = await getActorContext();
   if (!actor) return unauthorized();
 
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const existing = await prisma.employeeNote.findUnique({
     where: { id: parsed.data.id },
@@ -149,7 +152,7 @@ export async function updateEmployeeNoteAction(
 
   // Seul l'auteur OU super_admin peut modifier
   if (existing.authorId !== actor.adminId && !actor.isSuper) {
-    return { success: false, error: "Vous ne pouvez modifier que vos propres notes" };
+    return { success: false, error: t("vous_ne_pouvez_modifier_que_vos_propres") };
   }
 
   await prisma.employeeNote.update({
@@ -182,9 +185,10 @@ export async function updateEmployeeNoteAction(
 }
 
 export async function deleteEmployeeNoteAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actor = await getActorContext();
   if (!actor) return unauthorized();
-  if (!actor.isSuper) return { success: false, error: "Suppression reservee au super_admin" };
+  if (!actor.isSuper) return { success: false, error: t("suppression_reservee_au_super_admin") };
 
   const existing = await prisma.employeeNote.findUnique({
     where: { id: input.id },
@@ -208,6 +212,7 @@ export async function deleteEmployeeNoteAction(input: { id: number }): Promise<R
 }
 
 export async function acknowledgeEmployeeNoteAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -222,7 +227,7 @@ export async function acknowledgeEmployeeNoteAction(input: { id: number }): Prom
 
   // L'employe concerne uniquement peut acquitter sa note.
   if (note.adminId !== adminId) {
-    return { success: false, error: "Cette note ne vous est pas adressee" };
+    return { success: false, error: t("cette_note_ne_vous_est_pas_adressee") };
   }
   if (note.acknowledgedAt) return { success: true };
 

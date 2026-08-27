@@ -2,12 +2,14 @@
 // Art. 27 Loi 25 (portabilite des donnees). Genere un dump
 // complet de toutes les donnees liees a l'admin connecte.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET() {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -103,6 +105,6 @@ export async function GET() {
     });
   } catch (err) {
     console.error("[data-export]", err);
-    return NextResponse.json({ error: "Erreur lors de l'export" }, { status: 500 });
+    return NextResponse.json({ error: t("erreur_lors_de_l_export") }, { status: 500 });
   }
 }

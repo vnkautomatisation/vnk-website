@@ -13,6 +13,7 @@ import { PassThrough } from "stream";
 import {
   renderTemplate,
   findVariable,
+  variableLabelFr,
   type TemplateContext,
 } from "@/lib/document-templates";
 // eslint-disable-next-line @typescript-eslint/no-require-imports
@@ -169,7 +170,7 @@ function findUnresolvedVariables(text: string): UnresolvedVariable[] {
     const def = findVariable(key);
     out.push({
       key,
-      label: def?.label ?? key,
+      label: def ? variableLabelFr(key) : key,
       known: !!def,
     });
   }
@@ -186,7 +187,7 @@ function substituteUnresolvedPlaceholders(text: string): string {
     if (RESERVED_VAR_KEYWORDS.has(key)) return match;
     const def = findVariable(key);
     if (def) {
-      return `${PH_OPEN_KNOWN}A COMPLETER : ${def.label}${PH_CLOSE}`;
+      return `${PH_OPEN_KNOWN}A COMPLETER : ${variableLabelFr(key)}${PH_CLOSE}`;
     }
     return `${PH_OPEN_UNKNOWN}VARIABLE INCONNUE : ${key}${PH_CLOSE}`;
   });

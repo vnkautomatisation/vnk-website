@@ -108,11 +108,11 @@ type Employee = { id: number; fullName: string | null; email: string };
 
 type SignatureScope = "employee_only" | "employer_only" | "both" | "none";
 
-const SCOPE_LABEL: Record<SignatureScope, string> = {
-  employee_only: "Employe seulement",
-  employer_only: "Employeur seulement",
-  both: "Employe + Employeur",
-  none: "Aucune signature",
+const SCOPE_KEY: Record<SignatureScope, string> = {
+  employee_only: "employe_seulement",
+  employer_only: "employeur_seulement",
+  both: "employe_employeur",
+  none: "aucune_signature",
 };
 
 // =============================================================
@@ -127,12 +127,13 @@ export function HandbooksAdminView({
   templates: Template[];
   employees: Employee[];
 }) {
+  const t = useTranslations("admin.handbooks");
   const tc = useTranslations("common");
   const router = useRouter();
   const [editorOpen, setEditorOpen] = useState(false);
   const [editing, setEditing] = useState<Handbook | null>(null);
   const [confirmArchive, setConfirmArchive] = useState<Handbook | null>(null);
-  // Mission 3 : Apercu PDF + Dupliquer
+
   const [previewHandbook, setPreviewHandbook] = useState<Handbook | null>(null);
   const [duplicateBusyId, setDuplicateBusyId] = useState<number | null>(null);
 
@@ -150,7 +151,7 @@ export function HandbooksAdminView({
     try {
       const r = await duplicateHandbookAction({ id: h.id });
       if (r.success) {
-        toast.success("Cahier duplique (archive). Modifiez puis publiez.");
+        toast.success(t("cahier_duplique_archive_modifiez_puis"));
         router.refresh();
       } else {
         toast.error(r.error || "");
@@ -164,7 +165,7 @@ export function HandbooksAdminView({
 
   return (
     <div className="space-y-4">
-      {/* Header navy gradient VNK */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -175,7 +176,7 @@ export function HandbooksAdminView({
             <a
               href="/admin/employes/documents"
               className="h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 transition flex items-center justify-center"
-              title="Retour aux documents"
+              title={t("retour_documents")}
             >
               <ArrowLeft className="h-4 w-4" />
             </a>
@@ -183,11 +184,8 @@ export function HandbooksAdminView({
               <BookOpen className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Cahiers de l&apos;employe</h1>
-              <p className="text-xs text-white/80">
-                Regroupez plusieurs politiques en un seul cahier que l&apos;employe
-                signe en une fois.
-              </p>
+              <h1 className="text-lg font-bold">{t("cahiers_apos_employe")}</h1>
+              <p className="text-xs text-white/80">{t("handbooks_admin_view_regroupez_plusieurs_politiques_en_un_seul_cahier")}</p>
             </div>
           </div>
           <Button
@@ -196,7 +194,7 @@ export function HandbooksAdminView({
             className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Creer un cahier
+            {t("creer_cahier")}
           </Button>
         </div>
       </div>
@@ -204,18 +202,15 @@ export function HandbooksAdminView({
       {handbooks.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <BookOpen className="h-10 w-10 mx-auto text-muted-foreground/40" />
-          <p className="text-sm font-semibold">Aucun cahier cree pour l&apos;instant</p>
-          <p className="text-xs text-muted-foreground max-w-md mx-auto">
-            Creez un cahier pour regrouper plusieurs politiques internes en un
-            seul document que l&apos;employe signe en une seule fois.
-          </p>
+          <p className="text-sm font-semibold">{t("aucun_cahier_cree_apos_instant")}</p>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">{t("handbooks_admin_view_creez_un_cahier_pour_regrouper_plusieurs_politiques")}</p>
           <Button
             size="sm"
             onClick={openCreate}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Creer mon premier cahier
+            {t("creer_mon_premier_cahier")}
           </Button>
         </Card>
       ) : (
@@ -259,7 +254,7 @@ export function HandbooksAdminView({
                           variant="outline"
                           className="text-[9px] bg-muted text-muted-foreground"
                         >
-                          Archive
+                          {t("archive")}
                         </Badge>
                       )}
                     </div>
@@ -278,18 +273,18 @@ export function HandbooksAdminView({
                 </div>
 
                 <div className="rounded-md bg-muted/30 p-2.5 space-y-1">
-                  {/* Demande 2 : ligne sobre "Manuel de l'employe · vX" au lieu de "N chapitres" en gros. */}
+
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-muted-foreground inline-flex items-center gap-1.5">
                       <BookOpen className="h-3 w-3" />
-                      Manuel de l&apos;employe
+                      {t("manuel_apos_employe")}
                     </span>
                     <span className="font-medium text-[#0F2D52]">v{h.version}</span>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
                     <span className="text-muted-foreground inline-flex items-center gap-1.5">
                       <Users className="h-3 w-3" />
-                      Signe par
+                      {t("signe")}
                     </span>
                     <span
                       className={
@@ -302,15 +297,15 @@ export function HandbooksAdminView({
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">Signataires</span>
+                    <span className="text-muted-foreground">{t("signataires")}</span>
                     <span className="font-medium">
-                      {SCOPE_LABEL[(h.signatureScope as SignatureScope) ?? "employee_only"]}
+                      {t(SCOPE_KEY[(h.signatureScope as SignatureScope) ?? "employee_only"])}
                     </span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-1 pt-1 border-t">
-                  <ActionTooltip label="Apercu PDF">
+                  <ActionTooltip label={t("apercu_pdf")}>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -330,7 +325,7 @@ export function HandbooksAdminView({
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                   </ActionTooltip>
-                  <ActionTooltip label="Dupliquer">
+                  <ActionTooltip label={t("dupliquer")}>
                     <Button
                       variant="ghost"
                       size="icon"
@@ -346,7 +341,7 @@ export function HandbooksAdminView({
                     </Button>
                   </ActionTooltip>
                   {h.isActive && (
-                    <ActionTooltip label="Archiver">
+                    <ActionTooltip label={t("archiver")}>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -381,14 +376,14 @@ export function HandbooksAdminView({
         open={!!confirmArchive}
         onOpenChange={(o) => !o && setConfirmArchive(null)}
         title={`Archiver « ${confirmArchive?.title ?? ""} » ?`}
-        description="Le cahier ne sera plus propose aux nouveaux employes. Les signatures deja realisees sont conservees."
-        confirmLabel="Archiver"
+        description={t("cahier_ne_sera_plus_propose")}
+        confirmLabel={t("archiver")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmArchive) return;
           const r = await archiveHandbookAction({ id: confirmArchive.id });
           if (r.success) {
-            toast.success("Cahier archive");
+            toast.success(t("cahier_archive"));
             router.refresh();
           } else {
             toast.error(r.error || "");
@@ -397,7 +392,7 @@ export function HandbooksAdminView({
         }}
       />
 
-      {/* Mission 3 : Apercu PDF du cahier complet */}
+
       <PdfPreviewModal
         open={!!previewHandbook}
         url={previewHandbook ? `/api/admin/document-handbooks/${previewHandbook.id}/preview-pdf` : null}
@@ -426,6 +421,7 @@ function HandbookEditorDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.handbooks");
   const tc = useTranslations("common");
   const mode: "create" | "edit" = handbook ? "edit" : "create";
   const [title, setTitle] = useState("");
@@ -435,7 +431,7 @@ function HandbookEditorDialog({
   const [isRequired, setIsRequired] = useState(false);
   const [signatureScope, setSignatureScope] = useState<SignatureScope>("employee_only");
   const [orderedIds, setOrderedIds] = useState<number[]>([]);
-  // Demande 7 : valeurs RH pour les placeholders [CHAMP] des chapitres.
+
   const [customFieldValues, setCustomFieldValues] = useState<Record<string, string>>({});
   const [pending, setPending] = useState(false);
 
@@ -473,8 +469,8 @@ function HandbookEditorDialog({
     [availableTemplates, orderedIds],
   );
 
-  // Demande 7 : detecte tous les placeholders [CHAMP] dans les chapitres inclus.
-  // Dedoublonne par cle pour eviter de demander le meme champ 2x.
+
+
   const placeholderKeys = useMemo(() => {
     const seen = new Set<string>();
     const ordered: string[] = [];
@@ -488,7 +484,7 @@ function HandbookEditorDialog({
         }
       }
     }
-    // Inclut aussi le coverIntro
+
     if (coverIntro) {
       for (const k of detectPlaceholders(coverIntro)) {
         if (!seen.has(k)) {
@@ -526,8 +522,8 @@ function HandbookEditorDialog({
     if (!canSubmit) return;
     setPending(true);
     try {
-      // Demande 7 : on ne garde que les cles non vides pour eviter de
-      // stocker des champs orphelins.
+
+
       const cleanedValues: Record<string, string> = {};
       for (const [k, v] of Object.entries(customFieldValues)) {
         const trimmed = (v ?? "").trim();
@@ -548,14 +544,14 @@ function HandbookEditorDialog({
         mode === "edit" && handbook
           ? await updateHandbookAction({ id: handbook.id, ...payload })
           : await createHandbookAction(payload);
-      if (!r.success) throw new Error(r.error || "Erreur");
+      if (!r.success) throw new Error(r.error || t("erreur"));
       toast.success(
-        mode === "edit" ? "Cahier mis a jour" : "Cahier cree",
+        mode === "edit" ? t("cahier_mis_jour") : t("cahier_cree"),
       );
       onSaved();
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur";
+      const msg = err instanceof Error ? err.message : t("erreur");
       toast.error(msg);
     } finally {
       setPending(false);
@@ -569,40 +565,37 @@ function HandbookEditorDialog({
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <BookOpen className="h-4 w-4" />
-              {mode === "edit" ? "Modifier le cahier" : "Nouveau cahier"}
+              {mode === "edit" ? t("modifier_cahier") : t("nouveau_cahier")}
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-xs">
-              Regroupez plusieurs politiques en un seul livre que l&apos;employe
-              signera en une seule fois.
-            </DialogDescription>
+            <DialogDescription className="text-white/80 text-xs">{t("handbooks_admin_view_regroupez_plusieurs_politiques_en_un_seul_livre")}</DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
-          <FormSection icon={BookOpen} title="Identite du cahier">
-            <Field label="Titre" required>
+          <FormSection icon={BookOpen} title={t("identite_cahier")}>
+            <Field label={t("titre")} required>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Ex : Cahier d'accueil 2026"
+                placeholder={t("ex_cahier_accueil_2026")}
               />
             </Field>
-            <Field label="Sous-titre" hint="Optionnel — affiche en page de garde">
+            <Field label={t("sous_titre")} hint={t("optionnel_affiche_page_garde")}>
               <Input
                 value={subtitle}
                 onChange={(e) => setSubtitle(e.target.value)}
-                placeholder="Politiques internes et code de conduite"
+                placeholder={t("politiques_internes_code_conduite")}
               />
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Edition / version" required>
+              <Field label={t("edition_version")} required>
                 <Input
                   value={version}
                   onChange={(e) => setVersion(e.target.value)}
                   placeholder="1.0"
                 />
               </Field>
-              <Field label="Signataires requis" required>
+              <Field label={t("signataires_requis")} required>
                 <Select
                   value={signatureScope}
                   onValueChange={(v) => setSignatureScope(v as SignatureScope)}
@@ -611,20 +604,20 @@ function HandbookEditorDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="employee_only">Employe seulement</SelectItem>
-                    <SelectItem value="employer_only">Employeur seulement</SelectItem>
-                    <SelectItem value="both">Employe + Employeur</SelectItem>
-                    <SelectItem value="none">Aucune signature</SelectItem>
+                    <SelectItem value="employee_only">{t("employe_seulement")}</SelectItem>
+                    <SelectItem value="employer_only">{t("employeur_seulement")}</SelectItem>
+                    <SelectItem value="both">{t("employe_employeur")}</SelectItem>
+                    <SelectItem value="none">{t("aucune_signature")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
             </div>
-            <Field label="Introduction en page de garde" hint="Markdown supporte (gras, listes...)">
+            <Field label={t("introduction_page_garde")} hint={t("markdown_supporte_gras_listes")}>
               <Textarea
                 value={coverIntro}
                 onChange={(e) => setCoverIntro(e.target.value)}
                 rows={4}
-                placeholder="Bienvenue chez VNK Automatisation. Ce cahier regroupe les politiques internes que vous devez lire et accepter avant votre debut..."
+                placeholder={t("bienvenue_chez_vnk_automatisation_cahier")}
                 className="text-sm resize-y"
               />
             </Field>
@@ -632,10 +625,10 @@ function HandbookEditorDialog({
               <Switch checked={isRequired} onCheckedChange={setIsRequired} />
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  Cahier obligatoire
+                  {t("cahier_obligatoire")}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Apparait dans la conformite — tout employe actif doit l&apos;avoir signe.
+                  {t("apparait_conformite_tout_employe_actif")}
                 </p>
               </div>
             </label>
@@ -643,19 +636,19 @@ function HandbookEditorDialog({
 
           <FormSection
             icon={ListChecks}
-            title="Politiques incluses"
-            description="Ajoutez les templates legaux ou politiques que le cahier doit contenir. L'ordre determine la sequence dans le PDF final."
+            title={t("politiques_incluses")}
+            description={t("ajoutez_templates_legaux_politiques_cahier")}
           >
-            {/* Liste ordonnee */}
+
             {orderedIds.length === 0 ? (
               <p className="text-xs text-muted-foreground italic">
-                Aucune politique ajoutee. Selectionnez ci-dessous.
+                {t("aucune_politique_ajoutee_selectionnez_ci")}
               </p>
             ) : (
               <ol className="space-y-1.5">
                 {orderedIds.map((id, idx) => {
-                  const t = tplMap.get(id);
-                  if (!t) return null;
+                  const tpl = tplMap.get(id);
+                  if (!tpl) return null;
                   return (
                     <li
                       key={id}
@@ -665,12 +658,12 @@ function HandbookEditorDialog({
                         {idx + 1}
                       </span>
                       <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium truncate">{t.title}</p>
+                        <p className="text-sm font-medium truncate">{tpl.title}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          v{t.version}
+                          v{tpl.version}
                         </p>
                       </div>
-                      <ActionTooltip label="Monter">
+                      <ActionTooltip label={t("monter")}>
                         <Button
                           type="button"
                           variant="ghost"
@@ -682,7 +675,7 @@ function HandbookEditorDialog({
                           <ArrowUp className="h-3.5 w-3.5" />
                         </Button>
                       </ActionTooltip>
-                      <ActionTooltip label="Descendre">
+                      <ActionTooltip label={t("descendre")}>
                         <Button
                           type="button"
                           variant="ghost"
@@ -694,7 +687,7 @@ function HandbookEditorDialog({
                           <ArrowDown className="h-3.5 w-3.5" />
                         </Button>
                       </ActionTooltip>
-                      <ActionTooltip label="Retirer">
+                      <ActionTooltip label={t("retirer")}>
                         <Button
                           type="button"
                           variant="ghost"
@@ -711,7 +704,7 @@ function HandbookEditorDialog({
               </ol>
             )}
 
-            {/* Ajout d'une politique */}
+
             {unselectedTemplates.length > 0 && (
               <div className="pt-2">
                 <Select
@@ -722,7 +715,7 @@ function HandbookEditorDialog({
                   }}
                 >
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Ajouter une politique au cahier..." />
+                    <SelectValue placeholder={t("ajouter_politique_cahier")} />
                   </SelectTrigger>
                   <SelectContent>
                     {unselectedTemplates.map((t) => (
@@ -736,12 +729,12 @@ function HandbookEditorDialog({
             )}
           </FormSection>
 
-          {/* Demande 7 : Champs a completer ([CHAMP] des chapitres) */}
+
           {placeholderKeys.length > 0 && (
             <FormSection
               icon={Pencil}
-              title="Champs a completer"
-              description="Ces champs apparaissent entre crochets dans les chapitres et seront remplaces par vos valeurs dans le PDF final."
+              title={t("champs_completer")}
+              description={t("champs_apparaissent_entre_crochets_chapitres")}
             >
               {missingPlaceholderCount > 0 && (
                 <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
@@ -786,7 +779,7 @@ function HandbookEditorDialog({
             ) : (
               <Plus className="h-3.5 w-3.5 mr-1.5" />
             )}
-            {mode === "edit" ? "Enregistrer" : "Creer le cahier"}
+            {mode === "edit" ? t("enregistrer") : t("creer_cahier")}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -21,7 +21,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "bienvenue",
     title: "Bienvenue (premier contact)",
-    body: "Bonjour {{client_first_name}},\n\nBienvenue sur le portail VNK Automatisation !\n\nNous sommes ravis de vous compter parmi nos clients{{#if client_company}} chez {{client_company}}{{/if}}. Vous trouverez dans votre portail :\n\n- Vos devis et factures\n- Vos contrats\n- L'historique de nos échanges\n- Un calendrier pour réserver des rendez-vous\n\nN'hésitez pas à m'écrire si vous avez la moindre question.\n\nCordialement,\n{{admin_name}}",
+    body: "Bonjour {{client_first_name}},\\n\\nBienvenue sur le portail VNK Automatisation !\\n\\nNous sommes ravis de vous compter parmi nos clients{{#if client_company}} chez {{client_company}}{{/if}}. Vous trouverez dans votre portail :\\n\\n- Vos devis et factures\\n- Vos contrats\\n- L'historique de nos échanges\\n- Un calendrier pour réserver des rendez-vous\\n\\nN'hésitez pas à m'écrire si vous avez la moindre question.\\n\\nCordialement,\\n{{admin_name}}",
     category: "greetings",
     defaultChannel: "both",
     emailSubject: "Bienvenue chez VNK Automatisation",
@@ -38,7 +38,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "comment_aider",
     title: "Comment vous aider ?",
-    body: "Bonjour {{client_first_name}},\n\nMerci de votre visite. Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me décrire votre besoin et je reviendrai vers vous rapidement.",
+    body: "Bonjour {{client_first_name}},\\n\\nMerci de votre visite. Comment puis-je vous aider aujourd'hui ? N'hésitez pas à me décrire votre besoin et je reviendrai vers vous rapidement.",
     category: "greetings",
     defaultChannel: "chat",
   },
@@ -46,7 +46,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "devis_pret",
     title: "Devis prêt à signer",
-    body: "Bonjour {{client_first_name}},\n\nVotre devis {{#if quote_number}}**{{quote_number}}** {{/if}}est prêt et disponible dans votre portail :\n\n{{portal_url}}/devis\n\n{{#if quote_amount}}Montant : **{{quote_amount}}**\n\n{{/if}}Vous pouvez le consulter, télécharger le PDF et le signer électroniquement directement en ligne.\n\nN'hésitez pas si vous avez des questions.",
+    body: "Bonjour {{client_first_name}},\\n\\nVotre devis {{#if quote_number}}**{{quote_number}}** {{/if}}est prêt et disponible dans votre portail :\\n\\n{{portal_url}}/devis\\n\\n{{#if quote_amount}}Montant : **{{quote_amount}}**\\n\\n{{/if}}Vous pouvez le consulter, télécharger le PDF et le signer électroniquement directement en ligne.\\n\\nN'hésitez pas si vous avez des questions.",
     category: "billing",
     defaultChannel: "both",
     emailSubject: "Votre devis {{quote_number}} est prêt",
@@ -55,7 +55,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "devis_relance",
     title: "Relance devis (J+7)",
-    body: "Bonjour {{client_first_name}},\n\nJe me permets de revenir vers vous concernant le devis {{quote_number}} envoyé le {{date_short}}.\n\nAvez-vous eu l'occasion d'y jeter un œil ? Je reste disponible pour en discuter, répondre à vos questions ou ajuster la proposition si besoin.\n\nBonne journée.",
+    body: "Bonjour {{client_first_name}},\\n\\nJe me permets de revenir vers vous concernant le devis {{quote_number}} envoyé le {{date_short}}.\\n\\nAvez-vous eu l'occasion d'y jeter un œil ? Je reste disponible pour en discuter, répondre à vos questions ou ajuster la proposition si besoin.\\n\\nBonne journée.",
     category: "followup",
     defaultChannel: "both",
     emailSubject: "Relance — devis {{quote_number}}",
@@ -64,7 +64,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "devis_accepte",
     title: "Merci — devis accepté",
-    body: "Bonjour {{client_first_name}},\n\nMerci d'avoir accepté notre devis {{quote_number}} ! Le contrat correspondant a été généré automatiquement et est prêt à être signé dans votre portail.\n\nDès la signature complétée, nous démarrons l'exécution. Au plaisir de collaborer avec vous{{#if client_company}} chez {{client_company}}{{/if}}.",
+    body: "Bonjour {{client_first_name}},\\n\\nMerci d'avoir accepté notre devis {{quote_number}} ! Le contrat correspondant a été généré automatiquement et est prêt à être signé dans votre portail.\\n\\nDès la signature complétée, nous démarrons l'exécution. Au plaisir de collaborer avec vous{{#if client_company}} chez {{client_company}}{{/if}}.",
     category: "greetings",
     defaultChannel: "both",
     emailSubject: "Merci — devis accepté",
@@ -74,7 +74,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "facture_envoi",
     title: "Facture émise",
-    body: "Bonjour {{client_first_name}},\n\nVotre facture {{invoice_number}} d'un montant de **{{invoice_amount}}** est disponible dans votre portail :\n\n{{portal_url}}/factures\n\nÉchéance de paiement : **{{invoice_due_date}}**\n\nVous pouvez régler en ligne par carte ou par virement Interac. Merci !",
+    body: "Bonjour {{client_first_name}},\\n\\nVotre facture {{invoice_number}} d'un montant de **{{invoice_amount}}** est disponible dans votre portail :\\n\\n{{portal_url}}/factures\\n\\nÉchéance de paiement : **{{invoice_due_date}}**\\n\\nVous pouvez régler en ligne par carte ou par virement Interac. Merci !",
     category: "billing",
     defaultChannel: "both",
     emailSubject: "Facture {{invoice_number}} disponible",
@@ -83,7 +83,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "rappel_paiement",
     title: "Rappel paiement",
-    body: "Bonjour {{client_first_name}},\n\nUn petit rappel amical : la facture {{invoice_number}} d'un montant de {{invoice_amount}} arrive à échéance le {{invoice_due_date}}.\n\nVous pouvez la régler facilement via votre portail :\n\n{{portal_url}}/factures\n\nMerci pour votre attention.",
+    body: "Bonjour {{client_first_name}},\\n\\nUn petit rappel amical : la facture {{invoice_number}} d'un montant de {{invoice_amount}} arrive à échéance le {{invoice_due_date}}.\\n\\nVous pouvez la régler facilement via votre portail :\\n\\n{{portal_url}}/factures\\n\\nMerci pour votre attention.",
     category: "followup",
     defaultChannel: "both",
     emailSubject: "Rappel — facture {{invoice_number}}",
@@ -92,7 +92,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "merci_paiement",
     title: "Merci — paiement reçu",
-    body: "Bonjour {{client_first_name}},\n\nMerci ! Votre paiement de {{invoice_amount}} pour la facture {{invoice_number}} a bien été reçu.\n\nUn reçu officiel a été ajouté à vos documents.\n\nÀ bientôt !",
+    body: "Bonjour {{client_first_name}},\\n\\nMerci ! Votre paiement de {{invoice_amount}} pour la facture {{invoice_number}} a bien été reçu.\\n\\nUn reçu officiel a été ajouté à vos documents.\\n\\nÀ bientôt !",
     category: "billing",
     defaultChannel: "both",
     emailSubject: "Paiement reçu — merci !",
@@ -102,7 +102,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "contrat_signer",
     title: "Contrat à signer",
-    body: "Bonjour {{client_first_name}},\n\nVotre contrat {{contract_number}} est prêt à être signé électroniquement dans votre portail :\n\n{{portal_url}}/contrats\n\nLa signature est rapide et sécurisée. Une fois les deux parties signées, le projet démarre officiellement.",
+    body: "Bonjour {{client_first_name}},\\n\\nVotre contrat {{contract_number}} est prêt à être signé électroniquement dans votre portail :\\n\\n{{portal_url}}/contrats\\n\\nLa signature est rapide et sécurisée. Une fois les deux parties signées, le projet démarre officiellement.",
     category: "billing",
     defaultChannel: "both",
     emailSubject: "Contrat à signer — {{contract_number}}",
@@ -112,7 +112,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "rdv_confirme",
     title: "Rendez-vous confirmé",
-    body: "Bonjour {{client_first_name}},\n\nVotre rendez-vous est confirmé pour le **{{appointment_date}} à {{appointment_time}}**.\n\nSi vous avez besoin de modifier l'horaire, vous pouvez le faire depuis votre portail :\n\n{{portal_url}}/rendez-vous\n\nÀ très bientôt !",
+    body: "Bonjour {{client_first_name}},\\n\\nVotre rendez-vous est confirmé pour le **{{appointment_date}} à {{appointment_time}}**.\\n\\nSi vous avez besoin de modifier l'horaire, vous pouvez le faire depuis votre portail :\\n\\n{{portal_url}}/rendez-vous\\n\\nÀ très bientôt !",
     category: "scheduling",
     defaultChannel: "both",
     emailSubject: "Rendez-vous confirmé — {{appointment_date}}",
@@ -121,7 +121,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "rdv_rappel",
     title: "Rappel rendez-vous (J-1)",
-    body: "Bonjour {{client_first_name}},\n\nPetit rappel : nous avons rendez-vous **demain {{tomorrow}} à {{appointment_time}}**.\n\nÀ demain !",
+    body: "Bonjour {{client_first_name}},\\n\\nPetit rappel : nous avons rendez-vous **demain {{tomorrow}} à {{appointment_time}}**.\\n\\nÀ demain !",
     category: "scheduling",
     defaultChannel: "both",
     emailSubject: "Rappel rendez-vous demain",
@@ -131,7 +131,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "investigation",
     title: "Investigation en cours",
-    body: "Bonjour {{client_first_name}},\n\nJ'ai bien reçu votre demande et je commence l'investigation. Je reviens vers vous d'ici 24h avec un diagnostic et une proposition d'action.\n\nMerci pour votre patience.",
+    body: "Bonjour {{client_first_name}},\\n\\nJ'ai bien reçu votre demande et je commence l'investigation. Je reviens vers vous d'ici 24h avec un diagnostic et une proposition d'action.\\n\\nMerci pour votre patience.",
     category: "technical",
     defaultChannel: "chat",
     tags: ["technique"],
@@ -139,7 +139,7 @@ const DEFAULTS: Array<{
   {
     shortcut: "intervention_planifiee",
     title: "Intervention planifiée",
-    body: "Bonjour {{client_first_name}},\n\nL'intervention est planifiée pour le {{appointment_date}} à {{appointment_time}}.\n\nVeuillez prévoir :\n- Accès à l'automate / à l'équipement\n- Une connexion réseau si intervention à distance\n- Un contact disponible sur place\n\nÀ bientôt !",
+    body: "Bonjour {{client_first_name}},\\n\\nL'intervention est planifiée pour le {{appointment_date}} à {{appointment_time}}.\\n\\nVeuillez prévoir :\\n- Accès à l'automate / à l'équipement\\n- Une connexion réseau si intervention à distance\\n- Un contact disponible sur place\\n\\nÀ bientôt !",
     category: "scheduling",
     defaultChannel: "both",
     emailSubject: "Intervention planifiée — {{appointment_date}}",

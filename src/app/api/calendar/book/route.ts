@@ -2,6 +2,7 @@
 // → Le slot passe à "booked", l'appointment à "confirmed", workflow event + notification admin
 // → L'envoi email sera ajouté quand l'infra mail sera prête
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +18,7 @@ const bookSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "client") {
     return unauthorizedJson();
@@ -25,17 +27,17 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = bookSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: t("donnees_invalides") }, { status: 400 });
   }
 
   const slot = await prisma.availabilitySlot.findUnique({
     where: { id: parsed.data.slotId },
   });
   if (!slot) {
-    return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("creneau_introuvable") }, { status: 404 });
   }
   if (slot.status !== "available") {
-    return NextResponse.json({ error: "Créneau déjà réservé" }, { status: 409 });
+    return NextResponse.json({ error: t("creneau_deja_reserve") }, { status: 409 });
   }
 
   const client = await prisma.client.findUniqueOrThrow({
@@ -83,7 +85,7 @@ export async function POST(req: Request) {
         recipientType: "admin" as const,
         recipientId: a.id,
         type: "appointment_booked",
-        title: "Nouveau rendez-vous",
+        title: t("nouveau_rendez_vous"),
         message: `${client.fullName} a réservé un RDV le ${slot.slotDate.toLocaleDateString("fr-CA")} à ${slot.startTime}`,
         actionUrl: `/admin/calendar`,
       })),

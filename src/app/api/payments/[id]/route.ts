@@ -1,6 +1,7 @@
 // GET /api/payments/[id] — detail paiement avec timeline (OrderEvents lies)
 // PATCH /api/payments/[id] — modifier type, paymentMethod, accountingCategory, notes
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -73,6 +74,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -89,7 +91,7 @@ export async function PATCH(
   const body = await req.json().catch(() => ({}));
   const parsed = patchSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const existing = await prisma.payment.findUnique({ where: { id: paymentId } });
@@ -104,7 +106,7 @@ export async function PATCH(
   if (parsed.data.accountantNotes !== undefined) data.accountantNotes = parsed.data.accountantNotes;
 
   if (Object.keys(data).length === 0) {
-    return NextResponse.json({ error: "Aucun champ à modifier" }, { status: 400 });
+    return NextResponse.json({ error: t("aucun_champ_a_modifier") }, { status: 400 });
   }
 
   const updated = await prisma.payment.update({ where: { id: paymentId }, data });

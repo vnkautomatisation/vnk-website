@@ -6,163 +6,173 @@
 
 // Action verbs (créer/modifier/...)
 export const ACTION_LABELS: Record<string, string> = {
-  create: "Création",
-  update: "Modification",
-  delete: "Suppression",
-  login: "Connexion",
-  logout: "Déconnexion",
-  export: "Export",
-  view: "Consultation",
-  settings_update: "Paramètre modifié",
-  password_reset: "Mot de passe réinitialisé",
-  role_change: "Rôle changé",
-  impersonate: "Imitation",
+  create: "action_create",
+  update: "action_update",
+  delete: "action_delete",
+  login: "action_login",
+  logout: "action_logout",
+  export: "action_export",
+  view: "action_view",
+  settings_update: "action_settings_update",
+  password_reset: "action_password_reset",
+  role_change: "action_role_change",
+  impersonate: "action_impersonate",
+
 };
 
 // Verbes au passé pour phrases naturelles
 export const ACTION_VERBS: Record<string, string> = {
-  create: "a créé",
-  update: "a modifié",
-  delete: "a supprimé",
-  login: "s'est connecté",
-  logout: "s'est déconnecté",
-  export: "a exporté",
-  view: "a consulté",
-  settings_update: "a modifié les paramètres",
-  password_reset: "a réinitialisé le mot de passe",
-  role_change: "a changé le rôle",
-  impersonate: "a imité",
+  create: "verb_create",
+  update: "verb_update",
+  delete: "verb_delete",
+  login: "verb_login",
+  logout: "verb_logout",
+  export: "verb_export",
+  view: "verb_view",
+  settings_update: "verb_settings_update",
+  password_reset: "verb_password_reset",
+  role_change: "verb_role_change",
+  impersonate: "verb_impersonate",
+
 };
 
 // Type d'entité → libellé humain
-export const ENTITY_LABELS: Record<string, { singular: string; plural: string; article: "le" | "la" | "l'" }> = {
-  admin: { singular: "utilisateur", plural: "utilisateurs", article: "l'" },
-  admin_bulk: { singular: "groupe d'utilisateurs", plural: "groupes d'utilisateurs", article: "le" },
-  admin_invitation: { singular: "invitation", plural: "invitations", article: "l'" },
-  admin_anonymized: { singular: "compte anonymisé", plural: "comptes anonymisés", article: "le" },
-  admin_data_export: { singular: "export de données", plural: "exports", article: "l'" },
-  admin_onboarding: { singular: "accueil", plural: "accueils", article: "l'" },
-  role: { singular: "rôle", plural: "rôles", article: "le" },
-  role_reorder: { singular: "ordre des rôles", plural: "ordres", article: "l'" },
-  position: { singular: "poste", plural: "postes", article: "le" },
-  position_reorder: { singular: "ordre des postes", plural: "ordres", article: "l'" },
-  client: { singular: "client", plural: "clients", article: "le" },
-  clients: { singular: "client", plural: "clients", article: "le" },
-  quote: { singular: "devis", plural: "devis", article: "le" },
-  quotes: { singular: "devis", plural: "devis", article: "le" },
-  invoice: { singular: "facture", plural: "factures", article: "la" },
-  invoices: { singular: "facture", plural: "factures", article: "la" },
-  contract: { singular: "contrat", plural: "contrats", article: "le" },
-  contracts: { singular: "contrat", plural: "contrats", article: "le" },
-  mandate: { singular: "mandat", plural: "mandats", article: "le" },
-  mandates: { singular: "mandat", plural: "mandats", article: "le" },
-  payment: { singular: "paiement", plural: "paiements", article: "le" },
-  payments: { singular: "paiement", plural: "paiements", article: "le" },
-  refund: { singular: "remboursement", plural: "remboursements", article: "le" },
-  refunds: { singular: "remboursement", plural: "remboursements", article: "le" },
-  dispute: { singular: "litige", plural: "litiges", article: "le" },
-  expense: { singular: "dépense", plural: "dépenses", article: "la" },
-  expenses: { singular: "dépense", plural: "dépenses", article: "la" },
-  tax_declaration: { singular: "déclaration fiscale", plural: "déclarations fiscales", article: "la" },
-  tax_declarations: { singular: "déclaration fiscale", plural: "déclarations fiscales", article: "la" },
-  document: { singular: "document", plural: "documents", article: "le" },
-  documents: { singular: "document", plural: "documents", article: "le" },
-  message: { singular: "message", plural: "messages", article: "le" },
-  appointment: { singular: "rendez-vous", plural: "rendez-vous", article: "le" },
-  settings: { singular: "paramètre", plural: "paramètres", article: "le" },
-  security_policy: { singular: "politique de sécurité", plural: "politiques", article: "la" },
-  branding: { singular: "charte graphique", plural: "chartes", article: "la" },
-  config_export: { singular: "export config", plural: "exports", article: "l'" },
-  config_import: { singular: "import config", plural: "imports", article: "l'" },
-  catalog_item: { singular: "élément de catalogue", plural: "éléments", article: "l'" },
-  service_catalog: { singular: "service", plural: "services", article: "le" },
-  discount_code: { singular: "code promo", plural: "codes promo", article: "le" },
-  blog_post: { singular: "article de blog", plural: "articles", article: "l'" },
-  faq_item: { singular: "question FAQ", plural: "questions", article: "la" },
-  testimonial: { singular: "témoignage", plural: "témoignages", article: "le" },
-  email_template: { singular: "modèle de courriel", plural: "modèles", article: "le" },
-  pdf_template: { singular: "modèle PDF", plural: "modèles", article: "le" },
-  outgoing_webhook: { singular: "webhook sortant", plural: "webhooks", article: "le" },
-  incoming_webhook_log: { singular: "webhook entrant", plural: "webhooks", article: "le" },
-  api_token: { singular: "jeton API", plural: "jetons", article: "le" },
-  maintenance_window: { singular: "maintenance", plural: "maintenances", article: "la" },
-  incident_report: { singular: "incident", plural: "incidents", article: "l'" },
-  announcement_banner: { singular: "bandeau d'annonce", plural: "bandeaux", article: "le" },
-  force_logout_all: { singular: "déconnexion forcée", plural: "déconnexions", article: "la" },
-  admin_locked: { singular: "blocage de compte", plural: "blocages", article: "le" },
-  admin_unlocked: { singular: "déblocage de compte", plural: "déblocages", article: "le" },
-  demo_mode_enabled: { singular: "mode démo", plural: "modes démo", article: "le" },
-  demo_mode_disabled: { singular: "mode démo", plural: "modes démo", article: "le" },
-  demo_data_purged: { singular: "purge des données démo", plural: "purges", article: "la" },
+export const ENTITY_LABELS: Record<string, { key: string; pluralKey: string; article: "le" | "la" | "l'" }> = {
+  admin: { key: "ent_admin", pluralKey: "ent_admin_plural", article: "l'" },
+  admin_bulk: { key: "ent_admin_bulk", pluralKey: "ent_admin_bulk_plural", article: "le" },
+  admin_invitation: { key: "ent_admin_invitation", pluralKey: "ent_admin_invitation_plural", article: "l'" },
+  admin_anonymized: { key: "ent_admin_anonymized", pluralKey: "ent_admin_anonymized_plural", article: "le" },
+  admin_data_export: { key: "ent_admin_data_export", pluralKey: "ent_admin_data_export_plural", article: "l'" },
+  admin_onboarding: { key: "ent_admin_onboarding", pluralKey: "ent_admin_onboarding_plural", article: "l'" },
+  role: { key: "ent_role", pluralKey: "ent_role_plural", article: "le" },
+  role_reorder: { key: "ent_role_reorder", pluralKey: "ent_role_reorder_plural", article: "l'" },
+  position: { key: "ent_position", pluralKey: "ent_position_plural", article: "le" },
+  position_reorder: { key: "ent_position_reorder", pluralKey: "ent_position_reorder_plural", article: "l'" },
+  client: { key: "ent_client", pluralKey: "ent_client_plural", article: "le" },
+  clients: { key: "ent_clients", pluralKey: "ent_clients_plural", article: "le" },
+  quote: { key: "ent_quote", pluralKey: "ent_quote_plural", article: "le" },
+  quotes: { key: "ent_quotes", pluralKey: "ent_quotes_plural", article: "le" },
+  invoice: { key: "ent_invoice", pluralKey: "ent_invoice_plural", article: "la" },
+  invoices: { key: "ent_invoices", pluralKey: "ent_invoices_plural", article: "la" },
+  contract: { key: "ent_contract", pluralKey: "ent_contract_plural", article: "le" },
+  contracts: { key: "ent_contracts", pluralKey: "ent_contracts_plural", article: "le" },
+  mandate: { key: "ent_mandate", pluralKey: "ent_mandate_plural", article: "le" },
+  mandates: { key: "ent_mandates", pluralKey: "ent_mandates_plural", article: "le" },
+  payment: { key: "ent_payment", pluralKey: "ent_payment_plural", article: "le" },
+  payments: { key: "ent_payments", pluralKey: "ent_payments_plural", article: "le" },
+  refund: { key: "ent_refund", pluralKey: "ent_refund_plural", article: "le" },
+  refunds: { key: "ent_refunds", pluralKey: "ent_refunds_plural", article: "le" },
+  dispute: { key: "ent_dispute", pluralKey: "ent_dispute_plural", article: "le" },
+  expense: { key: "ent_expense", pluralKey: "ent_expense_plural", article: "la" },
+  expenses: { key: "ent_expenses", pluralKey: "ent_expenses_plural", article: "la" },
+  tax_declaration: { key: "ent_tax_declaration", pluralKey: "ent_tax_declaration_plural", article: "la" },
+  tax_declarations: { key: "ent_tax_declarations", pluralKey: "ent_tax_declarations_plural", article: "la" },
+  document: { key: "ent_document", pluralKey: "ent_document_plural", article: "le" },
+  documents: { key: "ent_documents", pluralKey: "ent_documents_plural", article: "le" },
+  message: { key: "ent_message", pluralKey: "ent_message_plural", article: "le" },
+  appointment: { key: "ent_appointment", pluralKey: "ent_appointment_plural", article: "le" },
+  settings: { key: "ent_settings", pluralKey: "ent_settings_plural", article: "le" },
+  security_policy: { key: "ent_security_policy", pluralKey: "ent_security_policy_plural", article: "la" },
+  branding: { key: "ent_branding", pluralKey: "ent_branding_plural", article: "la" },
+  config_export: { key: "ent_config_export", pluralKey: "ent_config_export_plural", article: "l'" },
+  config_import: { key: "ent_config_import", pluralKey: "ent_config_import_plural", article: "l'" },
+  catalog_item: { key: "ent_catalog_item", pluralKey: "ent_catalog_item_plural", article: "l'" },
+  service_catalog: { key: "ent_service_catalog", pluralKey: "ent_service_catalog_plural", article: "le" },
+  discount_code: { key: "ent_discount_code", pluralKey: "ent_discount_code_plural", article: "le" },
+  blog_post: { key: "ent_blog_post", pluralKey: "ent_blog_post_plural", article: "l'" },
+  faq_item: { key: "ent_faq_item", pluralKey: "ent_faq_item_plural", article: "la" },
+  testimonial: { key: "ent_testimonial", pluralKey: "ent_testimonial_plural", article: "le" },
+  email_template: { key: "ent_email_template", pluralKey: "ent_email_template_plural", article: "le" },
+  pdf_template: { key: "ent_pdf_template", pluralKey: "ent_pdf_template_plural", article: "le" },
+  outgoing_webhook: { key: "ent_outgoing_webhook", pluralKey: "ent_outgoing_webhook_plural", article: "le" },
+  incoming_webhook_log: { key: "ent_incoming_webhook_log", pluralKey: "ent_incoming_webhook_log_plural", article: "le" },
+  api_token: { key: "ent_api_token", pluralKey: "ent_api_token_plural", article: "le" },
+  maintenance_window: { key: "ent_maintenance_window", pluralKey: "ent_maintenance_window_plural", article: "la" },
+  incident_report: { key: "ent_incident_report", pluralKey: "ent_incident_report_plural", article: "l'" },
+  announcement_banner: { key: "ent_announcement_banner", pluralKey: "ent_announcement_banner_plural", article: "le" },
+  force_logout_all: { key: "ent_force_logout_all", pluralKey: "ent_force_logout_all_plural", article: "la" },
+  admin_locked: { key: "ent_admin_locked", pluralKey: "ent_admin_locked_plural", article: "le" },
+  admin_unlocked: { key: "ent_admin_unlocked", pluralKey: "ent_admin_unlocked_plural", article: "le" },
+  demo_mode_enabled: { key: "ent_demo_mode_enabled", pluralKey: "ent_demo_mode_enabled_plural", article: "le" },
+  demo_mode_disabled: { key: "ent_demo_mode_disabled", pluralKey: "ent_demo_mode_disabled_plural", article: "le" },
+  demo_data_purged: { key: "ent_demo_data_purged", pluralKey: "ent_demo_data_purged_plural", article: "la" },
+
 };
 
 // Helpers
-export function entityLabel(entityType: string, _entityId?: number | null): string {
+type T = (key: string, values?: Record<string, string | number>) => string;
+
+export function entityLabel(t: T, entityType: string): string {
   const meta = ENTITY_LABELS[entityType];
   if (!meta) return entityType.replace(/_/g, " ");
-  return meta.singular;
+  return t(meta.key);
 }
 
-export function entityLabelWithId(entityType: string, entityId?: number | null): string {
-  const label = entityLabel(entityType);
+export function entityLabelWithId(t: T, entityType: string, entityId?: number | null): string {
+  const label = entityLabel(t, entityType);
   if (entityId) return `${label} #${entityId}`;
   return label;
 }
 
-// Phrase complète : "Émilie a modifié la facture #42"
-export function formatAuditPhrase(opts: {
+// Phrase complete : "Emilie a modifie la facture #42"
+export function formatAuditPhrase(t: T, opts: {
   actorName?: string | null;
   action: string;
   entityType: string;
   entityId?: number | null;
 }): string {
-  const verb = ACTION_VERBS[opts.action] ?? `a effectué « ${opts.action} »`;
+  const verbKey = ACTION_VERBS[opts.action];
+  const verb = verbKey ? t(verbKey) : t("verb_fallback", { action: opts.action });
   const meta = ENTITY_LABELS[opts.entityType];
   const article = meta?.article ?? "le";
-  const label = meta?.singular ?? opts.entityType.replace(/_/g, " ");
-  const articlePrefix = article === "l'" ? "l'" : `${article} `;
-  const target = opts.entityId ? `${articlePrefix}${label} #${opts.entityId}` : `${articlePrefix}${label}`;
-  const actor = opts.actorName ?? "Système";
+  const label = meta ? t(meta.key) : opts.entityType.replace(/_/g, " ");
+  const target = t("cible_avec_article", {
+    article: article === "l'" ? "l'" : `${article} `,
+    label: opts.entityId ? `${label} #${opts.entityId}` : label,
+  });
+  const actor = opts.actorName ?? t("systeme");
   return `${actor} ${verb} ${target}`;
 }
 
 // Security event type → libellé humain
 export const SECURITY_EVENT_LABELS: Record<string, string> = {
-  login_success: "Connexion réussie",
-  login_failed: "Tentative de connexion échouée",
-  password_changed: "Mot de passe modifié",
-  password_breach_detected: "Mot de passe compromis détecté",
-  two_factor_enabled: "2FA activée",
-  two_factor_disabled: "2FA désactivée",
-  backup_codes_regenerated: "Codes de secours régénérés",
-  backup_code_used: "Code de secours utilisé",
-  session_revoked: "Session révoquée",
-  all_sessions_revoked: "Toutes les sessions révoquées",
-  trusted_device_added: "Appareil de confiance ajouté",
-  trusted_device_removed: "Appareil de confiance retiré",
-  api_token_created: "Jeton API créé",
-  api_token_revoked: "Jeton API révoqué",
-  data_export_requested: "Export de données demandé",
-  data_export_ready: "Export de données prêt",
-  account_deletion_requested: "Suppression de compte demandée",
-  suspicious_login: "Connexion suspecte",
-  passkey_added: "Clé d'accès (passkey) ajoutée",
-  passkey_removed: "Clé d'accès retirée",
-  profile_updated: "Profil mis à jour",
-  preferences_updated: "Préférences mises à jour",
-  notification_prefs_updated: "Notifications mises à jour",
-  user_created: "Compte créé",
-  user_updated: "Compte modifié",
-  user_deactivated: "Compte désactivé",
-  user_deleted: "Compte supprimé",
-  role_created: "Rôle créé",
-  role_updated: "Rôle modifié",
-  role_deleted: "Rôle supprimé",
-  position_created: "Poste créé",
-  position_updated: "Poste modifié",
-  position_deleted: "Poste supprimé",
+  login_success: "sec_login_success",
+  login_failed: "sec_login_failed",
+  password_changed: "sec_password_changed",
+  password_breach_detected: "sec_password_breach_detected",
+  two_factor_enabled: "sec_two_factor_enabled",
+  two_factor_disabled: "sec_two_factor_disabled",
+  backup_codes_regenerated: "sec_backup_codes_regenerated",
+  backup_code_used: "sec_backup_code_used",
+  session_revoked: "sec_session_revoked",
+  all_sessions_revoked: "sec_all_sessions_revoked",
+  trusted_device_added: "sec_trusted_device_added",
+  trusted_device_removed: "sec_trusted_device_removed",
+  api_token_created: "sec_api_token_created",
+  api_token_revoked: "sec_api_token_revoked",
+  data_export_requested: "sec_data_export_requested",
+  data_export_ready: "sec_data_export_ready",
+  account_deletion_requested: "sec_account_deletion_requested",
+  suspicious_login: "sec_suspicious_login",
+  passkey_added: "sec_passkey_added",
+  passkey_removed: "sec_passkey_removed",
+  profile_updated: "sec_profile_updated",
+  preferences_updated: "sec_preferences_updated",
+  notification_prefs_updated: "sec_notification_prefs_updated",
+  user_created: "sec_user_created",
+  user_updated: "sec_user_updated",
+  user_deactivated: "sec_user_deactivated",
+  user_deleted: "sec_user_deleted",
+  role_created: "sec_role_created",
+  role_updated: "sec_role_updated",
+  role_deleted: "sec_role_deleted",
+  position_created: "sec_position_created",
+  position_updated: "sec_position_updated",
+  position_deleted: "sec_position_deleted",
+
 };
 
-export function securityEventLabel(type: string): string {
-  return SECURITY_EVENT_LABELS[type] ?? type.replace(/_/g, " ");
+export function securityEventLabel(t: T, type: string): string {
+  const key = SECURITY_EVENT_LABELS[type];
+  return key ? t(key) : type.replace(/_/g, " ");
 }

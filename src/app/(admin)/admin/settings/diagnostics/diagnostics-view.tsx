@@ -29,14 +29,15 @@ type Report = {
   checks: Check[];
 };
 
-const STATUS_META: Record<CheckStatus, { color: string; bg: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
-  ok: { color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle2, label: "OK" },
-  warn: { color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: AlertTriangle, label: "Attention" },
-  error: { color: "text-red-700", bg: "bg-red-50 border-red-200", icon: XCircle, label: "Erreur" },
-  skip: { color: "text-gray-500", bg: "bg-gray-50 border-gray-200", icon: MinusCircle, label: "Non configuré" },
+const STATUS_META: Record<CheckStatus, { color: string; bg: string; icon: React.ComponentType<{ className?: string }>; labelKey: string }> = {
+  ok: { color: "text-emerald-700", bg: "bg-emerald-50 border-emerald-200", icon: CheckCircle2, labelKey: "diag_ok" },
+  warn: { color: "text-amber-700", bg: "bg-amber-50 border-amber-200", icon: AlertTriangle, labelKey: "diag_warn" },
+  error: { color: "text-red-700", bg: "bg-red-50 border-red-200", icon: XCircle, labelKey: "diag_error" },
+  skip: { color: "text-gray-500", bg: "bg-gray-50 border-gray-200", icon: MinusCircle, labelKey: "non_configure" },
 };
 
 export function DiagnosticsView() {
+  const t = useTranslations("settings");
   const tc = useTranslations("common");
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,7 +51,7 @@ export function DiagnosticsView() {
       const data = (await res.json()) as Report;
       setReport(data);
     } catch (e) {
-      toast.error("Échec du diagnostic : " + (e instanceof Error ? e.message : "inconnu"));
+      toast.error(t("echec_diagnostic") + (e instanceof Error ? e.message : "inconnu"));
     } finally {
       setLoading(false);
     }
@@ -73,18 +74,18 @@ export function DiagnosticsView() {
           <Activity className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Diagnostics</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("diagnostics")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Vérifications de santé : base de données, intégrations, stockage, configuration
+            {t("verifications_sante_base_donnees_integrations")}
           </p>
         </div>
         <Button onClick={run} disabled={loading} variant="outline" className="shrink-0">
           <RefreshCw className={cn("h-4 w-4 mr-1.5", loading && "animate-spin")} />
-          {loading ? "Analyse..." : "Relancer"}
+          {loading ? t("analyse") : t("relancer")}
         </Button>
       </div>
 
-      {/* RÉSUMÉ */}
+
       {report && (
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
           {(["ok", "warn", "error", "skip"] as CheckStatus[]).map((s) => {
@@ -96,7 +97,7 @@ export function DiagnosticsView() {
                 <CardContent className="p-3">
                   <div className="flex items-center gap-2">
                     <Icon className={cn("h-4 w-4", meta.color)} />
-                    <span className={cn("text-[10px] uppercase tracking-wider font-semibold", meta.color)}>{meta.label}</span>
+                    <span className={cn("text-[10px] uppercase tracking-wider font-semibold", meta.color)}>{t(meta.labelKey)}</span>
                   </div>
                   <p className="text-2xl font-bold mt-1">{count}</p>
                 </CardContent>
@@ -105,7 +106,7 @@ export function DiagnosticsView() {
           })}
           <Card className="border-l-4 border-l-[#0F2D52]">
             <CardContent className="p-3">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52]">Total</span>
+              <span className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52]">{t("total")}</span>
               <p className="text-2xl font-bold mt-1">{report.summary.total}</p>
             </CardContent>
           </Card>
@@ -118,12 +119,12 @@ export function DiagnosticsView() {
         </p>
       )}
 
-      {/* CHECKS PAR CATÉGORIE */}
+
       {loading && !report && (
         <Card>
           <CardContent className="p-8 text-center text-sm text-muted-foreground">
             <RefreshCw className="h-5 w-5 animate-spin inline mr-2" />
-            Analyse en cours...
+            {t("analyse_cours")}
           </CardContent>
         </Card>
       )}
@@ -185,9 +186,9 @@ export function DiagnosticsView() {
           <CardContent className="p-5 flex items-center gap-3">
             <CheckCircle2 className="h-6 w-6 text-emerald-600" />
             <div>
-              <p className="font-semibold text-emerald-900">Tout est en ordre</p>
+              <p className="font-semibold text-emerald-900">{t("tout_ordre")}</p>
               <p className="text-xs text-emerald-800">
-                {report.summary.ok} vérification{report.summary.ok > 1 ? "s" : ""} passée{report.summary.ok > 1 ? "s" : ""} avec succès.
+                {t("n_verifications_reussies", { count: report.summary.ok })}
               </p>
             </div>
           </CardContent>

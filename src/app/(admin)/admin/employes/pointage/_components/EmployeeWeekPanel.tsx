@@ -30,6 +30,7 @@ export function EmployeeWeekPanelRemote({
   focusDate?: string | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<{
@@ -67,7 +68,7 @@ export function EmployeeWeekPanelRemote({
     router.refresh();
   }, [router]);
 
-  // Wrapped actions: toast + refresh both the panel and the page.
+
   const approve = useCallback(async (ids: number[]) => {
     if (ids.length === 0) return;
     setPending(true);
@@ -79,32 +80,32 @@ export function EmployeeWeekPanelRemote({
 
   const reject = useCallback(async (id: number) => {
     const reason = await promptDialog({
-      title: "Rejeter le pointage",
-      label: "Motif du rejet",
-      placeholder: "L'employé verra ce message",
+      title: t("rejeter_pointage"),
+      label: t("motif_rejet"),
+      placeholder: t("employe_verra_message"),
       multiline: true,
       required: true,
       variant: "destructive",
-      confirmLabel: "Rejeter",
+      confirmLabel: t("rejeter"),
     });
     if (!reason) return;
     setPending(true);
     const r = await rejectTimeClockAction({ id, reason });
     setPending(false);
-    if (r.success) { toast.success("Pointage rejeté"); reload(); }
+    if (r.success) { toast.success(t("pointage_rejete")); reload(); }
     else toast.error(r.error || "");
   }, [reload]);
 
   const unapprove = useCallback(async (ids: number[]) => {
     if (ids.length === 0) return;
     const reason = await promptDialog({
-      title: ids.length > 1 ? "Annuler les approbations" : "Annuler l'approbation",
-      label: "Motif (optionnel)",
-      placeholder: "Pourquoi revenir sur cette décision ?",
+      title: ids.length > 1 ? t("annuler_approbations") : t("annuler_approbation"),
+      label: t("motif_optionnel"),
+      placeholder: t("pourquoi_revenir_decision"),
       multiline: true,
       required: false,
       variant: "destructive",
-      confirmLabel: "Annuler l'approbation",
+      confirmLabel: t("annuler_approbation"),
     });
     if (reason === null) return;
     setPending(true);
@@ -116,9 +117,9 @@ export function EmployeeWeekPanelRemote({
 
   const approveWeek = useCallback(async (name: string) => {
     const ok = await confirmDialog({
-      title: "Approuver la semaine en cours",
+      title: t("approuver_semaine_cours"),
       description: `Approuver toutes les entrées non approuvées de la semaine en cours pour ${name} ?`,
-      confirmLabel: "Approuver",
+      confirmLabel: t("approuver"),
     });
     if (!ok) return;
     setPending(true);
@@ -137,7 +138,7 @@ export function EmployeeWeekPanelRemote({
           </SheetHeader>
         </div>
         <div className="p-5">
-          <InlineLoader label="Chargement des entrées…" />
+          <InlineLoader label={t("chargement_entrees")} />
         </div>
       </>
     );
@@ -148,10 +149,10 @@ export function EmployeeWeekPanelRemote({
       <>
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
           <SheetHeader>
-            <SheetTitle className="text-white">Erreur</SheetTitle>
+            <SheetTitle className="text-white">{t("erreur")}</SheetTitle>
           </SheetHeader>
         </div>
-        <div className="p-5 text-sm text-red-700">{error ?? "Impossible de charger les données."}</div>
+        <div className="p-5 text-sm text-red-700">{error ?? t("impossible_charger_donnees")}</div>
       </>
     );
   }
@@ -185,6 +186,7 @@ export function EmployeeWeekPanel({
   onApproveWeek: () => Promise<void>;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const entries = employee.entries;
 
@@ -201,7 +203,7 @@ export function EmployeeWeekPanel({
     return { total, toApproveCount, approvedCount };
   }, [entries]);
 
-  // Group by day, most recent first, with focusDate pulled to the top.
+
   const groupedDays = useMemo(() => {
     const map = new Map<string, Entry[]>();
     for (const e of entries) {
@@ -231,13 +233,13 @@ export function EmployeeWeekPanel({
 
 
   const allPendingIds = useMemo(
-    // Workflow rule: only SUBMITTED entries are approvable.
+
     () => entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id),
     [entries],
   );
 
-  // The panel renders every day it is given; a long period is dozens of
-  // screens of internal scroll.
+
+
   const DAYS_PER_PAGE = 10;
   const [dayPage, setDayPage] = useState(1);
   useEffect(() => { setDayPage(1); }, [employee.id, groupedDays.length]);
@@ -266,15 +268,15 @@ export function EmployeeWeekPanel({
         </SheetHeader>
         <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">À approuver</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("approuver")}</p>
             <p className="text-lg font-bold tabular-nums">{stats.toApproveCount}</p>
           </div>
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">Approuvées</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("approuvees")}</p>
             <p className="text-lg font-bold tabular-nums">{stats.approvedCount}</p>
           </div>
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">Heures</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("heures")}</p>
             <p className="text-lg font-bold tabular-nums">{fmtDuration(stats.total)}</p>
           </div>
         </div>
@@ -286,8 +288,7 @@ export function EmployeeWeekPanel({
             className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 hover:text-white"
           >
             <Link href={`/admin/employes/${employee.id}/dossier`}>
-              <UserIcon className="h-3.5 w-3.5 mr-1.5" />Voir le dossier complet
-            </Link>
+              <UserIcon className="h-3.5 w-3.5 mr-1.5" />{t("employeeweekpanel_voir_le_dossier_complet")}</Link>
           </Button>
         </div>
       </div>
@@ -296,7 +297,7 @@ export function EmployeeWeekPanel({
         {truncated && (
           <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            <span>Période trop longue : seules les entrées les plus récentes sont chargées.</span>
+            <span>{t("periode_trop_longue_seules_entrees")}</span>
           </div>
         )}
         {dayTotalPages > 1 && (
@@ -307,18 +308,18 @@ export function EmployeeWeekPanel({
             <div className="flex items-center gap-1">
               <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
                 disabled={dayPage <= 1} onClick={() => setDayPage((n) => n - 1)}>
-                Préc.
+                {t("prec")}
               </Button>
               <span className="text-[11px] text-muted-foreground tabular-nums px-0.5">{dayPage}/{dayTotalPages}</span>
               <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
                 disabled={dayPage >= dayTotalPages} onClick={() => setDayPage((n) => n + 1)}>
-                Suiv.
+                {t("suiv")}
               </Button>
             </div>
           </div>
         )}
         {groupedDays.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">Aucune entrée sur la période.</p>
+          <p className="text-sm text-muted-foreground text-center py-8">{t("aucune_entree_periode")}</p>
         ) : pagedDays.map((day) => {
           const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
             weekday: "long", day: "numeric", month: "long",
@@ -384,7 +385,7 @@ export function EmployeeWeekPanel({
           className="w-full sm:w-auto bg-[#0F2D52] hover:bg-[#15406d]"
         >
           <CheckCircle2 className="h-3.5 w-3.5 mr-1.5 shrink-0" />
-          <span className="truncate">Approuver la semaine</span>
+          <span className="truncate">{t("approuver_semaine")}</span>
         </Button>
         <Button variant="ghost" size="sm" onClick={onClose} disabled={pending} className="sm:hidden">
           {tc("close")}

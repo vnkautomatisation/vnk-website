@@ -1,9 +1,13 @@
 // Admin · Devis — KPIs + table filtres + creation
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { QuotesView } from "./quotes-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Devis" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("devis") };
+}
 
 export default async function QuotesPage() {
   const [rawQuotes, clients, rawMandates] = await Promise.all([

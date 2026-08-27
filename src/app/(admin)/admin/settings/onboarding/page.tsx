@@ -1,12 +1,16 @@
 // Settings · Onboarding — assistant guidé pour la configuration initiale.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { OnboardingWizard } from "./onboarding-wizard";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Configuration guidée — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("configuration_guidee_vnk") };
+}
 
 export default async function OnboardingPage() {
   const session = await auth();

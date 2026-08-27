@@ -1,11 +1,13 @@
 // Admin · Clients — KPIs + table/filtres + creation + CDP
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { ClientsView } from "./clients-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Clients",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("clients") };
+}
 
 export default async function AdminClientsPage() {
   const [clients, totalCount, activeCount, inactiveCount, newThisMonth] = await Promise.all([

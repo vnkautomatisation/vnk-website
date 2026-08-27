@@ -1,13 +1,15 @@
 // Mon profil admin — banner enrichi + 10 modules (compte, preferences, securite,
 // notifications, sessions, activite, confidentialite Loi 25, api tokens, stats, integrations/auto)
 import { auth } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { ProfileView } from "./profile-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Mon profil",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mon_profil") };
+}
 
 export default async function ProfilePage() {
   const session = await auth();

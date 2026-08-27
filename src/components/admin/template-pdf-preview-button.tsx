@@ -22,6 +22,7 @@
 // Avec un trigger custom :
 //   <TemplatePdfPreviewButton ... trigger={<Button variant="ghost">Voir PDF</Button>} />
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -83,17 +84,18 @@ export interface TemplatePdfPreviewButtonProps {
 }
 
 export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
+  const t = useTranslations("admin.ui");
   const [open, setOpen] = useState(false);
-  // On stocke une DATA URL (immutable, survit aux re-renders) au lieu d'un blob URL.
+
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // AbortController courant (annulation si user ferme avant la fin du fetch)
+
   const abortRef = useRef<AbortController | null>(null);
-  // Marque si on a ete demonte ou si l'utilisateur a annule, pour eviter
-  // d'ouvrir un modal sur un blob qui ne sera plus utilise.
+
+
   const cancelledRef = useRef(false);
 
-  // Cleanup au demontage : abort fetch en cours (data URL n'a pas besoin de revoke)
+
   useEffect(() => {
     return () => {
       cancelledRef.current = true;
@@ -104,11 +106,11 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
   const reportError = useCallback(
     (err: Error) => {
       console.error("[TemplatePdfPreviewButton] PDF preview error:", err);
-      // onError prend priorite ; sinon toast par defaut
+
       if (props.onError) {
         props.onError(err);
       } else {
-        toast.error(err.message || "Impossible de generer l'apercu");
+        toast.error(err.message || t("impossible_generer_apercu"));
       }
     },
     [props],
@@ -117,12 +119,12 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
   const handleOpen = useCallback(async () => {
     if (loading) return;
 
-    // Garde-fou : pas de body utilisable -> message clair plutot que POST cassé
+
     const body = (props.bodyMarkdown ?? "").trim();
     if (!body) {
       reportError(
         new Error(
-          "Aucun contenu a previsualiser. Verifiez que le modele n'est pas vide.",
+          t("aucun_contenu_previsualiser_verifiez_modele"),
         ),
       );
       return;
@@ -160,34 +162,34 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
       }
       const blob = await res.blob();
       if (cancelledRef.current) {
-        // Modal ferme / composant demonte pendant le fetch : on jette le blob
+
         return;
       }
       if (blob.size === 0) {
-        throw new Error("Aperçu vide retourne par le serveur");
+        throw new Error(t("apercu_vide_retourne_serveur"));
       }
-      // Verifie que c'est bien un PDF (header %PDF-) — evite d'afficher
-      // un faux PDF en iframe (qui donnerait l'icone "fichier casse").
+
+
       const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
       const isPdf = head[0] === 0x25 && head[1] === 0x50 && head[2] === 0x44 && head[3] === 0x46 && head[4] === 0x2d;
       if (!isPdf) {
-        // Le serveur a peut-etre renvoye du JSON 500 (cas extreme) ; on tente de
-        // le decoder pour afficher un message clair.
+
+
         try {
           const txt = await blob.text();
           const data = JSON.parse(txt);
           if (data?.error) throw new Error(String(data.error));
         } catch { /* pas du JSON */ }
-        throw new Error("Reponse serveur invalide (pas un PDF). Consultez les logs.");
+        throw new Error(t("reponse_serveur_invalide_pas_pdf"));
       }
-      // Conversion en data URL (FileReader) : immutable + survit aux re-renders +
-      // pas d'invalidation comme avec blob URLs.
+
+
       const url = await blobToDataUrl(blob);
       if (cancelledRef.current) return;
       setDataUrl(url);
       setOpen(true);
     } catch (e) {
-      // AbortError n'est pas une vraie erreur : l'user a juste ferme
+
       if ((e as Error)?.name === "AbortError") return;
       reportError(e as Error);
     } finally {
@@ -200,8 +202,8 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
     cancelledRef.current = true;
     abortRef.current?.abort();
     setOpen(false);
-    // Data URL : pas besoin de revoke. On nettoie l'etat apres la fermeture
-    // du modal (animation Radix ~200ms) pour eviter de blanker l'iframe.
+
+
     window.setTimeout(() => setDataUrl(null), 300);
   }, []);
 
@@ -233,12 +235,12 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
       {loading ? (
         <>
           <Loader2 className="h-3.5 w-3.5 animate-spin" />
-          Generation…
+          {t("generation")}
         </>
       ) : (
         <>
           <FileText className="h-3.5 w-3.5" />
-          Aperçu PDF
+          {t("apercu_pdf")}
         </>
       )}
     </Button>

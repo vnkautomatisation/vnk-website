@@ -2,6 +2,7 @@
 // Retourne un fichier ICS pour ajouter le conge approuve a un calendrier
 // externe (Google, Outlook, Apple).
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
@@ -18,16 +19,17 @@ function nowStamp(): string {
   return `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  vacation: "Vacances",
-  sick: "Maladie",
-  parental: "Congé parental",
-  unpaid: "Sans solde",
-  bereavement: "Décès",
-  other: "Congé",
+const TYPE_KEY: Record<string, string> = {
+  vacation: "exp_vacances",
+  sick: "exp_maladie",
+  parental: "exp_conge_parental",
+  unpaid: "exp_sans_solde",
+  bereavement: "exp_deces",
+  other: "exp_conge",
 };
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -52,14 +54,14 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   }
 
   if (leave.status !== "approved") {
-    return NextResponse.json({ error: "Seuls les congés approuvés peuvent être exportés" }, { status: 400 });
+    return NextResponse.json({ error: t("seuls_les_conges_approuves_peuvent_etre_exportes") }, { status: 400 });
   }
 
   const dtStart = toIcsDate(leave.startDate);
   // DTEND est exclusif en ICS DATE-only -> +1 jour
   const endPlus = new Date(leave.endDate); endPlus.setDate(endPlus.getDate() + 1);
   const dtEnd = toIcsDate(endPlus);
-  const summary = `Congé : ${TYPE_LABEL[leave.type] ?? leave.type}`;
+  const summary = `Congé : ${TYPE_KEY[leave.type] ? t(TYPE_KEY[leave.type]) : leave.type}`;
   const description = leave.reason ? leave.reason.replace(/\n/g, "\\n") : "";
   const uid = `leave-${leave.id}@vnk.local`;
 

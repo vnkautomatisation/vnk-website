@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { LayoutGrid, List } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -14,6 +15,7 @@ export function ViewToggle({
   defaultView?: ViewMode;
   onChange?: (view: ViewMode) => void;
 }) {
+  const t = useTranslations("admin.ui");
   const [view, setView] = useState<ViewMode>(defaultView);
 
   useEffect(() => {
@@ -40,8 +42,8 @@ export function ViewToggle({
             ? "bg-primary text-primary-foreground"
             : "bg-background text-muted-foreground hover:bg-muted"
         )}
-        aria-label="Vue grille"
-        title="Vue grille"
+        aria-label={t("vue_grille")}
+        title={t("vue_grille")}
       >
         <LayoutGrid className="h-3.5 w-3.5" />
       </button>
@@ -53,8 +55,8 @@ export function ViewToggle({
             ? "bg-primary text-primary-foreground"
             : "bg-background text-muted-foreground hover:bg-muted"
         )}
-        aria-label="Vue liste"
-        title="Vue liste"
+        aria-label={t("vue_liste")}
+        title={t("vue_liste")}
       >
         <List className="h-3.5 w-3.5" />
       </button>

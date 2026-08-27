@@ -47,6 +47,7 @@ export function SubmitAppealDialog({
   onClose: () => void;
   onSubmitted: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
@@ -65,7 +66,7 @@ export function SubmitAppealDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Appel soumis. Les RH seront notifiés.");
+      toast.success(t("appel_soumis_rh_seront_notifies"));
       onSubmitted();
     } else {
       toast.error(r.error);
@@ -79,7 +80,7 @@ export function SubmitAppealDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Megaphone className="h-4 w-4 shrink-0" />
-              <span className="truncate">Faire appel de l&apos;attribution</span>
+              <span className="truncate">{t("faire_appel_apos_attribution")}</span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {preference.windowName} — Choix #{preference.rank}
@@ -101,19 +102,15 @@ export function SubmitAppealDialog({
           </div>
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-[11px] text-amber-900 flex gap-2">
             <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>
-              Expliquez clairement le motif de votre appel (anciennenté, conflit de garde,
-              contrainte familiale, etc.). Les RH étudieront votre demande au cas par cas.
-            </span>
+            <span>{t("appeal_dialog_expliquez_clairement_le_motif_de_votre_appel")}</span>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
-              Motif de l&apos;appel <span className="text-red-500">*</span>
+            <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">{t("appeal_dialog_motif_de_l_appel")}<span className="text-red-500">*</span>
             </Label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value.slice(0, MAX_REASON))}
-              placeholder="Expliquez en détail pourquoi vous souhaitez contester l'attribution..."
+              placeholder={t("expliquez_detail_pourquoi_vous_souhaitez")}
               rows={5}
               className="resize-y"
             />
@@ -131,7 +128,7 @@ export function SubmitAppealDialog({
             disabled={pending || !reasonOk}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Soumettre l'appel"}
+            {pending ? <Loader2 className="h-4 w-4 animate-spin" /> : t("soumettre_appel")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -155,13 +152,14 @@ export function ReviewAppealDialog({
   onClose: () => void;
   onReviewed: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [notes, setNotes] = useState("");
   const [pending, setPending] = useState<"approved" | "rejected" | null>(null);
 
   const review = async (decision: "approved" | "rejected") => {
     if (decision === "rejected" && notes.trim().length < 5) {
-      toast.error("Veuillez justifier le refus dans les notes.");
+      toast.error(t("veuillez_justifier_refus_notes"));
       return;
     }
     setPending(decision);
@@ -172,7 +170,7 @@ export function ReviewAppealDialog({
     });
     setPending(null);
     if (r.success) {
-      toast.success(decision === "approved" ? "Appel accordé" : "Appel refusé");
+      toast.success(decision === "approved" ? t("appel_accorde") : t("appel_refuse"));
       onReviewed();
     } else {
       toast.error(r.error);
@@ -186,7 +184,7 @@ export function ReviewAppealDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Megaphone className="h-4 w-4 shrink-0" />
-              <span className="truncate">Revoir un appel</span>
+              <span className="truncate">{t("revoir_appel")}</span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {appeal.employeeName}
@@ -196,13 +194,13 @@ export function ReviewAppealDialog({
         <div className="p-4 sm:p-5 space-y-3 flex-1 overflow-y-auto">
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
-              Préférence concernée
+              {t("preference_concernee")}
             </Label>
             <div className="rounded-md border bg-muted/30 p-3 text-xs">{appeal.prefDetails}</div>
           </div>
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
-              Motif invoqué par l&apos;employé
+              {t("motif_invoque_apos_employe")}
             </Label>
             <div className="rounded-md border bg-amber-50 border-amber-200 p-3 text-xs whitespace-pre-wrap text-amber-900">
               {appeal.reason}
@@ -210,12 +208,12 @@ export function ReviewAppealDialog({
           </div>
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
-              Notes administratives (obligatoires en cas de refus)
+              {t("notes_administratives_obligatoires_cas_refus")}
             </Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value.slice(0, 500))}
-              placeholder="Justification de la décision, contexte interne..."
+              placeholder={t("justification_decision_contexte_interne")}
               rows={4}
               className="resize-y"
             />
@@ -240,7 +238,7 @@ export function ReviewAppealDialog({
             ) : (
               <>
                 <XCircle className="h-3.5 w-3.5 mr-1" />
-                Refuser
+                {t("refuser")}
               </>
             )}
           </Button>
@@ -254,7 +252,7 @@ export function ReviewAppealDialog({
             ) : (
               <>
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                Approuver
+                {t("approuver")}
               </>
             )}
           </Button>

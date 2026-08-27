@@ -1,11 +1,14 @@
 export const dynamic = "force-dynamic";
 import { auth } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { BookingView } from "./booking-view";
 import { CalendarPlus } from "lucide-react";
 
 export default async function BookingPage() {
+  const t = await getTranslations("portal");
   const session = await auth();
   if (!session?.user?.clientId) redirect("/portail/login");
   const clientId = session.user.clientId;
@@ -49,8 +52,8 @@ export default async function BookingPage() {
           <CalendarPlus className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="portal-title">Reserver un appel</h1>
-          <p className="text-sm text-muted-foreground">Choisissez un creneau disponible</p>
+          <h1 className="portal-title">{t("reserver_un_appel")}</h1>
+          <p className="text-sm text-muted-foreground">{t("choisissez_creneau_disponible")}</p>
         </div>
       </div>
       <BookingView slots={slots} mandates={mandates} />

@@ -31,7 +31,7 @@ export function ContactForm() {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(data),
         });
-        if (!res.ok) throw new Error("Erreur");
+        if (!res.ok) throw new Error(t("erreur"));
         toast.success(t("success"));
         form.reset();
       } catch {
@@ -44,7 +44,7 @@ export function ContactForm() {
     <Card>
       <CardContent className="p-6">
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Honeypot — caché visuellement mais accessible aux bots */}
+
           <input
             type="text"
             name="website"
@@ -62,7 +62,7 @@ export function ContactForm() {
                 name="name"
                 required
                 autoComplete="name"
-                placeholder="Jean Tremblay"
+                placeholder={t("jean_tremblay")}
               />
             </div>
             <div className="space-y-2">
@@ -71,7 +71,7 @@ export function ContactForm() {
                 id="contact-company"
                 name="company"
                 autoComplete="organization"
-                placeholder="Industries XYZ"
+                placeholder={t("industries_xyz")}
               />
             </div>
           </div>
@@ -85,7 +85,7 @@ export function ContactForm() {
                 type="email"
                 required
                 autoComplete="email"
-                placeholder="jean@exemple.com"
+                placeholder={t("ph_courriel")}
               />
             </div>
             <div className="space-y-2">
@@ -108,11 +108,11 @@ export function ContactForm() {
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="support-plc">Support PLC</SelectItem>
-                  <SelectItem value="audit">Audit technique</SelectItem>
-                  <SelectItem value="documentation">Documentation</SelectItem>
-                  <SelectItem value="refactoring">Refactorisation PLC</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
+                  <SelectItem value="support-plc">{t("support_plc")}</SelectItem>
+                  <SelectItem value="audit">{t("audit_technique")}</SelectItem>
+                  <SelectItem value="documentation">{t("documentation")}</SelectItem>
+                  <SelectItem value="refactoring">{t("refactorisation_plc")}</SelectItem>
+                  <SelectItem value="other">{t("autre")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -123,11 +123,11 @@ export function ContactForm() {
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="siemens">Siemens</SelectItem>
-                  <SelectItem value="rockwell">Rockwell / Allen-Bradley</SelectItem>
-                  <SelectItem value="br">B&amp;R</SelectItem>
-                  <SelectItem value="schneider">Schneider</SelectItem>
-                  <SelectItem value="other">Autre</SelectItem>
+                  <SelectItem value="siemens">{t("siemens")}</SelectItem>
+                  <SelectItem value="rockwell">{t("rockwell_allen_bradley")}</SelectItem>
+                  <SelectItem value="br">{t("b_amp_r")}</SelectItem>
+                  <SelectItem value="schneider">{t("schneider")}</SelectItem>
+                  <SelectItem value="other">{t("autre")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -140,7 +140,7 @@ export function ContactForm() {
               name="message"
               required
               rows={5}
-              placeholder="Décrivez votre besoin…"
+              placeholder={t("decrivez_besoin")}
               minLength={10}
               maxLength={5000}
             />

@@ -1,6 +1,7 @@
 "use client";
 // Picker d'emojis inline — grille categorisable, zero dependance externe
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Smile } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ const CATEGORIES: { name: string; emojis: string[] }[] = [
 ];
 
 export function EmojiPicker({ onSelect, className }: { onSelect: (emoji: string) => void; className?: string }) {
+  const t = useTranslations("admin.messages");
   const [activeCat, setActiveCat] = useState(0);
   const [open, setOpen] = useState(false);
 
@@ -42,7 +44,7 @@ export function EmojiPicker({ onSelect, className }: { onSelect: (emoji: string)
         <button
           type="button"
           className={cn("h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors", className)}
-          aria-label="Insérer un emoji"
+          aria-label={t("inserer_emoji")}
         >
           <Smile className="h-5 w-5" />
         </button>

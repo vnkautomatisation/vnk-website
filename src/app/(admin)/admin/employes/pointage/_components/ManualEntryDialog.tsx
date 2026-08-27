@@ -1,6 +1,7 @@
 "use client";
 // Manual time entry dialog. `targetAdmin` fills in for another employee.
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -32,13 +33,13 @@ function sameDay(a: Date, b: Date): boolean {
 
 function defaultManualEntry(presetDate?: string | null): ManualEntry {
   const now = new Date();
-  // Defaults to presetDate, otherwise today.
+
   const target = presetDate ? new Date(presetDate + "T12:00:00") : now;
   const isToday = sameDay(target, now);
 
-  // Defaults must be VALID on open (no premature error): for today, clamp the
-  // end time to "now" (floored to 5 min) when 17:00 is still in the future,
-  // and pull the start back if needed.
+
+
+
   let startTime = "09:00";
   let endTime = "17:00";
   if (isToday) {
@@ -66,14 +67,15 @@ export function ManualEntryDialog({
   onClose: () => void;
   onSaved: () => void;
   presetDate: string | null;
-  /** When set, the entry is created for that admin instead of the caller. */
+
   targetAdmin?: { id: number; name: string } | null;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const [entry, setEntry] = useState<ManualEntry>(() => defaultManualEntry(presetDate));
   const [pending, setPending] = useState(false);
-  // Progressive disclosure: calendar collapsed by default (the day is almost
-  // always today or yesterday), so the dialog fits without scrolling.
+
+
   const [calOpen, setCalOpen] = useState(false);
 
   useEffect(() => {
@@ -92,14 +94,14 @@ export function ManualEntryDialog({
 
   const validation = useMemo(() => {
     if (!ciDate || isNaN(ciDate.getTime()) || !coDate || isNaN(coDate.getTime())) {
-      return { ok: false, error: "Date ou heure invalide" };
+      return { ok: false, error: t("date_heure_invalide") };
     }
     const now = new Date();
-    if (ciDate > now) return { ok: false, error: "La date est dans le futur" };
-    if (coDate > now) return { ok: false, error: "L'heure de fin est dans le futur" };
-    if (coDate <= ciDate) return { ok: false, error: "L'heure de fin doit être après le début" };
+    if (ciDate > now) return { ok: false, error: t("date_futur") };
+    if (coDate > now) return { ok: false, error: t("heure_fin_futur") };
+    if (coDate <= ciDate) return { ok: false, error: t("heure_fin_doit_etre_apres") };
     if (coDate.getTime() - ciDate.getTime() > 16 * 60 * 60 * 1000) {
-      return { ok: false, error: "Période > 16h — saisissez plusieurs entrées" };
+      return { ok: false, error: t("periode_16h_saisissez_plusieurs_entrees") };
     }
     return { ok: true as const };
   }, [ciDate, coDate]);
@@ -111,7 +113,7 @@ export function ManualEntryDialog({
     if (!ciDate || !coDate || !validation.ok) { setOverlap(null); return; }
     timer.current = setTimeout(async () => {
       try {
-        // Without the target, HR is checked against their own punches.
+
         const overlapUrl =
           `/api/admin/timeclock/check-overlap?from=${encodeURIComponent(ciDate.toISOString())}`
           + `&to=${encodeURIComponent(coDate.toISOString())}`
@@ -134,7 +136,7 @@ export function ManualEntryDialog({
     setEntry((e) => ({ ...e, startTime: start, endTime: end }));
   };
 
-  // Date shortcuts; red is reserved for actual field errors.
+
   const todayISO = toISO(new Date());
   const yesterdayISO = useMemo(() => {
     const y = new Date();
@@ -161,11 +163,11 @@ export function ManualEntryDialog({
     if (r.success) {
       toast.success(targetAdmin
         ? `Entrée ajoutée pour ${targetAdmin.name} — il devra soumettre sa semaine`
-        : "Entrée ajoutée — pensez à cliquer « Soumettre la semaine » pour validation");
+        : t("entree_ajoutee_pensez_cliquer_soumettre"));
       onSaved();
       onClose();
     } else {
-      toast.error(r.error || "Échec");
+      toast.error(r.error || t("echec"));
     }
   };
 
@@ -176,17 +178,17 @@ export function ManualEntryDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <History className="h-4 w-4" />
-              {targetAdmin ? `Saisir pour ${targetAdmin.name}` : "Saisie manuelle"}
+              {targetAdmin ? `Saisir pour ${targetAdmin.name}` : t("saisie_manuelle")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               {targetAdmin
-                ? "Saisie effectuée pour l'employé — il devra encore soumettre sa semaine."
-                : "L'entrée sera créée en brouillon. Soumettez la semaine entière pour validation."}
+                ? t("saisie_effectuee_employe_il_devra")
+                : t("entree_sera_creee_brouillon_soumettez")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="px-4 sm:px-5 py-4 space-y-4 overflow-y-auto flex-1">
-          <FormSection icon={CalendarIcon} title="1. Date">
+          <FormSection icon={CalendarIcon} title={t("1_date")}>
             <div className="flex items-center gap-1.5 flex-wrap">
               <Button
                 size="sm"
@@ -194,7 +196,7 @@ export function ManualEntryDialog({
                 className={`h-7 text-xs ${entry.date === todayISO ? "bg-[#0F2D52] hover:bg-[#1a3a66] text-white" : ""}`}
                 onClick={() => { setEntry((s) => ({ ...s, date: todayISO })); setCalOpen(false); }}
               >
-                Aujourd&apos;hui
+                {t("aujourd_apos_hui")}
               </Button>
               <Button
                 size="sm"
@@ -202,7 +204,7 @@ export function ManualEntryDialog({
                 className={`h-7 text-xs ${entry.date === yesterdayISO ? "bg-[#0F2D52] hover:bg-[#1a3a66] text-white" : ""}`}
                 onClick={() => { setEntry((s) => ({ ...s, date: yesterdayISO })); setCalOpen(false); }}
               >
-                Hier
+                {t("hier")}
               </Button>
               <Button
                 size="sm"
@@ -229,7 +231,7 @@ export function ManualEntryDialog({
 
           <FormSection
             icon={ClockIcon}
-            title="2. Heures"
+            title={t("2_heures")}
             action={duration ? (
               <span className="font-mono text-sm font-bold text-[#0F2D52] tabular-nums">{duration}</span>
             ) : undefined}
@@ -259,14 +261,14 @@ export function ManualEntryDialog({
 
             <div className="grid grid-cols-2 gap-3 pt-1">
               <TimeStepper
-                label="Début"
+                label={t("debut")}
                 value={entry.startTime}
                 onChange={(v) => setEntry((s) => ({ ...s, startTime: v }))}
                 accent="emerald"
                 invalid={startInvalid}
               />
               <TimeStepper
-                label="Fin"
+                label={t("fin")}
                 value={entry.endTime}
                 onChange={(v) => setEntry((s) => ({ ...s, endTime: v }))}
                 accent="navy"
@@ -275,11 +277,11 @@ export function ManualEntryDialog({
             </div>
           </FormSection>
 
-          <FormSection icon={FileText} title="3. Notes (optionnel)">
+          <FormSection icon={FileText} title={t("3_notes_optionnel")}>
             <Input
               value={entry.notes}
               onChange={(e) => setEntry((s) => ({ ...s, notes: e.target.value }))}
-              placeholder="Détail de la tâche…"
+              placeholder={t("detail_tache")}
             />
           </FormSection>
 
@@ -304,14 +306,14 @@ export function ManualEntryDialog({
           {duration && (
             <div className="flex items-center justify-center py-3 rounded-lg border-2 border-[#0F2D52] bg-gradient-to-br from-[#0F2D52]/5 to-[#0F2D52]/10">
               <div className="text-center">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Durée totale</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">{t("duree_totale")}</p>
                 <p className="font-mono text-3xl font-bold text-[#0F2D52] tabular-nums">{duration}</p>
               </div>
             </div>
           )}
 
           <p className="text-[10px] text-muted-foreground italic text-center">
-            Brouillon · Modifiable jusqu&apos;à soumission de la semaine
+            {t("brouillon_modifiable_jusqu_apos_soumission")}
           </p>
         </div>
         <DialogFooter className="px-4 sm:px-5 py-3 border-t bg-muted/30 shrink-0">
@@ -321,7 +323,7 @@ export function ManualEntryDialog({
             disabled={pending || !validation.ok || !!overlap?.overlap}
             className="bg-[#0F2D52] hover:bg-[#15406d]"
           >
-            {pending ? "Ajout en cours…" : "Ajouter"}
+            {pending ? t("ajout_cours") : t("ajouter")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -330,15 +332,6 @@ export function ManualEntryDialog({
 }
 
 // Inline mini calendar with three modes: days, months, years.
-const MONTHS_FR = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-const MONTHS_FR_SHORT = [
-  "Janv", "Févr", "Mars", "Avril", "Mai", "Juin",
-  "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
-];
-const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 type InlineMode = "days" | "months" | "years";
 
@@ -349,13 +342,17 @@ function InlineCalendar({
   onChange: (v: string) => void;
   max?: string;
 }) {
+  const MONTHS_FR = useMonthNames();
+  const DAYS_FR_SHORT = useWeekdayNames("narrow");
+  const MONTHS_FR_SHORT = useMonthNames("short");
+  const t = useTranslations("admin.timeclock");
   const selectedDate = parseISO(value);
   const [viewDate, setViewDate] = useState<Date>(() => new Date(selectedDate));
   const [mode, setMode] = useState<InlineMode>("days");
   const today = new Date();
   const maxDate = max ? parseISO(max) : null;
 
-  // Re-center when the value changes from outside (preset click).
+
   useEffect(() => {
     setViewDate(parseISO(value));
   }, [value]);
@@ -370,7 +367,7 @@ function InlineCalendar({
   for (let i = 1; i <= daysInMonth; i++) cells.push({ d: new Date(viewDate.getFullYear(), viewDate.getMonth(), i) });
   while (cells.length % 7 !== 0) cells.push({ d: null });
 
-  // Year grid: 12 per decade.
+
   const yearGrid = useMemo(() => {
     const baseYear = Math.floor(viewDate.getFullYear() / 12) * 12;
     return Array.from({ length: 12 }, (_, i) => baseYear + i);
@@ -385,7 +382,7 @@ function InlineCalendar({
   return (
     <div className="rounded-md border bg-card overflow-hidden">
       <div className="flex items-center justify-between px-2 py-1.5 border-b">
-        <ActionTooltip label={mode === "days" ? "Mois précédent" : mode === "months" ? "Année précédente" : "Décennie précédente"} side="bottom">
+        <ActionTooltip label={mode === "days" ? t("mois_precedent") : mode === "months" ? t("annee_precedente") : t("decennie_precedente")} side="bottom">
           <Button
             size="sm" variant="ghost" className="h-7 w-7 p-0"
             onClick={() => {
@@ -397,7 +394,7 @@ function InlineCalendar({
             <ChevronLeft className="h-4 w-4" />
           </Button>
         </ActionTooltip>
-        <ActionTooltip label="Cliquer pour changer de vue" side="bottom">
+        <ActionTooltip label={t("cliquer_changer_vue")} side="bottom">
           <button
             type="button"
             onClick={() => {
@@ -412,7 +409,7 @@ function InlineCalendar({
             {mode === "years" && `${yearGrid[0]} – ${yearGrid[yearGrid.length - 1]}`}
           </button>
         </ActionTooltip>
-        <ActionTooltip label={mode === "days" ? "Mois suivant" : mode === "months" ? "Année suivante" : "Décennie suivante"} side="bottom">
+        <ActionTooltip label={mode === "days" ? t("mois_suivant") : mode === "months" ? t("annee_suivante") : t("decennie_suivante")} side="bottom">
           <Button
             size="sm" variant="ghost" className="h-7 w-7 p-0"
             onClick={() => {
@@ -537,9 +534,10 @@ function TimeStepper({
   value: string; // "HH:MM"
   onChange: (v: string) => void;
   accent: "emerald" | "navy";
-  /** Red is reserved for real errors (end <= start, future). */
+
   invalid?: boolean;
 }) {
+  const t = useTranslations("admin.timeclock");
   const [h, m] = value.split(":").map(Number);
   const accentCls = invalid
     ? "text-red-700"
@@ -571,13 +569,13 @@ function TimeStepper({
       <div className="flex items-center justify-between mb-1">
         <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">{label}</Label>
         <div className="flex items-center gap-0.5">
-          <ActionTooltip label="-15 minutes">
+          <ActionTooltip label={t("15_minutes")}>
             <button type="button" onClick={() => adjust(-15)} className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center">
               <Minus className="h-3 w-3" />
             </button>
           </ActionTooltip>
           <span className="text-[9px] text-muted-foreground px-0.5">15m</span>
-          <ActionTooltip label="+15 minutes">
+          <ActionTooltip label={t("15_minutes_2")}>
             <button type="button" onClick={() => adjust(15)} className="h-5 w-5 rounded hover:bg-muted flex items-center justify-center">
               <Plus className="h-3 w-3" />
             </button>

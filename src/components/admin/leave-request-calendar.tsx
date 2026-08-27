@@ -11,6 +11,7 @@
 //
 // Theme VNK navy partout, pas de dependance externe.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home,
@@ -58,11 +59,6 @@ export const LEAVE_TYPE_META: Record<LeaveType, { label: string; icon: typeof Su
   other: { label: "Autre", icon: CalendarDays, color: "bg-amber-100 text-amber-700" },
 };
 
-const MONTHS_FR = [
-  "Janvier", "Fevrier", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Aout", "Septembre", "Octobre", "Novembre", "Decembre",
-];
-const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function toISO(d: Date): string {
@@ -112,30 +108,33 @@ export function LeaveRequestCalendar({
   balance?: LeaveBalanceInfo;
   isSuperAdmin?: boolean;
   initialType?: LeaveType;
-  /** "create" : nouvelle demande. "edit" : pre-remplir + label "Enregistrer". */
+
   mode?: "create" | "edit";
-  /** En mode edit : valeurs initiales pour pre-remplir. */
+
   initialValues?: LeaveInitialValues;
-  /** Override du titre du header (par defaut "Demander un conge" / "Modifier la demande"). */
+
   title?: string;
-  /** Override du sous-titre du header. */
+
   subtitle?: string;
-  /** Mode admin : action effectuée pour un autre employé (toggle auto-approve + ignore cutoff). */
+
   adminMode?: boolean;
-  /** Id employé cible : en mode admin, on charge le calendrier de sa team. */
+
   employeeIdOverride?: number;
-  /** Nom employé cible (affiché dans le header). */
+
   employeeName?: string;
-  /** Mode admin : true si l'acteur a l'autorité d'approuver immédiatement. */
+
   canAutoApprove?: boolean;
-  /** Override l'URL fetch du calendrier (par defaut /api/admin/leaves/calendar). */
+
   calendarUrl?: string;
-  /** Nombre de mois visibles cote a cote sur desktop (default 1). Mobile reste 1 mois. */
+
   monthsVisible?: 1 | 2 | 3;
 }) {
+  const MONTHS_FR = useMonthNames();
+  const DAYS_FR_SHORT = useWeekdayNames("narrow");
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
-  // Determination du mois visible initial : si edit avec date de debut, on l'utilise
+
   const initialMonth = useMemo(() => {
     if (initialValues?.startDate) {
       try { return startOfMonth(parseISO(initialValues.startDate.slice(0, 10))); }
@@ -152,22 +151,22 @@ export function LeaveRequestCalendar({
   const [halfPart, setHalfPart] = useState<"AM" | "PM">((initialValues?.halfDay as "AM" | "PM") ?? "AM");
   const [reason, setReason] = useState(initialValues?.reason ?? "");
   const [pending, setPending] = useState(false);
-  // Mode admin : approuver immédiatement la demande créée
+
   const [autoApprove, setAutoApprove] = useState(false);
 
-  // Cache des fetches : key = "YYYY-MM" -> { absences, holidays }
+
   const [cache, setCache] = useState<Map<string, { absences: CalendarAbsence[]; holidays: CalendarHoliday[] }>>(new Map());
   const [loading, setLoading] = useState(false);
 
-  // Fetch les data pour CHAQUE mois visible (multi-mois) — fait en parallele, alimente le cache.
-  // Aussi precharge ±2 semaines (buffer) pour la suggestion alternative.
+
+
   useEffect(() => {
     if (!open) return;
     const monthsToFetch: Date[] = [];
     for (let i = 0; i < monthsVisible; i++) {
       monthsToFetch.push(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + i, 1));
     }
-    // Pour la suggestion : on prefetch aussi le mois precedent et suivant
+
     monthsToFetch.push(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() - 1, 1));
     monthsToFetch.push(new Date(visibleMonth.getFullYear(), visibleMonth.getMonth() + monthsVisible, 1));
 
@@ -196,9 +195,9 @@ export function LeaveRequestCalendar({
     }).finally(() => setLoading(false));
   }, [open, visibleMonth, cache, adminMode, employeeIdOverride, calendarUrl, monthsVisible]);
 
-  // Reset le state quand le modal ouvre
-  // - Mode create : tout vide
-  // - Mode edit : pre-rempli avec initialValues
+
+
+
   useEffect(() => {
     if (open) {
       if (mode === "edit" && initialValues) {
@@ -224,12 +223,12 @@ export function LeaveRequestCalendar({
         setVisibleMonth(startOfMonth(today));
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open, initialType, today, mode]);
 
-  // ─── Heatmap : agregge TOUS les mois visibles + buffer pour suggestions ────
-  // On consolide absences/holidays sur l'ensemble du cache (utilise pour heatmap,
-  // conflits, et suggestion d'alternatives sans conflit dans une fenetre +/-2 sem).
+
+
+
   const { absences, holidays } = useMemo(() => {
     const allAbs: CalendarAbsence[] = [];
     const allHol: CalendarHoliday[] = [];
@@ -270,7 +269,7 @@ export function LeaveRequestCalendar({
     return m;
   }, [holidays]);
 
-  // ─── Grilles 6 semaines (dimanche-first) — une par mois visible ────
+
   const grids = useMemo(() => {
     const out: Array<{ month: Date; days: Date[] }> = [];
     for (let i = 0; i < monthsVisible; i++) {
@@ -290,7 +289,7 @@ export function LeaveRequestCalendar({
     return out;
   }, [visibleMonth, monthsVisible]);
 
-  // ─── Disabled : >14j dans le passe sans super_admin ─────────────
+
   const cutoffPast = useMemo(() => {
     const d = new Date(today);
     d.setDate(d.getDate() - 14);
@@ -302,18 +301,18 @@ export function LeaveRequestCalendar({
     return d < cutoffPast;
   };
 
-  // ─── Selection range : 2 modes possibles ────────────────────────
-  // 1) Drag : mouse-down sur une cellule, drag par-dessus les autres -> range live
-  // 2) Click sequence (fallback si pas de drag) : click 1 = start, click 2 = end (auto-swap si reverse)
-  //
-  // On distingue les deux via dragStartedAt : si pointerdown puis pointerup sur la meme cellule sans mouvement,
-  // on traite comme un click sequence; sinon, on commit la range definie par le drag.
+
+
+
+
+
+
   const [dragStartIso, setDragStartIso] = useState<string | null>(null);
   const [dragHoverIso, setDragHoverIso] = useState<string | null>(null);
   const [didDrag, setDidDrag] = useState(false);
   const calendarRef = useRef<HTMLDivElement>(null);
 
-  // Recherche la date associee a un point (touchmove). On utilise data-iso sur les boutons.
+
   const isoFromPoint = useCallback((x: number, y: number): string | null => {
     const el = document.elementFromPoint(x, y);
     if (!el) return null;
@@ -330,7 +329,7 @@ export function LeaveRequestCalendar({
     setEnd(hi);
   }, []);
 
-  // Mouse handlers (desktop)
+
   const onCellMouseDown = (d: Date) => {
     if (isDayDisabled(d)) return;
     setDragStartIso(toISO(d));
@@ -344,14 +343,14 @@ export function LeaveRequestCalendar({
     if (iso !== dragStartIso) setDidDrag(true);
     setDragHoverIso(iso);
   };
-  // Global mouseup : commit le range si drag, sinon laisser handleDayClick gerer
+
   useEffect(() => {
     if (!open) return;
     const onUp = () => {
       if (dragStartIso && dragHoverIso && didDrag) {
         commitRange(dragStartIso, dragHoverIso);
       }
-      // Si pas drag (= simple click), handleDayClick a deja gere via onClick
+
       setDragStartIso(null);
       setDragHoverIso(null);
       setDidDrag(false);
@@ -360,7 +359,7 @@ export function LeaveRequestCalendar({
     return () => window.removeEventListener("mouseup", onUp);
   }, [open, dragStartIso, dragHoverIso, didDrag, commitRange]);
 
-  // Touch handlers (mobile) — on suit touchmove via document
+
   const onCellTouchStart = (d: Date) => {
     if (isDayDisabled(d)) return;
     setDragStartIso(toISO(d));
@@ -376,7 +375,7 @@ export function LeaveRequestCalendar({
       if (!iso) return;
       if (iso !== dragStartIso) setDidDrag(true);
       setDragHoverIso(iso);
-      // Empeche le scroll pendant le drag
+
       e.preventDefault();
     };
     const onEnd = () => {
@@ -397,12 +396,12 @@ export function LeaveRequestCalendar({
     };
   }, [open, dragStartIso, dragHoverIso, didDrag, isoFromPoint, commitRange]);
 
-  // Click sequence fallback (utilise quand le drag n'a pas bouge)
+
   const handleDayClick = (d: Date) => {
     if (isDayDisabled(d)) return;
     if (didDrag) return; // le commit a deja eu lieu via mouseup
     const iso = toISO(d);
-    // Si pas de start, ou si on a deja start+end -> reset
+
     if (!start || (start && end)) {
       setStart(iso);
       setEnd("");
@@ -421,7 +420,7 @@ export function LeaveRequestCalendar({
     }
   };
 
-  // Aperçu visuel pendant le drag (priorité sur la range committed)
+
   const previewRange = (() => {
     if (!dragStartIso || !dragHoverIso) return null;
     const a = parseISO(dragStartIso);
@@ -451,7 +450,7 @@ export function LeaveRequestCalendar({
     return end ? sameDay(d, parseISO(end)) : false;
   };
 
-  // ─── Calcul jours ouvres dans la range (cote client, approximatif) ─
+
   const estimatedDays = useMemo(() => {
     if (!start) return 0;
     const sDate = parseISO(start);
@@ -470,7 +469,7 @@ export function LeaveRequestCalendar({
     return count;
   }, [start, end, isHalfDay, holidaysMap]);
 
-  // ─── Conflits equipe ────────────────────────────────────────────
+
   const teamConflicts = useMemo(() => {
     if (!start) return { othersCount: 0, names: [] as string[] };
     const sDate = parseISO(start);
@@ -488,10 +487,10 @@ export function LeaveRequestCalendar({
     return { othersCount: seen.size, names: Array.from(seen.values()).slice(0, 5) };
   }, [start, end, absences]);
 
-  // ─── Auto-suggestion : alternatives sans conflit ────────────────
-  // Declenchee si conflits >= 30% (proxy : >=2 absents) et range complete.
-  // Algo : scan glissant fenetre = (eDate - sDate) jours, ±2 semaines de la date initiale,
-  // retourne les 3 premieres fenetres avec 0 conflit (skip weekends/feries dans la duree).
+
+
+
+
   const suggestions = useMemo<Array<{ start: string; end: string }>>(() => {
     if (!start || !end) return [];
     if (teamConflicts.othersCount < 2) return [];
@@ -500,7 +499,7 @@ export function LeaveRequestCalendar({
     const durationDays = Math.round((eDate.getTime() - sDate.getTime()) / 86400000);
     if (durationDays < 0 || durationDays > 21) return [];
 
-    // Range de scan : -14j à +14j
+
     const found: Array<{ start: string; end: string }> = [];
     const scanFrom = new Date(sDate);
     scanFrom.setDate(scanFrom.getDate() - 14);
@@ -520,19 +519,19 @@ export function LeaveRequestCalendar({
 
     const cursor = new Date(scanFrom);
     while (cursor <= scanTo && found.length < 3) {
-      // Skip si la fenetre commence avant cutoff passe ou meme jour que la selection courante
+
       if (cursor < cutoffPast && !isSuperAdmin && !adminMode) {
         cursor.setDate(cursor.getDate() + 1);
         continue;
       }
       const winEnd = new Date(cursor);
       winEnd.setDate(winEnd.getDate() + durationDays);
-      // On evite de proposer la meme periode
+
       if (sameDay(cursor, sDate)) {
         cursor.setDate(cursor.getDate() + 1);
         continue;
       }
-      // Skip si le start est weekend (pour proposer un mardi/mercredi propre)
+
       const dow = cursor.getDay();
       if (dow === 0 || dow === 6) {
         cursor.setDate(cursor.getDate() + 1);
@@ -540,7 +539,7 @@ export function LeaveRequestCalendar({
       }
       if (!hasConflict(cursor, winEnd)) {
         found.push({ start: toISO(cursor), end: toISO(winEnd) });
-        // Skip 3 jours pour eviter les doublons quasi-identiques
+
         cursor.setDate(cursor.getDate() + 3);
       } else {
         cursor.setDate(cursor.getDate() + 1);
@@ -555,7 +554,7 @@ export function LeaveRequestCalendar({
     setVisibleMonth(startOfMonth(parseISO(s.start)));
   };
 
-  // ─── Submit ─────────────────────────────────────────────────────
+
   const sameDayRange = start && end && start === end;
   const canSubmit = !!start && !!end && !pending && estimatedDays > 0;
 
@@ -582,28 +581,28 @@ export function LeaveRequestCalendar({
   const balanceAfter = balance ? Math.max(0, balance.vacationDaysRemaining - estimatedDays) : null;
   const balanceInsufficient = balance && type === "vacation" && estimatedDays > balance.vacationDaysRemaining;
 
-  // Labels dynamiques selon le mode
+
   const headerTitle = title ?? (
     adminMode && mode === "create" ? `Créer un congé${employeeName ? ` — ${employeeName}` : ""}`
     : adminMode && mode === "edit" ? `Modifier le congé${employeeName ? ` — ${employeeName}` : ""}`
-    : mode === "edit" ? "Modifier la demande"
-    : "Demander un conge"
+    : mode === "edit" ? t("modifier_demande")
+    : t("demander_conge")
   );
   const headerSubtitle = subtitle ?? (
     adminMode
-      ? "Action administrateur — l'employé sera notifié."
+      ? t("action_administrateur_employe_sera_notifie")
       : mode === "edit"
-        ? "Ajustez la periode ou les details. Le superviseur sera notifie."
-        : "Selectionnez votre periode sur le calendrier — les absences de votre equipe sont visibles."
+        ? t("ajustez_periode_details_superviseur_sera")
+        : t("selectionnez_periode_calendrier_absences_equipe")
   );
   const submitLabel = adminMode && mode === "create" && autoApprove
-    ? "Créer et approuver"
+    ? t("creer_approuver")
     : adminMode && mode === "create"
-      ? "Créer la demande"
+      ? t("creer_demande")
       : mode === "edit"
-        ? "Enregistrer"
-        : "Soumettre";
-  const submitPending = mode === "edit" ? "Enregistrement..." : "Création...";
+        ? t("enregistrer")
+        : t("soumettre");
+  const submitPending = mode === "edit" ? t("enregistrement") : t("creation");
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start md:items-center justify-center p-2 md:p-4 overflow-y-auto" onClick={onClose}>
@@ -611,7 +610,7 @@ export function LeaveRequestCalendar({
         className="bg-background rounded-lg shadow-2xl w-full max-w-5xl my-4 overflow-hidden border flex flex-col max-h-[95vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header navy sticky */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 flex items-center justify-between gap-3 shrink-0">
           <div className="min-w-0">
             <h2 className="text-base font-semibold flex items-center gap-2">
@@ -630,16 +629,16 @@ export function LeaveRequestCalendar({
           </ActionTooltip>
         </div>
 
-        {/* Body : 2 colonnes responsive, scrollable */}
+
         <div className="grid md:grid-cols-[1fr_320px] gap-0 flex-1 overflow-y-auto">
-          {/* Colonne gauche : calendrier (1 a N mois) */}
+
           <div className="p-4 border-r" ref={calendarRef}>
-            {/* Nav mois */}
+
             <div className="flex items-center justify-between mb-3">
               <button
                 onClick={() => setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1))}
                 className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center"
-                aria-label="Mois precedent"
+                aria-label={t("mois_precedent")}
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -654,7 +653,7 @@ export function LeaveRequestCalendar({
               <button
                 onClick={() => setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1))}
                 className="h-8 w-8 rounded-md hover:bg-muted flex items-center justify-center"
-                aria-label="Mois suivant"
+                aria-label={t("mois_suivant")}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -668,7 +667,7 @@ export function LeaveRequestCalendar({
                       {MONTHS_FR[month.getMonth()]} {month.getFullYear()}
                     </div>
                   )}
-                  {/* Header jours */}
+
                   <div className="grid grid-cols-7 gap-0.5 mb-1">
                     {DAYS_FR_SHORT.map((d, i) => (
                       <div key={i} className="text-[10px] uppercase tracking-wider text-muted-foreground text-center font-semibold py-1">
@@ -676,7 +675,7 @@ export function LeaveRequestCalendar({
                       </div>
                     ))}
                   </div>
-                  {/* Grille */}
+
                   <div className="grid grid-cols-7 gap-0.5">
                     {days.map((d, i) => {
                       const inMonth = d.getMonth() === month.getMonth();
@@ -692,7 +691,7 @@ export function LeaveRequestCalendar({
                       const absOnDay = dayAbsenceCount.get(iso) ?? [];
                       const count = absOnDay.length;
 
-                      // Couleur de heatmap (background)
+
                       let heatmapBg = "";
                       if (!inSel && count > 0) {
                         if (count >= 6) heatmapBg = "bg-red-100";
@@ -700,7 +699,7 @@ export function LeaveRequestCalendar({
                         else heatmapBg = "bg-yellow-50";
                       }
 
-                      // Tooltip text
+
                       const tooltipParts: string[] = [];
                       if (holiday) tooltipParts.push(`Ferie : ${holiday.name}`);
                       if (count > 0) tooltipParts.push(`${count} absent${count > 1 ? "s" : ""} : ${absOnDay.map((a) => a.fullName).join(", ")}`);
@@ -736,7 +735,7 @@ export function LeaveRequestCalendar({
                           aria-label={iso}
                         >
                           <span className="text-xs">{d.getDate()}</span>
-                          {/* Indicateurs */}
+
                           <div className="flex items-center gap-0.5 mt-0.5">
                             {holiday && (
                               <span className="text-[8px] font-bold uppercase tracking-tight text-cyan-700" aria-hidden>F</span>
@@ -759,20 +758,20 @@ export function LeaveRequestCalendar({
               ))}
             </div>
 
-            {/* Legende */}
+
             <div className="mt-3 flex flex-wrap items-center gap-3 text-[10px] text-muted-foreground">
-              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-[#0F2D52]" />Selection</span>
-              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-yellow-50 border" />1-2 absent</span>
-              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-orange-100 border" />3-5 absents</span>
-              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-red-100 border" />6+ absents</span>
-              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-cyan-50 border" />Ferie (F)</span>
-              <span className="text-[10px] text-muted-foreground/70 ml-auto italic">Astuce : glissez pour selectionner une plage</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-[#0F2D52]" />{t("selection")}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-yellow-50 border" />{t("1_2_absent")}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-orange-100 border" />{t("3_5_absents")}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-red-100 border" />{t("6_absents")}</span>
+              <span className="flex items-center gap-1"><span className="inline-block h-3 w-3 rounded bg-cyan-50 border" />{t("ferie_f")}</span>
+              <span className="text-[10px] text-muted-foreground/70 ml-auto italic">{t("astuce_glissez_selectionner_plage")}</span>
             </div>
           </div>
 
-          {/* Colonne droite : sidebar */}
+
           <div className="p-4 space-y-4 bg-muted/10">
-            <FormSection icon={CalendarDays} title="Type de conge">
+            <FormSection icon={CalendarDays} title={t("type_conge")}>
               <Select value={type} onValueChange={(v) => setType(v as LeaveType)}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -783,11 +782,11 @@ export function LeaveRequestCalendar({
               </Select>
             </FormSection>
 
-            {/* Periode selectionnee */}
+
             <div className="rounded-md border bg-background p-3 text-xs">
-              <p className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground mb-1">Periode</p>
+              <p className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground mb-1">{t("periode")}</p>
               {!start ? (
-                <p className="text-muted-foreground italic">Cliquez une date de debut sur le calendrier</p>
+                <p className="text-muted-foreground italic">{t("cliquez_date_debut_calendrier")}</p>
               ) : (
                 <>
                   <p className="font-medium">
@@ -799,7 +798,7 @@ export function LeaveRequestCalendar({
                       </>
                     )}
                   </p>
-                  {!end && <p className="text-muted-foreground mt-0.5">Cliquez une date de fin</p>}
+                  {!end && <p className="text-muted-foreground mt-0.5">{t("cliquez_date_fin")}</p>}
                   {start && end && (
                     <p className="mt-1 text-muted-foreground">
                       <strong className="tabular-nums text-foreground">{estimatedDays}</strong> jour{estimatedDays > 1 ? "s" : ""} ouvr{estimatedDays > 1 ? "es" : "e"}
@@ -809,32 +808,32 @@ export function LeaveRequestCalendar({
               )}
             </div>
 
-            {/* Demi-journee */}
+
             {sameDayRange && (
-              <Field label="Demi-journee">
+              <Field label={t("demi_journee")}>
                 <label className="flex items-center gap-2 text-xs cursor-pointer">
                   <Checkbox checked={isHalfDay} onCheckedChange={(v) => setIsHalfDay(!!v)} />
-                  <span>Cette demande couvre une demi-journee</span>
+                  <span>{t("demande_couvre_demi_journee")}</span>
                 </label>
                 {isHalfDay && (
                   <Select value={halfPart} onValueChange={(v) => setHalfPart(v as "AM" | "PM")}>
                     <SelectTrigger className="h-8 w-full text-xs mt-2"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="AM">Matin (AM)</SelectItem>
-                      <SelectItem value="PM">Apres-midi (PM)</SelectItem>
+                      <SelectItem value="AM">{t("matin_am")}</SelectItem>
+                      <SelectItem value="PM">{t("apres_midi_pm")}</SelectItem>
                     </SelectContent>
                   </Select>
                 )}
               </Field>
             )}
 
-            {/* Solde dispo */}
+
             {balance && type === "vacation" && (
               <div className={`rounded-md border p-3 text-xs ${balanceInsufficient ? "bg-red-50 border-red-200" : "bg-background"}`}>
-                <p className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground mb-1">Solde vacances</p>
+                <p className="uppercase tracking-wider text-[10px] font-semibold text-muted-foreground mb-1">{t("solde_vacances")}</p>
                 <p className="font-medium">
                   <span className="tabular-nums text-[#0F2D52] text-base font-bold">{balance.vacationDaysRemaining}</span>
-                  <span className="text-muted-foreground"> j dispo</span>
+                  <span className="text-muted-foreground"> {t("j_dispo")}</span>
                   {start && end && (
                     <>
                       <span className="mx-1.5 text-muted-foreground">·</span>
@@ -849,7 +848,7 @@ export function LeaveRequestCalendar({
                     <AlertTriangle className="h-3 w-3" />Solde insuffisant
                   </p>
                 )}
-                {/* Barre de progression */}
+
                 <div className="mt-2 h-1.5 bg-muted rounded overflow-hidden">
                   <div
                     className={`h-full transition ${balanceInsufficient ? "bg-red-500" : "bg-[#0F2D52]"}`}
@@ -863,7 +862,7 @@ export function LeaveRequestCalendar({
               </div>
             )}
 
-            {/* Conflits equipe */}
+
             {start && teamConflicts.othersCount > 0 && (
               <div className="rounded-md border border-orange-200 bg-orange-50 p-3 text-xs">
                 <p className="flex items-center gap-1.5 font-semibold text-orange-800">
@@ -874,15 +873,15 @@ export function LeaveRequestCalendar({
               </div>
             )}
 
-            {/* Auto-suggestions : dates sans conflit ±2 semaines */}
+
             {suggestions.length > 0 && (
               <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs space-y-1.5">
                 <p className="flex items-center gap-1.5 font-semibold text-emerald-800">
                   <Sparkles className="h-3.5 w-3.5" />
-                  Dates suggerees sans conflit
+                  {t("dates_suggerees_sans_conflit")}
                 </p>
                 <p className="text-[10px] text-emerald-700/80">
-                  Cliquez pour pre-remplir une periode equivalente avec 0 absent.
+                  {t("cliquez_pre_remplir_periode_equivalente")}
                 </p>
                 <div className="flex flex-col gap-1 pt-0.5">
                   {suggestions.map((s, idx) => (
@@ -901,26 +900,26 @@ export function LeaveRequestCalendar({
                           </>
                         )}
                       </span>
-                      <span className="text-[10px] uppercase tracking-wider text-emerald-700">Appliquer</span>
+                      <span className="text-[10px] uppercase tracking-wider text-emerald-700">{t("appliquer")}</span>
                     </button>
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Raison */}
-            <Field label="Raison (optionnelle)">
+
+            <Field label={t("raison_optionnelle")}>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 rows={3}
                 className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-                placeholder="Contexte, urgence, lien…"
+                placeholder={t("contexte_urgence_lien")}
                 maxLength={500}
               />
             </Field>
 
-            {/* Toggle Approuver immédiatement (admin uniquement, en création) */}
+
             {adminMode && mode === "create" && canAutoApprove && (
               <div className="rounded-md border border-[#0F2D52]/30 bg-[#0F2D52]/5 p-3 text-xs">
                 <label className="flex items-start gap-2 cursor-pointer">
@@ -930,11 +929,8 @@ export function LeaveRequestCalendar({
                     className="mt-0.5"
                   />
                   <div className="min-w-0">
-                    <p className="font-semibold text-[#0F2D52]">Approuver immédiatement</p>
-                    <p className="text-[11px] text-muted-foreground mt-0.5">
-                      La demande sera créée en statut <strong>approuvé</strong> sans passer par la file d&apos;attente.
-                      Les TimeClock seront générés automatiquement pour les congés payés.
-                    </p>
+                    <p className="font-semibold text-[#0F2D52]">{t("approuver_immediatement")}</p>
+                    <p className="text-[11px] text-muted-foreground mt-0.5">{t("leave_request_calendar_la_demande_sera_creee_en_statut")}<strong>{t("approuve")}</strong>{t("leave_request_calendar_sans_passer_par_la_file_d_attente")}</p>
                   </div>
                 </label>
               </div>
@@ -942,12 +938,12 @@ export function LeaveRequestCalendar({
           </div>
         </div>
 
-        {/* Footer sticky */}
+
         <div className="px-5 py-3 border-t bg-muted/30 flex items-center justify-between gap-2 shrink-0">
           <p className="text-xs text-muted-foreground">
             {start && end ? (
-              <>Total : <strong className="tabular-nums text-foreground">{estimatedDays}</strong> jour{estimatedDays > 1 ? "s" : ""}</>
-            ) : "Selectionnez une periode"}
+              <>{t("total")} <strong className="tabular-nums text-foreground">{estimatedDays}</strong> jour{estimatedDays > 1 ? "s" : ""}</>
+            ) : t("selectionnez_periode")}
           </p>
           <div className="flex gap-2">
             <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>

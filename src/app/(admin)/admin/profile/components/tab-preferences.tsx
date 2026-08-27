@@ -39,7 +39,7 @@ function useAutoSave(callback: () => Promise<void>, deps: unknown[], delay = 800
     if (firstRun.current) { firstRun.current = false; return; }
     const t = setTimeout(() => { callback(); }, delay);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, deps);
 }
 
@@ -69,21 +69,21 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
                     partial.defaultLanding !== undefined ? startBeh : startShort;
       start(async () => {
         const r = await updatePreferencesAction(partial);
-        if (r.success && !silent) toast.success("Préférences enregistrées");
+        if (r.success && !silent) toast.success(t("preferences_enregistrees"));
         else if (!r.success) toast.error(r.error);
         resolve();
       });
     });
   };
 
-  // ── Auto-save Apparence (theme + accent) + application immédiate ─────────────
+
   useAutoSave(() => {
-    // Appliquer immédiatement côté client pour effet instantané
+
     applyAdminTheme(theme, accentColor || null);
     return save({ theme, accentColor: accentColor || "" }, true);
   }, [theme, accentColor]);
 
-  // ── Auto-save Raccourcis + application immédiate (localStorage) ─
+
   useAutoSave(() => {
     try {
       if (shortcutSearch) localStorage.setItem("vnk-admin-shortcut-search", shortcutSearch);
@@ -92,7 +92,7 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
     return save({ shortcuts: { search: shortcutSearch, save: shortcutSave } }, true);
   }, [shortcutSearch, shortcutSave]);
 
-  // ── Horloge temps réel (rafraîchit chaque minute) ─────
+
   const [tick, setTick] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setTick((t) => t + 1), 60_000);
@@ -103,24 +103,24 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* ── Langue + Fuseau (édition contrôlée) ───────── */}
+
       <EditableSection
         title={t("language_and_tz.title")}
         icon={Globe}
         saving={savingLoc}
         onSave={async () => {
           await save({ timezone, locale });
-          // Si la langue a changé : on supprime le cookie NEXT_LOCALE (utilisé par
-          // le site public) pour qu'il ne pollue pas /portail ou /. Le portail admin
-          // utilise UNIQUEMENT admin.locale lu depuis la base par request.ts.
+
+
+
           if (locale !== initialLocale.current) {
             try {
-              // Supprime le cookie NEXT_LOCALE peu importe le path précédent
+
               document.cookie = "NEXT_LOCALE=; path=/; max-age=0; SameSite=Lax";
               document.cookie = "NEXT_LOCALE=; path=/admin; max-age=0; SameSite=Lax";
             } catch {}
             router.refresh();
-            // Reload sur la même URL admin (pas de redirection ailleurs)
+
             setTimeout(() => {
               const currentPath = window.location.pathname;
               if (currentPath.startsWith("/admin")) {
@@ -162,7 +162,7 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
         }
       />
 
-      {/* ── Comportement (édition contrôlée) ──────────── */}
+
       <EditableSection
         title={t("behavior.title")}
         icon={Home}
@@ -190,7 +190,7 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
         }
       />
 
-      {/* ── Apparence (toujours éditable + auto-save) ─── */}
+
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -249,7 +249,7 @@ export function TabPreferences({ admin }: { admin: AdminProfile }) {
         </CardContent>
       </Card>
 
-      {/* ── Raccourcis (toujours éditable + auto-save) ── */}
+
       <Card>
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">

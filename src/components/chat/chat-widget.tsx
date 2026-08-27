@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,7 @@ const EMOJIS = ["👍", "👋", "😊", "🙏", "✅", "⏰", "🔧", "⚡", "�
 
 // ── Rich message renderer pour les messages automatises ──
 function RichMessageContent({ content }: { content: string }) {
+  const t = useTranslations("portal");
   // Demande de projet
   if (content.includes("NOUVELLE DEMANDE DE PROJET")) {
     const lines = content.split("\n").filter((l) => l.trim());
@@ -33,7 +35,7 @@ function RichMessageContent({ content }: { content: string }) {
       <div className="space-y-2">
         <div className={cn("flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs font-semibold", isUrgent ? "bg-red-50 text-red-700" : "bg-[#0F2D52]/10 text-[#0F2D52]")}>
           <span>{isUrgent ? "🔴" : "🚀"}</span>
-          <span>Nouvelle demande de projet</span>
+          <span>{t("chat_nouvelle_demande_projet")}</span>
         </div>
         <div className="space-y-1 text-xs">
           {fields.map((f) => (
@@ -63,7 +65,7 @@ function RichMessageContent({ content }: { content: string }) {
     const isQuote = num.startsWith("D-");
     const isContract = num.startsWith("CT-");
     const color = isInvoice ? "emerald" : isQuote ? "amber" : "blue";
-    const label = isInvoice ? "Facture" : isQuote ? "Devis" : "Contrat";
+    const label = isInvoice ? t("chat_facture") : isQuote ? t("chat_devis") : t("chat_contrat");
     const icon = isInvoice ? "💰" : isQuote ? "📋" : "📝";
 
     return (
@@ -102,6 +104,8 @@ export function ChatWidget({
   clientId?: number;
   clientName?: string;
 }) {
+  const t = useTranslations("portal");
+  const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -235,7 +239,7 @@ export function ChatWidget({
           type="button"
           onClick={() => setOpen(true)}
           className="fixed bottom-[70px] right-3 lg:bottom-6 lg:right-6 z-40 group"
-          aria-label="Ouvrir le chat"
+          aria-label={t("chat_ouvrir")}
         >
           <div className="relative h-12 w-12 lg:h-14 lg:w-14 rounded-full bg-[#0F2D52] text-white shadow-xl flex items-center justify-center group-hover:scale-110 group-active:scale-95 transition-all ring-2 ring-white/30">
             <span className="text-sm lg:text-base font-bold">{initials}</span>
@@ -285,7 +289,7 @@ export function ChatWidget({
                 <button onClick={() => setExpanded((e) => !e)} className="h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center" aria-label={expanded ? "Reduire" : "Agrandir"}>
                   {expanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
                 </button>
-                <button onClick={() => { setOpen(false); setExpanded(false); }} className="h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center" aria-label="Fermer">
+                <button onClick={() => { setOpen(false); setExpanded(false); }} className="h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center" aria-label={tc("close")}>
                   <X className="h-4 w-4" />
                 </button>
               </div>
@@ -298,8 +302,8 @@ export function ChatWidget({
                   <div className="h-14 w-14 rounded-full bg-[#0F2D52] flex items-center justify-center mx-auto mb-3 shadow-lg">
                     <MessageCircle className="h-6 w-6 text-white" />
                   </div>
-                  <p className="text-sm font-semibold">Besoin d'aide ?</p>
-                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-[220px] mx-auto">Notre equipe est disponible pour vous assister.</p>
+                  <p className="text-sm font-semibold">{t("chat_besoin_aide")}</p>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-[220px] mx-auto">{t("chat_equipe_disponible")}</p>
                 </div>
               ) : (
                 groupedMessages.map((group) => (
@@ -414,7 +418,7 @@ export function ChatWidget({
                   value={input}
                   onChange={handleInputChange}
                   onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
-                  placeholder="Ecrivez un message..."
+                  placeholder={t("chat_ecrivez_message")}
                   disabled={sending}
                   rows={1}
                   className="flex-1 bg-transparent resize-none text-sm focus:outline-none min-h-[24px] max-h-[100px] leading-relaxed"
@@ -450,7 +454,7 @@ export function ChatWidget({
                 <button
                   onClick={() => setPreviewPdf(null)}
                   className="h-8 w-8 rounded-md hover:bg-white/10 flex items-center justify-center"
-                  aria-label="Fermer"
+                  aria-label={tc("close")}
                 >
                   <X className="h-4 w-4" />
                 </button>

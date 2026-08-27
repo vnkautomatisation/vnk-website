@@ -1,6 +1,7 @@
 "use client";
 // Vue Organigramme — deux modes : Hiérarchie managériale (managerId) ou Arbre des équipes (parentTeamId).
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Network, Crown, Users, GitBranch } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,9 +31,10 @@ type TeamLite = {
 type Mode = "managers" | "teams";
 
 export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: AdminLite[] }) {
+  const t = useTranslations("admin.hr_nav");
   const [mode, setMode] = useState<Mode>("managers");
 
-  // Index pour lookups O(1)
+
   const adminById = useMemo(() => {
     const m = new Map<number, AdminLite>();
     for (const a of admins) m.set(a.id, a);
@@ -44,7 +46,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
     return m;
   }, [teams]);
 
-  // Arbre managérial : noeud = admin, enfants = admins dont managerId === a.id
+
   const managerRoots = useMemo(() => admins.filter((a) => !a.managerId || !adminById.has(a.managerId)), [admins, adminById]);
   const reportsByManager = useMemo(() => {
     const m = new Map<number, AdminLite[]>();
@@ -57,7 +59,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
     return m;
   }, [admins]);
 
-  // Arbre des équipes
+
   const teamRoots = useMemo(() => teams.filter((t) => !t.parentTeamId || !teamById.has(t.parentTeamId)), [teams, teamById]);
   const childTeamsByParent = useMemo(() => {
     const m = new Map<number, TeamLite[]>();
@@ -87,10 +89,10 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Network className="h-5 w-5 text-[#0F2D52]" />
-            Organigramme
+            {t("organigramme")}
           </h1>
           <p className="text-sm text-muted-foreground">
-            Visualisez la structure de votre organisation : hiérarchie managériale ou arborescence des équipes.
+            {t("visualisez_structure_organisation_hierarchie_manageriale")}
           </p>
         </div>
         <div className="flex gap-1 p-1 bg-muted rounded-md">
@@ -101,7 +103,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
             onClick={() => setMode("managers")}
           >
             <Crown className="h-3 w-3 mr-1" />
-            Hiérarchie managériale
+            {t("hierarchie_manageriale")}
           </Button>
           <Button
             size="sm"
@@ -110,7 +112,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
             onClick={() => setMode("teams")}
           >
             <GitBranch className="h-3 w-3 mr-1" />
-            Équipes
+            {t("equipes")}
           </Button>
         </div>
       </div>
@@ -119,7 +121,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
         {mode === "managers" ? (
           managerRoots.length === 0 ? (
             <p className="text-center text-sm text-muted-foreground py-12">
-              Aucun utilisateur actif. Ajoutez des utilisateurs et assignez-leur un manager pour construire la hiérarchie.
+              {t("aucun_utilisateur_actif_ajoutez_utilisateurs")}
             </p>
           ) : (
             <div className="space-y-6">
@@ -130,7 +132,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
           )
         ) : teamRoots.length === 0 ? (
           <p className="text-center text-sm text-muted-foreground py-12">
-            Aucune équipe créée.
+            {t("aucune_equipe_creee")}
           </p>
         ) : (
           <div className="space-y-6">
@@ -160,7 +162,7 @@ export function OrgChartView({ teams, admins }: { teams: TeamLite[]; admins: Adm
       </Card>
 
       <p className="text-[11px] text-muted-foreground italic text-center">
-        Astuce : modifiez le manager ou l&apos;équipe d&apos;un utilisateur depuis sa fiche.
+        {t("astuce_modifiez_manager_apos_equipe")}
       </p>
     </div>
   );
@@ -176,7 +178,7 @@ function ManagerNode({
   const reports = reportsByManager.get(admin.id) ?? [];
   return (
     <div className="relative" style={{ marginLeft: level === 0 ? 0 : 24 }}>
-      {/* Connecteur visuel parent → enfants */}
+
       {level > 0 && (
         <div className="absolute -left-3 top-0 bottom-0 w-px bg-border" aria-hidden />
       )}

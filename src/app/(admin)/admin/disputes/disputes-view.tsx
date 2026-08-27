@@ -79,72 +79,72 @@ type MandateOption = { id: number; title: string; clientId: number };
 
 type StatusFilter = "all" | "open" | "under_review" | "won" | "lost" | "resolved";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "open", label: "Ouverts" },
-  { key: "under_review", label: "En examen" },
-  { key: "won", label: "Gagnés" },
-  { key: "lost", label: "Perdus" },
-  { key: "resolved", label: "Résolus" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "open", labelKey: "ouverts" },
+  { key: "under_review", labelKey: "examen" },
+  { key: "won", labelKey: "gagnes" },
+  { key: "lost", labelKey: "perdus" },
+  { key: "resolved", labelKey: "resolus" },
 ];
 
 const TYPE_OPTIONS = [
-  { value: "chargeback", label: "Chargeback Stripe", icon: CreditCard, color: "bg-red-100 text-red-700" },
-  { value: "invoice", label: "Contestation facture", icon: ReceiptIcon, color: "bg-amber-100 text-amber-700" },
-  { value: "service", label: "Plainte service", icon: AlertCircle, color: "bg-orange-100 text-orange-700" },
-  { value: "refund", label: "Demande remboursement", icon: DollarSign, color: "bg-blue-100 text-blue-700" },
-  { value: "warranty", label: "Garantie", icon: CheckCircle2, color: "bg-purple-100 text-purple-700" },
-  { value: "legal", label: "Juridique", icon: Gavel, color: "bg-violet-100 text-violet-700" },
-  { value: "other", label: "Autre", icon: AlertTriangle, color: "bg-gray-100 text-gray-700" },
+  { value: "chargeback", labelKey: "chargeback_stripe", icon: CreditCard, color: "bg-red-100 text-red-700" },
+  { value: "invoice", labelKey: "contestation_facture", icon: ReceiptIcon, color: "bg-amber-100 text-amber-700" },
+  { value: "service", labelKey: "plainte_service", icon: AlertCircle, color: "bg-orange-100 text-orange-700" },
+  { value: "refund", labelKey: "demande_remboursement", icon: DollarSign, color: "bg-blue-100 text-blue-700" },
+  { value: "warranty", labelKey: "garantie", icon: CheckCircle2, color: "bg-purple-100 text-purple-700" },
+  { value: "legal", labelKey: "juridique", icon: Gavel, color: "bg-violet-100 text-violet-700" },
+  { value: "other", labelKey: "autre", icon: AlertTriangle, color: "bg-gray-100 text-gray-700" },
 ];
 
 const STRIPE_REASONS = [
-  { value: "duplicate", label: "Duplicate" },
-  { value: "fraudulent", label: "Frauduleux" },
-  { value: "subscription_canceled", label: "Abonnement annulé" },
-  { value: "product_unacceptable", label: "Produit non acceptable" },
-  { value: "product_not_received", label: "Produit non reçu" },
-  { value: "unrecognized", label: "Non reconnu" },
-  { value: "credit_not_processed", label: "Crédit non traité" },
-  { value: "general", label: "Général" },
-  { value: "incorrect_account_details", label: "Détails compte incorrects" },
-  { value: "insufficient_funds", label: "Fonds insuffisants" },
-  { value: "bank_cannot_process", label: "Banque ne peut traiter" },
-  { value: "debit_not_authorized", label: "Débit non autorisé" },
+  { value: "duplicate", labelKey: "duplicate" },
+  { value: "fraudulent", labelKey: "frauduleux" },
+  { value: "subscription_canceled", labelKey: "abonnement_annule" },
+  { value: "product_unacceptable", labelKey: "produit_non_acceptable" },
+  { value: "product_not_received", labelKey: "produit_non_recu" },
+  { value: "unrecognized", labelKey: "non_reconnu" },
+  { value: "credit_not_processed", labelKey: "credit_non_traite" },
+  { value: "general", labelKey: "general" },
+  { value: "incorrect_account_details", labelKey: "details_compte_incorrects" },
+  { value: "insufficient_funds", labelKey: "fonds_insuffisants" },
+  { value: "bank_cannot_process", labelKey: "banque_ne_peut_traiter" },
+  { value: "debit_not_authorized", labelKey: "debit_non_autorise" },
 ];
 
 const TRIBUNAL_OPTIONS = [
-  { value: "petites_creances", label: "Cour des petites créances" },
-  { value: "regie_logement", label: "Régie du logement" },
-  { value: "cour_quebec", label: "Cour du Québec" },
-  { value: "cour_superieure", label: "Cour supérieure" },
-  { value: "arbitrage", label: "Arbitrage privé" },
-  { value: "mediation", label: "Médiation" },
+  { value: "petites_creances", labelKey: "cour_petites_creances" },
+  { value: "regie_logement", labelKey: "regie_logement" },
+  { value: "cour_quebec", labelKey: "cour_quebec" },
+  { value: "cour_superieure", labelKey: "cour_superieure" },
+  { value: "arbitrage", labelKey: "arbitrage_prive" },
+  { value: "mediation", labelKey: "mediation" },
 ];
 
 const CONTACT_METHODS = [
-  { value: "email", label: "Courriel" },
-  { value: "phone", label: "Téléphone" },
-  { value: "letter", label: "Lettre formelle" },
-  { value: "meeting", label: "Rencontre" },
-  { value: "lawyer", label: "Via avocat" },
+  { value: "email", labelKey: "courriel" },
+  { value: "phone", labelKey: "telephone" },
+  { value: "letter", labelKey: "lettre_formelle" },
+  { value: "meeting", labelKey: "rencontre" },
+  { value: "lawyer", labelKey: "via_avocat" },
 ];
 
 const PRIORITY_OPTIONS = [
-  { value: "low", label: "Faible", color: "bg-gray-100 text-gray-700" },
-  { value: "medium", label: "Moyenne", color: "bg-blue-100 text-blue-700" },
-  { value: "high", label: "Haute", color: "bg-amber-100 text-amber-700" },
-  { value: "urgent", label: "Urgente", color: "bg-red-100 text-red-700" },
+  { value: "low", labelKey: "faible", color: "bg-gray-100 text-gray-700" },
+  { value: "medium", labelKey: "moyenne", color: "bg-blue-100 text-blue-700" },
+  { value: "high", labelKey: "haute", color: "bg-amber-100 text-amber-700" },
+  { value: "urgent", labelKey: "urgente", color: "bg-red-100 text-red-700" },
 ];
 
 const STATUS_OPTIONS = [
-  { value: "open", label: "Ouvert" },
-  { value: "under_review", label: "En examen" },
-  { value: "evidence_submitted", label: "Preuves soumises" },
-  { value: "won", label: "Gagné" },
-  { value: "lost", label: "Perdu" },
-  { value: "resolved", label: "Résolu" },
-  { value: "cancelled", label: "Annulé" },
+  { value: "open", labelKey: "ouvert" },
+  { value: "under_review", labelKey: "examen" },
+  { value: "evidence_submitted", labelKey: "preuves_soumises" },
+  { value: "won", labelKey: "gagne" },
+  { value: "lost", labelKey: "perdu" },
+  { value: "resolved", labelKey: "resolu" },
+  { value: "cancelled", labelKey: "annule" },
 ];
 
 export function DisputesView({
@@ -160,6 +160,7 @@ export function DisputesView({
   mandates: MandateOption[];
   kpis: { total: number; open: number; won: number; lost: number; overdueEvidence: number; totalAtStake: number };
 }) {
+  const t = useTranslations("admin.disputes");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -274,7 +275,7 @@ export function DisputesView({
   const handleCreate = async () => {
     if (submitting) return;
     if (!fClientId || !fTitle.trim() || !fDescription.trim()) {
-      toast.error("Client, titre et description requis"); return;
+      toast.error(t("client_titre_description_requis")); return;
     }
     setSubmitting(true);
     try {
@@ -282,8 +283,8 @@ export function DisputesView({
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildPayload()),
       });
-      if (res.ok) { toast.success("Litige créé"); setCreateOpen(false); resetForm(); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("litige_cree")); setCreateOpen(false); resetForm(); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
@@ -308,16 +309,16 @@ export function DisputesView({
           smallClaimsFiledAt: fSmallClaimsFiledAt || null,
         }),
       });
-      if (res.ok) { toast.success("Litige modifié"); setEditDispute(null); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("litige_modifie")); setEditDispute(null); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteDispute) return;
     const res = await fetch(`/api/disputes/${deleteDispute.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Litige supprimé"); setDeleteDispute(null); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("litige_supprime")); setDeleteDispute(null); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
   const handleSetStatus = async (d: Dispute, status: string, label: string) => {
@@ -332,16 +333,16 @@ export function DisputesView({
       method: "PATCH", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    if (res.ok) { toast.success("Statut mis à jour"); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("statut_mis_jour")); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} litige(s) ?`,
-      description: "Action irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("action_irreversible"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -413,18 +414,18 @@ export function DisputesView({
 
   const getActions = useCallback((d: Dispute) => {
     const a: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir client", icon: <Users className="h-3.5 w-3.5" />, onClick: () => openEntity("client", d.clientId) },
+      { label: t("voir_client"), icon: <Users className="h-3.5 w-3.5" />, onClick: () => openEntity("client", d.clientId) },
     ];
-    if (d.invoiceId) a.push({ label: "Voir facture", icon: <ReceiptIcon className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", d.invoiceId!) });
-    if (d.mandateId) a.push({ label: "Voir mandat", icon: <Briefcase className="h-3.5 w-3.5" />, onClick: () => openEntity("mandate", d.mandateId!) });
-    if (d.status === "open") a.push({ label: "Marquer en examen", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "under_review", "Marquer en examen") });
+    if (d.invoiceId) a.push({ label: t("voir_facture"), icon: <ReceiptIcon className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", d.invoiceId!) });
+    if (d.mandateId) a.push({ label: t("voir_mandat"), icon: <Briefcase className="h-3.5 w-3.5" />, onClick: () => openEntity("mandate", d.mandateId!) });
+    if (d.status === "open") a.push({ label: t("marquer_examen"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "under_review", t("marquer_examen")) });
     if (d.status === "under_review" || d.status === "evidence_submitted" || d.status === "open") {
-      a.push({ label: "Marquer gagné", icon: <Award className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "won", "Marquer gagné") });
-      a.push({ label: "Marquer perdu", icon: <XCircle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "lost", "Marquer perdu") });
-      a.push({ label: "Marquer résolu", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "resolved", "Marquer résolu") });
+      a.push({ label: t("marquer_gagne"), icon: <Award className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "won", t("marquer_gagne")) });
+      a.push({ label: t("marquer_perdu"), icon: <XCircle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "lost", t("marquer_perdu")) });
+      a.push({ label: t("marquer_resolu"), icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(d, "resolved", t("marquer_resolu")) });
     }
-    a.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d), separator: true });
-    a.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDispute(d), variant: "destructive" });
+    a.push({ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d), separator: true });
+    a.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDispute(d), variant: "destructive" });
     return a;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEntity]);
@@ -435,22 +436,22 @@ export function DisputesView({
   const columns: Column<Dispute>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} />
       ),
     },
     {
-      key: "type", header: "Type",
+      key: "type", header: t("type"),
       accessor: (r) => {
-        const t = TYPE_OPTIONS.find((o) => o.value === r.type);
-        const Icon = t?.icon ?? AlertTriangle;
-        return <div className="flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs">{t?.label ?? r.type}</span></div>;
+        const opt = TYPE_OPTIONS.find((o) => o.value === r.type);
+        const Icon = opt?.icon ?? AlertTriangle;
+        return <div className="flex items-center gap-1.5"><Icon className="h-3.5 w-3.5 text-muted-foreground" /><span className="text-xs">{opt ? t(opt.labelKey) : r.type}</span></div>;
       },
       hiddenOnMobile: true,
     },
     {
-      key: "title", header: "Titre",
+      key: "title", header: t("titre"),
       accessor: (r) => (
         <div>
           <p className="text-sm font-medium">{r.title}</p>
@@ -461,7 +462,7 @@ export function DisputesView({
       sortable: true, sortBy: (r) => r.title,
     },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -471,21 +472,21 @@ export function DisputesView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "amount", header: "Montant",
+      key: "amount", header: t("montant"),
       accessor: (r) => r.amountDisputed ? <span className="font-semibold tabular-nums">{formatCurrency(r.amountDisputed)}</span> : <span className="text-muted-foreground">—</span>,
       sortable: true, sortBy: (r) => r.amountDisputed ?? 0, hiddenOnMobile: true,
     },
     {
-      key: "priority", header: "Priorité",
+      key: "priority", header: t("priorite"),
       accessor: (r) => {
         const p = PRIORITY_OPTIONS.find((o) => o.value === r.priority);
-        return <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", p?.color ?? "bg-gray-100 text-gray-700")}>{p?.label ?? r.priority}</span>;
+        return <span className={cn("text-[10px] px-2 py-0.5 rounded-full font-medium", p?.color ?? "bg-gray-100 text-gray-700")}>{p ? t(p.labelKey) : r.priority}</span>;
       },
       hiddenOnMobile: true,
     },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     {
-      key: "deadline", header: "Échéance",
+      key: "deadline", header: t("echeance"),
       accessor: (r) => {
         if (!r.evidenceDueBy) return <span className="text-muted-foreground text-xs">—</span>;
         const overdue = new Date(r.evidenceDueBy) < new Date() && !r.evidenceSubmittedAt && !r.resolvedAt;
@@ -493,7 +494,7 @@ export function DisputesView({
       },
       hiddenOnMobile: true,
     },
-    { key: "openedAt", header: "Ouvert", accessor: (r) => formatDate(new Date(r.openedAt)), sortable: true, sortBy: (r) => r.openedAt, hiddenOnMobile: true },
+    { key: "openedAt", header: t("ouvert"), accessor: (r) => formatDate(new Date(r.openedAt)), sortable: true, sortBy: (r) => r.openedAt, hiddenOnMobile: true },
     {
       key: "actions", header: "",
       accessor: (r) => (
@@ -531,8 +532,8 @@ export function DisputesView({
               <Scale className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Litiges</h1>
-              <p className="text-white/70 text-sm mt-0.5">Chargebacks Stripe · contestations · plaintes · escalade juridique</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("litiges")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("chargebacks_stripe_contestations_plaintes_escalade")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -543,17 +544,17 @@ export function DisputesView({
               </div>
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold" onClick={() => { resetForm(); setCreateOpen(true); }}>
-              <Plus className="h-4 w-4" />Nouveau litige
+              <Plus className="h-4 w-4" />{t("nouveau_litige")}
             </Button>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total litiges" value={kpis.total} icon={Scale} accent="bg-indigo-500" />
-        <StatCard label="Ouverts" value={kpis.open} icon={Clock} accent="bg-amber-500" deltaLabel={`${formatCurrency(kpis.totalAtStake)} en jeu`} />
-        <StatCard label="Gagnés" value={kpis.won} icon={Award} accent="bg-emerald-500" />
-        <StatCard label="Perdus" value={kpis.lost} icon={XCircle} accent="bg-red-500" />
+        <StatCard label={t("total_litiges")} value={kpis.total} icon={Scale} accent="bg-indigo-500" />
+        <StatCard label={t("ouverts")} value={kpis.open} icon={Clock} accent="bg-amber-500" deltaLabel={`${formatCurrency(kpis.totalAtStake)} en jeu`} />
+        <StatCard label={t("gagnes")} value={kpis.won} icon={Award} accent="bg-emerald-500" />
+        <StatCard label={t("perdus")} value={kpis.lost} icon={XCircle} accent="bg-red-500" />
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
@@ -563,13 +564,13 @@ export function DisputesView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Scale className="h-4 w-4" />
-              Litiges
+              {t("litiges")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            {kpis.open > 0 && <span className="text-muted-foreground">Ouverts <span className="font-semibold text-amber-600">{kpis.open}</span></span>}
-            <span className="text-muted-foreground">Gagnés <span className="font-semibold text-emerald-600">{kpis.won}</span></span>
-            {kpis.lost > 0 && <span className="text-muted-foreground">Perdus <span className="font-semibold text-red-600">{kpis.lost}</span></span>}
-            {kpis.totalAtStake > 0 && <span className="ml-auto text-muted-foreground">En jeu <span className="font-semibold">{formatCurrency(kpis.totalAtStake)}</span></span>}
+            {kpis.open > 0 && <span className="text-muted-foreground">{t("ouverts")} <span className="font-semibold text-amber-600">{kpis.open}</span></span>}
+            <span className="text-muted-foreground">{t("gagnes")} <span className="font-semibold text-emerald-600">{kpis.won}</span></span>
+            {kpis.lost > 0 && <span className="text-muted-foreground">{t("perdus")} <span className="font-semibold text-red-600">{kpis.lost}</span></span>}
+            {kpis.totalAtStake > 0 && <span className="ml-auto text-muted-foreground">{t("jeu")} <span className="font-semibold">{formatCurrency(kpis.totalAtStake)}</span></span>}
           </div>
         </div>
       )}
@@ -577,14 +578,14 @@ export function DisputesView({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Titre, client, facture, dossier..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("titre_client_facture_dossier")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -592,34 +593,34 @@ export function DisputesView({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Type</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("type")}</p>
               <div className="flex flex-wrap gap-1">
-                {TYPE_OPTIONS.map((t) => {
-                  const isOn = filterTypes.has(t.value);
+                {TYPE_OPTIONS.map((opt) => {
+                  const isOn = filterTypes.has(opt.value);
                   return (
-                    <button key={t.value} type="button" onClick={() => { const set = new Set(filterTypes); if (isOn) set.delete(t.value); else set.add(t.value); setFilterTypes(set); }}
-                      className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", isOn ? "bg-[#0F2D52] text-white" : t.color)}>
-                      {t.label}
+                    <button key={opt.value} type="button" onClick={() => { const set = new Set(filterTypes); if (isOn) set.delete(opt.value); else set.add(opt.value); setFilterTypes(set); }}
+                      className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", isOn ? "bg-[#0F2D52] text-white" : opt.color)}>
+                      {t(opt.labelKey)}
                     </button>
                   );
                 })}
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Priorité</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("priorite")}</p>
               <div className="flex flex-wrap gap-1">
                 {PRIORITY_OPTIONS.map((p) => {
                   const isOn = filterPriorities.has(p.value);
                   return (
                     <button key={p.value} type="button" onClick={() => { const set = new Set(filterPriorities); if (isOn) set.delete(p.value); else set.add(p.value); setFilterPriorities(set); }}
                       className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", isOn ? "bg-[#0F2D52] text-white" : p.color)}>
-                      {p.label}
+                      {t(p.labelKey)}
                     </button>
                   );
                 })}
@@ -627,7 +628,7 @@ export function DisputesView({
             </div>
             {clients.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Client</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("client")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {clients.map((c) => {
                     const isOn = filterClients.has(c.id);
@@ -642,13 +643,12 @@ export function DisputesView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Assigné à</p>
-              <Input value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)} placeholder="Email admin" className="h-8 text-xs" />
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("assigne")}</p>
+              <Input value={filterAssigned} onChange={(e) => setFilterAssigned(e.target.value)} placeholder={t("email_admin")} className="h-8 text-xs" />
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("disputes_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -677,7 +677,7 @@ export function DisputesView({
         columns={columns}
         getRowId={(r) => r.id}
         onRowClick={(r) => openEdit(r)}
-        searchPlaceholder="Rechercher..."
+        searchPlaceholder={t("rechercher")}
         exportFilename="litiges"
         storageKey="admin-disputes"
       />
@@ -755,7 +755,7 @@ export function DisputesView({
       <ConfirmDialog
         open={!!deleteDispute}
         onOpenChange={(o) => { if (!o) setDeleteDispute(null); }}
-        title="Supprimer ce litige ?"
+        title={t("supprimer_litige")}
         description={`Le litige "${deleteDispute?.title}" sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -805,6 +805,7 @@ function DisputeFormDialog({
   setters: DFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.disputes");
   const tc = useTranslations("common");
   const isCreate = mode === "create";
   const isChargeback = values.type === "chargeback";
@@ -820,55 +821,55 @@ function DisputeFormDialog({
               {isCreate ? <Scale className="h-6 w-6 text-white" /> : <Pencil className="h-6 w-6 text-white" />}
             </div>
             <div>
-              <DialogTitle className="text-white text-lg">{isCreate ? "Nouveau litige" : "Modifier le litige"}</DialogTitle>
+              <DialogTitle className="text-white text-lg">{isCreate ? t("nouveau_litige") : t("modifier_litige")}</DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
-                {isCreate ? "Capturez tous les détails utiles dès le départ" : (editingTitle || "Modification")}
+                {isCreate ? t("capturez_tous_details_utiles_depart") : (editingTitle || t("modification"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          <FormSection title="Identification" icon={<Scale className="h-3.5 w-3.5" />}>
+          <FormSection title={t("identification")} icon={<Scale className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                 <Select value={values.clientId} onValueChange={setters.setClientId} disabled={!isCreate}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                   <SelectContent>
                     {clients.map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_2")}</Label>
                 <Select value={values.type} onValueChange={setters.setType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {TYPE_OPTIONS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                    {TYPE_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
-              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Ex: Chargeback sur facture F-2026-042" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("titre")}</Label>
+              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder={t("ex_chargeback_facture_f_2026")} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description *</Label>
-              <Textarea value={values.description} onChange={(e) => setters.setDescription(e.target.value)} rows={3} placeholder="Nature du litige, contexte, faits..." />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description")}</Label>
+              <Textarea value={values.description} onChange={(e) => setters.setDescription(e.target.value)} rows={3} placeholder={t("nature_litige_contexte_faits")} />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Catégorie / sous-type</Label>
-                <Input value={values.category} onChange={(e) => setters.setCategory(e.target.value)} placeholder="Ex: Service non conforme" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("categorie_sous_type")}</Label>
+                <Input value={values.category} onChange={(e) => setters.setCategory(e.target.value)} placeholder={t("ex_service_non_conforme")} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Priorité</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("priorite")}</Label>
                 <Select value={values.priority} onValueChange={setters.setPriority}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {PRIORITY_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    {PRIORITY_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -876,14 +877,14 @@ function DisputeFormDialog({
           </FormSection>
 
           {Number(values.clientId) > 0 && (invoices.length > 0 || mandates.length > 0) && (
-            <FormSection title="Liens (optionnel)" icon={<ReceiptIcon className="h-3.5 w-3.5" />}>
+            <FormSection title={t("liens_optionnel")} icon={<ReceiptIcon className="h-3.5 w-3.5" />}>
               {invoices.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Facture concernée</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("facture_concernee")}</Label>
                   <Select value={values.invoiceId || "none"} onValueChange={(v) => setters.setInvoiceId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucune" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucune")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucune</SelectItem>
+                      <SelectItem value="none">{t("aucune")}</SelectItem>
                       {invoices.map((i) => <SelectItem key={i.id} value={String(i.id)}>{i.invoiceNumber} — {formatCurrency(i.amountTtc)} ({i.status})</SelectItem>)}
                     </SelectContent>
                   </Select>
@@ -891,7 +892,7 @@ function DisputeFormDialog({
               )}
               {mandates.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat concerné</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("mandat_concerne")}</Label>
                   <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder={tc("none")} /></SelectTrigger>
                     <SelectContent>
@@ -904,14 +905,14 @@ function DisputeFormDialog({
             </FormSection>
           )}
 
-          <FormSection title="Montant en jeu" icon={<DollarSign className="h-3.5 w-3.5" />}>
+          <FormSection title={t("montant_jeu")} icon={<DollarSign className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-2 sm:col-span-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant contesté</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_conteste")}</Label>
                 <Input type="number" min="0" step="0.01" value={values.amountDisputed} onChange={(e) => setters.setAmountDisputed(e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Devise</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("devise")}</Label>
                 <Select value={values.currency} onValueChange={setters.setCurrency}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -925,60 +926,60 @@ function DisputeFormDialog({
           </FormSection>
 
           {isChargeback && (
-            <FormSection title="Détails Stripe (chargeback)" icon={<CreditCard className="h-3.5 w-3.5" />}>
+            <FormSection title={t("details_stripe_chargeback")} icon={<CreditCard className="h-3.5 w-3.5" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Stripe Dispute ID</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("stripe_dispute_id")}</Label>
                   <Input value={values.stripeDisputeId} onChange={(e) => setters.setStripeDisputeId(e.target.value)} placeholder="dp_xxxxx" className="font-mono text-xs" />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Raison Stripe</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("raison_stripe")}</Label>
                   <Select value={values.stripeReason || "none"} onValueChange={(v) => setters.setStripeReason(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
-                      {STRIPE_REASONS.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                      {STRIPE_REASONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Marque carte</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("marque_carte")}</Label>
                   <Select value={values.cardBrand || "none"} onValueChange={(v) => setters.setCardBrand(v === "none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
-                      <SelectItem value="visa">Visa</SelectItem>
-                      <SelectItem value="mastercard">Mastercard</SelectItem>
-                      <SelectItem value="amex">Amex</SelectItem>
-                      <SelectItem value="discover">Discover</SelectItem>
-                      <SelectItem value="other">Autre</SelectItem>
+                      <SelectItem value="visa">{t("visa")}</SelectItem>
+                      <SelectItem value="mastercard">{t("mastercard")}</SelectItem>
+                      <SelectItem value="amex">{t("amex")}</SelectItem>
+                      <SelectItem value="discover">{t("discover")}</SelectItem>
+                      <SelectItem value="other">{t("autre")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Échéance preuves</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("echeance_preuves")}</Label>
                   <Input type="date" value={values.evidenceDueBy} onChange={(e) => setters.setEvidenceDueBy(e.target.value)} />
                 </div>
                 {!isCreate && (
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Preuves soumises</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("preuves_soumises")}</Label>
                     <Input type="date" value={values.evidenceSubmittedAt} onChange={(e) => setters.setEvidenceSubmittedAt(e.target.value)} />
                   </div>
                 )}
               </div>
               {!isCreate && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Issue (outcome)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("issue_outcome")}</Label>
                   <Select value={values.outcome || "none"} onValueChange={(v) => setters.setOutcome(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="En attente" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("attente")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">En attente</SelectItem>
-                      <SelectItem value="warning_under_review">Warning - en examen</SelectItem>
-                      <SelectItem value="warning_closed">Warning - fermé</SelectItem>
-                      <SelectItem value="won">Gagné</SelectItem>
-                      <SelectItem value="lost">Perdu</SelectItem>
+                      <SelectItem value="none">{t("attente")}</SelectItem>
+                      <SelectItem value="warning_under_review">{t("warning_examen")}</SelectItem>
+                      <SelectItem value="warning_closed">{t("warning_ferme")}</SelectItem>
+                      <SelectItem value="won">{t("gagne")}</SelectItem>
+                      <SelectItem value="lost">{t("perdu")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -986,40 +987,40 @@ function DisputeFormDialog({
             </FormSection>
           )}
 
-          <FormSection title="Gestion interne" icon={<Users className="h-3.5 w-3.5" />}>
+          <FormSection title={t("gestion_interne")} icon={<Users className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Assigné à (admin)</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("assigne_admin")}</Label>
                 <Input value={values.assignedTo} onChange={(e) => setters.setAssignedTo(e.target.value)} placeholder="email@vnk.ca" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date résolution estimée</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_resolution_estimee")}</Label>
                 <Input type="date" value={values.estimatedResolutionDate} onChange={(e) => setters.setEstimatedResolutionDate(e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Méthode contact</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("methode_contact")}</Label>
                 <Select value={values.contactMethod || "none"} onValueChange={(v) => setters.setContactMethod(v === "none" ? "" : v)}>
                   <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">—</SelectItem>
-                    {CONTACT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                    {CONTACT_METHODS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Dernier contact client</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("dernier_contact_client")}</Label>
                 <Input type="date" value={values.lastClientContactAt} onChange={(e) => setters.setLastClientContactAt(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Prochaine action due</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("prochaine_action_due")}</Label>
                 <Input type="date" value={values.nextActionDue} onChange={(e) => setters.setNextActionDue(e.target.value)} />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes internes (admin)</Label>
-              <Textarea value={values.internalNotes} onChange={(e) => setters.setInternalNotes(e.target.value)} rows={3} placeholder="Notes privées sur le dossier…" className="bg-amber-50/30" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("notes_internes_admin")}</Label>
+              <Textarea value={values.internalNotes} onChange={(e) => setters.setInternalNotes(e.target.value)} rows={3} placeholder={t("notes_privees_dossier")} className="bg-amber-50/30" />
             </div>
             {!isCreate && (
               <div className="space-y-2">
@@ -1027,7 +1028,7 @@ function DisputeFormDialog({
                 <Select value={values.status} onValueChange={setters.setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                    {STATUS_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -1035,30 +1036,30 @@ function DisputeFormDialog({
           </FormSection>
 
           {(values.type === "legal" || isLegal) && (
-            <FormSection title="Escalade juridique" icon={<Gavel className="h-3.5 w-3.5" />}>
+            <FormSection title={t("escalade_juridique")} icon={<Gavel className="h-3.5 w-3.5" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Cabinet d&apos;avocat</Label>
-                  <Input value={values.lawFirmInvolved} onChange={(e) => setters.setLawFirmInvolved(e.target.value)} placeholder="Nom cabinet ou avocat" />
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("cabinet_apos_avocat")}</Label>
+                  <Input value={values.lawFirmInvolved} onChange={(e) => setters.setLawFirmInvolved(e.target.value)} placeholder={t("nom_cabinet_avocat")} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Numéro de dossier</Label>
-                  <Input value={values.caseNumber} onChange={(e) => setters.setCaseNumber(e.target.value)} placeholder="Ex: 700-22-088xxx-xxx" className="font-mono text-xs" />
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("numero_dossier")}</Label>
+                  <Input value={values.caseNumber} onChange={(e) => setters.setCaseNumber(e.target.value)} placeholder={t("ex_700_22_088xxx_xxx")} className="font-mono text-xs" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Tribunal</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("tribunal")}</Label>
                   <Select value={values.tribunal || "none"} onValueChange={(v) => setters.setTribunal(v === "none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">—</SelectItem>
-                      {TRIBUNAL_OPTIONS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                      {TRIBUNAL_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date dépôt petites créances</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_depot_petites_creances")}</Label>
                   <Input type="date" value={values.smallClaimsFiledAt} onChange={(e) => setters.setSmallClaimsFiledAt(e.target.value)} />
                 </div>
               </div>
@@ -1066,10 +1067,10 @@ function DisputeFormDialog({
           )}
 
           {!isCreate && (
-            <FormSection title="Résolution" icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
+            <FormSection title={t("resolution")} icon={<CheckCircle2 className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Résolution / verdict</Label>
-                <Textarea value={values.resolution} onChange={(e) => setters.setResolution(e.target.value)} rows={3} placeholder="Décision finale, accord, montant remboursé…" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("resolution_verdict")}</Label>
+                <Textarea value={values.resolution} onChange={(e) => setters.setResolution(e.target.value)} rows={3} placeholder={t("decision_finale_accord_montant_rembourse")} />
               </div>
             </FormSection>
           )}
@@ -1082,7 +1083,7 @@ function DisputeFormDialog({
             disabled={submitting || !values.clientId || !values.title.trim() || (isCreate && !values.description.trim())}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer le litige" : "Enregistrer")}
+            {submitting ? t("enregistrement") : (isCreate ? t("creer_litige") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

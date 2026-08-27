@@ -20,6 +20,7 @@ const SHOW_DELAY_MS = 300; // attendre avant d'afficher (évite flicker sur navs
 const MAX_VISIBLE_MS = 8000; // safety : auto-hide après 8s
 
 export function NavigationOverlay() {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -27,7 +28,7 @@ export function NavigationOverlay() {
   const pendingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const safetyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Helper: reset complet de l'état
+
   const clearAll = () => {
     if (pendingTimerRef.current) {
       clearTimeout(pendingTimerRef.current);
@@ -40,19 +41,19 @@ export function NavigationOverlay() {
     setVisible(false);
   };
 
-  // Cache l'overlay quand l'URL change (= nouvelle page rendue)
+
   useEffect(() => {
     clearAll();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [pathname, searchParams]);
 
-  // Écoute les clicks sur les liens internes + back/forward + escape
+
   useEffect(() => {
     const startLoading = () => {
       if (pendingTimerRef.current) clearTimeout(pendingTimerRef.current);
       pendingTimerRef.current = setTimeout(() => {
         setVisible(true);
-        // Safety : si la nav ne termine jamais, auto-hide après 8s
+
         if (safetyTimerRef.current) clearTimeout(safetyTimerRef.current);
         safetyTimerRef.current = setTimeout(() => {
           setVisible(false);
@@ -61,7 +62,7 @@ export function NavigationOverlay() {
     };
 
     const handleClick = (e: MouseEvent) => {
-      // Ignore modifiers, middle click, defaultPrevented
+
       if (e.defaultPrevented) return;
       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
 
@@ -80,7 +81,7 @@ export function NavigationOverlay() {
       ) {
         return;
       }
-      // Same URL → pas de nav, ne pas démarrer
+
       try {
         const targetUrl = new URL(href, window.location.href);
         if (
@@ -148,7 +149,7 @@ export function NavigationOverlay() {
           </div>
         </div>
         <p className="text-sm font-bold text-[#0F2D52]">{tc("loading")}</p>
-        <p className="text-[10px] text-muted-foreground">Cliquez ou appuyez sur Échap pour fermer</p>
+        <p className="text-[10px] text-muted-foreground">{t("cliquez_appuyez_echap_fermer")}</p>
       </div>
     </div>
   );

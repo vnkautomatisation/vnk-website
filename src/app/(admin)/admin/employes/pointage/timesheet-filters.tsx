@@ -11,12 +11,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 export type StatusFilter = "all" | "submitted" | "pending" | "approved" | "rejected";
 
 // "pending" is the DRAFT state; "En attente" would clash with the rows' badge.
-const STATUS_LABEL: Record<StatusFilter, string> = {
-  all: "Tous les statuts",
-  submitted: "Soumis — à approuver",
-  pending: "Brouillon — non soumis",
-  approved: "Approuvé",
-  rejected: "Rejeté",
+const STATUS_KEY: Record<StatusFilter, string> = {
+  all: "tous_statuts",
+  submitted: "soumis_approuver",
+  pending: "brouillon_non_soumis_tiret",
+  approved: "approuve",
+  rejected: "rejete",
 };
 
 // Team / department / status filters + search, kept in sync with searchParams.
@@ -40,13 +40,14 @@ export function TimesheetFilters({
   departmentFilter: string | null;
   statusFilter: StatusFilter;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
   const [searchValue, setSearchValue] = useState(q);
 
-  // Sync local state if URL changes externally
+
   useEffect(() => { setSearchValue(q); }, [q]);
 
   const buildUrl = useCallback(
@@ -56,14 +57,14 @@ export function TimesheetFilters({
         if (v == null || v === "") params.delete(k);
         else params.set(k, v);
       }
-      // Reset pagination whenever a filter changes
+
       params.delete("page");
       return `${pathname}?${params.toString()}`;
     },
     [pathname, sp],
   );
 
-  // Debounce search
+
   useEffect(() => {
     if (searchValue === q) return;
     const t = setTimeout(() => {
@@ -97,7 +98,7 @@ export function TimesheetFilters({
           <Input
             value={searchValue}
             onChange={(e) => setSearchValue(e.target.value)}
-            placeholder="Rechercher nom, courriel, poste…"
+            placeholder={t("rechercher_nom_courriel_poste")}
             className="h-9 text-sm pl-7"
           />
           {searchValue && (
@@ -105,7 +106,7 @@ export function TimesheetFilters({
               type="button"
               onClick={() => setSearchValue("")}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-              aria-label="Effacer la recherche"
+              aria-label={t("effacer_recherche")}
             >
               <X className="h-3.5 w-3.5" />
             </button>
@@ -116,10 +117,10 @@ export function TimesheetFilters({
       {teams.length > 0 && (
         <Select value={teamFilter == null ? "all" : String(teamFilter)} onValueChange={onTeamChange}>
           <SelectTrigger className="h-9 w-[160px] text-sm">
-            <SelectValue placeholder="Équipe" />
+            <SelectValue placeholder={t("equipe")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Toutes les équipes</SelectItem>
+            <SelectItem value="all">{t("toutes_equipes")}</SelectItem>
             {teams.map((t) => (
               <SelectItem key={t.id} value={String(t.id)}>
                 {t.name}
@@ -135,10 +136,10 @@ export function TimesheetFilters({
           onValueChange={onDepartmentChange}
         >
           <SelectTrigger className="h-9 w-[160px] text-sm">
-            <SelectValue placeholder="Département" />
+            <SelectValue placeholder={t("departement")} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les départements</SelectItem>
+            <SelectItem value="all">{t("tous_departements")}</SelectItem>
             {departments.map((d) => (
               <SelectItem key={d} value={d}>
                 {d}
@@ -154,9 +155,9 @@ export function TimesheetFilters({
             <SelectValue placeholder={tc("status")} />
           </SelectTrigger>
           <SelectContent>
-            {(Object.keys(STATUS_LABEL) as StatusFilter[]).map((k) => (
+            {(Object.keys(STATUS_KEY) as StatusFilter[]).map((k) => (
               <SelectItem key={k} value={k}>
-                {STATUS_LABEL[k]}
+                {t(STATUS_KEY[k])}
               </SelectItem>
             ))}
           </SelectContent>
@@ -165,8 +166,7 @@ export function TimesheetFilters({
 
       {hasActiveFilter && (
         <Button variant="ghost" size="sm" className="h-9 text-xs" onClick={reset}>
-          <X className="h-3.5 w-3.5 mr-1" />Réinitialiser
-        </Button>
+          <X className="h-3.5 w-3.5 mr-1" />{t("timesheet_filters_reinitialiser")}</Button>
       )}
     </div>
   );

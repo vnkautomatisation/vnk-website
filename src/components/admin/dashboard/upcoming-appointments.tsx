@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Calendar, Video, Phone, MapPin, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -22,25 +23,26 @@ export function UpcomingAppointments({
 }: {
   appointments: UpcomingAppointment[];
 }) {
+  const t = useTranslations("admin.ui");
   return (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-sm flex items-center gap-2">
             <Calendar className="h-4 w-4 text-muted-foreground" />
-            Rendez-vous a venir
+            {t("rendez_vous_venir")}
           </h3>
           <Link
             href="/admin/calendar"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            Voir calendrier
+            {t("voir_calendrier")}
           </Link>
         </div>
 
         {appointments.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            Aucun rendez-vous a venir
+            {t("aucun_rendez_vous_venir")}
           </p>
         ) : (
           <div className="space-y-2">
@@ -65,7 +67,7 @@ export function UpcomingAppointments({
                       {apt.clientName}
                     </p>
                     <p className="text-xs text-muted-foreground truncate">
-                      {apt.subject || apt.meetingType === "video" ? "Reunion video" : apt.meetingType === "phone" ? "Appel" : "Presentiel"}
+                      {apt.subject || apt.meetingType === "video" ? t("reunion_video") : apt.meetingType === "phone" ? t("appel") : t("presentiel")}
                     </p>
                   </div>
                   <div className="text-right shrink-0">

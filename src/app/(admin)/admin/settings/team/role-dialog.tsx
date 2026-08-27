@@ -3,6 +3,7 @@
 // Affiche une matrice (ressource × action) avec cases à cocher.
 // Les rôles système (isSystem=true) sont en lecture seule sauf pour super_admin.
 import { useState, useEffect, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Shield, Palette } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -17,39 +18,39 @@ import { createRoleAction, updateRoleAction } from "@/app/actions/roles";
 import type { RoleRow } from "./team-view";
 
 // Liste des ressources (doit rester synchronisée avec src/lib/rbac.ts)
-const RESOURCE_GROUPS: { label: string; resources: { key: string; label: string }[] }[] = [
+const RESOURCE_GROUPS: { labelKey: string; resources: { key: string; labelKey: string }[] }[] = [
   {
-    label: "Données métier (clients)",
+    labelKey: "grp_donnees_metier_clients",
     resources: [
-      { key: "clients", label: "Clients" },
-      { key: "invoices", label: "Factures" },
-      { key: "quotes", label: "Devis" },
-      { key: "contracts", label: "Contrats clients" },
-      { key: "mandates", label: "Mandats" },
-      { key: "payments", label: "Paiements" },
-      { key: "expenses", label: "Dépenses" },
-      { key: "refunds", label: "Remboursements" },
-      { key: "disputes", label: "Litiges" },
-      { key: "documents", label: "Documents clients" },
-      { key: "requests", label: "Demandes clients" },
+      { key: "clients", labelKey: "res_clients" },
+      { key: "invoices", labelKey: "res_invoices" },
+      { key: "quotes", labelKey: "res_quotes" },
+      { key: "contracts", labelKey: "res_contracts" },
+      { key: "mandates", labelKey: "res_mandates" },
+      { key: "payments", labelKey: "res_payments" },
+      { key: "expenses", labelKey: "res_expenses" },
+      { key: "refunds", labelKey: "res_refunds" },
+      { key: "disputes", labelKey: "res_disputes" },
+      { key: "documents", labelKey: "res_documents" },
+      { key: "requests", labelKey: "res_requests" },
     ],
   },
   {
-    label: "Communication",
+    labelKey: "grp_communication",
     resources: [
-      { key: "messages", label: "Messages" },
-      { key: "calendar", label: "Calendrier (RDV clients)" },
-      { key: "appointments", label: "Rendez-vous" },
-      { key: "message_templates", label: "Modèles de messages" },
+      { key: "messages", labelKey: "res_messages" },
+      { key: "calendar", labelKey: "res_calendar" },
+      { key: "appointments", labelKey: "res_appointments" },
+      { key: "message_templates", labelKey: "res_message_templates" },
     ],
   },
   {
-    label: "Comptabilité",
+    labelKey: "grp_comptabilite",
     resources: [
-      { key: "transactions", label: "Transactions" },
-      { key: "tax_declarations", label: "Déclarations fiscales" },
-      { key: "finance", label: "Tableau financier" },
-      { key: "reconciliation", label: "Réconciliation" },
+      { key: "transactions", labelKey: "res_transactions" },
+      { key: "tax_declarations", labelKey: "res_tax_declarations" },
+      { key: "finance", labelKey: "res_finance" },
+      { key: "reconciliation", labelKey: "res_reconciliation" },
     ],
   },
   {
@@ -58,72 +59,72 @@ const RESOURCE_GROUPS: { label: string; resources: { key: string; label: string 
     // aussi tous les domaines RH ci-dessous.
     // L'accès « mon équipe » des managers vient de la hiérarchie
     // (manager direct / chef d'équipe), pas de ces cases.
-    label: "Ressources humaines",
+    labelKey: "grp_ressources_humaines",
     resources: [
-      { key: "hr", label: "Dossiers employés (passe-partout RH)" },
-      { key: "hr_documents", label: "Documents RH & contrats d'emploi" },
-      { key: "leaves", label: "Congés" },
-      { key: "timeclock", label: "Pointage & codes de tâche" },
-      { key: "payroll", label: "Paie & docs fiscaux" },
-      { key: "performance", label: "Évaluations & 1-on-1" },
-      { key: "safety", label: "SST, formations & permis" },
-      { key: "hr_comms", label: "Annonces internes" },
+      { key: "hr", labelKey: "res_hr" },
+      { key: "hr_documents", labelKey: "res_hr_documents" },
+      { key: "leaves", labelKey: "res_leaves" },
+      { key: "timeclock", labelKey: "res_timeclock" },
+      { key: "payroll", labelKey: "res_payroll" },
+      { key: "performance", labelKey: "res_performance" },
+      { key: "safety", labelKey: "res_safety" },
+      { key: "hr_comms", labelKey: "res_hr_comms" },
     ],
   },
   {
     // Config du portail client et du site web PILOTEE DEPUIS L'ADMIN.
     // Pensee pour les informaticiens/developpeurs qui gerent les deux.
-    label: "Portail client & site web",
+    labelKey: "grp_portail_client_site_web",
     resources: [
-      { key: "client_portal", label: "Portail client (config & visuel)" },
-      { key: "website", label: "Site web public" },
+      { key: "client_portal", labelKey: "res_client_portal" },
+      { key: "website", labelKey: "res_website" },
     ],
   },
   {
-    label: "Système",
+    labelKey: "grp_systeme",
     resources: [
-      { key: "workflow", label: "Workflow" },
-      { key: "audit_trail", label: "Journal d'audit" },
-      { key: "statistics", label: "Statistiques" },
+      { key: "workflow", labelKey: "res_workflow" },
+      { key: "audit_trail", labelKey: "res_audit_trail" },
+      { key: "statistics", labelKey: "res_statistics" },
     ],
   },
   {
-    label: "Configuration",
+    labelKey: "grp_configuration",
     resources: [
-      { key: "settings", label: "Paramètres" },
-      { key: "users", label: "Utilisateurs" },
-      { key: "roles", label: "Rôles" },
-      { key: "positions", label: "Postes" },
-      { key: "integrations", label: "Intégrations" },
-      { key: "automations", label: "Automatisations" },
-      { key: "branding", label: "Charte graphique" },
+      { key: "settings", labelKey: "res_settings" },
+      { key: "users", labelKey: "res_users" },
+      { key: "roles", labelKey: "res_roles" },
+      { key: "positions", labelKey: "res_positions" },
+      { key: "integrations", labelKey: "res_integrations" },
+      { key: "automations", labelKey: "res_automations" },
+      { key: "branding", labelKey: "res_branding" },
     ],
   },
   {
-    label: "Contenu",
+    labelKey: "grp_contenu",
     resources: [
-      { key: "blog", label: "Blog" },
-      { key: "pages", label: "Pages publiques" },
-      { key: "email_templates", label: "Modèles emails" },
-      { key: "pdf_templates", label: "Modèles PDF" },
+      { key: "blog", labelKey: "res_blog" },
+      { key: "pages", labelKey: "res_pages" },
+      { key: "email_templates", labelKey: "res_email_templates" },
+      { key: "pdf_templates", labelKey: "res_pdf_templates" },
     ],
   },
   {
-    label: "Catalogues",
+    labelKey: "grp_catalogues",
     resources: [
-      { key: "industries", label: "Industries" },
-      { key: "client_tags", label: "Étiquettes clients" },
-      { key: "client_sources", label: "Sources clients" },
-      { key: "expense_categories", label: "Catégories dépenses" },
+      { key: "industries", labelKey: "res_industries" },
+      { key: "client_tags", labelKey: "res_client_tags" },
+      { key: "client_sources", labelKey: "res_client_sources" },
+      { key: "expense_categories", labelKey: "res_expense_categories" },
     ],
   },
 ];
 
-const ACTIONS: { key: "read" | "write" | "delete" | "export"; label: string }[] = [
-  { key: "read", label: "Lire" },
-  { key: "write", label: "Écrire" },
-  { key: "delete", label: "Supprimer" },
-  { key: "export", label: "Exporter" },
+const ACTIONS: { key: "read" | "write" | "delete" | "export"; labelKey: string }[] = [
+  { key: "read", labelKey: "perm_read" },
+  { key: "write", labelKey: "perm_write" },
+  { key: "delete", labelKey: "perm_delete" },
+  { key: "export", labelKey: "perm_export" },
 ];
 
 const COLORS = ["#0F2D52", "#1A5FB4", "#26A269", "#E5A50A", "#613583", "#C01C28", "#6b7280"];
@@ -136,6 +137,7 @@ export function RoleDialog({
   role: RoleRow | null;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.team");
   const mode = role ? "edit" : "create";
   const isReadOnly = !!role?.isSystem; // affichage seul pour les rôles système
   const [pending, startTransition] = useTransition();
@@ -187,7 +189,7 @@ export function RoleDialog({
 
   const handleSave = () => {
     if (isReadOnly && mode === "edit") {
-      // Permettre uniquement description/color sur les rôles système
+
       startTransition(async () => {
         const result = await updateRoleAction({
           id: role!.id,
@@ -195,7 +197,7 @@ export function RoleDialog({
           color,
         });
         if (result.success) {
-          toast.success("Rôle mis à jour");
+          toast.success(t("role_mis_jour"));
           onSaved(); onOpenChange(false);
         } else {
           toast.error(result.error);
@@ -212,7 +214,7 @@ export function RoleDialog({
           permissions: permissions as never,
         });
         if (result.success) {
-          toast.success("Rôle créé");
+          toast.success(t("role_cree"));
           onSaved(); onOpenChange(false);
         } else {
           toast.error(result.error);
@@ -225,7 +227,7 @@ export function RoleDialog({
           permissions: permissions as never,
         });
         if (result.success) {
-          toast.success("Rôle mis à jour");
+          toast.success(t("role_mis_jour"));
           onSaved(); onOpenChange(false);
         } else {
           toast.error(result.error);
@@ -241,7 +243,7 @@ export function RoleDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header VNK navy avec gradient */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#1A5FB4] text-white px-6 py-5 flex items-center gap-3.5 shrink-0">
           <div
             className="h-11 w-11 rounded-lg flex items-center justify-center shadow-sm ring-2 ring-white/20"
@@ -251,10 +253,10 @@ export function RoleDialog({
           </div>
           <div className="flex-1 min-w-0">
             <DialogTitle className="text-white text-base font-semibold leading-tight truncate">
-              {mode === "create" ? "Nouveau rôle" : role?.name}
+              {mode === "create" ? t("nouveau_role") : role?.name}
             </DialogTitle>
             <p className="text-xs text-white/75 mt-0.5">
-              {isReadOnly ? "Rôle système — permissions verrouillées" : "Définissez les permissions par ressource"}
+              {isReadOnly ? t("role_systeme_permissions_verrouillees") : t("definissez_permissions_ressource")}
             </p>
           </div>
           <Badge className="bg-white/20 hover:bg-white/20 text-white text-[10px] font-medium border-white/10 shrink-0">
@@ -262,11 +264,11 @@ export function RoleDialog({
           </Badge>
         </div>
 
-        {/* Body */}
+
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-          {/* Métadonnées */}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Code (identifiant interne)" hint="Minuscules, sans espaces (utilisé par le code)">
+            <Field label={t("code_identifiant_interne")} hint={t("minuscules_sans_espaces_utilise_code")}>
               <Input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
@@ -275,7 +277,7 @@ export function RoleDialog({
                 className="font-mono text-sm"
               />
             </Field>
-            <Field label="Couleur">
+            <Field label={t("couleur")}>
               <div className="flex gap-1.5">
                 {COLORS.map((c) => (
                   <button
@@ -293,35 +295,35 @@ export function RoleDialog({
               </div>
             </Field>
           </div>
-          <Field label="Description">
+          <Field label={t("description")}>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="À quoi sert ce rôle ?"
+              placeholder={t("quoi_sert_role")}
               className="text-sm"
             />
           </Field>
 
-          {/* Matrice de permissions */}
-          <FormSection icon={Palette} title="Matrice de permissions">
+
+          <FormSection icon={Palette} title={t("matrice_permissions")}>
             <div className="space-y-4">
               {RESOURCE_GROUPS.map((group) => (
-                <div key={group.label} className="rounded-lg border overflow-hidden">
+                <div key={group.labelKey} className="rounded-lg border overflow-hidden">
                   <div className="bg-muted/40 px-3 py-1.5 text-[10px] uppercase tracking-wider font-bold text-muted-foreground border-b">
-                    {group.label}
+                    {t(group.labelKey)}
                   </div>
 
-                  {/* ─── Vue desktop : tableau classique ─── */}
+
                   <div className="hidden md:block">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-[10px] uppercase tracking-wider text-muted-foreground">
-                          <th className="text-left px-3 py-2 font-semibold">Ressource</th>
+                          <th className="text-left px-3 py-2 font-semibold">{t("ressource")}</th>
                           {ACTIONS.map((a) => (
-                            <th key={a.key} className="text-center px-2 py-2 font-semibold w-20">{a.label}</th>
+                            <th key={a.key} className="text-center px-2 py-2 font-semibold w-20">{t(a.labelKey)}</th>
                           ))}
-                          <th className="text-center px-2 py-2 font-semibold w-16">Tout</th>
+                          <th className="text-center px-2 py-2 font-semibold w-16">{t("tout")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -330,7 +332,7 @@ export function RoleDialog({
                           const allChecked = ACTIONS.every((a) => checked.includes(a.key));
                           return (
                             <tr key={r.key} className="border-b last:border-b-0 hover:bg-muted/20">
-                              <td className="px-3 py-2 font-medium">{r.label}</td>
+                              <td className="px-3 py-2 font-medium">{t(r.labelKey)}</td>
                               {ACTIONS.map((a) => (
                                 <td key={a.key} className="text-center px-2 py-2">
                                   <Checkbox
@@ -354,7 +356,7 @@ export function RoleDialog({
                     </table>
                   </div>
 
-                  {/* ─── Vue mobile : cartes empilées avec chips ─── */}
+
                   <div className="md:hidden divide-y">
                     {group.resources.map((r) => {
                       const checked = permissions[r.key] ?? [];
@@ -362,14 +364,14 @@ export function RoleDialog({
                       return (
                         <div key={r.key} className="p-3 space-y-2">
                           <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium text-sm">{r.label}</span>
+                            <span className="font-medium text-sm">{t(r.labelKey)}</span>
                             <label className="flex items-center gap-1.5 text-[11px] text-muted-foreground cursor-pointer">
                               <Checkbox
                                 checked={allChecked}
                                 onCheckedChange={(v) => toggleAllForResource(r.key, !!v)}
                                 disabled={isReadOnly}
                               />
-                              Tout
+                              {t("tout")}
                             </label>
                           </div>
                           <div className="flex flex-wrap gap-1.5">
@@ -387,7 +389,7 @@ export function RoleDialog({
                                       : "bg-white text-muted-foreground border-input hover:bg-muted/40"
                                   } ${isReadOnly ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
                                 >
-                                  {a.label}
+                                  {t(a.labelKey)}
                                 </button>
                               );
                             })}
@@ -402,13 +404,13 @@ export function RoleDialog({
           </FormSection>
         </div>
 
-        {/* Footer */}
+
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
-            {isReadOnly && mode === "edit" ? "Fermer" : "Annuler"}
+            {isReadOnly && mode === "edit" ? t("fermer") : t("annuler")}
           </Button>
           <Button onClick={handleSave} disabled={pending} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm">
-            {pending ? "..." : mode === "create" ? "Créer le rôle" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer_role") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

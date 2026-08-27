@@ -12,19 +12,20 @@ export function PdfPreviewModal({
   open, url, title, description, downloadFilename, onClose,
 }: {
   open: boolean;
-  /** URL de l'endpoint PDF (sans timestamp — on rajoute un cache-buster). */
+
   url: string | null;
   title: string;
   description?: string;
-  /** Nom de fichier suggéré pour le téléchargement. */
+
   downloadFilename?: string;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  // Cache-buster pour éviter de servir un PDF stale après modification
+
   const [stamp, setStamp] = useState<number>(() => Date.now());
   useEffect(() => {
     if (open) {
@@ -34,14 +35,14 @@ export function PdfPreviewModal({
     }
   }, [open, url]);
 
-  // Refactor : on ne sort plus du composant avant le Dialog (sinon l'animation
-  // d'ouverture/fermeture est cassée). On garde une URL optionnelle et on
-  // affiche un état "Aucune URL fournie" si null.
-  //
-  // IMPORTANT : les blob URL (`blob:...`) et data URL (`data:...`) ne supportent
-  // PAS de query string — y ajouter `?_t=...` casse l'iframe avec un message
-  // "fichier deplace ou supprime". On applique le cache-buster uniquement sur
-  // les URL HTTP(S).
+
+
+
+
+
+
+
+
   const isOpaqueUrl = !!url && (url.startsWith("blob:") || url.startsWith("data:"));
   const fullUrl = url
     ? (isOpaqueUrl
@@ -82,9 +83,9 @@ export function PdfPreviewModal({
           {!fullUrl ? (
             <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
               <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-foreground">Aucune URL fournie</p>
+              <p className="text-sm font-medium text-foreground">{t("aucune_url_fournie")}</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                Le document n&apos;est pas disponible pour le moment.
+                {t("document_n_apos_pas_disponible")}
               </p>
             </div>
           ) : (
@@ -93,19 +94,15 @@ export function PdfPreviewModal({
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
                   <div className="bg-background/90 rounded-md px-4 py-3 shadow-sm flex items-center gap-2">
                     <Loader2 className="h-4 w-4 animate-spin text-[#0F2D52]" />
-                    <span className="text-xs text-foreground">Chargement du PDF...</span>
+                    <span className="text-xs text-foreground">{t("chargement_pdf")}</span>
                   </div>
                 </div>
               )}
               {hasError ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
                   <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                  <p className="text-sm font-medium text-foreground">Aperçu indisponible</p>
-                  <p className="text-xs text-muted-foreground mt-1 max-w-md">
-                    Le PDF n&apos;a pas pu être chargé. Le document a peut-être expiré, été supprimé,
-                    ou votre navigateur ne sait pas l&apos;afficher inline. Utilisez les boutons
-                    ci-dessous pour le télécharger ou l&apos;ouvrir dans un nouvel onglet.
-                  </p>
+                  <p className="text-sm font-medium text-foreground">{t("apercu_indisponible")}</p>
+                  <p className="text-xs text-muted-foreground mt-1 max-w-md">{t("pdf_preview_modal_le_pdf_n_a_pas_pu_etre")}</p>
                 </div>
               ) : (
                 <iframe
@@ -128,8 +125,8 @@ export function PdfPreviewModal({
             disabled={!fullUrl}
           >
             <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
-            <span className="hidden sm:inline">Ouvrir dans un onglet</span>
-            <span className="sm:hidden">Onglet</span>
+            <span className="hidden sm:inline">{t("ouvrir_onglet")}</span>
+            <span className="sm:hidden">{t("onglet")}</span>
           </Button>
           <Button size="sm" onClick={download} disabled={!fullUrl} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
             <Download className="h-3.5 w-3.5 mr-1.5" />{tc("download")}

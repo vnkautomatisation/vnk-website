@@ -1,14 +1,19 @@
 // Settings · Mode démo — créer/purger des données fictives.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { DemoView } from "./demo-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Mode démo — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mode_demo_vnk") };
+}
 
 export default async function DemoPage() {
+  const t = await getTranslations("admin.demo");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   // Acces reglages : settings.write requis.

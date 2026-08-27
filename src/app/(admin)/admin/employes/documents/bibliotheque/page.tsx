@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { BibliothequeView } from "./bibliotheque-view";
 
-export const metadata: Metadata = { title: "Documents — Bibliothèque" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("documents_bibliotheque") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function BibliothequePage() {

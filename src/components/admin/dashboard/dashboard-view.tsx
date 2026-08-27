@@ -6,6 +6,7 @@ import {
   DollarSign,
 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 import { StatCard } from "@/components/admin/stat-card";
 import { WelcomeBanner } from "./welcome-banner";
 import { QuickActions } from "./quick-actions";
@@ -58,6 +59,7 @@ export type DashboardData = {
 };
 
 export function DashboardView({ data }: { data: DashboardData }) {
+  const t = useTranslations("admin.ui");
   return (
     <div className="space-y-6">
       <WelcomeBanner
@@ -71,7 +73,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
 
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
         <StatCard
-          label="Clients actifs"
+          label={t("clients_actifs")}
           value={data.activeClientsCount}
           icon={Users}
           accent="bg-blue-500"
@@ -79,33 +81,33 @@ export function DashboardView({ data }: { data: DashboardData }) {
           href="/admin/clients"
         />
         <StatCard
-          label="Mandats actifs"
+          label={t("mandats_actifs")}
           value={data.activeMandatesCount}
           icon={Briefcase}
           accent="bg-violet-500"
-          deltaLabel={data.pendingMandatesCount > 0 ? `${data.pendingMandatesCount} en attente` : undefined}
+          deltaLabel={data.pendingMandatesCount > 0 ? t("n_en_attente", { count: data.pendingMandatesCount }) : undefined}
           href="/admin/mandates"
         />
         <StatCard
-          label="A recevoir"
+          label={t("recevoir")}
           value={formatCurrency(data.receivableAmount)}
           icon={AlertCircle}
           accent="bg-amber-500"
-          deltaLabel={data.overdueCount > 0 ? `${data.overdueCount} en retard` : "Tout a jour"}
+          deltaLabel={data.overdueCount > 0 ? `${data.overdueCount} en retard` : t("tout_jour")}
           href="/admin/invoices"
         />
         <StatCard
-          label="Revenu ce mois"
+          label={t("revenu_mois")}
           value={formatCurrency(data.thisMonthAmount)}
           icon={DollarSign}
           accent="bg-emerald-500"
           delta={data.revenueDelta !== 0 ? data.revenueDelta : undefined}
-          deltaLabel="vs mois dernier"
+          deltaLabel={t("vs_mois_dernier")}
           href="/admin/finance"
         />
       </div>
 
-      {/* Graphique revenus + Alertes */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div className="lg:col-span-2">
           <RevenueChart data={data.revenueByMonth} />
@@ -115,7 +117,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
         </div>
       </div>
 
-      {/* RDV + Activite */}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <div>
           <UpcomingAppointments appointments={data.upcomingAppointments} />

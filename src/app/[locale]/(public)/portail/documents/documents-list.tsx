@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { FolderOpen, Eye, FileText, EyeOff, FileBarChart, FileSignature } from "lucide-react";
 import { DataTable, type Column, type FilterOption } from "@/components/data-table/data-table";
@@ -49,6 +50,7 @@ function getFileTypeBadge(title: string, url: string | null) {
 }
 
 export function PortalDocumentsList({ documents: initialDocuments }: { documents: Doc[] }) {
+  const t = useTranslations("portal");
   const [docs, setDocs] = useState(initialDocuments);
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
@@ -56,11 +58,11 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
   const handlePreview = (doc: Doc, e?: React.MouseEvent) => {
     e?.stopPropagation();
     if (!doc.fileUrl) {
-      toast.error("Aucun fichier attache a ce document");
+      toast.error(t("aucun_fichier_attache_document"));
       return;
     }
     setPreviewDoc(doc);
-    // Mark as read — local + server
+
     if (!doc.isRead) {
       setDocs((prev) => prev.map((d) => d.id === doc.id ? { ...d, isRead: true } : d));
       fetch(`/api/documents/${doc.id}/read`, { method: "PATCH" }).catch(() => {});
@@ -83,7 +85,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
         <button
           onClick={(e) => handlePreview(r, e)}
           className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center hover:bg-[#0F2D52]/20 transition-colors"
-          title="Previsualiser"
+          title={t("previsualiser")}
         >
           <FileText className="h-4 w-4 text-[#0F2D52]" />
         </button>
@@ -91,7 +93,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
     },
     {
       key: "title",
-      header: "Document",
+      header: t("document"),
       accessor: (r) => (
         <div>
           <div className="flex items-center gap-2">
@@ -99,7 +101,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
             {!r.isRead && (
               <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200 shrink-0">
                 <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
-                Non lu
+                {t("non_lu")}
               </span>
             )}
           </div>
@@ -113,7 +115,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
     },
     {
       key: "category",
-      header: "Categorie",
+      header: t("categorie"),
       accessor: (r) => {
         if (!r.category) return <span className="text-muted-foreground">—</span>;
         const cls = CATEGORY_COLORS[r.category] ?? CATEGORY_COLORS.Autre;
@@ -126,7 +128,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => (
         <span className="text-muted-foreground text-sm">
           {formatDate(new Date(r.createdAt))}
@@ -144,7 +146,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
         <div className="flex justify-end" onClick={(e) => e.stopPropagation()}>
           <Button size="sm" variant="outline" onClick={(e) => handlePreview(r, e)}>
             <Eye className="h-3.5 w-3.5 mr-1" />
-            Voir
+            {t("voir")}
           </Button>
         </div>
       ),
@@ -174,7 +176,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                 {!doc.isRead && (
                   <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 border border-sky-200 mt-1">
                     <span className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-pulse" />
-                    Non lu
+                    {t("non_lu")}
                   </span>
                 )}
                 {doc.mandateTitle && (
@@ -197,7 +199,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
           </div>
           <Button size="sm" variant="outline" className="w-full" onClick={(e) => handlePreview(doc, e)}>
             <Eye className="h-3.5 w-3.5 mr-1" />
-            Voir
+            {t("voir")}
           </Button>
         </CardContent>
       </Card>
@@ -207,7 +209,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
   const readFilterActions = (
     <div className="flex border rounded-md overflow-hidden">
       {(["all", "unread", "read"] as const).map((val) => {
-        const labels = { all: "Tous", unread: "Non lus", read: "Lus" };
+        const labels = { all: t("tous"), unread: t("non_lus"), read: t("lus") };
         return (
           <button
             key={val}
@@ -236,9 +238,9 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                 <FolderOpen className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="portal-title">Documents</h1>
+                <h1 className="portal-title">{t("titre_documents")}</h1>
                 <p className="text-sm text-muted-foreground">
-                  Consultez et telechargez vos documents
+                  {t("consultez_telechargez_documents")}
                 </p>
               </div>
             </div>
@@ -249,7 +251,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                     <FolderOpen className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Total documents</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("total_documents")}</p>
                     <p className="portal-kpi-number">{docs.length}</p>
                   </div>
                 </div>
@@ -260,7 +262,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                     <EyeOff className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-[#0F2D52]">Non lus</p>
+                    <p className="portal-kpi-label text-[#0F2D52]">{t("non_lus")}</p>
                     <p className="portal-kpi-number">{docs.filter((d) => !d.isRead).length}</p>
                   </div>
                 </div>
@@ -271,7 +273,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                     <FileBarChart className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Rapports</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("rapports")}</p>
                     <p className="portal-kpi-number">{docs.filter((d) => d.category === "Rapports").length}</p>
                   </div>
                 </div>
@@ -282,7 +284,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                     <FileSignature className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Contrats</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("contrats")}</p>
                     <p className="portal-kpi-number">{docs.filter((d) => d.category === "Contrats").length}</p>
                   </div>
                 </div>
@@ -296,16 +298,16 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
         renderCard={renderCard}
         onRowClick={(doc) => handlePreview(doc)}
         storageKey="portal-documents"
-        searchPlaceholder="Rechercher un document..."
+        searchPlaceholder={t("rechercher_document")}
         searchFn={(r) => `${r.title} ${r.category ?? ""}`}
         filterOptions={categoryFilterOptions}
-        filterFn={(r) => r.category ?? "Autre"}
-        filterLabel="Toutes les categories"
+        filterFn={(r) => r.category ?? t("autre")}
+        filterLabel={t("toutes_categories")}
         headerActions={readFilterActions}
-        emptyMessage="Aucun document"
+        emptyMessage={t("aucun_document")}
       />
 
-      {/* PDF preview modal */}
+
       {previewDoc && (
         <PdfViewerModal
           open={!!previewDoc}

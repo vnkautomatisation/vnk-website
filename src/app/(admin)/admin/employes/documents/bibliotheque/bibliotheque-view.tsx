@@ -10,6 +10,7 @@
 // PdfPreviewModal via TemplatePdfPreviewButton.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -150,14 +151,14 @@ interface Props {
 }
 
 // ---------- Helpers ----------------------------------------------
-const LEGAL_CATEGORY_LABELS: Record<string, string> = {
-  policy: "Politique",
-  nda: "Confidentialité (NDA)",
-  acknowledgment: "Accusé de réception",
+const LEGAL_CATEGORY_KEYS: Record<string, string> = {
+  policy: "politique",
+  nda: "confidentialite_nda",
+  acknowledgment: "accuse_reception",
 };
 
-function contractTypeLabel(value: string): string {
-  return CONTRACT_TYPES.find((t) => t.value === value)?.label ?? value;
+function contractTypeKey(value: string): string | null {
+  return CONTRACT_TYPES.find((c) => c.value === value)?.labelKey ?? null;
 }
 
 type StarterFilter = "all" | "starter" | "custom";
@@ -165,6 +166,21 @@ type CategoryTab = "all" | "legal" | "contract" | "policy";
 type GroupBy = "category" | "department" | "position";
 
 // Departements VNK officiels (toujours proposes dans le filtre)
+// Le departement est stocke en francais : seul l'affichage suit la locale.
+const DEPARTMENT_EN: Record<string, string> = {
+  "Direction": "Management",
+  "Administration": "Administration",
+  "Comptabilité": "Accounting",
+  "Ressources humaines": "Human resources",
+  "Ingénierie": "Engineering",
+  "Automatisation": "Automation",
+  "Technique": "Technical",
+  "Gestion de projet": "Project management",
+  "Ventes": "Sales",
+  "Support": "Support",
+  "Service après-vente": "After-sales service",
+};
+
 const VNK_DEPARTMENTS = [
   "Direction",
   "Administration",
@@ -186,6 +202,7 @@ const ALL_POSITIONS_KEY = "__all_positions__";
 function toLib(
   row: LegalRow | ContractRow | PolicyRow,
   kind: "legal" | "contract" | "policy",
+  t: (k: string) => string,
 ): LibraryTemplate {
   if (kind === "legal") {
     const r = row as LegalRow;
@@ -193,7 +210,7 @@ function toLib(
       id: r.id,
       kind: "legal",
       title: r.title,
-      categoryLabel: LEGAL_CATEGORY_LABELS[r.category] ?? r.category,
+      categoryLabel: LEGAL_CATEGORY_KEYS[r.category] ?? r.category,
       version: r.version,
       isRequired: r.isRequired,
       isStarter: r.isStarter,
@@ -211,7 +228,7 @@ function toLib(
       id: r.id,
       kind: "contract",
       title: r.name,
-      categoryLabel: contractTypeLabel(r.contractType),
+      categoryLabel: contractTypeKey(r.contractType) ?? r.contractType,
       version: undefined,
       isRequired: false,
       isStarter: r.isStarter,
@@ -227,7 +244,7 @@ function toLib(
     id: r.id,
     kind: "policy",
     title: r.title,
-    categoryLabel: "Politique RH",
+    categoryLabel: t("politique_rh"),
     version: r.version,
     isRequired: false,
     isStarter: r.isStarter,
@@ -249,9 +266,11 @@ export function BibliothequeView({
   employees,
   teams = [],
 }: Props) {
+  const t = useTranslations("admin.library");
+  const isEn = useLocale().startsWith("en");
   const router = useRouter();
 
-  // ---- Filtres ----
+
   const [tab, setTab] = useState<CategoryTab>("all");
   const [starterFilter, setStarterFilter] = useState<StarterFilter>("all");
   const [query, setQuery] = useState("");
@@ -260,20 +279,20 @@ export function BibliothequeView({
   const [posPickerOpen, setPosPickerOpen] = useState(false);
   const [posSearch, setPosSearch] = useState("");
 
-  // ---- Filtre departements ----
+
   const [deptFilter, setDeptFilter] = useState<string[]>([]);
   const [deptPickerOpen, setDeptPickerOpen] = useState(false);
   const [deptSearch, setDeptSearch] = useState("");
 
-  // ---- Mode de groupement ----
+
   const [groupBy, setGroupBy] = useState<GroupBy>("category");
 
-  // ---- Widget "Documents recommandes pour un poste" ----
+
   const [recommendPosition, setRecommendPosition] = useState<string>("");
   const [recommendPickerOpen, setRecommendPickerOpen] = useState(false);
   const [recommendSearch, setRecommendSearch] = useState("");
 
-  // ---- Sticky bar (pattern Finance) ----
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -287,16 +306,16 @@ export function BibliothequeView({
     return () => obs.disconnect();
   }, []);
 
-  // ---- Normalisation ----
+
   const allItems = useMemo<LibraryTemplate[]>(() => {
     return [
-      ...legalTemplates.map((r) => toLib(r, "legal")),
-      ...contractTemplates.map((r) => toLib(r, "contract")),
-      ...hrPolicies.map((r) => toLib(r, "policy")),
+      ...legalTemplates.map((r) => toLib(r, "legal", t)),
+      ...contractTemplates.map((r) => toLib(r, "contract", t)),
+      ...hrPolicies.map((r) => toLib(r, "policy", t)),
     ];
   }, [legalTemplates, contractTemplates, hrPolicies]);
 
-  // ---- Postes uniques pour le filtre ----
+
   const allPositions = useMemo(() => {
     const set = new Set<string>();
     for (const it of allItems) {
@@ -311,7 +330,7 @@ export function BibliothequeView({
     return allPositions.filter((p) => p.toLowerCase().includes(q));
   }, [allPositions, posSearch]);
 
-  // ---- Departements uniques pour le filtre ----
+
   const allDepartments = useMemo(() => {
     const set = new Set<string>(VNK_DEPARTMENTS);
     for (const it of allItems) {
@@ -334,21 +353,21 @@ export function BibliothequeView({
     return allPositions.filter((p) => p.toLowerCase().includes(q));
   }, [allPositions, recommendSearch]);
 
-  // ---- Recommandations pour le poste selectionne ----
+
   const recommendedItems = useMemo<LibraryTemplate[]>(() => {
     if (!recommendPosition) return [];
     const target = recommendPosition.toLowerCase();
     return allItems.filter((i) => {
       if (!i.isActive) return false;
-      // Politique RH (pas de targeting) -> generique, montre toujours
+
       if (i.kind === "policy") return true;
-      // Pas de positions => generique
+
       if (!i.targetPositions || i.targetPositions.length === 0) return true;
       return i.targetPositions.some((p) => p.toLowerCase() === target);
     });
   }, [allItems, recommendPosition]);
 
-  // ---- KPIs (calcules sur la totalite, pas filtres) ----
+
   const kpis = useMemo(() => {
     const total = allItems.length;
     const starters = allItems.filter((i) => i.isStarter).length;
@@ -357,7 +376,7 @@ export function BibliothequeView({
     return { total, starters, custom, archived };
   }, [allItems]);
 
-  // ---- Filtrage ----
+
   const filteredItems = useMemo(() => {
     let out = allItems;
 
@@ -385,7 +404,7 @@ export function BibliothequeView({
     if (deptFilter.length > 0) {
       const wanted = new Set(deptFilter.map((d) => d.toLowerCase()));
       out = out.filter((i) => {
-        // Vide = generique (tous departements) -> match toujours
+
         if (!i.targetDepartments || i.targetDepartments.length === 0) {
           return true;
         }
@@ -406,7 +425,7 @@ export function BibliothequeView({
     return out;
   }, [allItems, tab, starterFilter, query, includeArchived, posFilter, deptFilter]);
 
-  // ---- Groupement par kind pour affichage ----
+
   const grouped = useMemo(() => {
     const g: Record<"legal" | "contract" | "policy", LibraryTemplate[]> = {
       legal: [],
@@ -417,7 +436,7 @@ export function BibliothequeView({
     return g;
   }, [filteredItems]);
 
-  // ---- Groupement par departement ----
+
   const groupedByDepartment = useMemo(() => {
     const map = new Map<string, LibraryTemplate[]>();
     map.set(ALL_DEPARTMENTS_KEY, []);
@@ -431,7 +450,7 @@ export function BibliothequeView({
         map.get(d)!.push(i);
       }
     }
-    // Trie alphabetique des cles (sauf "tous" en dernier)
+
     const sortedKeys = Array.from(map.keys())
       .filter((k) => k !== ALL_DEPARTMENTS_KEY && map.get(k)!.length > 0)
       .sort((a, b) => a.localeCompare(b, "fr"));
@@ -443,14 +462,14 @@ export function BibliothequeView({
     if (generic.length > 0) {
       result.push({
         key: ALL_DEPARTMENTS_KEY,
-        label: "Tous départements (génériques)",
+        label: t("tous_departements_generiques"),
         items: generic,
       });
     }
     return result;
   }, [filteredItems]);
 
-  // ---- Groupement par poste ----
+
   const groupedByPosition = useMemo(() => {
     const map = new Map<string, LibraryTemplate[]>();
     map.set(ALL_POSITIONS_KEY, []);
@@ -475,14 +494,14 @@ export function BibliothequeView({
     if (generic.length > 0) {
       result.push({
         key: ALL_POSITIONS_KEY,
-        label: "Tous postes (génériques)",
+        label: t("tous_postes_generiques"),
         items: generic,
       });
     }
     return result;
   }, [filteredItems]);
 
-  // ---- Dialog states ----
+
   const [wizard, setWizard] = useState<{
     open: boolean;
     type: TemplateWizardType;
@@ -494,13 +513,13 @@ export function BibliothequeView({
   const [confirmArchive, setConfirmArchive] = useState<LibraryTemplate | null>(null);
   const [archiveBusy, setArchiveBusy] = useState(false);
 
-  // Demande de signature pre-remplie depuis une card de modele legal
+
   const [requestDialog, setRequestDialog] = useState<{
     open: boolean;
     template: SignatureRequestTemplate | null;
   }>({ open: false, template: null });
 
-  // PDF preview sans employe pre-selectionne -> pick + open
+
   const [pickPreview, setPickPreview] = useState<LibraryTemplate | null>(null);
   const [previewBlobUrl, setPreviewBlobUrl] = useState<string | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -517,11 +536,11 @@ export function BibliothequeView({
     [employees],
   );
 
-  // ---- Handlers ----
+
   const handleEdit = (tpl: LibraryTemplate) => {
-    // Edition DIRECTE de tout template (Starter VNK inclus).
-    // Le user peut modifier les modeles a sa guise — pas de duplication forcee.
-    // Le bouton "Dupliquer" reste disponible separement pour qui veut une copie.
+
+
+
     const initial: TemplateWizardInitial = {
       title: tpl.title,
       bodyMarkdown: tpl.bodyMarkdown,
@@ -551,8 +570,8 @@ export function BibliothequeView({
   };
 
   const handleUse = (tpl: LibraryTemplate) => {
-    // « Utiliser » = creer un nouveau modele pre-rempli a partir de ce
-    // starter / template. Mode create, etape 2 (saute la bibliotheque).
+
+
     const initial: TemplateWizardInitial = {
       title: tpl.title,
       bodyMarkdown: tpl.bodyMarkdown,
@@ -589,13 +608,13 @@ export function BibliothequeView({
         res = await duplicateHrPolicyAction({ id: tpl.id });
       }
       if (!res.success) {
-        toast.error(res.error || "Erreur de duplication");
+        toast.error(res.error || t("erreur_duplication"));
         return;
       }
-      toast.success("Modele duplique");
+      toast.success(t("modele_duplique"));
       router.refresh();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur de duplication");
+      toast.error(e instanceof Error ? e.message : t("erreur_duplication"));
     }
   };
 
@@ -638,10 +657,10 @@ export function BibliothequeView({
         });
       }
       if (!res.success) {
-        toast.error(res.error || "Erreur");
+        toast.error(res.error || t("erreur"));
         return;
       }
-      toast.success(targetActive ? "Modele restaure" : "Modele archive");
+      toast.success(targetActive ? t("modele_restaure") : t("modele_archive"));
       setConfirmArchive(null);
       router.refresh();
     } finally {
@@ -649,7 +668,7 @@ export function BibliothequeView({
     }
   };
 
-  // ---- Apercu PDF sans employe ----
+
   const handlePreviewWithoutEmployee = (tpl: LibraryTemplate) => {
     setPickPreview(tpl);
   };
@@ -684,7 +703,7 @@ export function BibliothequeView({
       setPreviewTitle(pickPreview.title);
       setPreviewOpen(true);
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Apercu PDF indisponible");
+      toast.error(e instanceof Error ? e.message : t("apercu_pdf_indisponible"));
     } finally {
       setPreviewLoading(false);
       setPickPreview(null);
@@ -699,7 +718,7 @@ export function BibliothequeView({
     }
   };
 
-  // ---- Wizard save ----
+
   const handleWizardSave = async (data: {
     key?: string;
     title: string;
@@ -714,7 +733,7 @@ export function BibliothequeView({
 
     if (wizard.type === "legal") {
       const key = (data.key ?? "").trim();
-      if (!key) throw new Error("Cle technique requise");
+      if (!key) throw new Error(t("cle_technique_requise"));
       const r = await upsertLegalDocAction({
         id: wizard.mode === "edit" ? wizard.existingId : undefined,
         key,
@@ -730,11 +749,11 @@ export function BibliothequeView({
         acknowledgmentMode:
           ((data as { acknowledgmentMode?: "reading_only" | "signature" }).acknowledgmentMode) ?? "reading_only",
       });
-      if (!r.success) throw new Error(r.error || "Erreur");
-      toast.success(wizard.mode === "edit" ? "Modele mis a jour" : "Modele cree");
+      if (!r.success) throw new Error(r.error || t("erreur"));
+      toast.success(wizard.mode === "edit" ? t("modele_mis_jour") : t("modele_cree"));
     } else if (wizard.type === "policy") {
       const key = (data.key ?? "").trim();
-      if (!key) throw new Error("Cle technique requise");
+      if (!key) throw new Error(t("cle_technique_requise"));
       const today = new Date().toISOString().slice(0, 10);
       const r = await upsertHrPolicyAction({
         id: wizard.mode === "edit" ? wizard.existingId : undefined,
@@ -745,10 +764,10 @@ export function BibliothequeView({
         effectiveFrom: today,
         isActive: true,
       });
-      if (!r.success) throw new Error(r.error || "Erreur");
-      toast.success(wizard.mode === "edit" ? "Politique mise a jour" : "Politique creee");
+      if (!r.success) throw new Error(r.error || t("erreur"));
+      toast.success(wizard.mode === "edit" ? t("politique_mise_jour") : t("politique_creee"));
     } else {
-      // contract
+
       const contractType = (data.category ?? "permanent_full_time").trim();
       const payload = {
         name: data.title,
@@ -759,12 +778,12 @@ export function BibliothequeView({
       };
       if (wizard.mode === "edit" && wizard.existingId) {
         const r = await updateContractTemplateAction({ id: wizard.existingId, ...payload });
-        if (!r.success) throw new Error(r.error || "Erreur");
-        toast.success("Modele de contrat mis a jour");
+        if (!r.success) throw new Error(r.error || t("erreur"));
+        toast.success(t("modele_contrat_mis_jour"));
       } else {
         const r = await createContractTemplateAction(payload);
-        if (!r.success) throw new Error(r.error || "Erreur");
-        toast.success("Modele de contrat cree");
+        if (!r.success) throw new Error(r.error || t("erreur"));
+        toast.success(t("modele_contrat_cree"));
       }
     }
 
@@ -772,21 +791,18 @@ export function BibliothequeView({
     router.refresh();
   };
 
-  // ============================================================
+
   return (
     <div className="space-y-5">
-      {/* Header navy gradient */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] rounded-xl px-5 py-5 text-white">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <BookOpen className="h-5 w-5 sm:h-6 sm:w-6" />
-              Bibliothèque de modèles
+              {t("bibliotheque_modeles")}
             </h1>
-            <p className="text-white/70 text-sm mt-1">
-              Modèles VNK officiels et personnalisés — contrats, politiques et
-              documents légaux centralisés.
-            </p>
+            <p className="text-white/70 text-sm mt-1">{t("bibliotheque_view_modeles_vnk_officiels_et_personnalises_contrats_politiques")}</p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button
@@ -796,7 +812,7 @@ export function BibliothequeView({
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
             >
               <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-              Nouveau document légal
+              {t("nouveau_document_legal")}
             </Button>
             <Button
               size="sm"
@@ -805,7 +821,7 @@ export function BibliothequeView({
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
             >
               <FileText className="h-3.5 w-3.5 mr-1.5" />
-              Nouveau contrat
+              {t("nouveau_contrat")}
             </Button>
             <Button
               size="sm"
@@ -814,13 +830,13 @@ export function BibliothequeView({
               className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
             >
               <Award className="h-3.5 w-3.5 mr-1.5" />
-              Nouvelle politique
+              {t("nouvelle_politique")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div
         className={cn(
           "grid grid-cols-2 gap-3",
@@ -828,37 +844,37 @@ export function BibliothequeView({
         )}
       >
         <DocumentStatsCard
-          label="Total des modèles"
+          label={t("total_modeles")}
           value={kpis.total}
           icon={Library}
           accent="navy"
           hint={`${grouped.legal.length + grouped.contract.length + grouped.policy.length} affichés`}
         />
         <DocumentStatsCard
-          label="Starters VNK"
+          label={t("starters_vnk")}
           value={kpis.starters}
           icon={Sparkles}
           accent="success"
-          hint="Livrés par défaut"
+          hint={t("livres_defaut")}
         />
         <DocumentStatsCard
-          label="Personnalisés"
+          label={t("personnalises_2")}
           value={kpis.custom}
           icon={User}
           accent="info"
-          hint="Créés en interne"
+          hint={t("crees_interne")}
         />
         <DocumentStatsCard
-          label="Archivés"
+          label={t("archives")}
           value={kpis.archived}
           icon={ArchiveIcon}
           accent="warning"
-          hint={includeArchived ? "Visibles" : "Masqués"}
+          hint={includeArchived ? t("visibles") : t("masques")}
           onClick={() => setIncludeArchived((v) => !v)}
         />
         {recommendPosition && (
           <DocumentStatsCard
-            label="Recommandations actives"
+            label={t("recommandations_actives")}
             value={recommendedItems.length}
             icon={Lightbulb}
             accent="info"
@@ -867,17 +883,17 @@ export function BibliothequeView({
         )}
       </div>
 
-      {/* Widget : Documents recommandés pour un poste */}
+
       {allItems.length > 0 && (
         <div className="rounded-xl border bg-gradient-to-br from-amber-50/40 via-card to-card p-4 space-y-3">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
               <h2 className="text-sm font-bold text-[#0F2D52] inline-flex items-center gap-1.5">
                 <Lightbulb className="h-4 w-4 text-amber-600" />
-                Documents recommandés pour un poste
+                {t("documents_recommandes_poste")}
               </h2>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Sélectionnez un poste pour voir tous les modèles pertinents (ciblés ou génériques).
+                {t("selectionnez_poste_voir_tous_modeles")}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -894,7 +910,7 @@ export function BibliothequeView({
                   >
                     <span className="inline-flex items-center gap-1.5 truncate">
                       <Briefcase className="h-3.5 w-3.5 text-[#0F2D52]" />
-                      {recommendPosition || "Choisir un poste..."}
+                      {recommendPosition || t("choisir_poste")}
                     </span>
                     <ChevronDown className="h-3 w-3 text-muted-foreground ml-1" />
                   </Button>
@@ -906,7 +922,7 @@ export function BibliothequeView({
                       <Input
                         value={recommendSearch}
                         onChange={(e) => setRecommendSearch(e.target.value)}
-                        placeholder="Rechercher un poste..."
+                        placeholder={t("rechercher_poste")}
                         className="h-8 text-xs pl-7"
                       />
                     </div>
@@ -914,7 +930,7 @@ export function BibliothequeView({
                   <div className="max-h-64 overflow-y-auto py-1">
                     {filteredRecommendPositions.length === 0 ? (
                       <p className="px-3 py-4 text-[11px] text-muted-foreground text-center">
-                        Aucun poste disponible
+                        {t("aucun_poste_disponible")}
                       </p>
                     ) : (
                       filteredRecommendPositions.map((p) => {
@@ -945,7 +961,7 @@ export function BibliothequeView({
                 </PopoverContent>
               </Popover>
               {recommendPosition && (
-                <ActionTooltip label="Effacer la sélection">
+                <ActionTooltip label={t("effacer_selection")}>
                   <Button
                     type="button"
                     variant="ghost"
@@ -964,18 +980,17 @@ export function BibliothequeView({
             recommendedItems.length === 0 ? (
               <div className="rounded-md border border-dashed bg-muted/20 px-4 py-6 text-center">
                 <p className="text-xs text-muted-foreground">
-                  Aucun modèle ne cible ce poste pour l&apos;instant.
+                  {t("aucun_modele_ne_cible_poste")}
                 </p>
               </div>
             ) : (
               <div className="space-y-2">
                 <p className="text-[11px] text-muted-foreground">
-                  <span className="font-semibold text-[#0F2D52]">
-                    {recommendedItems.length}
-                  </span>{" "}
-                  document{recommendedItems.length > 1 ? "s" : ""} recommandé
-                  {recommendedItems.length > 1 ? "s" : ""} pour{" "}
-                  <span className="font-semibold">{recommendPosition}</span>
+                  {t.rich("n_documents_recommandes_pour", {
+                    count: recommendedItems.length,
+                    position: recommendPosition,
+                    b: (chunks) => <span className="font-semibold text-[#0F2D52]">{chunks}</span>,
+                  })}
                 </p>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-1.5">
                   {recommendedItems.slice(0, 8).map((it) => {
@@ -1001,14 +1016,14 @@ export function BibliothequeView({
                             variant="outline"
                             className="text-[9px] h-4 px-1 py-0 text-muted-foreground"
                           >
-                            générique
+                            {t("generique")}
                           </Badge>
                         ) : (
                           <Badge
                             variant="outline"
                             className="text-[9px] h-4 px-1 py-0 text-emerald-700 border-emerald-300"
                           >
-                            ciblé
+                            {t("cible")}
                           </Badge>
                         )}
                       </li>
@@ -1028,48 +1043,45 @@ export function BibliothequeView({
                       window.scrollTo({ top: 0, behavior: "smooth" });
                     }}
                   >
-                    Voir tous les {recommendedItems.length} documents dans la grille
+                    {t("voir_tous_n_documents", { count: recommendedItems.length })}
                   </Button>
                 </div>
               </div>
             )
           ) : (
             <div className="rounded-md border border-dashed bg-muted/20 px-4 py-5 text-center">
-              <p className="text-xs text-muted-foreground">
-                Sélectionnez un poste pour voir les modèles recommandés (contrats,
-                politiques, lettres ciblées ou génériques).
-              </p>
+              <p className="text-xs text-muted-foreground">{t("bibliotheque_view_selectionnez_un_poste_pour_voir_les_modeles")}</p>
             </div>
           )}
         </div>
       )}
 
-      {/* Sentinel pour sticky bar */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky bar compact */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 py-2 bg-background/95 backdrop-blur shadow-sm border-b rounded-md px-3 animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <BookOpen className="h-4 w-4" />
-              Bibliothèque
+              {t("bibliotheque")}
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Total :</span>
+              <span className="text-muted-foreground">{t("total")}</span>
               <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Starters :</span>
+              <span className="text-muted-foreground">{t("starters")}</span>
               <span className="font-semibold text-emerald-600">{kpis.starters}</span>
             </span>
             <span className="flex items-baseline gap-1.5">
-              <span className="text-muted-foreground">Personnalisés :</span>
+              <span className="text-muted-foreground">{t("personnalises")}</span>
               <span className="font-semibold text-sky-600">{kpis.custom}</span>
             </span>
             {filteredItems.length !== allItems.length && (
               <span className="flex items-baseline gap-1.5">
-                <span className="text-muted-foreground">Affichés :</span>
+                <span className="text-muted-foreground">{t("affiches")}</span>
                 <span className="font-semibold">{filteredItems.length}</span>
               </span>
             )}
@@ -1077,27 +1089,27 @@ export function BibliothequeView({
         </div>
       )}
 
-      {/* Toolbar filtres */}
+
       <div className="rounded-lg border bg-card p-3 space-y-3">
-        {/* Tabs catégorie */}
+
         <div className="flex flex-wrap items-center gap-1">
           {([
-            { id: "all", label: "Tous", count: allItems.length, icon: Layers },
+            { id: "all", label: t("tous"), count: allItems.length, icon: Layers },
             {
               id: "legal",
-              label: "Légaux",
+              label: t("legaux"),
               count: legalTemplates.length,
               icon: ShieldCheck,
             },
             {
               id: "contract",
-              label: "Contrats",
+              label: t("contrats"),
               count: contractTemplates.length,
               icon: FileText,
             },
             {
               id: "policy",
-              label: "Politiques",
+              label: t("politiques"),
               count: hrPolicies.length,
               icon: Award,
             },
@@ -1131,25 +1143,25 @@ export function BibliothequeView({
           })}
         </div>
 
-        {/* Ligne filtres secondaires */}
+
         <div className="flex flex-wrap items-center gap-2">
-          {/* Recherche */}
+
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher un modèle, une politique, un contrat..."
+              placeholder={t("rechercher_modele_politique_contrat")}
               className="h-8 text-xs pl-7"
             />
           </div>
 
-          {/* Toggle Starter / Custom / All */}
+
           <div className="inline-flex rounded-md border bg-muted/40 p-0.5">
             {([
-              { id: "all", label: "Tous" },
-              { id: "starter", label: "Starter VNK" },
-              { id: "custom", label: "Personnalisés" },
+              { id: "all", label: t("tous") },
+              { id: "starter", label: t("starter_vnk") },
+              { id: "custom", label: t("personnalises_2") },
             ] as const).map((s) => {
               const active = starterFilter === s.id;
               return (
@@ -1170,7 +1182,7 @@ export function BibliothequeView({
             })}
           </div>
 
-          {/* Filtre par postes cibles */}
+
           <Popover open={posPickerOpen} onOpenChange={setPosPickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -1198,7 +1210,7 @@ export function BibliothequeView({
                   <Input
                     value={posSearch}
                     onChange={(e) => setPosSearch(e.target.value)}
-                    placeholder="Filtrer les postes..."
+                    placeholder={t("filtrer_postes")}
                     className="h-8 text-xs pl-7"
                   />
                 </div>
@@ -1206,7 +1218,7 @@ export function BibliothequeView({
               <div className="max-h-64 overflow-y-auto py-1">
                 {filteredPositions.length === 0 ? (
                   <p className="px-3 py-4 text-[11px] text-muted-foreground text-center">
-                    Aucun poste cible
+                    {t("aucun_poste_cible")}
                   </p>
                 ) : (
                   filteredPositions.map((p) => {
@@ -1256,7 +1268,7 @@ export function BibliothequeView({
             </PopoverContent>
           </Popover>
 
-          {/* Filtre par departements cibles */}
+
           <Popover open={deptPickerOpen} onOpenChange={setDeptPickerOpen}>
             <PopoverTrigger asChild>
               <Button
@@ -1284,7 +1296,7 @@ export function BibliothequeView({
                   <Input
                     value={deptSearch}
                     onChange={(e) => setDeptSearch(e.target.value)}
-                    placeholder="Filtrer les départements..."
+                    placeholder={t("filtrer_departements")}
                     className="h-8 text-xs pl-7"
                   />
                 </div>
@@ -1292,7 +1304,7 @@ export function BibliothequeView({
               <div className="max-h-64 overflow-y-auto py-1">
                 {filteredDepartments.length === 0 ? (
                   <p className="px-3 py-4 text-[11px] text-muted-foreground text-center">
-                    Aucun département
+                    {t("aucun_departement")}
                   </p>
                 ) : (
                   filteredDepartments.map((d) => {
@@ -1319,7 +1331,7 @@ export function BibliothequeView({
                           readOnly
                           className="h-3 w-3 accent-[#0F2D52]"
                         />
-                        <span className="flex-1 truncate">{d}</span>
+                        <span className="flex-1 truncate">{isEn ? DEPARTMENT_EN[d] ?? d : d}</span>
                       </button>
                     );
                   })
@@ -1342,12 +1354,12 @@ export function BibliothequeView({
             </PopoverContent>
           </Popover>
 
-          {/* Toggle groupement */}
+
           <div className="inline-flex rounded-md border bg-muted/40 p-0.5">
             {([
-              { id: "category", label: "Catégorie", icon: Layers },
-              { id: "department", label: "Département", icon: Building2 },
-              { id: "position", label: "Poste", icon: Briefcase },
+              { id: "category", label: t("categorie"), icon: Layers },
+              { id: "department", label: t("departement"), icon: Building2 },
+              { id: "position", label: t("poste"), icon: Briefcase },
             ] as const).map((g) => {
               const active = groupBy === g.id;
               const Icon = g.icon;
@@ -1370,7 +1382,7 @@ export function BibliothequeView({
             })}
           </div>
 
-          {/* Toggle archives */}
+
           <label className="inline-flex items-center gap-1.5 text-xs cursor-pointer select-none">
             <input
               type="checkbox"
@@ -1378,10 +1390,10 @@ export function BibliothequeView({
               onChange={(e) => setIncludeArchived(e.target.checked)}
               className="h-3.5 w-3.5 accent-[#0F2D52]"
             />
-            <span className="text-muted-foreground">Inclure archivés</span>
+            <span className="text-muted-foreground">{t("inclure_archives")}</span>
           </label>
 
-          {/* Reset */}
+
           {(query
             || tab !== "all"
             || starterFilter !== "all"
@@ -1405,39 +1417,39 @@ export function BibliothequeView({
               }}
             >
               <X className="h-3 w-3 mr-1" />
-              Réinitialiser
+              {t("reinitialiser")}
             </Button>
           )}
         </div>
       </div>
 
-      {/* Sections groupées */}
+
       {allItems.length === 0 ? (
-        // Bibliotheque totalement vide -> guide de seed
+
         <div className="rounded-xl border bg-card p-8 text-center max-w-3xl mx-auto">
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-full bg-[#0F2D52]/10 mb-4">
             <Database className="h-7 w-7 text-[#0F2D52]" />
           </div>
           <h2 className="text-base font-bold text-foreground">
-            Bibliothèque vide
+            {t("bibliotheque_vide")}
           </h2>
           <p className="text-xs text-muted-foreground mt-1">
-            Aucun modèle n&apos;a encore été chargé en base.
+            {t("aucun_modele_n_apos_encore")}
           </p>
 
           <div className="mt-5 rounded-lg border bg-muted/30 p-4 text-left">
             <p className="text-xs font-semibold text-[#0F2D52] inline-flex items-center gap-1.5">
               <Terminal className="h-3.5 w-3.5" />
-              Pour charger les 50+ modèles VNK officiels
+              {t("charger_50_modeles_vnk_officiels")}
             </p>
             <p className="text-[11px] text-muted-foreground mt-1">
-              (contrats, politiques CNESST/OIQ, lettres...)
+              {t("contrats_politiques_cnesst_oiq_lettres")}
             </p>
             <ol className="mt-3 space-y-1.5 text-xs text-foreground list-decimal list-inside">
               <li>
                 Arrête le serveur de développement{" "}
                 <code className="text-[10px] bg-background border rounded px-1 py-0.5">
-                  Ctrl + C
+                  {t("ctrl_c")}
                 </code>
               </li>
               <li>
@@ -1459,10 +1471,7 @@ export function BibliothequeView({
                 </code>
               </li>
             </ol>
-            <p className="text-[11px] text-muted-foreground mt-3">
-              Tu pourras ensuite consulter, dupliquer ou personnaliser tous les
-              modèles.
-            </p>
+            <p className="text-[11px] text-muted-foreground mt-3">{t("bibliotheque_view_tu_pourras_ensuite_consulter_dupliquer_ou_personnaliser")}</p>
           </div>
 
           <div className="mt-5 flex items-center justify-center gap-2 flex-wrap">
@@ -1475,7 +1484,7 @@ export function BibliothequeView({
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-              Créer manuellement un modèle
+              {t("creer_manuellement_modele")}
             </Button>
           </div>
         </div>
@@ -1483,10 +1492,10 @@ export function BibliothequeView({
         <div className="rounded-xl border bg-card p-10 text-center">
           <Library className="h-10 w-10 mx-auto text-muted-foreground/40 mb-3" />
           <p className="text-sm font-semibold text-foreground">
-            Aucun modèle trouvé
+            {t("aucun_modele_trouve")}
           </p>
           <p className="text-xs text-muted-foreground mt-1">
-            Ajustez vos filtres ou créez un nouveau modèle.
+            {t("ajustez_filtres_creez_nouveau_modele")}
           </p>
         </div>
       ) : groupBy === "category" ? (
@@ -1496,10 +1505,10 @@ export function BibliothequeView({
             if (items.length === 0) return null;
             const label =
               kind === "legal"
-                ? "Documents légaux"
+                ? t("documents_legaux")
                 : kind === "contract"
-                  ? "Contrats"
-                  : "Politiques RH";
+                  ? t("contrats")
+                  : t("politiques_rh");
             const KindIcon =
               kind === "legal" ? ShieldCheck : kind === "contract" ? FileText : Award;
             return (
@@ -1532,7 +1541,7 @@ export function BibliothequeView({
           })}
         </div>
       ) : (
-        // groupBy = "department" ou "position"
+
         <div className="space-y-6">
           {(groupBy === "department" ? groupedByDepartment : groupedByPosition).map(
             (group) => {
@@ -1585,7 +1594,7 @@ export function BibliothequeView({
         </div>
       )}
 
-      {/* Wizard */}
+
       {wizard && (
         <TemplateWizard
           open={wizard.open}
@@ -1597,7 +1606,7 @@ export function BibliothequeView({
         />
       )}
 
-      {/* Confirm archive / restore */}
+
       <ConfirmDialog
         open={!!confirmArchive}
         onOpenChange={(o) => !o && setConfirmArchive(null)}
@@ -1608,16 +1617,16 @@ export function BibliothequeView({
         }
         description={
           confirmArchive?.isActive
-            ? "Le modèle sera masqué des sélections mais reste consultable via le filtre « Inclure archivés »."
-            : "Le modèle redevient disponible dans toutes les sélections."
+            ? t("modele_sera_masque_selections_mais")
+            : t("modele_redevient_disponible_toutes_selections")
         }
-        confirmLabel={confirmArchive?.isActive ? "Archiver" : "Restaurer"}
+        confirmLabel={confirmArchive?.isActive ? t("archiver") : t("restaurer")}
         variant={confirmArchive?.isActive ? "destructive" : "default"}
         loading={archiveBusy}
         onConfirm={confirmArchiveAction}
       />
 
-      {/* Pick employe pour apercu PDF */}
+
       {pickPreview && (
         <PickEmployeeForPreviewDialog
           open={!!pickPreview && !previewLoading}
@@ -1627,12 +1636,12 @@ export function BibliothequeView({
           }}
           employees={pickEmployees}
           title={`Aperçu PDF : ${pickPreview.title}`}
-          description="Sélectionnez un employé pour résoudre les variables (nom, poste, salaire...)."
-          confirmLabel="Générer l'aperçu"
+          description={t("selectionnez_employe_resoudre_variables_nom")}
+          confirmLabel={t("generer_apercu")}
         />
       )}
 
-      {/* Demande de signature pre-remplie depuis une card de modele legal */}
+
       <SignatureRequestDialog
         open={requestDialog.open}
         onClose={() => setRequestDialog({ open: false, template: null })}

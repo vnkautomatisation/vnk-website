@@ -44,7 +44,7 @@ function formatValue(key: string, value: unknown, t: T): string {
   if (typeof value === "number") return value.toString();
   if (typeof value === "string") {
     // Decisions, statuses, leave types, half days.
-    const ns = VALUE_NAMESPACE[key] ?? (key.endsWith("Status") ? "status" : null);
+    const ns = VALUE_NAMESPACE[key] ?? (key.endsWith("status") ? "status" : null);
     if (ns) {
       const full = `${ns}.${value}`;
       return t.has(full) ? t(full) : value;

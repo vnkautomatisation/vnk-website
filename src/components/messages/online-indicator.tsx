@@ -1,17 +1,19 @@
 "use client";
 import { cn } from "@/lib/utils";
+import { useTranslations } from "next-intl";
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // < 5 min = en ligne
 const RECENT_THRESHOLD_MS = 15 * 60 * 1000; // < 15 min = recent
 
 export function OnlineIndicator({ lastSeenAt, className }: { lastSeenAt: string | null; className?: string }) {
-  if (!lastSeenAt) return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted", className)} title="Jamais connecté" />;
+  const t = useTranslations("admin.messages");
+  if (!lastSeenAt) return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted", className)} title={t("jamais_connecte")} />;
   const diff = Date.now() - new Date(lastSeenAt).getTime();
   if (diff < ONLINE_THRESHOLD_MS) {
-    return <span className={cn("inline-block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30", className)} title="En ligne" />;
+    return <span className={cn("inline-block h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/30", className)} title={t("ligne")} />;
   }
   if (diff < RECENT_THRESHOLD_MS) {
-    return <span className={cn("inline-block h-2 w-2 rounded-full bg-amber-400", className)} title="Récent" />;
+    return <span className={cn("inline-block h-2 w-2 rounded-full bg-amber-400", className)} title={t("recent")} />;
   }
   return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted-foreground/40", className)} title={`Vu ${formatLastSeen(lastSeenAt)}`} />;
 }

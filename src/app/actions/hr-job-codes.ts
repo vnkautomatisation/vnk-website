@@ -3,6 +3,7 @@
 // Chaque poste a sa propre liste de codes (comptable / programmeur / etc.).
 // Le pointage exige obligatoirement un code au clock-in.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -31,17 +32,18 @@ function revalidateAll() {
 
 // ─── Create ────────────────────────────────────────────────
 const createSchema = z.object({
-  code: z.string().min(1).max(40).regex(/^[A-Z0-9-_]+$/, "Code: lettres maj, chiffres, - et _ seulement"),
+  code: z.string().min(1).max(40).regex(/^[A-Z0-9-_]+$/, "code_lettres_maj_chiffres_et_seulement"),
   label: z.string().min(1).max(120),
   positionId: z.number().int().positive(),
   sortOrder: z.number().int().optional(),
 });
 
 export async function createJobCodeAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireUsersWrite();
   if (!actorId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Verifier unicite du code (global)
   const existing = await prisma.jobCode.findUnique({ where: { code: parsed.data.code } });
@@ -76,10 +78,11 @@ const updateSchema = z.object({
 });
 
 export async function updateJobCodeAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireUsersWrite();
   if (!actorId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const existing = await prisma.jobCode.findUnique({ where: { id: parsed.data.id } });
   if (!existing) return { success: false, error: "Code introuvable" };

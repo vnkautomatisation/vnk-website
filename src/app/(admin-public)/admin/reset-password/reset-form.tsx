@@ -1,6 +1,7 @@
 "use client";
 // Formulaire reset : saisie du code 6 chiffres + nouveau mot de passe.
 import { useState, useEffect, useTransition, useRef } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -16,6 +17,7 @@ export function ResetPasswordForm({
   tokenFromUrl: string | null;
   audience: "admin" | "client";
 }) {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [token, setToken] = useState<string>("");
@@ -27,7 +29,7 @@ export function ResetPasswordForm({
   const [showPw, setShowPw] = useState(false);
   const codeInputRef = useRef<HTMLInputElement>(null);
 
-  // Charger le token depuis l'URL ou la sessionStorage
+
   useEffect(() => {
     if (tokenFromUrl) {
       setToken(tokenFromUrl);
@@ -40,20 +42,20 @@ export function ResetPasswordForm({
     setTimeout(() => codeInputRef.current?.focus(), 100);
   }, [tokenFromUrl]);
 
-  // Sans token = impossible
+
   if (!token) {
     return (
       <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
         <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
-          <h1 className="text-xl font-bold text-[#0F2D52]">Lien invalide</h1>
+          <h1 className="text-xl font-bold text-[#0F2D52]">{t("lien_invalide")}</h1>
           <p className="text-sm text-muted-foreground mt-2">
-            Ce lien n&apos;est pas valide. Veuillez recommencer la procédure de réinitialisation.
+            {t("lien_n_apos_pas_valide")}
           </p>
           <Link
             href={audience === "admin" ? "/admin/forgot-password" : "/portail/forgot-password"}
             className="inline-block mt-6 text-sm text-[#0F2D52] hover:underline"
           >
-            Recommencer →
+            {t("recommencer")}
           </Link>
         </div>
       </div>
@@ -70,7 +72,7 @@ export function ResetPasswordForm({
       } else {
         toast.error(r.error);
         if (r.error.includes("expiré") || r.error.includes("Trop")) {
-          // Token mort → retour à la demande
+
           setTimeout(() => router.push(audience === "admin" ? "/admin/forgot-password" : "/portail/forgot-password"), 2000);
         }
       }
@@ -95,7 +97,7 @@ export function ResetPasswordForm({
         sessionStorage.removeItem("vnk-reset-token");
         sessionStorage.removeItem("vnk-reset-email");
         sessionStorage.removeItem("vnk-reset-audience");
-        toast.success("Mot de passe modifié");
+        toast.success(t("mot_passe_modifie"));
         router.push(audience === "admin" ? "/admin/login?reset=1" : "/portail/login?reset=1");
       } else {
         toast.error(r.error);
@@ -111,12 +113,12 @@ export function ResetPasswordForm({
             {step === "code" ? <KeyRound className="h-7 w-7" /> : <ShieldCheck className="h-7 w-7" />}
           </div>
           <h1 className="text-xl font-bold">
-            {step === "code" ? "Code de vérification" : "Nouveau mot de passe"}
+            {step === "code" ? t("code_verification") : t("nouveau_mot_passe")}
           </h1>
           <p className="text-sm text-white/80 mt-1">
             {step === "code"
-              ? "Saisissez le code à 6 chiffres reçu par courriel"
-              : "Créez un mot de passe sécurisé"}
+              ? t("saisissez_code_6_chiffres_recu")
+              : t("creez_mot_passe_securise")}
           </p>
           {email && <p className="text-[11px] text-white/60 mt-1">{email}</p>}
         </div>
@@ -125,7 +127,7 @@ export function ResetPasswordForm({
           <form onSubmit={handleVerifyCode} className="p-6 space-y-4">
             <div>
               <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Code à 6 chiffres
+                {t("code_6_chiffres")}
               </Label>
               <Input
                 ref={codeInputRef}
@@ -141,7 +143,7 @@ export function ResetPasswordForm({
                 className="mt-1 text-center text-2xl tracking-[0.5em] font-mono font-semibold"
               />
               <p className="text-[10px] text-muted-foreground mt-1.5">
-                Vérifiez votre boîte de réception (et vos courriers indésirables). Le code est valable 30 minutes.
+                {t("verifiez_boite_reception_courriers_indesirables")}
               </p>
             </div>
 
@@ -151,9 +153,9 @@ export function ResetPasswordForm({
               className="w-full bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm"
             >
               {pending ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Vérification...</>
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("verification")}</>
               ) : (
-                "Vérifier le code"
+                t("verifier_code")
               )}
             </Button>
 
@@ -168,14 +170,14 @@ export function ResetPasswordForm({
           <form onSubmit={handleComplete} className="p-6 space-y-4">
             <div>
               <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Nouveau mot de passe
+                {t("nouveau_mot_passe")}
               </Label>
               <div className="relative mt-1">
                 <Input
                   type={showPw ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Minimum 12 caractères"
+                  placeholder={t("minimum_12_caracteres")}
                   autoComplete="new-password"
                   required
                   className="pr-10"
@@ -184,7 +186,7 @@ export function ResetPasswordForm({
                   type="button"
                   onClick={() => setShowPw(!showPw)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                  aria-label={showPw ? "Masquer" : "Afficher"}
+                  aria-label={showPw ? t("masquer") : t("afficher")}
                 >
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -193,7 +195,7 @@ export function ResetPasswordForm({
 
             <div>
               <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                Confirmer
+                {t("confirmer")}
               </Label>
               <Input
                 type={showPw ? "text" : "password"}
@@ -206,11 +208,11 @@ export function ResetPasswordForm({
             </div>
 
             <div className="rounded-lg border bg-muted/20 p-3 space-y-1">
-              <Check ok={checks.length} label="Au moins 12 caractères" />
-              <Check ok={checks.upper} label="Une majuscule" />
-              <Check ok={checks.lower} label="Une minuscule" />
-              <Check ok={checks.digit} label="Un chiffre" />
-              <Check ok={checks.match} label="Les deux mots de passe correspondent" />
+              <Check ok={checks.length} label={t("moins_12_caracteres")} />
+              <Check ok={checks.upper} label={t("majuscule")} />
+              <Check ok={checks.lower} label={t("minuscule")} />
+              <Check ok={checks.digit} label={t("chiffre")} />
+              <Check ok={checks.match} label={t("deux_mots_passe_correspondent")} />
             </div>
 
             <Button
@@ -219,9 +221,9 @@ export function ResetPasswordForm({
               className="w-full bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm"
             >
               {pending ? (
-                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Enregistrement...</>
+                <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("enregistrement")}</>
               ) : (
-                "Modifier mon mot de passe"
+                t("modifier_mon_mot_passe")
               )}
             </Button>
           </form>
@@ -232,6 +234,7 @@ export function ResetPasswordForm({
 }
 
 function Check({ ok, label }: { ok: boolean; label: string }) {
+  const t = useTranslations("auth");
   return (
     <div className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-700" : "text-muted-foreground"}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />

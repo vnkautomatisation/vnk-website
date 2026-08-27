@@ -57,6 +57,7 @@ export function WebhooksView({
   outgoing: OutgoingWebhookRow[];
   incoming: IncomingLogRow[];
 }) {
+  const t = useTranslations("admin.webhooks");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("outgoing");
@@ -71,8 +72,8 @@ export function WebhooksView({
     const r = confirmDelete.kind === "outgoing"
       ? await deleteWebhookAction({ id: confirmDelete.id })
       : await deleteIncomingLogAction({ id: confirmDelete.id });
-    if (r.success) { toast.success("Supprimé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("supprime")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDelete(null);
   };
 
@@ -81,8 +82,8 @@ export function WebhooksView({
       id: w.id, name: w.name, url: w.url, events: w.events,
       isEnabled: !w.isEnabled,
     });
-    if (r.success) { toast.success(w.isEnabled ? "Désactivé" : "Activé"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(w.isEnabled ? t("desactive") : t("active")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   const handleTest = async (w: OutgoingWebhookRow) => {
@@ -97,7 +98,7 @@ export function WebhooksView({
         }
         router.refresh();
       } else {
-        toast.error(r.success ? "Erreur" : r.error);
+        toast.error(r.success ? t("erreur") : r.error);
       }
     } finally {
       setTesting(null);
@@ -108,22 +109,22 @@ export function WebhooksView({
     const r = await rotateWebhookSecretAction({ id: w.id });
     if (r.success && "data" in r) {
       setRevealedSecret({ id: w.id, secret: r.data.secret });
-      toast.success("Nouveau secret généré");
+      toast.success(t("nouveau_secret_genere"));
       router.refresh();
     } else {
-      toast.error(r.success ? "Erreur" : r.error);
+      toast.error(r.success ? t("erreur") : r.error);
     }
   };
 
   const copySecret = (secret: string) => {
     navigator.clipboard.writeText(secret);
-    toast.success("Secret copié");
+    toast.success(t("secret_copie"));
   };
 
   const handleReplay = async (log: IncomingLogRow) => {
     const r = await replayIncomingAction({ id: log.id });
-    if (r.success) { toast.success("Marqué pour retraitement"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("marque_retraitement")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   return (
@@ -134,9 +135,9 @@ export function WebhooksView({
           <Webhook className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Webhooks</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("webhooks")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Envoyer des événements à des systèmes externes ou inspecter ceux reçus de partenaires
+            {t("envoyer_evenements_systemes_externes_inspecter")}
           </p>
         </div>
       </div>
@@ -166,7 +167,7 @@ export function WebhooksView({
         </div>
       </div>
 
-      {/* SORTANTS */}
+
       {tab === "outgoing" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -214,15 +215,15 @@ export function WebhooksView({
                       )}
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button size="sm" variant="outline" onClick={() => handleTest(w)} disabled={testing === w.id} title="Envoyer un test">
+                      <Button size="sm" variant="outline" onClick={() => handleTest(w)} disabled={testing === w.id} title={t("envoyer_test")}>
                         {testing === w.id ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
                       </Button>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => setWebhookDialog({ open: true, webhook: w })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => toggleEnabled(w)}><Power className="h-4 w-4 mr-2" />{w.isEnabled ? "Désactiver" : "Activer"}</DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleRotateSecret(w)}><RotateCw className="h-4 w-4 mr-2" />Régénérer le secret</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => toggleEnabled(w)}><Power className="h-4 w-4 mr-2" />{w.isEnabled ? t("desactiver") : t("activer")}</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRotateSecret(w)}><RotateCw className="h-4 w-4 mr-2" />{t("regenerer_secret")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "outgoing", id: w.id, label: w.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -231,7 +232,7 @@ export function WebhooksView({
                   </div>
                   {revealedSecret?.id === w.id && (
                     <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
-                      <p className="text-xs font-semibold text-emerald-900 mb-1.5">Nouveau secret généré · à copier maintenant :</p>
+                      <p className="text-xs font-semibold text-emerald-900 mb-1.5">{t("nouveau_secret_genere_copier_maintenant")}</p>
                       <div className="flex items-center gap-2">
                         <code className="text-[11px] font-mono bg-white px-2 py-1 rounded border flex-1 break-all">{revealedSecret.secret}</code>
                         <Button size="sm" variant="outline" onClick={() => copySecret(revealedSecret.secret)} title={tc("copy")}>
@@ -245,7 +246,7 @@ export function WebhooksView({
               ))}
               {outgoing.length === 0 && (
                 <p className="p-8 text-center text-sm text-muted-foreground">
-                  Aucun webhook sortant. Créez-en un pour envoyer des événements VNK vers des systèmes externes.
+                  {t("aucun_webhook_sortant_creez_envoyer")}
                 </p>
               )}
             </div>
@@ -253,17 +254,17 @@ export function WebhooksView({
         </div>
       )}
 
-      {/* ENTRANTS */}
+
       {tab === "incoming" && (
         <div className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Derniers 50 webhooks reçus de partenaires (Stripe, Calendly, Dropbox Sign...). Utile pour debug.
+            {t("derniers_50_webhooks_recus_partenaires")}
           </p>
           <Card>
             <div className="divide-y">
               {incoming.length === 0 ? (
                 <p className="p-8 text-center text-sm text-muted-foreground">
-                  Aucun webhook entrant reçu.
+                  {t("aucun_webhook_entrant_recu")}
                 </p>
               ) : (
                 incoming.map((log) => (
@@ -277,17 +278,17 @@ export function WebhooksView({
                           <Badge variant="outline" className="text-[10px] font-semibold">{log.provider}</Badge>
                           <p className="font-mono text-xs">{log.eventType}</p>
                           {log.verified ? (
-                            <Badge className="text-[9px] bg-emerald-600 hover:bg-emerald-600">Signature OK</Badge>
+                            <Badge className="text-[9px] bg-emerald-600 hover:bg-emerald-600">{t("signature_ok")}</Badge>
                           ) : (
-                            <Badge variant="outline" className="text-[9px] text-amber-700">Non vérifié</Badge>
+                            <Badge variant="outline" className="text-[9px] text-amber-700">{t("non_verifie")}</Badge>
                           )}
                           {log.processed ? (
-                            <Badge variant="outline" className="text-[9px]">Traité</Badge>
+                            <Badge variant="outline" className="text-[9px]">{t("traite")}</Badge>
                           ) : (
-                            <Badge className="text-[9px] bg-amber-500 hover:bg-amber-500">En attente</Badge>
+                            <Badge className="text-[9px] bg-amber-500 hover:bg-amber-500">{t("attente")}</Badge>
                           )}
                           {log.error && (
-                            <Badge className="text-[9px] bg-red-600 hover:bg-red-600">Erreur</Badge>
+                            <Badge className="text-[9px] bg-red-600 hover:bg-red-600">{t("erreur")}</Badge>
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -297,7 +298,7 @@ export function WebhooksView({
                           <p className="text-xs text-red-600 mt-1 font-mono">{log.error}</p>
                         )}
                         <details className="mt-1.5">
-                          <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">Voir le payload</summary>
+                          <summary className="text-[10px] text-muted-foreground cursor-pointer hover:text-foreground">{t("voir_payload")}</summary>
                           <pre className="mt-1 text-[10px] bg-muted/40 rounded p-2 overflow-x-auto max-w-full font-mono max-h-60">
                             {JSON.stringify(log.payload, null, 2).slice(0, 2000)}
                           </pre>
@@ -306,7 +307,7 @@ export function WebhooksView({
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleReplay(log)}><RefreshCw className="h-4 w-4 mr-2" />Re-traiter</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleReplay(log)}><RefreshCw className="h-4 w-4 mr-2" />{t("re_traiter")}</DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "incoming", id: log.id, label: log.eventType })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                         </DropdownMenuContent>
@@ -326,8 +327,8 @@ export function WebhooksView({
         webhook={webhookDialog.webhook}
         onSaved={(secret) => {
           if (secret) {
-            // Pour un nouveau webhook, afficher le secret généré (impossible à revoir après)
-            toast.success("Webhook créé. Copiez le secret affiché — il ne sera plus jamais visible.");
+
+            toast.success(t("webhook_cree_copiez_secret_affiche"));
           }
           router.refresh();
         }}
@@ -336,7 +337,7 @@ export function WebhooksView({
         open={!!confirmDelete}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}

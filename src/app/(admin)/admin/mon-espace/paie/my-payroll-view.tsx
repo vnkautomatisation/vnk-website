@@ -9,6 +9,7 @@
 //  - PDFs via PdfPreviewModal
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -101,10 +102,11 @@ export function MyPayrollView({
   stubs: Stub[];
   taxDocs: TaxDoc[];
 }) {
+  const t = useTranslations("admin.payroll");
   const [tab, setTab] = useState<TabKey>("stubs");
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
-  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -118,7 +120,7 @@ export function MyPayrollView({
     return () => io.disconnect();
   }, []);
 
-  // KPI portal target inside the mobile module nav.
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -143,7 +145,7 @@ export function MyPayrollView({
     });
   }, []);
 
-  // KPIs
+
   const kpis = useMemo(() => {
     const released = stubs.filter((s) => s.releasedAt);
     const ytd = released
@@ -157,13 +159,13 @@ export function MyPayrollView({
   }, [stubs, taxDocs]);
 
   const TABS: TabItem<TabKey>[] = [
-    { key: "stubs", label: "Mes bulletins", icon: Wallet, count: kpis.count },
-    { key: "tax", label: "Documents fiscaux", icon: FileText, count: taxDocs.length },
+    { key: "stubs", label: t("mes_bulletins"), icon: Wallet, count: kpis.count },
+    { key: "tax", label: t("documents_fiscaux"), icon: FileText, count: taxDocs.length },
   ];
 
   return (
     <div className="space-y-4">
-      {/* Header navy */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -175,78 +177,78 @@ export function MyPayrollView({
               <Wallet className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Ma paie</h1>
+              <h1 className="text-lg font-bold">{t("ma_paie")}</h1>
               <p className="text-xs text-white/80">
-                Consultez vos bulletins de paie et documents fiscaux (T4, Releve 1).
+                {t("consultez_bulletins_paie_documents_fiscaux")}
               </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="Bulletins disponibles"
+          label={t("bulletins_disponibles")}
           value={kpis.count}
           icon={Receipt}
           accent="info"
           hint={kpis.last
             ? `Dernier : ${formatDateOnly(kpis.last.period.startDate)}`
-            : "Aucun bulletin pour le moment"}
+            : t("aucun_bulletin_moment")}
           onClick={() => setTab("stubs")}
         />
         <DocumentStatsCard
-          label="Net cumule YTD"
+          label={t("net_cumule_ytd")}
           value={formatMoney(kpis.ytd)}
           icon={Wallet}
           accent="success"
           hint={`Annee ${new Date().getFullYear()}`}
         />
         <DocumentStatsCard
-          label="Brut cumule YTD"
+          label={t("brut_cumule_ytd")}
           value={formatMoney(kpis.grossYtd)}
           icon={DollarSign}
           accent="navy"
-          hint="Avant deductions a la source"
+          hint={t("avant_deductions_source")}
         />
         <DocumentStatsCard
-          label="Documents fiscaux"
+          label={t("documents_fiscaux")}
           value={kpis.taxCount}
           icon={FileText}
           accent={kpis.taxCount > 0 ? "info" : "navy"}
-          hint="T4, Releve 1, lettres..."
+          hint={t("t4_releve_1_lettres")}
           onClick={() => setTab("tax")}
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Bul :</span>
-                  <span className="hidden min-[480px]:inline">Bulletins :</span>
+                  <span className="min-[480px]:hidden">{t("bul")}</span>
+                  <span className="hidden min-[480px]:inline">{t("bulletins")}</span>
                 </span>
                 <span className="font-semibold text-[#0F2D52]">{kpis.count}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">YTD :</span>
-                  <span className="hidden min-[480px]:inline">Net YTD :</span>
+                  <span className="min-[480px]:hidden">{t("ytd")}</span>
+                  <span className="hidden min-[480px]:inline">{t("net_ytd")}</span>
                 </span>
                 <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd)}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Fisc :</span>
-                  <span className="hidden min-[480px]:inline">Docs fiscaux :</span>
+                  <span className="min-[480px]:hidden">{t("fisc")}</span>
+                  <span className="hidden min-[480px]:inline">{t("docs_fiscaux")}</span>
                 </span>
                 <span className="font-semibold text-[#0F2D52]">{kpis.taxCount}</span>
               </span>
@@ -255,7 +257,7 @@ export function MyPayrollView({
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -269,23 +271,23 @@ export function MyPayrollView({
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <Wallet className="h-4 w-4" />
-            Ma paie
+            {t("ma_paie")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Bulletins :</span>
+            <span className="text-muted-foreground">{t("bulletins")}</span>
             <span className="font-semibold text-[#0F2D52]">{kpis.count}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Net YTD :</span>
+            <span className="text-muted-foreground">{t("net_ytd")}</span>
             <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd)}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Docs fiscaux :</span>
+            <span className="text-muted-foreground">{t("docs_fiscaux")}</span>
             <span className="font-semibold text-[#0F2D52]">{kpis.taxCount}</span>
           </span>
         </div>
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation ma paie" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_ma_paie")} />
         </div>
       </div>
 
@@ -308,15 +310,16 @@ export function MyPayrollView({
 // TAB : MY STUBS
 // =============================================================
 function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) => void }) {
+  const t = useTranslations("admin.payroll");
   if (stubs.length === 0) {
     return (
       <Card className="p-10 text-center space-y-3">
         <Wallet className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
-          Aucun bulletin de paie disponible pour le moment.
+          {t("aucun_bulletin_paie_disponible_moment")}
         </p>
         <p className="text-[11px] text-muted-foreground/80">
-          Vos bulletins apparaitront ici une fois la periode de paie marquee payee.
+          {t("bulletins_apparaitront_ici_fois_periode")}
         </p>
       </Card>
     );
@@ -331,6 +334,7 @@ function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) 
 }
 
 function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
+  const t = useTranslations("admin.payroll");
   const totalDeductions =
     Number(stub.deductionFederal) + Number(stub.deductionProvincial) +
     Number(stub.deductionRrq) + Number(stub.deductionAe) +
@@ -344,7 +348,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             <Receipt className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider opacity-80">Periode</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-80">{t("periode")}</p>
             <h3 className="font-bold text-sm truncate">
               {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
             </h3>
@@ -352,7 +356,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider opacity-80">Net a payer</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-80">{t("net_payer")}</p>
             <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay)}</p>
           </div>
           <Button
@@ -362,14 +366,14 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             onClick={onOpenPdf}
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Apercu PDF
+            {t("apercu_pdf")}
           </Button>
         </div>
       </div>
       <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Heures regulieres
+            {t("heures_regulieres")}
           </p>
           <p className="font-mono">
             {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate)}
@@ -378,7 +382,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursOvertime) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Heures supplementaires
+              {t("heures_supplementaires")}
             </p>
             <p className="font-mono">{Number(stub.hoursOvertime).toFixed(2)} h x 1.5</p>
           </div>
@@ -386,7 +390,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursHoliday) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Jour ferie travaille
+              {t("jour_ferie_travaille")}
             </p>
             <p className="font-mono">{Number(stub.hoursHoliday).toFixed(2)} h x 2</p>
           </div>
@@ -394,7 +398,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.holidayIndemnity) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Indemnite ferie
+              {t("indemnite_ferie")}
             </p>
             <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
           </div>
@@ -402,38 +406,38 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursVacation) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Vacances
+              {t("vacances")}
             </p>
             <p className="font-mono">{Number(stub.hoursVacation).toFixed(2)} h</p>
           </div>
         )}
         <div className="col-span-full border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div>
-            <span className="text-muted-foreground">Brut : </span>
+            <span className="text-muted-foreground">{t("brut")} </span>
             <strong className="tabular-nums">{formatMoney(stub.grossPay)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">Federal : </span>
+            <span className="text-muted-foreground">{t("federal")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionFederal)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">Provincial : </span>
+            <span className="text-muted-foreground">{t("provincial")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">RRQ : </span>
+            <span className="text-muted-foreground">{t("rrq")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionRrq)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">AE : </span>
+            <span className="text-muted-foreground">{t("ae")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionAe)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">RQAP : </span>
+            <span className="text-muted-foreground">{t("rqap")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionRqap)}</strong>
           </div>
           <div className="md:col-span-2">
-            <span className="text-muted-foreground">Total deductions : </span>
+            <span className="text-muted-foreground">{t("total_deductions")} </span>
             <strong className="tabular-nums">-{formatMoney(totalDeductions)}</strong>
           </div>
         </div>
@@ -446,6 +450,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
 // TAB : MY TAX DOCS
 // =============================================================
 function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxDoc) => void }) {
+  const t = useTranslations("admin.payroll");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("all");
 
@@ -466,7 +471,7 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
   const byYear = useMemo(() => {
     const map = new Map<number | string, TaxDoc[]>();
     for (const d of filtered) {
-      const y = d.taxYear ?? "Sans annee";
+      const y = d.taxYear ?? t("sans_annee");
       if (!map.has(y)) map.set(y, []);
       map.get(y)!.push(d);
     }
@@ -482,10 +487,10 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
       <Card className="p-10 text-center space-y-3">
         <FileText className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
-          Aucun document fiscal disponible pour le moment.
+          {t("aucun_document_fiscal_disponible_moment")}
         </p>
         <p className="text-[11px] text-muted-foreground/80">
-          Vos T4, Releves 1 et autres documents apparaitront ici une fois emis par les RH.
+          {t("t4_releves_1_autres_documents")}
         </p>
       </Card>
     );
@@ -500,14 +505,14 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un document..."
+              placeholder={t("rechercher_document")}
               className="h-9 text-sm pl-7"
             />
           </div>
           <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Annee" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("annee")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les annees</SelectItem>
+              <SelectItem value="all">{t("toutes_annees")}</SelectItem>
               {years.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
@@ -518,7 +523,7 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
 
       {byYear.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Aucun resultat avec ces filtres.
+          {t("aucun_resultat_filtres")}
         </Card>
       ) : (
         byYear.map(([year, list]) => (
@@ -546,10 +551,10 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
                           {meta.label} - emis le {formatDate(d.issuedAt)}
                         </p>
                       </div>
-                      <ActionTooltip label="Apercu PDF">
+                      <ActionTooltip label={t("apercu_pdf")}>
                         <Button
                           size="icon" variant="ghost" className="h-8 w-8"
-                          aria-label="Apercu PDF"
+                          aria-label={t("apercu_pdf")}
                           onClick={() => onOpenPdf(d)}
                         >
                           <Eye className="h-4 w-4" />

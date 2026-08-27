@@ -101,6 +101,7 @@ import {
   VARIABLE_REGISTRY,
   VARIABLE_SOURCES,
   findVariable,
+  variableLabel,
   type VariableDef,
   type VariableSource,
 } from "@/lib/document-templates/variable-registry";
@@ -504,7 +505,7 @@ type PMNode = {
   marks?: Array<{ type: string }>;
 };
 
-function inlineTokensToPM(tokens: LineToken[]): PMNode[] {
+function inlineTokensToPM(tokens: LineToken[], tv: (k: string) => string): PMNode[] {
   const out: PMNode[] = [];
   for (const t of tokens) {
     if (t.kind === "variable") {
@@ -513,12 +514,12 @@ function inlineTokensToPM(tokens: LineToken[]): PMNode[] {
         type: "variable",
         attrs: {
           key: t.key,
-          label: def?.label ?? t.key,
+          label: def ? tv(def.labelKey) : t.key,
           knownVar: !!def,
         },
       });
     } else if (t.value.length > 0) {
-      // Inline marks (bold/italic) — parse minimal markdown
+
       out.push(...inlineMarkdownToPM(t.value));
     }
   }
@@ -534,8 +535,8 @@ function inlineMarkdownToPM(text: string): PMNode[] {
   if (!text) return [];
   const out: PMNode[] = [];
 
-  // Tokenize **bold** first, then *italic* / _italic_ inside the residue.
-  // Simple non-nesting parser — sufficient for HR document content.
+
+
   const boldRe = /\*\*([^*\n]+)\*\*/g;
   let last = 0;
   let m: RegExpExecArray | null;
@@ -584,18 +585,18 @@ function italicMarkdownToPM(text: string): PMNode[] {
  * Block parsing : headings (#/##/###), unordered list (- / *),
  * ordered list (1.), paragraphs separated by blank lines.
  */
-export function parseMarkdownToDoc(md: string): PMNode {
+export function parseMarkdownToDoc(md: string, tv: (k: string) => string): PMNode {
   const lines = (md ?? "").replace(/\r\n/g, "\n").split("\n");
   const content: PMNode[] = [];
 
   let i = 0;
   let listType: "bullet" | "ordered" | "task" | null = null;
   let listItems: PMNode[] = [];
-  // Style applique a la prochaine liste (issu d'un marker
-  // `<!-- list-style: X -->` qui precede immediatement la liste).
+
+
   let pendingListStyle: string | null = null;
-  // Style courant : applique a la liste en cours d'accumulation pour
-  // que flushList sache quel attribut poser sur le noeud.
+
+
   let currentListStyle: string | null = null;
 
   const flushList = () => {
@@ -633,16 +634,16 @@ export function parseMarkdownToDoc(md: string): PMNode {
     const line = raw ?? "";
     const trimmed = line.trim();
 
-    // Blank line : flush list, paragraph separator. On garde
-    // `pendingListStyle` actif car le marker peut etre suivi d'une
-    // ligne vide avant la liste.
+
+
+
     if (!trimmed) {
       flushList();
       i++;
       continue;
     }
 
-    // Pagebreak HTML comment marker
+
     if (/^<!--\s*pagebreak\s*-->$/i.test(trimmed)) {
       flushList();
       content.push({ type: "pagebreak" });
@@ -650,9 +651,9 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Marqueur de style de liste (Word-like) :
-    // <!-- list-style: lower-alpha -->
-    // S'applique a la PROCHAINE liste rencontree.
+
+
+
     const styleMatch = /^<!--\s*list-style:\s*([\w-]+)\s*-->$/i.exec(trimmed);
     if (styleMatch) {
       flushList();
@@ -661,7 +662,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Horizontal rule (--- ou *** ou ___ sur une ligne, min 3 caracteres)
+
     if (/^(?:-{3,}|\*{3,}|_{3,})\s*$/.test(trimmed)) {
       flushList();
       content.push({ type: "horizontalRule" });
@@ -669,7 +670,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Blockquote : lignes consécutives commençant par "> "
+
     if (/^>\s?/.test(trimmed)) {
       flushList();
       const buf: string[] = [trimmed.replace(/^>\s?/, "")];
@@ -681,7 +682,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
         j++;
       }
       const joined = buf.join(" ");
-      const inline = inlineTokensToPM(tokenizeLine(joined));
+      const inline = inlineTokensToPM(tokenizeLine(joined), tv);
       content.push({
         type: "blockquote",
         content: [
@@ -695,12 +696,12 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Heading
+
     const h = /^(#{1,3})\s+(.*)$/.exec(trimmed);
     if (h) {
       flushList();
       const level = h[1].length;
-      const inline = inlineTokensToPM(tokenizeLine(h[2]));
+      const inline = inlineTokensToPM(tokenizeLine(h[2]), tv);
       content.push({
         type: "heading",
         attrs: { level },
@@ -710,13 +711,13 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Task list (checkbox markdown) : "- [ ] Texte" ou "- [x] Texte"
+
     const task = /^[-*]\s+\[([ xX])\]\s+(.*)$/.exec(trimmed);
     if (task) {
       if (listType && listType !== "task") flushList();
       listType = "task";
       const checked = task[1].toLowerCase() === "x";
-      const inline = inlineTokensToPM(tokenizeLine(task[2]));
+      const inline = inlineTokensToPM(tokenizeLine(task[2]), tv);
       listItems.push({
         type: "taskItem",
         attrs: { checked },
@@ -731,8 +732,8 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Unordered list — detecte les listes indentees (nested) via la
-    // largeur du whitespace en debut de ligne (line, pas trimmed).
+
+
     const ulMatch = /^(\s*)[-*]\s+(.*)$/.exec(line);
     if (ulMatch && !/^[-*]\s+\[/.test(trimmed)) {
       if (listType && listType !== "bullet") flushList();
@@ -744,22 +745,22 @@ export function parseMarkdownToDoc(md: string): PMNode {
         }
       }
       const indent = ulMatch[1].length;
-      const inline = inlineTokensToPM(tokenizeLine(ulMatch[2]));
+      const inline = inlineTokensToPM(tokenizeLine(ulMatch[2]), tv);
       const itemContent: PMNode[] = [
         {
           type: "paragraph",
           content: inline.length > 0 ? inline : undefined,
         },
       ];
-      // Cherche les enfants indentes (>= indent+2) sous cet item
-      // et les recursifie en sous-listes.
+
+
       let j = i + 1;
       const childLines: string[] = [];
       while (j < lines.length) {
         const cl = lines[j] ?? "";
         const ws = /^(\s*)/.exec(cl)?.[1]?.length ?? 0;
         if (cl.trim() === "") {
-          // ligne vide : on garde si l'item se poursuit
+
           if (j + 1 < lines.length) {
             const nextWs = /^(\s*)/.exec(lines[j + 1] ?? "")?.[1]?.length ?? 0;
             if (nextWs > indent) {
@@ -771,7 +772,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
           break;
         }
         if (ws > indent) {
-          // dedent au niveau de l'item enfant
+
           childLines.push(cl.slice(indent + 2));
           j++;
         } else {
@@ -779,7 +780,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
         }
       }
       if (childLines.length > 0) {
-        const childDoc = parseMarkdownToDoc(childLines.join("\n"));
+        const childDoc = parseMarkdownToDoc(childLines.join("\n"), tv);
         for (const cb of childDoc.content ?? []) {
           if (cb.type === "bulletList" || cb.type === "orderedList") {
             itemContent.push(cb);
@@ -791,7 +792,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Ordered list — gestion identique avec indentation pour multi-niveau.
+
     const olMatch = /^(\s*)\d+\.\s+(.*)$/.exec(line);
     if (olMatch) {
       if (listType && listType !== "ordered") flushList();
@@ -803,7 +804,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
         }
       }
       const indent = olMatch[1].length;
-      const inline = inlineTokensToPM(tokenizeLine(olMatch[2]));
+      const inline = inlineTokensToPM(tokenizeLine(olMatch[2]), tv);
       const itemContent: PMNode[] = [
         {
           type: "paragraph",
@@ -834,7 +835,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
         }
       }
       if (childLines.length > 0) {
-        const childDoc = parseMarkdownToDoc(childLines.join("\n"));
+        const childDoc = parseMarkdownToDoc(childLines.join("\n"), tv);
         for (const cb of childDoc.content ?? []) {
           if (cb.type === "bulletList" || cb.type === "orderedList") {
             itemContent.push(cb);
@@ -846,9 +847,9 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Table markdown : `| h1 | h2 |\n|---|---|\n| c1 | c2 |`
-    // On detecte une ligne de pipe + une ligne separateur, on parse en
-    // noeud table Tiptap natif.
+
+
+
     if (/^\|.*\|$/.test(trimmed)) {
       const nextRaw = (lines[i + 1] ?? "").trim();
       const sepRe = /^\|\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|\s*$/;
@@ -874,7 +875,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
             content: [
               {
                 type: "paragraph",
-                content: inlineTokensToPM(tokenizeLine(cellText)),
+                content: inlineTokensToPM(tokenizeLine(cellText), tv),
               },
             ],
           })),
@@ -887,9 +888,9 @@ export function parseMarkdownToDoc(md: string): PMNode {
         i = j;
         continue;
       }
-      // Pas de separateur -> traite comme paragraphe normal
+
       flushList();
-      const inline = inlineTokensToPM(tokenizeLine(trimmed));
+      const inline = inlineTokensToPM(tokenizeLine(trimmed), tv);
       content.push({
         type: "paragraph",
         content: inline.length > 0 ? inline : undefined,
@@ -898,7 +899,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
       continue;
     }
 
-    // Paragraph : accumulate consecutive non-blank, non-special lines
+
     flushList();
     const buf: string[] = [trimmed];
     let j = i + 1;
@@ -916,7 +917,7 @@ export function parseMarkdownToDoc(md: string): PMNode {
       j++;
     }
     const joined = buf.join(" ");
-    const inline = inlineTokensToPM(tokenizeLine(joined));
+    const inline = inlineTokensToPM(tokenizeLine(joined), tv);
     content.push({
       type: "paragraph",
       content: inline.length > 0 ? inline : undefined,
@@ -954,7 +955,7 @@ function serializeInline(node: PMNode): string {
     if (linkMark?.attrs?.href) txt = `[${txt}](${linkMark.attrs.href})`;
     return txt;
   }
-  // hardBreak
+
   if (node.type === "hardBreak") return "\n";
   return "";
 }
@@ -977,8 +978,8 @@ function serializeListItem(item: PMNode, marker: string): string {
       ? serializeInlineList(firstPara.content)
       : "";
   lines.push(`${marker} ${firstText}`);
-  // Indente les blocs suivants (listes imbriquees, paragraphes additionnels)
-  // de la largeur du marker + 1 espace, pour la convention markdown CommonMark.
+
+
   const indent = " ".repeat(marker.length + 1);
   for (let k = 1; k < blocks.length; k++) {
     const child = blocks[k];
@@ -1035,7 +1036,7 @@ function serializeBlock(node: PMNode): string {
       return "---";
     }
     case "blockquote": {
-      // Préfixe chaque ligne du contenu avec "> "
+
       const inner = (node.content ?? [])
         .map((child) => serializeBlock(child))
         .join("\n");
@@ -1045,7 +1046,7 @@ function serializeBlock(node: PMNode): string {
         .join("\n");
     }
     case "table": {
-      // Sérialise en markdown standard : | h1 | h2 |\n|---|---|\n| c1 | c2 |
+
       const rows = node.content ?? [];
       if (rows.length === 0) return "";
       const allRows: string[][] = [];
@@ -1088,8 +1089,8 @@ export function serializeDocToMarkdown(doc: PMNode): string {
     parts.push(serializeBlock(block));
   }
   if (parts.length === 0) return "";
-  // Reconstruction avec separateur \n entre lignes de tableau adjacentes,
-  // \n\n entre blocs standards.
+
+
   let out = parts[0];
   for (let i = 1; i < parts.length; i++) {
     const prev = parts[i - 1] ?? "";
@@ -1139,10 +1140,12 @@ export function TemplateRichEditor({
   numbering: numberingProp,
   onNumberingChange,
 }: Props) {
-  // Mode de numerotation : controle externe via numberingProp, ou state local.
-  // Defaut = "auto" pour matcher le rendu PDF (qui auto-numerote par defaut).
-  // Defaut "none" : laisse le user choisir explicitement la numerotation
-  // (evite le double "1. 1. Titre" si seed contient deja des numeros manuels)
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
+
+
+
+
   const [numberingState, setNumberingState] = useState<NumberingMode>(
     numberingProp ?? "none",
   );
@@ -1155,26 +1158,26 @@ export function TemplateRichEditor({
     [numberingProp, onNumberingChange],
   );
 
-  // Keep last-emitted markdown to short-circuit no-op echo loops
+
   const lastEmittedRef = useRef<string>(value ?? "");
-  // Flag : skip onChange echo when external `value` was just applied
+
   const skipNextEmitRef = useRef<boolean>(false);
-  // Debounce timer pour onUpdate : evite re-serialiser le markdown a chaque
-  // keystroke ou clic toolbar (latence sur long template > 5000 chars).
+
+
   const debounceTimerRef = useRef<number | null>(null);
-  // Compteur de selection : force React a re-rendre la toolbar quand la
-  // selection change dans l'editeur, pour que les boutons (bold/italic/etc.)
-  // affichent leur etat actif correctement quand on clique sur du texte stylise.
+
+
+
   const [, setSelectionTick] = useState(0);
 
-  // Cleanup debounce timer au demontage du composant
+
   useEffect(() => {
     return () => {
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
     };
   }, []);
 
-  // Pill popover state (action menu on click)
+
   const [pillMenu, setPillMenu] = useState<{
     x: number;
     y: number;
@@ -1183,26 +1186,26 @@ export function TemplateRichEditor({
     pos: number;
   } | null>(null);
 
-  // Lien : état contrôlé pour permettre l'ouverture via Ctrl+K (raccourci Word).
+
   const [linkPopoverOpen, setLinkPopoverOpen] = useState(false);
 
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        // Disable codeBlock (geré différemment ailleurs si besoin), mais
-        // on active Blockquote et HorizontalRule qui font partie du markdown
-        // standard et sont utilisés dans les documents RH (citations légales,
-        // séparateurs visuels).
+
+
+
+
         codeBlock: false,
         heading: { levels: [1, 2, 3] },
-        // StarterKit v3 inclut deja Link et Underline. On les desactive ici
-        // pour les ajouter en bas avec notre configuration custom (Link avec
-        // HTMLAttributes rel/target, Underline plain).
+
+
+
         link: false,
         underline: false,
       }),
       Placeholder.configure({
-        placeholder: placeholder ?? "Commencez a rediger…",
+        placeholder: placeholder ?? t("commencez_rediger"),
       }),
       VariableNode,
       PagebreakNode,
@@ -1231,7 +1234,7 @@ export function TemplateRichEditor({
       Color,
       Highlight.configure({ multicolor: true }),
     ],
-    content: parseMarkdownToDoc(value ?? ""),
+    content: parseMarkdownToDoc(value ?? "", tv),
     immediatelyRender: false,
     editorProps: {
       attributes: {
@@ -1243,8 +1246,8 @@ export function TemplateRichEditor({
         skipNextEmitRef.current = false;
         return;
       }
-      // Debounce 150ms : evite de re-serialiser le markdown a chaque keystroke
-      // ou clic toolbar sur un long template (>5000 chars). Reduit le lag.
+
+
       if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
       debounceTimerRef.current = window.setTimeout(() => {
         const json = editor.getJSON() as PMNode;
@@ -1255,14 +1258,14 @@ export function TemplateRichEditor({
       }, 150);
     },
     onSelectionUpdate: ({ editor }) => {
-      // Force re-render de la toolbar : isActive('bold') etc. doivent etre
-      // re-evalues quand la selection change (clic dans du texte deja stylise).
+
+
       setSelectionTick((t) => t + 1);
-      // Visual feedback : marque les pills variables incluses dans la selection.
-      // Les atoms contenteditable=false sont normalement "sautes" par la selection
-      // browser, donc le user ne voit pas que la pill est dans la range. On
-      // ajoute une classe `is-selected` sur celles dont la position est dans
-      // [from, to] de la selection ProseMirror.
+
+
+
+
+
       try {
         const { from, to } = editor.state.selection;
         const wrapper = editorWrapperRef.current;
@@ -1281,31 +1284,31 @@ export function TemplateRichEditor({
           }
         });
       } catch {
-        // posAtDOM peut échouer en transition de doc - on ignore.
+
       }
     },
     onTransaction: () => {
-      // Idem : tout changement de marks/nodes doit declencher re-render toolbar.
+
       setSelectionTick((t) => t + 1);
     },
   });
 
-  // Sync external `value` -> editor when it diverges (e.g. import,
-  // quick-insert toolbar in parent, starter template selection).
+
+
   useEffect(() => {
     if (!editor) return;
     const incoming = value ?? "";
     if (incoming === lastEmittedRef.current) return;
-    // Compute serialized current to compare
+
     const currentMd = serializeDocToMarkdown(editor.getJSON() as PMNode);
     if (incoming === currentMd) return;
     skipNextEmitRef.current = true;
     lastEmittedRef.current = incoming;
-    const doc = parseMarkdownToDoc(incoming);
+    const doc = parseMarkdownToDoc(incoming, tv);
     editor.commands.setContent(doc, { emitUpdate: false });
   }, [value, editor]);
 
-  // Click handler for pills (delegated)
+
   const editorWrapperRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const wrapper = editorWrapperRef.current;
@@ -1322,10 +1325,10 @@ export function TemplateRichEditor({
       e.stopPropagation();
       const key = pill.getAttribute("data-variable") ?? "";
       const label =
-        pill.getAttribute("data-label") || findVariable(key)?.label || key;
+        pill.getAttribute("data-label") || variableLabel(key, tv);
       const rect = pill.getBoundingClientRect();
       const wrapperRect = wrapper.getBoundingClientRect();
-      // Find PM position of the clicked node
+
       let foundPos: number | null = null;
       try {
         const view = editor.view;
@@ -1349,7 +1352,7 @@ export function TemplateRichEditor({
     return () => wrapper.removeEventListener("click", onClick);
   }, [editor]);
 
-  // Close pill menu on outside click / Esc
+
   useEffect(() => {
     if (!pillMenu) return;
     const onDocClick = (e: MouseEvent) => {
@@ -1379,7 +1382,7 @@ export function TemplateRichEditor({
           type: "variable",
           attrs: {
             key: def.key,
-            label: def.label,
+            label: tv(def.labelKey),
             knownVar: true,
           },
         })
@@ -1397,7 +1400,7 @@ export function TemplateRichEditor({
       const tr = view.state.tr.replaceWith(pos, pos + node.nodeSize, [
         view.state.schema.nodes.variable.create({
           key: def.key,
-          label: def.label,
+          label: tv(def.labelKey),
           knownVar: true,
         }),
       ]);
@@ -1428,14 +1431,14 @@ export function TemplateRichEditor({
           className
         )}
       >
-        Chargement de l&apos;editeur…
+        {t("chargement_apos_editeur")}
       </div>
     );
   }
 
   return (
     <div className={cn("space-y-2", className)}>
-      {/* Toolbar */}
+
       <RichToolbar
         editor={editor}
         onPickVariable={insertVariable}
@@ -1445,7 +1448,7 @@ export function TemplateRichEditor({
         onLinkPopoverOpenChange={setLinkPopoverOpen}
       />
 
-      {/* Editor */}
+
       <div
         ref={editorWrapperRef}
         className="relative rounded-md border border-input bg-background"
@@ -1457,7 +1460,7 @@ export function TemplateRichEditor({
           style={{ minHeight }}
         />
 
-        {/* Pill action menu (popover) */}
+
         {pillMenu && (
           <PillActionMenu
             x={pillMenu.x}
@@ -1471,7 +1474,7 @@ export function TemplateRichEditor({
         )}
       </div>
 
-      {/* Local styles for pills + placeholder */}
+
       <style jsx global>{`
         .tpl-richeditor .ProseMirror {
           min-height: ${minHeight};
@@ -1497,7 +1500,7 @@ export function TemplateRichEditor({
           font-weight: 600;
           margin: 0.6em 0 0.3em;
         }
-        /* Auto-numerotation hierarchique des titres dans l'editeur,
+
            coherente avec le rendu PDF (data-numbering="auto" sur le wrapper). */
         [data-numbering="auto"] .tpl-richeditor .ProseMirror {
           counter-reset: tpl-h2 tpl-h3;
@@ -1532,7 +1535,7 @@ export function TemplateRichEditor({
         .tpl-richeditor .ProseMirror li {
           margin: 0.15em 0;
         }
-        /* Style "dash" : tiret long manuel via ::marker (pas de list-style-type
+
            natif pour le tiret, on simule). */
         .tpl-richeditor .ProseMirror ul.tpl-list-dash {
           list-style: none;
@@ -1548,7 +1551,7 @@ export function TemplateRichEditor({
           color: #0F2D52;
           font-weight: 600;
         }
-        /* Style "multilevel" : hiérarchie Word 1, 1.1, 1.1.1 — niveaux
+
            gérés via CSS counters. Niveau 1 = decimal, niveau 2 = a.b,
            niveau 3 = a.b.c. Indentation via Tab/Shift+Tab sur les listes. */
         .tpl-richeditor .ProseMirror ol.tpl-list-multilevel {
@@ -1724,7 +1727,7 @@ export function TemplateRichEditor({
           outline: 2px solid #0f2d52;
           outline-offset: 1px;
         }
-        /* Pill visuellement incluse dans une range selection (drag-select) :
+
            applique un fond bleu cohérent avec le ::selection texte navigateur,
            car les atoms contenteditable=false sont normalement sautes. */
         .tpl-pill.is-selected {
@@ -1855,22 +1858,22 @@ export function TemplateRichEditor({
 // ─────────────────────────────────────────────────────────
 
 // Palettes VNK
-const TEXT_COLORS: Array<{ value: string; label: string }> = [
-  { value: "#0F2D52", label: "Navy" },
-  { value: "#15406d", label: "Navy clair" },
-  { value: "#334155", label: "Gris foncé" },
-  { value: "#64748B", label: "Gris" },
-  { value: "#DC2626", label: "Rouge" },
-  { value: "#16A34A", label: "Vert" },
-  { value: "#D97706", label: "Ambre" },
+const TEXT_COLORS: Array<{ value: string; labelKey: string }> = [
+  { value: "#0F2D52", labelKey: "navy" },
+  { value: "#15406d", labelKey: "navy_clair" },
+  { value: "#334155", labelKey: "gris_fonce" },
+  { value: "#64748B", labelKey: "gris" },
+  { value: "#DC2626", labelKey: "rouge" },
+  { value: "#16A34A", labelKey: "vert" },
+  { value: "#D97706", labelKey: "ambre" },
 ];
 
-const HIGHLIGHT_COLORS: Array<{ value: string; label: string }> = [
-  { value: "#fef3c7", label: "Jaune" },
-  { value: "#dcfce7", label: "Vert clair" },
-  { value: "#dbeafe", label: "Bleu clair" },
-  { value: "#fee2e2", label: "Rouge clair" },
-  { value: "#f3e8ff", label: "Violet clair" },
+const HIGHLIGHT_COLORS: Array<{ value: string; labelKey: string }> = [
+  { value: "#fef3c7", labelKey: "jaune" },
+  { value: "#dcfce7", labelKey: "vert_clair" },
+  { value: "#dbeafe", labelKey: "bleu_clair" },
+  { value: "#fee2e2", labelKey: "rouge_clair" },
+  { value: "#f3e8ff", labelKey: "violet_clair" },
 ];
 
 function RichToolbar({
@@ -1888,7 +1891,9 @@ function RichToolbar({
   linkPopoverOpen: boolean;
   onLinkPopoverOpenChange: (next: boolean) => void;
 }) {
-  // ─── Indent / Outdent listes ─────────────────────────────────
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
+
   const canIndent =
     editor.can().sinkListItem("listItem") || editor.can().sinkListItem("taskItem");
   const canOutdent =
@@ -1910,63 +1915,63 @@ function RichToolbar({
 
   return (
     <div className="border rounded-lg bg-muted/30 p-1.5 flex flex-wrap items-center gap-0.5">
-      {/* Groupe 1 — Undo / Redo */}
+
       <TbButton
         onClick={() => editor.chain().focus().undo().run()}
         disabled={!editor.can().undo()}
-        title="Annuler (Ctrl+Z)"
+        title={t("annuler_ctrl_z")}
       >
         <RotateCcw className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         onClick={() => editor.chain().focus().redo().run()}
         disabled={!editor.can().redo()}
-        title="Rétablir (Ctrl+Y)"
+        title={t("retablir_ctrl_y")}
       >
         <RotateCw className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 2 — Famille + taille de police */}
+
       <FontFamilyDropdown editor={editor} />
       <FontSizeDropdown editor={editor} />
 
       <TbDivider />
 
-      {/* Groupe 3 — Style inline */}
+
       <TbButton
         active={editor.isActive("bold")}
         onClick={() => editor.chain().focus().toggleBold().run()}
-        title="Gras (Ctrl+B)"
+        title={t("gras_ctrl_b")}
       >
         <Bold className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive("italic")}
         onClick={() => editor.chain().focus().toggleItalic().run()}
-        title="Italique (Ctrl+I)"
+        title={t("italique_ctrl_i")}
       >
         <Italic className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive("underline")}
         onClick={() => editor.chain().focus().toggleUnderline().run()}
-        title="Souligné (Ctrl+U)"
+        title={t("souligne_ctrl_u")}
       >
         <UnderlineIcon className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive("strike")}
         onClick={() => editor.chain().focus().toggleStrike().run()}
-        title="Barré"
+        title={t("barre")}
       >
         <Strikethrough className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive("code")}
         onClick={() => editor.chain().focus().toggleCode().run()}
-        title="Code inline"
+        title={t("code_inline")}
       >
         <Code className="h-3.5 w-3.5" />
       </TbButton>
@@ -1974,26 +1979,26 @@ function RichToolbar({
         onClick={() =>
           editor.chain().focus().unsetAllMarks().clearNodes().run()
         }
-        title="Effacer toute la mise en forme"
+        title={t("effacer_toute_mise_forme")}
       >
         <Eraser className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 4 — Couleurs */}
+
       <TextColorPopover editor={editor} />
       <HighlightColorPopover editor={editor} />
 
       <TbDivider />
 
-      {/* Groupe 5 — Titres + citation */}
+
       <TbButton
         active={editor.isActive("heading", { level: 1 })}
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 1 }).run()
         }
-        title="Titre 1"
+        title={t("titre_1")}
       >
         <Heading1 className="h-3.5 w-3.5" />
       </TbButton>
@@ -2002,7 +2007,7 @@ function RichToolbar({
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 2 }).run()
         }
-        title="Titre 2"
+        title={t("titre_2")}
       >
         <Heading2 className="h-3.5 w-3.5" />
       </TbButton>
@@ -2011,7 +2016,7 @@ function RichToolbar({
         onClick={() =>
           editor.chain().focus().toggleHeading({ level: 3 }).run()
         }
-        title="Titre 3"
+        title={t("titre_3")}
       >
         <Heading3 className="h-3.5 w-3.5" />
       </TbButton>
@@ -2022,8 +2027,8 @@ function RichToolbar({
         }
         title={
           numbering === "auto"
-            ? "Numerotation auto activee (1, 1.1, 1.2) — cliquer pour desactiver"
-            : "Activer la numerotation auto des titres (1, 1.1, 1.2)"
+            ? t("numerotation_auto_activee_1_1")
+            : t("activer_numerotation_auto_titres_1")
         }
       >
         <Hash className="h-3.5 w-3.5" />
@@ -2031,73 +2036,73 @@ function RichToolbar({
       <TbButton
         active={editor.isActive("blockquote")}
         onClick={() => editor.chain().focus().toggleBlockquote().run()}
-        title="Citation"
+        title={t("citation")}
       >
         <Quote className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 6 — Alignement */}
+
       <TbButton
         active={editor.isActive({ textAlign: "left" })}
         onClick={() => editor.chain().focus().setTextAlign("left").run()}
-        title="Aligner à gauche"
+        title={t("aligner_gauche")}
       >
         <AlignLeft className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive({ textAlign: "center" })}
         onClick={() => editor.chain().focus().setTextAlign("center").run()}
-        title="Centrer"
+        title={t("centrer")}
       >
         <AlignCenter className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive({ textAlign: "right" })}
         onClick={() => editor.chain().focus().setTextAlign("right").run()}
-        title="Aligner à droite"
+        title={t("aligner_droite")}
       >
         <AlignRight className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         active={editor.isActive({ textAlign: "justify" })}
         onClick={() => editor.chain().focus().setTextAlign("justify").run()}
-        title="Justifier"
+        title={t("justifier")}
       >
         <AlignJustify className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 7 — Listes + indent / outdent */}
+
       <BulletListDropdown editor={editor} />
       <OrderedListDropdown editor={editor} />
       <TbButton
         active={editor.isActive("taskList")}
         onClick={() => editor.chain().focus().toggleTaskList().run()}
-        title="Cases à cocher"
+        title={t("cases_cocher")}
       >
         <CheckSquare className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         onClick={handleOutdent}
         disabled={!canOutdent}
-        title="Diminuer l'indentation (Maj+Tab)"
+        title={t("diminuer_indentation_maj_tab")}
       >
         <IndentDecrease className="h-3.5 w-3.5" />
       </TbButton>
       <TbButton
         onClick={handleIndent}
         disabled={!canIndent}
-        title="Augmenter l'indentation (Tab)"
+        title={t("augmenter_indentation_tab")}
       >
         <IndentIncrease className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 8 — Insertion (lien / tableau / séparateur / saut de page) */}
+
       <LinkPopover
         editor={editor}
         open={linkPopoverOpen}
@@ -2106,7 +2111,7 @@ function RichToolbar({
       <TablePopover editor={editor} />
       <TbButton
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
-        title="Insérer un séparateur horizontal"
+        title={t("inserer_separateur_horizontal")}
       >
         <Minus className="h-3.5 w-3.5" />
       </TbButton>
@@ -2114,19 +2119,19 @@ function RichToolbar({
         onClick={() => {
           editor.chain().focus().insertContent({ type: "pagebreak" }).run();
         }}
-        title="Saut de page"
+        title={t("saut_page")}
       >
         <ScissorsLineDashed className="h-3.5 w-3.5" />
       </TbButton>
 
       <TbDivider />
 
-      {/* Groupe 9 — Champ dynamique */}
+
       <VariableInsertPopover onPick={onPickVariable} />
 
       <TbDivider />
 
-      {/* Groupe 10 — Sections types */}
+
       <SectionInsertPopover editor={editor} />
     </div>
   );
@@ -2169,7 +2174,7 @@ function TbButton({
         type="button"
         disabled={disabled}
         onMouseDown={(e) => {
-          // Prevent loss of selection
+
           e.preventDefault();
         }}
         onClick={onClick}
@@ -2184,41 +2189,43 @@ function TbButton({
 // ─────────────────────────────────────────────────────────
 //   Dropdown : famille de police
 // ─────────────────────────────────────────────────────────
-const FONT_FAMILIES: Array<{ value: string; label: string; cssStack: string }> = [
-  { value: "default", label: "Par défaut", cssStack: "" },
+const FONT_FAMILIES: Array<{ value: string; labelKey: string; cssStack: string }> = [
+  { value: "default", labelKey: "defaut", cssStack: "" },
   {
     value: "Inter",
-    label: "Inter",
+    labelKey: "inter",
     cssStack: "Inter, system-ui, sans-serif",
   },
   {
     value: "Playfair Display",
-    label: "Playfair Display",
+    labelKey: "playfair_display",
     cssStack: '"Playfair Display", Georgia, serif',
   },
   {
     value: "Georgia",
-    label: "Georgia",
+    labelKey: "georgia",
     cssStack: "Georgia, 'Times New Roman', serif",
   },
   {
     value: "Courier",
-    label: "Courier (monospace)",
+    labelKey: "courier_monospace",
     cssStack:
       "'Courier New', Courier, ui-monospace, SFMono-Regular, Menlo, monospace",
   },
   {
     value: "system-ui",
-    label: "Système",
+    labelKey: "systeme_police",
     cssStack: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
   },
 ];
 
 function FontFamilyDropdown({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const currentValue =
     (editor.getAttributes("textStyle")?.fontFamily as string | undefined) ?? null;
-  // Trouve le label affiché : compare avec cssStack
+
   const currentFamily =
     FONT_FAMILIES.find((f) => f.cssStack === currentValue) ?? FONT_FAMILIES[0];
 
@@ -2238,7 +2245,7 @@ function FontFamilyDropdown({ editor }: { editor: Editor }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="inline-flex items-center gap-1 h-8 px-2 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition text-[11px] font-medium min-w-[100px] max-w-[140px]"
-          title="Famille de police"
+          title={t("famille_police")}
         >
           <Type className="h-3 w-3 shrink-0" />
           <span
@@ -2249,7 +2256,7 @@ function FontFamilyDropdown({ editor }: { editor: Editor }) {
                 : undefined
             }
           >
-            {currentFamily.label}
+            {t(currentFamily.labelKey)}
           </span>
           <ChevronDown className="h-2.5 w-2.5 opacity-60 shrink-0" />
         </button>
@@ -2263,7 +2270,7 @@ function FontFamilyDropdown({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <Type className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Famille de police
+              {t("famille_police")}
             </h4>
           </div>
         </div>
@@ -2280,7 +2287,7 @@ function FontFamilyDropdown({ editor }: { editor: Editor }) {
               )}
               style={f.cssStack ? { fontFamily: f.cssStack } : undefined}
             >
-              <span className="truncate">{f.label}</span>
+              <span className="truncate">{t(f.labelKey)}</span>
               {currentFamily.value === f.value && (
                 <Check className="h-3 w-3 shrink-0 text-[#0F2D52]" />
               )}
@@ -2295,18 +2302,20 @@ function FontFamilyDropdown({ editor }: { editor: Editor }) {
 // ─────────────────────────────────────────────────────────
 //   Dropdown : taille de police
 // ─────────────────────────────────────────────────────────
-const FONT_SIZES: Array<{ value: string; label: string }> = [
-  { value: "", label: "Par défaut" },
-  { value: "9pt", label: "9 pt" },
-  { value: "10pt", label: "10 pt" },
-  { value: "10.5pt", label: "10.5 pt" },
-  { value: "11pt", label: "11 pt" },
-  { value: "12pt", label: "12 pt" },
-  { value: "14pt", label: "14 pt" },
-  { value: "16pt", label: "16 pt" },
+const FONT_SIZES: Array<{ value: string; labelKey: string }> = [
+  { value: "", labelKey: "defaut" },
+  { value: "9pt", labelKey: "9_pt" },
+  { value: "10pt", labelKey: "10_pt" },
+  { value: "10.5pt", labelKey: "10_5_pt" },
+  { value: "11pt", labelKey: "11_pt" },
+  { value: "12pt", labelKey: "12_pt" },
+  { value: "14pt", labelKey: "14_pt" },
+  { value: "16pt", labelKey: "16_pt" },
 ];
 
 function FontSizeDropdown({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const currentValue =
     (editor.getAttributes("textStyle")?.fontSize as string | undefined) ?? "";
@@ -2329,9 +2338,9 @@ function FontSizeDropdown({ editor }: { editor: Editor }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="inline-flex items-center gap-1 h-8 px-2 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition text-[11px] font-medium min-w-[68px]"
-          title="Taille de police"
+          title={t("taille_police")}
         >
-          <span className="truncate">{currentSize.label}</span>
+          <span className="truncate">{t(currentSize.labelKey)}</span>
           <ChevronDown className="h-2.5 w-2.5 opacity-60 shrink-0" />
         </button>
       </PopoverTrigger>
@@ -2342,7 +2351,7 @@ function FontSizeDropdown({ editor }: { editor: Editor }) {
       >
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-3 py-2">
           <h4 className="text-[11px] font-bold uppercase tracking-wider">
-            Taille
+            {t("taille")}
           </h4>
         </div>
         <div className="py-1 max-h-[260px] overflow-y-auto">
@@ -2357,7 +2366,7 @@ function FontSizeDropdown({ editor }: { editor: Editor }) {
                 currentSize.value === s.value && "bg-[#0F2D52]/10 text-[#0F2D52] font-semibold",
               )}
             >
-              <span>{s.label}</span>
+              <span>{t(s.labelKey)}</span>
               {currentSize.value === s.value && (
                 <Check className="h-3 w-3 shrink-0 text-[#0F2D52]" />
               )}
@@ -2374,29 +2383,31 @@ function FontSizeDropdown({ editor }: { editor: Editor }) {
 // ─────────────────────────────────────────────────────────
 const BULLET_STYLE_OPTIONS: Array<{
   value: BulletStyle;
-  label: string;
+  labelKey: string;
   preview: string;
 }> = [
-  { value: "disc", label: "Point plein", preview: "•" },
-  { value: "circle", label: "Cercle", preview: "◦" },
-  { value: "square", label: "Carré", preview: "▪" },
-  { value: "dash", label: "Tiret", preview: "—" },
+  { value: "disc", labelKey: "point_plein", preview: "•" },
+  { value: "circle", labelKey: "cercle", preview: "◦" },
+  { value: "square", labelKey: "carre", preview: "▪" },
+  { value: "dash", labelKey: "tiret", preview: "—" },
 ];
 
 const ORDERED_STYLE_OPTIONS: Array<{
   value: OrderedStyle;
-  label: string;
+  labelKey: string;
   preview: string;
 }> = [
-  { value: "decimal", label: "1, 2, 3", preview: "1." },
-  { value: "lower-alpha", label: "a, b, c", preview: "a." },
-  { value: "upper-alpha", label: "A, B, C", preview: "A." },
-  { value: "lower-roman", label: "i, ii, iii", preview: "i." },
-  { value: "upper-roman", label: "I, II, III", preview: "I." },
-  { value: "multilevel", label: "1, 1.1, 1.1.1 (multi-niveau)", preview: "1.1" },
+  { value: "decimal", labelKey: "lbl_1_2_3", preview: "1." },
+  { value: "lower-alpha", labelKey: "lbl_a_b_c", preview: "a." },
+  { value: "upper-alpha", labelKey: "lbl_a_b_c_2", preview: "A." },
+  { value: "lower-roman", labelKey: "i_ii_iii", preview: "i." },
+  { value: "upper-roman", labelKey: "i_ii_iii_2", preview: "I." },
+  { value: "multilevel", labelKey: "1_1_1_1_1", preview: "1.1" },
 ];
 
 function BulletListDropdown({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const isActive = editor.isActive("bulletList");
   const currentStyle = (editor.getAttributes("bulletList")?.listStyle as
@@ -2407,7 +2418,7 @@ function BulletListDropdown({ editor }: { editor: Editor }) {
     const chain = editor.chain().focus();
     if (!isActive) {
       chain.toggleBulletList().run();
-      // Apres toggle, le node est cree : on applique le style.
+
       editor.chain().focus().setListStyle(style).run();
     } else {
       chain.setListStyle(style).run();
@@ -2425,8 +2436,8 @@ function BulletListDropdown({ editor }: { editor: Editor }) {
             "inline-flex items-center gap-0.5 h-8 px-1.5 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition",
             isActive && "bg-[#0F2D52] text-white hover:bg-[#15406d] hover:text-white",
           )}
-          title="Liste à puces (choix du style)"
-          aria-label="Liste à puces"
+          title={t("liste_puces_choix_style")}
+          aria-label={t("liste_puces")}
         >
           <List className="h-3.5 w-3.5" />
           <ChevronDown className="h-2.5 w-2.5 opacity-70" />
@@ -2441,7 +2452,7 @@ function BulletListDropdown({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <List className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Style de puces
+              {t("style_puces")}
             </h4>
           </div>
         </div>
@@ -2461,7 +2472,7 @@ function BulletListDropdown({ editor }: { editor: Editor }) {
               <span className="inline-flex items-center justify-center w-5 h-5 text-base text-[#0F2D52] font-semibold">
                 {opt.preview}
               </span>
-              <span className="flex-1">{opt.label}</span>
+              <span className="flex-1">{t(opt.labelKey)}</span>
               {isActive && currentStyle === opt.value && (
                 <Check className="h-3 w-3 shrink-0 text-[#0F2D52]" />
               )}
@@ -2474,6 +2485,8 @@ function BulletListDropdown({ editor }: { editor: Editor }) {
 }
 
 function OrderedListDropdown({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const isActive = editor.isActive("orderedList");
   const currentStyle = (editor.getAttributes("orderedList")?.listStyle as
@@ -2501,8 +2514,8 @@ function OrderedListDropdown({ editor }: { editor: Editor }) {
             "inline-flex items-center gap-0.5 h-8 px-1.5 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition",
             isActive && "bg-[#0F2D52] text-white hover:bg-[#15406d] hover:text-white",
           )}
-          title="Liste numérotée (choix du style)"
-          aria-label="Liste numérotée"
+          title={t("liste_numerotee_choix_style")}
+          aria-label={t("liste_numerotee")}
         >
           <ListOrdered className="h-3.5 w-3.5" />
           <ChevronDown className="h-2.5 w-2.5 opacity-70" />
@@ -2517,7 +2530,7 @@ function OrderedListDropdown({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <ListOrdered className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Style de numérotation
+              {t("style_numerotation")}
             </h4>
           </div>
         </div>
@@ -2537,7 +2550,7 @@ function OrderedListDropdown({ editor }: { editor: Editor }) {
               <span className="inline-flex items-center justify-center w-7 h-5 text-[11px] text-[#0F2D52] font-semibold tabular-nums">
                 {opt.preview}
               </span>
-              <span className="flex-1">{opt.label}</span>
+              <span className="flex-1">{t(opt.labelKey)}</span>
               {isActive && currentStyle === opt.value && (
                 <Check className="h-3 w-3 shrink-0 text-[#0F2D52]" />
               )}
@@ -2553,6 +2566,8 @@ function OrderedListDropdown({ editor }: { editor: Editor }) {
 //   Popover : couleur du texte
 // ─────────────────────────────────────────────────────────
 function TextColorPopover({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const current =
     (editor.getAttributes("textStyle")?.color as string | undefined) ?? null;
@@ -2566,8 +2581,8 @@ function TextColorPopover({ editor }: { editor: Editor }) {
             "inline-flex items-center justify-center h-8 min-w-8 px-2 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition relative",
             current && "bg-[#0F2D52]/10"
           )}
-          title="Couleur du texte"
-          aria-label="Couleur du texte"
+          title={t("couleur_texte")}
+          aria-label={t("couleur_texte")}
         >
           <Palette className="h-3.5 w-3.5" />
           <span
@@ -2585,13 +2600,13 @@ function TextColorPopover({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <Palette className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Couleur du texte
+              {t("couleur_texte")}
             </h4>
           </div>
         </div>
         <div className="p-2 grid grid-cols-4 gap-1.5">
           {TEXT_COLORS.map((c) => (
-            <ActionTooltip key={c.value} label={c.label}>
+            <ActionTooltip key={c.value} label={t(c.labelKey)}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
@@ -2604,7 +2619,7 @@ function TextColorPopover({ editor }: { editor: Editor }) {
                   current === c.value && "ring-2 ring-[#0F2D52] ring-offset-1"
                 )}
                 style={{ background: c.value }}
-                aria-label={c.label}
+                aria-label={t(c.labelKey)}
               />
             </ActionTooltip>
           ))}
@@ -2619,7 +2634,7 @@ function TextColorPopover({ editor }: { editor: Editor }) {
             }}
             className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-muted/60 text-muted-foreground transition"
           >
-            Réinitialiser la couleur
+            {t("reinitialiser_couleur")}
           </button>
         </div>
       </PopoverContent>
@@ -2631,6 +2646,8 @@ function TextColorPopover({ editor }: { editor: Editor }) {
 //   Popover : surligneur
 // ─────────────────────────────────────────────────────────
 function HighlightColorPopover({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const current =
     (editor.getAttributes("highlight")?.color as string | undefined) ?? null;
@@ -2644,8 +2661,8 @@ function HighlightColorPopover({ editor }: { editor: Editor }) {
             "inline-flex items-center justify-center h-8 min-w-8 px-2 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition relative",
             editor.isActive("highlight") && "bg-[#0F2D52]/10"
           )}
-          title="Surligneur"
-          aria-label="Surligneur"
+          title={t("surligneur")}
+          aria-label={t("surligneur")}
         >
           <Highlighter className="h-3.5 w-3.5" />
           <span
@@ -2663,13 +2680,13 @@ function HighlightColorPopover({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <Highlighter className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Surligneur
+              {t("surligneur")}
             </h4>
           </div>
         </div>
         <div className="p-2 grid grid-cols-5 gap-1.5">
           {HIGHLIGHT_COLORS.map((c) => (
-            <ActionTooltip key={c.value} label={c.label}>
+            <ActionTooltip key={c.value} label={t(c.labelKey)}>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
@@ -2682,7 +2699,7 @@ function HighlightColorPopover({ editor }: { editor: Editor }) {
                   current === c.value && "ring-2 ring-[#0F2D52] ring-offset-1"
                 )}
                 style={{ background: c.value }}
-                aria-label={c.label}
+                aria-label={t(c.labelKey)}
               />
             </ActionTooltip>
           ))}
@@ -2697,7 +2714,7 @@ function HighlightColorPopover({ editor }: { editor: Editor }) {
             }}
             className="w-full text-left text-[11px] px-2 py-1 rounded hover:bg-muted/60 text-muted-foreground transition"
           >
-            Retirer le surligneur
+            {t("retirer_surligneur")}
           </button>
         </div>
       </PopoverContent>
@@ -2717,6 +2734,8 @@ function LinkPopover({
   open?: boolean;
   onOpenChange?: (next: boolean) => void;
 }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [openInt, setOpenInt] = useState(false);
   const open = openExt !== undefined ? openExt : openInt;
   const setOpen = (next: boolean) => {
@@ -2759,8 +2778,8 @@ function LinkPopover({
             editor.isActive("link") &&
               "bg-[#0F2D52] text-white hover:bg-[#15406d] hover:text-white"
           )}
-          title="Insérer un lien"
-          aria-label="Insérer un lien"
+          title={t("inserer_lien")}
+          aria-label={t("inserer_lien")}
         >
           <Link2 className="h-3.5 w-3.5" />
         </button>
@@ -2774,7 +2793,7 @@ function LinkPopover({
           <div className="flex items-center gap-2">
             <Link2 className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Lien hypertexte
+              {t("lien_hypertexte")}
             </h4>
           </div>
         </div>
@@ -2802,7 +2821,7 @@ function LinkPopover({
                 }}
                 className="text-[11px] text-red-600 hover:text-red-800 font-medium transition"
               >
-                Retirer le lien
+                {t("retirer_lien")}
               </button>
             ) : (
               <span />
@@ -2812,7 +2831,7 @@ function LinkPopover({
               onClick={apply}
               className="h-7 px-3 rounded bg-[#0F2D52] hover:bg-[#15406d] text-white text-[11px] font-semibold transition"
             >
-              Appliquer
+              {t("appliquer")}
             </button>
           </div>
         </div>
@@ -2825,6 +2844,8 @@ function LinkPopover({
 //   Popover : insertion d'un tableau (dimensions au choix)
 // ─────────────────────────────────────────────────────────
 function TablePopover({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
 
   const insert = (rows: number, cols: number) => {
@@ -2845,8 +2866,8 @@ function TablePopover({ editor }: { editor: Editor }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="inline-flex items-center justify-center h-8 min-w-8 px-2 rounded text-foreground/80 hover:bg-accent hover:text-foreground transition"
-          title="Insérer un tableau"
-          aria-label="Insérer un tableau"
+          title={t("inserer_tableau")}
+          aria-label={t("inserer_tableau")}
         >
           <TableIcon className="h-3.5 w-3.5" />
         </button>
@@ -2860,7 +2881,7 @@ function TablePopover({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <TableIcon className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Insérer un tableau
+              {t("inserer_tableau")}
             </h4>
           </div>
         </div>
@@ -2887,7 +2908,7 @@ function TablePopover({ editor }: { editor: Editor }) {
           <>
             <div className="border-t px-3 py-1.5">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Actions sur le tableau
+                {t("actions_tableau")}
               </p>
             </div>
             <div className="grid grid-cols-2 gap-1 p-2">
@@ -2899,7 +2920,7 @@ function TablePopover({ editor }: { editor: Editor }) {
                 }}
                 className="px-2 py-1 rounded hover:bg-blue-50 text-[11px] text-foreground transition"
               >
-                + Ligne
+                {t("ligne")}
               </button>
               <button
                 type="button"
@@ -2909,7 +2930,7 @@ function TablePopover({ editor }: { editor: Editor }) {
                 }}
                 className="px-2 py-1 rounded hover:bg-blue-50 text-[11px] text-foreground transition"
               >
-                + Colonne
+                {t("colonne")}
               </button>
               <button
                 type="button"
@@ -2919,7 +2940,7 @@ function TablePopover({ editor }: { editor: Editor }) {
                 }}
                 className="px-2 py-1 rounded hover:bg-red-50 text-[11px] text-red-700 transition"
               >
-                − Ligne
+                {t("ligne_2")}
               </button>
               <button
                 type="button"
@@ -2929,7 +2950,7 @@ function TablePopover({ editor }: { editor: Editor }) {
                 }}
                 className="px-2 py-1 rounded hover:bg-red-50 text-[11px] text-red-700 transition"
               >
-                − Colonne
+                {t("colonne_2")}
               </button>
               <button
                 type="button"
@@ -2939,7 +2960,7 @@ function TablePopover({ editor }: { editor: Editor }) {
                 }}
                 className="col-span-2 px-2 py-1 rounded hover:bg-red-50 text-[11px] text-red-700 font-medium transition"
               >
-                Supprimer le tableau
+                {t("supprimer_tableau")}
               </button>
             </div>
           </>
@@ -2954,14 +2975,14 @@ function TablePopover({ editor }: { editor: Editor }) {
 // ─────────────────────────────────────────────────────────
 const SECTION_TEMPLATES: Array<{
   key: string;
-  label: string;
-  description: string;
+  labelKey: string;
+  descriptionKey: string;
   markdown: string;
 }> = [
   {
     key: "preamble",
-    label: "Préambule contrat",
-    description: "Bloc d'introduction standard (entre les parties, ET, conviennent)",
+    labelKey: "preambule_contrat",
+    descriptionKey: "bloc_introduction_standard_entre_parties",
     markdown: `**Entre les parties soussignées :**
 
 {{company.fullName}}, personne morale légalement constituée ayant son siège social au {{company.address}}, ci-après désignée « l'Employeur »,
@@ -2974,8 +2995,8 @@ ET
   },
   {
     key: "signatures",
-    label: "Bloc signatures",
-    description: "Section finale avec boîtes signature employé + employeur",
+    labelKey: "bloc_signatures",
+    descriptionKey: "section_finale_boites_signature_employe",
     markdown: `## Signatures
 
 {{signature.employee}}
@@ -2984,8 +3005,8 @@ ET
   },
   {
     key: "compliance",
-    label: "Section Conformité (QC)",
-    description: "Références légales Code civil QC, LNT, LSST, Loi 25, Loi 96",
+    labelKey: "section_conformite_qc",
+    descriptionKey: "references_legales_code_civil_qc",
     markdown: `## Conformité légale
 
 Le présent document est rédigé conformément aux lois en vigueur au Québec, notamment :
@@ -2998,16 +3019,16 @@ Le présent document est rédigé conformément aux lois en vigueur au Québec, 
   },
   {
     key: "section",
-    label: "Section numérotée",
-    description: "Squelette « ## X. Titre » avec paragraphe vide à compléter",
+    labelKey: "section_numerotee",
+    descriptionKey: "squelette_x_titre_paragraphe_vide",
     markdown: `## X. Titre de section
 
 Contenu à compléter.`,
   },
   {
     key: "table",
-    label: "Tableau (3 colonnes)",
-    description: "Tableau markdown 3 colonnes prêt à éditer dans la source",
+    labelKey: "tableau_3_colonnes",
+    descriptionKey: "tableau_markdown_3_colonnes_pret",
     markdown: `| Colonne 1 | Colonne 2 | Colonne 3 |
 |-----------|-----------|-----------|
 | Cellule A | Cellule B | Cellule C |
@@ -3016,11 +3037,13 @@ Contenu à compléter.`,
 ];
 
 function SectionInsertPopover({ editor }: { editor: Editor }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
 
   const insert = (md: string) => {
-    // Parse le markdown en blocs ProseMirror puis insere au curseur.
-    const doc = parseMarkdownToDoc(md);
+
+    const doc = parseMarkdownToDoc(md, tv);
     const content = (doc.content ?? []) as unknown as Parameters<
       ReturnType<Editor["chain"]>["insertContent"]
     >[0];
@@ -3035,10 +3058,10 @@ function SectionInsertPopover({ editor }: { editor: Editor }) {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="inline-flex items-center gap-1 rounded h-7 px-2 text-foreground/80 hover:bg-[#0F2D52]/10 hover:text-[#0F2D52] transition text-[11px] font-medium"
-          title="Inserer une section type"
+          title={t("inserer_section_type")}
         >
           <LayoutTemplate className="h-3.5 w-3.5" />
-          Section
+          {t("section")}
         </button>
       </PopoverTrigger>
       <PopoverContent
@@ -3050,7 +3073,7 @@ function SectionInsertPopover({ editor }: { editor: Editor }) {
           <div className="flex items-center gap-2">
             <LayoutTemplate className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Inserer une section
+              {t("inserer_section")}
             </h4>
           </div>
         </div>
@@ -3063,10 +3086,10 @@ function SectionInsertPopover({ editor }: { editor: Editor }) {
               className="w-full text-left px-3 py-2 hover:bg-blue-50 transition border-b last:border-b-0"
             >
               <p className="text-[12px] font-semibold text-foreground">
-                {s.label}
+                {t(s.labelKey)}
               </p>
               <p className="text-[10px] text-muted-foreground italic mt-0.5">
-                {s.description}
+                {t(s.descriptionKey)}
               </p>
             </button>
           ))}
@@ -3084,9 +3107,11 @@ function VariableInsertPopover({
 }: {
   onPick: (def: VariableDef) => void;
 }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  // Accordion : un SEUL groupe ouvert a la fois (null = tous fermes par defaut).
+
   const [openSource, setOpenSource] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
@@ -3095,7 +3120,7 @@ function VariableInsertPopover({
     return VARIABLE_REGISTRY.filter(
       (v) =>
         v.key.toLowerCase().includes(q) ||
-        v.label.toLowerCase().includes(q) ||
+        tv(v.labelKey).toLowerCase().includes(q) ||
         v.example.toLowerCase().includes(q)
     );
   }, [query]);
@@ -3117,10 +3142,10 @@ function VariableInsertPopover({
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           className="inline-flex items-center gap-1 rounded h-7 px-2 ml-auto bg-[#0F2D52] hover:bg-[#1a3a66] text-white text-[11px] font-medium transition"
-          title="Inserer un champ dynamique"
+          title={t("inserer_champ_dynamique")}
         >
           <Plus className="h-3 w-3" />
-          Inserer un champ
+          {t("inserer_champ")}
           <Sparkles className="h-3 w-3 opacity-80" />
         </button>
       </PopoverTrigger>
@@ -3129,12 +3154,12 @@ function VariableInsertPopover({
         sideOffset={6}
         className="w-[320px] p-0 overflow-hidden"
       >
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-3 py-2.5 shrink-0">
           <div className="flex items-center gap-2 mb-2">
             <Sparkles className="h-3.5 w-3.5" />
             <h4 className="text-[11px] font-bold uppercase tracking-wider">
-              Inserer un champ
+              {t("inserer_champ")}
             </h4>
           </div>
           <div className="relative">
@@ -3143,7 +3168,7 @@ function VariableInsertPopover({
               autoFocus
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Rechercher…"
+              placeholder={t("rechercher")}
               className="pl-8 h-7 text-xs bg-white/10 text-white border-white/20 placeholder:text-white/50 focus-visible:ring-white/40"
             />
           </div>
@@ -3162,8 +3187,8 @@ function VariableInsertPopover({
             overscrollBehavior: "contain",
           }}
           onWheel={(e) => {
-            // Empeche le wheel de propager au Dialog parent qui pourrait avoir
-            // scroll-lock (Radix Dialog locke le body scroll quand ouvert).
+
+
             e.stopPropagation();
           }}
           onTouchMove={(e) => e.stopPropagation()}
@@ -3172,8 +3197,8 @@ function VariableInsertPopover({
             const items = grouped.get(section.source) ?? [];
             if (items.length === 0 && query.trim()) return null;
             const Icon = SOURCE_ICONS[section.source];
-            // Si recherche active : tous les groupes auto-ouverts pour voir matches.
-            // Sinon : accordion (un seul ouvert).
+
+
             const isOpen = query.trim()
               ? true
               : openSource === section.source;
@@ -3182,8 +3207,8 @@ function VariableInsertPopover({
                 <button
                   type="button"
                   onClick={() =>
-                    // Accordion : clic ouvre ce groupe et ferme les autres
-                    // (toggle si meme groupe deja ouvert).
+
+
                     setOpenSource((cur) =>
                       cur === section.source ? null : section.source,
                     )
@@ -3197,7 +3222,7 @@ function VariableInsertPopover({
                   )}
                   <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />
                   <span className="text-[11px] font-semibold text-foreground flex-1">
-                    {section.label}
+                    {tv(section.labelKey)}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
                     {items.length}
@@ -3217,7 +3242,7 @@ function VariableInsertPopover({
                         className="w-full text-left rounded px-2 py-1 hover:bg-blue-50 focus:bg-blue-100 focus:outline-none transition"
                       >
                         <span className="text-[12px] font-semibold text-foreground block truncate">
-                          {v.label}
+                          {tv(v.labelKey)}
                         </span>
                         {v.example && (
                           <span className="text-[10px] text-muted-foreground italic block truncate">
@@ -3235,16 +3260,16 @@ function VariableInsertPopover({
             <div className="px-3 py-6 text-center">
               <Search className="h-5 w-5 mx-auto text-muted-foreground/40 mb-2" />
               <p className="text-[11px] text-muted-foreground">
-                Aucun champ ne correspond a votre recherche.
+                {t("aucun_champ_ne_correspond_recherche")}
               </p>
             </div>
           )}
         </div>
 
-        {/* Footer */}
+
         <div className="px-3 py-1.5 border-t bg-muted/20 shrink-0">
           <p className="text-[10px] text-muted-foreground leading-snug">
-            Le champ sera rempli automatiquement avec les vraies donnees.
+            {t("champ_sera_rempli_automatiquement_vraies")}
           </p>
         </div>
       </PopoverContent>
@@ -3272,6 +3297,8 @@ function PillActionMenu({
   onDelete: () => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.message_templates");
+  const tv = useTranslations("admin.library");
   const tc = useTranslations("common");
   const [showReplace, setShowReplace] = useState(false);
   const [query, setQuery] = useState("");
@@ -3282,7 +3309,7 @@ function PillActionMenu({
     return VARIABLE_REGISTRY.filter(
       (v) =>
         v.key.toLowerCase().includes(q) ||
-        v.label.toLowerCase().includes(q)
+        tv(v.labelKey).toLowerCase().includes(q)
     );
   }, [query]);
 
@@ -3297,11 +3324,11 @@ function PillActionMenu({
         top: y,
       }}
     >
-      {/* Header navy */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-3 py-2 flex items-center justify-between gap-2">
         <div className="min-w-0">
           <p className="text-[10px] uppercase tracking-wider text-white/70 font-semibold">
-            {isKnown ? "Champ dynamique" : "Champ inconnu"}
+            {isKnown ? t("champ_dynamique") : t("champ_inconnu")}
           </p>
           <p className="text-xs font-semibold truncate">{currentLabel}</p>
         </div>
@@ -3323,7 +3350,7 @@ function PillActionMenu({
             className="w-full text-left px-3 py-2 hover:bg-muted/40 text-xs font-medium text-foreground flex items-center gap-2"
           >
             <Plus className="h-3.5 w-3.5 text-[#0F2D52]" />
-            Remplacer par un autre champ…
+            {t("remplacer_autre_champ")}
           </button>
           <button
             type="button"
@@ -3331,7 +3358,7 @@ function PillActionMenu({
             className="w-full text-left px-3 py-2 hover:bg-red-50 text-xs font-medium text-red-700 flex items-center gap-2"
           >
             <Trash2 className="h-3.5 w-3.5" />
-            Supprimer ce champ
+            {t("supprimer_champ")}
           </button>
         </div>
       ) : (
@@ -3343,7 +3370,7 @@ function PillActionMenu({
                 autoFocus
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Rechercher…"
+                placeholder={t("rechercher")}
                 className="pl-7 h-7 text-xs"
               />
             </div>
@@ -3351,7 +3378,7 @@ function PillActionMenu({
           <div className="overflow-y-auto py-1">
             {filtered.length === 0 ? (
               <p className="px-3 py-3 text-[11px] text-muted-foreground italic text-center">
-                Aucun resultat.
+                {t("aucun_resultat")}
               </p>
             ) : (
               filtered.slice(0, 30).map((v) => (
@@ -3362,7 +3389,7 @@ function PillActionMenu({
                   className="w-full text-left px-3 py-1.5 hover:bg-blue-50 transition"
                 >
                   <span className="text-[12px] font-semibold text-foreground block truncate">
-                    {v.label}
+                    {tv(v.labelKey)}
                   </span>
                   {v.example && (
                     <span className="text-[10px] text-muted-foreground italic block truncate">

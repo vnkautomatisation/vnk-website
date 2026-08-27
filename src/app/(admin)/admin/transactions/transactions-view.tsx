@@ -73,13 +73,13 @@ type AdminOption = { id: number; fullName: string | null; email: string };
 
 type StatusFilter = "all" | "succeeded" | "failed" | "refunded" | "to_reconcile" | "reconciled" | "exported";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Toutes" },
-  { key: "to_reconcile", label: "À vérifier" },
-  { key: "reconciled", label: "Confirmées reçues" },
-  { key: "exported", label: "Exportées" },
-  { key: "failed", label: "Échouées" },
-  { key: "refunded", label: "Remboursées" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "toutes" },
+  { key: "to_reconcile", labelKey: "verifier" },
+  { key: "reconciled", labelKey: "confirmees_recues" },
+  { key: "exported", labelKey: "exportees" },
+  { key: "failed", labelKey: "echouees" },
+  { key: "refunded", labelKey: "remboursees" },
 ];
 
 const CATEGORIES = [
@@ -110,6 +110,7 @@ export function TransactionsView({
     count: number;
   };
 }) {
+  const t = useTranslations("admin.transactions");
   const tc = useTranslations("common");
   const router = useRouter();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -124,7 +125,7 @@ export function TransactionsView({
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -173,7 +174,7 @@ export function TransactionsView({
     return result;
   }, [payments, statusFilter, methodFilter, clientFilter, accountantFilter, dateFrom, dateTo, searchQuery]);
 
-  // Sélection
+
   const allSelected = filtered.length > 0 && filtered.every((p) => selectedIds.has(p.id));
   const toggleAll = () => {
     if (allSelected) setSelectedIds(new Set());
@@ -199,14 +200,14 @@ export function TransactionsView({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
       const data = await res.json();
       toast.success(`${data.count} paiement(s) mis à jour`);
       setSelectedIds(new Set());
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setBulkBusy(false);
     }
@@ -223,9 +224,9 @@ export function TransactionsView({
   };
 
   const accountingStatusBadge = (p: Payment) => {
-    if (p.exportedAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">Exporté</span>;
-    if (p.reconciledAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">Confirmé reçu</span>;
-    if (p.status === "succeeded" || p.status === "paid") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">À vérifier</span>;
+    if (p.exportedAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700">{t("exporte")}</span>;
+    if (p.reconciledAt) return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">{t("confirme_recu")}</span>;
+    if (p.status === "succeeded" || p.status === "paid") return <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-100 text-amber-700">{t("verifier")}</span>;
     return <span className="text-[10px] text-muted-foreground">—</span>;
   };
 
@@ -233,7 +234,7 @@ export function TransactionsView({
     {
       key: "select",
       header: (
-        <button onClick={toggleAll} className="flex items-center" title={allSelected ? "Tout désélectionner" : "Tout sélectionner"}>
+        <button onClick={toggleAll} className="flex items-center" title={allSelected ? t("tout_deselectionner") : t("tout_selectionner")}>
           {allSelected ? <CheckSquare className="h-3.5 w-3.5" /> : <Square className="h-3.5 w-3.5" />}
         </button>
       ),
@@ -245,14 +246,14 @@ export function TransactionsView({
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => formatDate(new Date(r.paidAt ?? r.createdAt)),
       sortable: true,
       sortBy: (r) => r.paidAt ?? r.createdAt,
     },
     {
       key: "client",
-      header: "Client",
+      header: t("client"),
       accessor: (r) => (
         <div className="min-w-0">
           <div className="font-medium text-sm truncate">{r.clientName}</div>
@@ -264,31 +265,31 @@ export function TransactionsView({
     },
     {
       key: "invoice",
-      header: "Facture",
+      header: t("facture"),
       accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>,
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (r) => <span className="font-semibold">{formatCurrency(r.amount, (r.currency || "CAD").toUpperCase())}</span>,
       sortable: true,
       sortBy: (r) => r.amount,
     },
     {
       key: "method",
-      header: "Méthode",
+      header: t("methode"),
       accessor: (r) => <span className="text-xs capitalize">{r.paymentMethod ?? "—"}</span>,
       hiddenOnMobile: true,
     },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     {
       key: "accounting",
-      header: "Compta",
+      header: t("compta"),
       accessor: (r) => accountingStatusBadge(r),
     },
     {
       key: "accountant",
-      header: "Comptable",
+      header: t("comptable"),
       accessor: (r) => r.assignedAccountantName ? (
         <span className="text-xs">{r.assignedAccountantName}</span>
       ) : <span className="text-xs text-muted-foreground italic">—</span>,
@@ -315,15 +316,15 @@ export function TransactionsView({
     setSearchQuery("");
   };
 
-  // Totaux filtrés (changent selon les filtres pour aider comptable à voir les sous-totaux)
+
   const filteredTotalPaid = filtered.filter((p) => p.status === "succeeded" || p.status === "paid").reduce((s, p) => s + p.amount, 0);
   const filteredTotalRefunded = filtered.filter((p) => p.status === "refunded").reduce((s, p) => s + p.amount, 0);
   const filteredNet = filteredTotalPaid - filteredTotalRefunded;
 
-  // Sticky header : KPI strip + filtres + tabs status (passé au DataTable)
+
   const stickyHeader = (
     <div className="space-y-2">
-      {/* Tabs status */}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="flex bg-muted rounded-md p-0.5 flex-wrap">
           {STATUS_TABS.map((tab) => (
@@ -335,60 +336,59 @@ export function TransactionsView({
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground",
               )}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
         <Button variant="outline" size="sm" onClick={() => setShowAdvanced(!showAdvanced)} className="h-8 text-xs gap-1">
-          <Filter className="h-3 w-3" />Filtres
+          <Filter className="h-3 w-3" />{t("filtres")}
         </Button>
         {(statusFilter !== "all" || methodFilter !== "all" || clientFilter !== "all" || accountantFilter !== "all" || dateFrom || dateTo || searchQuery) && (
           <button onClick={clearFilters} className="text-xs text-muted-foreground hover:text-foreground">
-            Effacer filtres
+            {t("effacer_filtres")}
           </button>
         )}
       </div>
 
-      {/* Filtres avancés repliables */}
+
       {showAdvanced && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-2 p-2.5 rounded-md border bg-muted/30">
           <Select value={methodFilter} onValueChange={setMethodFilter}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Méthode" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("methode")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes méthodes</SelectItem>
+              <SelectItem value="all">{t("toutes_methodes")}</SelectItem>
               {methods.map((m) => <SelectItem key={m} value={m} className="capitalize">{m}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={clientFilter} onValueChange={setClientFilter}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Client" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("client")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous clients</SelectItem>
+              <SelectItem value="all">{t("tous_clients")}</SelectItem>
               {clients.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)}>{c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}</SelectItem>
               ))}
             </SelectContent>
           </Select>
           <Select value={accountantFilter} onValueChange={setAccountantFilter}>
-            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Comptable" /></SelectTrigger>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={t("comptable")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous comptables</SelectItem>
-              <SelectItem value="none">Non assignés</SelectItem>
+              <SelectItem value="all">{t("tous_comptables")}</SelectItem>
+              <SelectItem value="none">{t("non_assignes")}</SelectItem>
               {accountants.map((a) => <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" placeholder="Du" />
-          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" placeholder="Au" />
+          <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" placeholder={t("du")} />
+          <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" placeholder={t("au")} />
         </div>
       )}
 
-      {/* Bulk actions bar — visible uniquement si sélection */}
+
       {selectedIds.size > 0 && (
         <div className="bg-[#0F2D52] text-white rounded-md p-2 flex items-center gap-2 flex-wrap shadow-md">
           <span className="text-sm font-medium px-2">{selectedIds.size} sélectionnée(s)</span>
           <div className="flex-1" />
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy} onClick={() => bulkAction("reconcile")}>
-            <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
-          </Button>
+            <CheckCircle2 className="h-3 w-3 mr-1" />{t("transactions_view_confirmer_recus")}</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy}>
@@ -402,14 +402,13 @@ export function TransactionsView({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => bulkAction("assign_accountant", { accountantId: null })}>Désassigner</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => bulkAction("assign_accountant", { accountantId: null })}>{t("desassigner")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy}>
-                <MoreHorizontal className="h-3 w-3 mr-1" />Catégoriser
-              </Button>
+                <MoreHorizontal className="h-3 w-3 mr-1" />{t("transactions_view_categoriser")}</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
               {CATEGORIES.map((c) => (
@@ -418,7 +417,7 @@ export function TransactionsView({
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => bulkAction("set_category", { category: null })}>Effacer catégorie</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => bulkAction("set_category", { category: null })}>{t("effacer_categorie")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
@@ -431,21 +430,21 @@ export function TransactionsView({
 
   return (
     <div className="space-y-4">
-      {/* Hero — scrolle away quand on descend */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h1 className="text-xl font-bold flex items-center gap-2"><CreditCard className="h-5 w-5" />Transactions</h1>
+            <h1 className="text-xl font-bold flex items-center gap-2"><CreditCard className="h-5 w-5" />{t("transactions")}</h1>
             <p className="text-white/70 text-xs mt-0.5">
               {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {kpis.toReconcileCount} à vérifier
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/finance"><TrendingUp className="h-3.5 w-3.5 mr-1.5" />Tableau de bord</Link>
+              <Link href="/admin/finance"><TrendingUp className="h-3.5 w-3.5 mr-1.5" />{t("tableau_bord")}</Link>
             </Button>
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/tax-declarations"><FileText className="h-3.5 w-3.5 mr-1.5" />Rapports fiscaux</Link>
+              <Link href="/admin/tax-declarations"><FileText className="h-3.5 w-3.5 mr-1.5" />{t("rapports_fiscaux")}</Link>
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -454,7 +453,7 @@ export function TransactionsView({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Format comptable</DropdownMenuLabel>
+                <DropdownMenuLabel>{t("format_comptable")}</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => exportComptable("quickbooks")}>
                   <FileSpreadsheet className="h-3.5 w-3.5 mr-2" />QuickBooks
                 </DropdownMenuItem>
@@ -474,32 +473,32 @@ export function TransactionsView({
         </div>
       </div>
 
-      {/* Sentinel — détecte fin du Hero */}
+
       <div ref={sentinelRef} aria-hidden className="h-px -mt-1" />
 
-      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <CreditCard className="h-4 w-4" />
-              Transactions
+              {t("transactions")}
             </span>
             <span className="font-semibold">{filtered.length} affichées</span>
-            <span className="text-muted-foreground">Encaissé <span className="font-semibold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span></span>
-            <span className="text-muted-foreground">Remboursé <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span></span>
-            <span className="text-muted-foreground">Net <span className="font-semibold text-emerald-700">{formatCurrency(filteredNet)}</span></span>
+            <span className="text-muted-foreground">{t("encaisse")} <span className="font-semibold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span></span>
+            <span className="text-muted-foreground">{t("rembourse")} <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span></span>
+            <span className="text-muted-foreground">{t("net")} <span className="font-semibold text-emerald-700">{formatCurrency(filteredNet)}</span></span>
             <span className="ml-auto text-muted-foreground">{kpis.toReconcileCount} à vérifier</span>
           </div>
         </div>
       )}
 
-      {/* Tableau avec stickyHeader contenant tabs + filtres + bulk actions */}
+
       <DataTable
         data={filtered}
         columns={columns}
         getRowId={(r) => r.id}
-        searchPlaceholder="Client, facture, Stripe ID, notes..."
+        searchPlaceholder={t("client_facture_stripe_id_notes")}
         exportFilename="transactions"
         storageKey="admin-transactions"
         stickyHeader={stickyHeader}

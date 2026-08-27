@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
   AlertCircle,
@@ -34,10 +35,10 @@ const TYPE_CONFIG: Record<
 
 type Filter = "all" | "unread";
 
-function formatTime(iso: string): string {
+function formatTime(iso: string, justNow: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "A l'instant";
+  if (min < 1) return justNow;
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
@@ -58,6 +59,7 @@ export function NotificationCenter({
   onMarkOneRead: (id: number) => void;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
 
@@ -68,10 +70,10 @@ export function NotificationCenter({
 
   return (
     <div className="absolute right-0 top-full mt-2 w-[380px] max-w-[calc(100vw-2rem)] bg-background border rounded-xl shadow-lg z-50 overflow-hidden animate-in fade-in-0 slide-in-from-top-2 duration-200">
-      {/* Header */}
+
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <div className="flex items-center gap-2">
-          <h3 className="text-sm font-semibold">Notifications</h3>
+          <h3 className="text-sm font-semibold">{t("notifications")}</h3>
           {unreadCount > 0 && (
             <span className="h-5 min-w-5 px-1.5 rounded-full bg-red-500 text-[10px] font-bold text-white flex items-center justify-center">
               {unreadCount}
@@ -86,12 +88,12 @@ export function NotificationCenter({
             className="text-xs h-7"
           >
             <CheckCheck className="h-3.5 w-3.5 mr-1" />
-            Tout marquer lu
+            {t("tout_marquer_lu")}
           </Button>
         )}
       </div>
 
-      {/* Filters */}
+
       <div className="flex gap-1 px-4 py-2 border-b">
         {(["all", "unread"] as const).map((f) => (
           <button
@@ -104,16 +106,16 @@ export function NotificationCenter({
                 : "text-muted-foreground hover:bg-muted"
             )}
           >
-            {f === "all" ? "Toutes" : "Non lues"}
+            {f === "all" ? t("toutes") : t("non_lues")}
           </button>
         ))}
       </div>
 
-      {/* List */}
+
       <div className="max-h-[400px] overflow-y-auto">
         {filtered.length === 0 ? (
           <div className="py-10 text-center text-sm text-muted-foreground">
-            Aucune notification
+            {t("aucune_notification")}
           </div>
         ) : (
           filtered.map((n) => {
@@ -152,7 +154,7 @@ export function NotificationCenter({
                       </p>
                     )}
                     <p className="text-[10px] text-muted-foreground mt-1">
-                      {formatTime(n.createdAt)}
+                      {formatTime(n.createdAt, t("instant"))}
                     </p>
                   </div>
                 </div>

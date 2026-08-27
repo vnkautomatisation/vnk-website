@@ -41,6 +41,7 @@ type EmployeeItem = {
 export function StartDraftDialog({
   open, templateId, templateTitle, onClose, onCreated,
 }: StartDraftDialogProps) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [employees, setEmployees] = useState<EmployeeItem[]>([]);
   const [search, setSearch] = useState("");
@@ -48,7 +49,7 @@ export function StartDraftDialog({
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  // Reset + load au open
+
   useEffect(() => {
     if (!open) return;
     setSearch("");
@@ -96,7 +97,7 @@ export function StartDraftDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-base flex items-center gap-2">
               <ClipboardList className="h-4 w-4" />
-              Preparer un document
+              {t("preparer_document")}
             </DialogTitle>
             <p className="text-white/80 text-xs mt-1 truncate">
               Modele : <span className="font-semibold text-white">{templateTitle}</span>
@@ -110,7 +111,7 @@ export function StartDraftDialog({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un employe…"
+              placeholder={t("rechercher_employe")}
               className="pl-8 h-9 text-sm"
             />
           </div>
@@ -124,7 +125,7 @@ export function StartDraftDialog({
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <User className="h-10 w-10 text-muted-foreground/40 mb-2" />
-              <p className="text-sm text-muted-foreground">Aucun employe trouve</p>
+              <p className="text-sm text-muted-foreground">{t("aucun_employe_trouve")}</p>
             </div>
           ) : (
             <ul className="space-y-1">
@@ -144,11 +145,11 @@ export function StartDraftDialog({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium text-foreground truncate">
-                        {e.fullName ?? "Sans nom"}
+                        {e.fullName ?? t("sans_nom")}
                       </div>
                       <div className="text-[11px] text-muted-foreground truncate">
                         {[e.position, e.department].filter(Boolean).join(" · ")
-                          || <span className="italic">Aucun poste ni departement</span>}
+                          || <span className="italic">{t("aucun_poste_ni_departement")}</span>}
                       </div>
                     </div>
                     {selectedId === e.id && (

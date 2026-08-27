@@ -2,6 +2,7 @@
 // PATCH /api/expenses/[id] — mettre a jour
 // DELETE /api/expenses/[id] — supprimer
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -23,15 +24,16 @@ const updateSchema = z.object({
     if (!s) return true;
     const d = new Date(s);
     return !isNaN(d.getTime()) && d <= new Date(new Date().toISOString().slice(0, 10) + "T23:59:59");
-  }, { message: "La date ne peut pas être dans le futur" }),
+  }, { message: "la_date_ne_peut_pas_etre_dans" }),
   notes: z.string().nullable().optional(),
   receiptData: z.string().startsWith("data:").nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -42,7 +44,7 @@ export async function GET(
   const { id } = await params;
   const expense = await prisma.expense.findUnique({ where: { id: Number(id) } });
   if (!expense) {
-    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("depense_introuvable") }, { status: 404 });
   }
   return NextResponse.json({ expense });
 }
@@ -51,6 +53,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -63,13 +66,13 @@ export async function PATCH(
 
   const existing = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!existing) {
-    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("depense_introuvable") }, { status: 404 });
   }
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   // Validation taille recu si fourni
@@ -101,6 +104,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -113,7 +117,7 @@ export async function DELETE(
 
   const existing = await prisma.expense.findUnique({ where: { id: expenseId } });
   if (!existing) {
-    return NextResponse.json({ error: "Dépense introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("depense_introuvable") }, { status: 404 });
   }
 
   await prisma.expense.delete({ where: { id: expenseId } });

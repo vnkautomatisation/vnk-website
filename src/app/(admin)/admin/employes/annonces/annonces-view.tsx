@@ -28,6 +28,7 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
   teams: Array<{ id: number; name: string }>;
   roles: Array<{ id: number; name: string }>;
 }) {
+  const t = useTranslations("admin.announcements");
   const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Ann | null }>({ open: false, existing: null });
@@ -37,14 +38,14 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 text-[#0F2D52]" />Annonces internes</h1>
-          <p className="text-sm text-muted-foreground">Communications de la direction et RH.</p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><Megaphone className="h-5 w-5 text-[#0F2D52]" />{t("annonces_internes")}</h1>
+          <p className="text-sm text-muted-foreground">{t("communications_direction_rh")}</p>
         </div>
-        <Button onClick={() => setDialog({ open: true, existing: null })}><Plus className="h-4 w-4 mr-1.5" />Nouvelle annonce</Button>
+        <Button onClick={() => setDialog({ open: true, existing: null })}><Plus className="h-4 w-4 mr-1.5" />{t("nouvelle_annonce")}</Button>
       </div>
 
       {announcements.length === 0 ? (
-        <Card className="p-10 text-center text-sm text-muted-foreground">Aucune annonce.</Card>
+        <Card className="p-10 text-center text-sm text-muted-foreground">{t("aucune_annonce")}</Card>
       ) : (
         <div className="space-y-2">
           {announcements.map((a) => (
@@ -56,19 +57,19 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
                     <h3 className="font-bold text-sm">{a.title}</h3>
                     <Badge variant="outline" className="text-[10px] capitalize">{a.category}</Badge>
                     <Badge variant="outline" className="text-[10px]">{a._count?.reads ?? 0} vue{(a._count?.reads ?? 0) > 1 ? "s" : ""}</Badge>
-                    {!a.publishedAt && <Badge className="text-[10px] bg-slate-100 text-slate-700">Brouillon</Badge>}
-                    {a.publishedAt && new Date(a.publishedAt) <= new Date() && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">Publié</Badge>}
+                    {!a.publishedAt && <Badge className="text-[10px] bg-slate-100 text-slate-700">{t("brouillon")}</Badge>}
+                    {a.publishedAt && new Date(a.publishedAt) <= new Date() && <Badge className="text-[10px] bg-emerald-100 text-emerald-700">{t("publie")}</Badge>}
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{a.body}</p>
                   <p className="text-[10px] text-muted-foreground mt-1">
-                    {a.author?.fullName || a.author?.email} · Audience: {a.audienceType === "all" ? "Tout le monde" : a.audienceType}
+                    {a.author?.fullName || a.author?.email} · {t("audience")}: {a.audienceType === "all" ? t("tout_le_monde") : a.audienceType}
                   </p>
                 </div>
                 <div className="flex flex-col gap-1 items-end">
                   {!a.publishedAt && (
                     <Button size="sm" onClick={async () => {
                       const r = await publishAnnouncementAction({ id: a.id });
-                      if (r.success) { toast.success("Publié"); router.refresh(); }
+                      if (r.success) { toast.success(t("publie")); router.refresh(); }
                       else toast.error(r.error || "");
                     }}>
                       <Send className="h-3 w-3 mr-1" />Publier
@@ -102,13 +103,13 @@ export function AnnouncementsAdminView({ announcements, teams, roles }: {
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.title} ?`}
-        description="Cette annonce sera retirée définitivement. Les notifications déjà envoyées restent."
+        description={t("annonce_sera_retiree_definitivement_notifications")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteAnnouncementAction({ id: confirmDel.id });
-          if (r.success) { toast.success("Supprimée"); router.refresh(); }
+          if (r.success) { toast.success(t("supprimee")); router.refresh(); }
           else toast.error(r.error || "");
           setConfirmDel(null);
         }}
@@ -123,6 +124,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
   roles: Array<{ id: number; name: string }>;
   onClose: () => void; onSaved: () => void;
 }) {
+  const t = useTranslations("admin.announcements");
   const tc = useTranslations("common");
   const [title, setTitle] = useState(existing?.title ?? "");
   const [body, setBody] = useState(existing?.body ?? "");
@@ -150,7 +152,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
   }, [open, existing]);
 
   const submit = async () => {
-    if (!title.trim() || !body.trim()) { toast.error("Titre et corps requis"); return; }
+    if (!title.trim() || !body.trim()) { toast.error(t("titre_corps_requis")); return; }
     setPending(true);
     const r = await upsertAnnouncementAction({
       id: existing?.id,
@@ -165,7 +167,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
       audienceRoleId: audienceRoleId ? Number(audienceRoleId) : null,
     });
     setPending(false);
-    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
+    if (r.success) { toast.success(t("enregistre")); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -173,55 +175,54 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-2xl max-h-[90vh] p-0 overflow-hidden flex flex-col">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
-          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Megaphone className="h-4 w-4" />{existing ? "Modifier" : "Nouvelle"} annonce</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle className="text-base text-white flex items-center gap-2"><Megaphone className="h-4 w-4" />{existing ? t("modifier_annonce") : t("nouvelle_annonce")}</DialogTitle></DialogHeader>
         </div>
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Titre *</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("titre")}</Label>
             <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Catégorie</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("categorie")}</Label>
               <Select value={category} onValueChange={setCategory}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="general">Général</SelectItem>
-                  <SelectItem value="safety">Sécurité</SelectItem>
+                  <SelectItem value="general">{t("general")}</SelectItem>
+                  <SelectItem value="safety">{t("securite")}</SelectItem>
                   <SelectItem value="hr">RH</SelectItem>
-                  <SelectItem value="tech">Technique</SelectItem>
-                  <SelectItem value="celebration">Célébration</SelectItem>
+                  <SelectItem value="tech">{t("technique")}</SelectItem>
+                  <SelectItem value="celebration">{t("celebration")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <label className="flex items-center gap-2 text-sm cursor-pointer mt-6">
               <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} className="h-4 w-4 rounded border-input" />
-              <Pin className="h-3.5 w-3.5 text-amber-500" />Épinglée
-            </label>
+              <Pin className="h-3.5 w-3.5 text-amber-500" />{t("annonces_view_epinglee")}</label>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Expire le</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("expire")}</Label>
               <Input type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} className="h-9" />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Corps *</Label>
-            <MarkdownEditor value={body} onChange={setBody} placeholder="Contenu de l'annonce (Markdown supporté)" helpText="Markdown supporté : **gras**, *italique*, # titres, - listes, [lien](url)" />
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("corps")}</Label>
+            <MarkdownEditor value={body} onChange={setBody} placeholder={t("contenu_annonce_markdown_supporte")} helpText={t("markdown_supporte_aide")} />
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Audience</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("audience")}</Label>
               <Select value={audienceType} onValueChange={setAudienceType}>
                 <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tout le monde</SelectItem>
-                  <SelectItem value="team">Équipe</SelectItem>
-                  <SelectItem value="role">Rôle</SelectItem>
+                  <SelectItem value="all">{t("tout_monde")}</SelectItem>
+                  <SelectItem value="team">{t("equipe")}</SelectItem>
+                  <SelectItem value="role">{t("role")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             {audienceType === "team" && (
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider font-semibold">Équipe</Label>
+                <Label className="text-xs uppercase tracking-wider font-semibold">{t("equipe")}</Label>
                 <Select value={audienceTeamId} onValueChange={setAudienceTeamId}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>{teams.map((t) => <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>)}</SelectContent>
@@ -230,7 +231,7 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
             )}
             {audienceType === "role" && (
               <div className="space-y-1.5">
-                <Label className="text-xs uppercase tracking-wider font-semibold">Rôle</Label>
+                <Label className="text-xs uppercase tracking-wider font-semibold">{t("role")}</Label>
                 <Select value={audienceRoleId} onValueChange={setAudienceRoleId}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>{roles.map((r) => <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>)}</SelectContent>
@@ -241,13 +242,13 @@ function AnnouncementDialog({ open, existing, teams, roles, onClose, onSaved }: 
           {!existing && (
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input type="checkbox" checked={publishNow} onChange={(e) => setPublishNow(e.target.checked)} className="h-4 w-4 rounded border-input" />
-              Publier immédiatement (sinon en brouillon)
+              {t("publier_immediatement_sinon_brouillon")}
             </label>
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : "Enregistrer"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : t("enregistrer")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

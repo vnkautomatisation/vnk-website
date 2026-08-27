@@ -3,27 +3,31 @@
 // On valide le token (non expiré, non révoqué, non utilisé), puis on affiche
 // un formulaire de création de mot de passe.
 import crypto from "crypto";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { AcceptInviteForm } from "./accept-invite-form";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Activation de compte — VNK",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("auth");
+  return { title: t("activation_de_compte") };
+}
 
 export default async function AcceptInvitePage({
   searchParams,
 }: {
   searchParams: Promise<{ token?: string }>;
 }) {
+  const t = await getTranslations("auth");
   const params = await searchParams;
   const token = params.token ?? "";
 
   if (!token) {
     return (
       <ErrorState
-        title="Lien invalide"
-        message="Aucun token n'a été fourni. Vérifiez votre lien d'invitation."
+        title={t("lien_invalide")}
+        linkLabel={t("aller_page_connexion")}
+        message={t("aucun_token_n_ete_fourni")}
       />
     );
   }
@@ -36,8 +40,9 @@ export default async function AcceptInvitePage({
   if (!invitation) {
     return (
       <ErrorState
-        title="Lien invalide"
-        message="Cette invitation n'existe pas. Demandez à votre administrateur de vous en renvoyer une."
+        title={t("lien_invalide")}
+        linkLabel={t("aller_page_connexion")}
+        message={t("invitation_n_existe_pas_demandez")}
       />
     );
   }
@@ -45,8 +50,9 @@ export default async function AcceptInvitePage({
   if (invitation.revokedAt) {
     return (
       <ErrorState
-        title="Invitation annulée"
-        message="Cette invitation a été annulée par votre administrateur."
+        title={t("invitation_annulee")}
+        linkLabel={t("aller_page_connexion")}
+        message={t("invitation_ete_annulee_administrateur")}
       />
     );
   }
@@ -54,8 +60,9 @@ export default async function AcceptInvitePage({
   if (invitation.acceptedAt) {
     return (
       <ErrorState
-        title="Compte déjà créé"
-        message="Cette invitation a déjà été utilisée. Connectez-vous directement sur /admin/login."
+        title={t("compte_deja_cree")}
+        linkLabel={t("aller_page_connexion")}
+        message={t("invitation_deja_ete_utilisee_connectez")}
       />
     );
   }
@@ -63,8 +70,9 @@ export default async function AcceptInvitePage({
   if (invitation.expiresAt < new Date()) {
     return (
       <ErrorState
-        title="Lien expiré"
-        message="Cette invitation a expiré. Demandez à votre administrateur de vous en renvoyer une nouvelle."
+        title={t("lien_expire")}
+        linkLabel={t("aller_page_connexion")}
+        message={t("invitation_expire_demandez_administrateur_vous")}
       />
     );
   }
@@ -78,7 +86,7 @@ export default async function AcceptInvitePage({
   );
 }
 
-function ErrorState({ title, message }: { title: string; message: string }) {
+function ErrorState({ title, message, linkLabel }: { title: string; message: string; linkLabel: string }) {
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8 text-center">
@@ -90,7 +98,7 @@ function ErrorState({ title, message }: { title: string; message: string }) {
         <h1 className="text-xl font-bold text-[#0F2D52]">{title}</h1>
         <p className="text-sm text-muted-foreground mt-2">{message}</p>
         <a href="/admin/login" className="inline-block mt-6 text-sm text-[#0F2D52] hover:underline">
-          Aller à la page de connexion →
+          {linkLabel}
         </a>
       </div>
     </div>

@@ -1,5 +1,8 @@
 // HR · Anniversaires (naissance + ancienneté).
 import { prisma } from "@/lib/prisma";
+import { getLocale, getTranslations } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Cake, Award, Sparkles, Trophy, Star } from "lucide-react";
@@ -7,6 +10,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function BirthdaysPage() {
+  const t = await getTranslations("admin.hr_nav");
+  const dl = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
 
@@ -21,7 +26,7 @@ export default async function BirthdaysPage() {
     },
   });
 
-  // Anniversaires de naissance (≤ 30 jours)
+
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   type BirthdayItem = {
     id: number;
@@ -60,7 +65,7 @@ export default async function BirthdaysPage() {
   const formatBirthDate = (d: Date) =>
     d.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
 
-  // Anniversaires de travail (jubilés)
+
   const workAnniversaries = admins
     .filter((a) => a.startDate)
     .map((a) => {
@@ -80,8 +85,8 @@ export default async function BirthdaysPage() {
   return (
     <div className="space-y-5">
       <div>
-        <h1 className="text-xl font-bold flex items-center gap-2"><Cake className="h-5 w-5 text-pink-500" />Anniversaires</h1>
-        <p className="text-sm text-muted-foreground">Anniversaires de naissance (30 jours) et anniversaires de travail (60 jours).</p>
+        <h1 className="text-xl font-bold flex items-center gap-2"><Cake className="h-5 w-5 text-pink-500" />{t("anniversaires")}</h1>
+        <p className="text-sm text-muted-foreground">{t("anniversaires_naissance_30_jours_anniversaires")}</p>
       </div>
 
       <section>
@@ -90,7 +95,7 @@ export default async function BirthdaysPage() {
           {birthdays.length > 0 && <span className="text-muted-foreground normal-case font-normal">({birthdays.length})</span>}
         </h2>
         {birthdays.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">Aucun anniversaire dans les 30 prochains jours.</Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("aucun_anniversaire_30_prochains_jours")}</Card>
         ) : (
           <Card>
             <div className="divide-y">
@@ -106,11 +111,11 @@ export default async function BirthdaysPage() {
                   </div>
                   <div className="text-right shrink-0">
                     {b.isToday ? (
-                      <Badge className="bg-amber-100 text-amber-900 border-amber-300">Aujourd&apos;hui</Badge>
+                      <Badge className="bg-amber-100 text-amber-900 border-amber-300">{t("aujourd_apos_hui")}</Badge>
                     ) : (
-                      <p className="text-xs font-medium">{formatBirthDate(b.nextBirthday)} <span className="text-muted-foreground">(dans {b.daysUntil} j)</span></p>
+                      <p className="text-xs font-medium">{formatBirthDate(b.nextBirthday)} <span className="text-muted-foreground">{t("dans_n_jours_parentheses", { days: b.daysUntil })}</span></p>
                     )}
-                    <p className="text-[10px] text-muted-foreground mt-0.5">aura {b.turningAge} ans</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{t("aura_n_ans", { age: b.turningAge })}</p>
                   </div>
                 </div>
               ))}
@@ -122,7 +127,7 @@ export default async function BirthdaysPage() {
       {milestones.length > 0 && (
         <section>
           <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-500" />Jubilés à célébrer ({milestones.length})
+            <Sparkles className="h-4 w-4 text-amber-500" />{t("jubiles_celebrer", { count: milestones.length })}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {milestones.map((m) => (
@@ -138,7 +143,7 @@ export default async function BirthdaysPage() {
                     <p className="font-bold">{m.fullName || m.email}</p>
                     <p className="text-xs text-muted-foreground">{m.position?.name ?? "—"}</p>
                     <p className="text-sm font-semibold text-amber-700 mt-1">
-                      {m.yearsAtNext} an{m.yearsAtNext > 1 ? "s" : ""} dans {m.daysUntil} jour{m.daysUntil > 1 ? "s" : ""}
+                      {t("ans_dans_jours", { years: m.yearsAtNext, days: m.daysUntil })}
                     </p>
                   </div>
                 </div>
@@ -150,10 +155,10 @@ export default async function BirthdaysPage() {
 
       <section>
         <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider flex items-center gap-2">
-          <Award className="h-4 w-4 text-[#0F2D52]" />Tous les anniversaires de travail à venir
+          <Award className="h-4 w-4 text-[#0F2D52]" />{t("tous_anniversaires_travail_venir")}
         </h2>
         {workAnniversaries.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">Aucun anniversaire dans les 60 prochains jours.</Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("aucun_anniversaire_60_prochains_jours")}</Card>
         ) : (
           <Card>
             <div className="divide-y">
@@ -165,11 +170,11 @@ export default async function BirthdaysPage() {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium">{a.fullName || a.email}</p>
-                    <p className="text-xs text-muted-foreground">{a.position?.name ?? "—"} · Débuté le {new Date(a.startDate!).toLocaleDateString("fr-CA")}</p>
+                    <p className="text-xs text-muted-foreground">{a.position?.name ?? "—"} · {t("debute_le", { date: new Date(a.startDate!).toLocaleDateString(dl) })}</p>
                   </div>
                   <div className="text-right">
-                    <Badge variant="outline" className="text-[10px]">{a.yearsAtNext} an{a.yearsAtNext > 1 ? "s" : ""}</Badge>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.daysUntil === 0 ? "Aujourd'hui !" : `Dans ${a.daysUntil} j`}</p>
+                    <Badge variant="outline" className="text-[10px]">{t("n_ans", { years: a.yearsAtNext })}</Badge>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">{a.daysUntil === 0 ? t("aujourd_hui") : t("dans_n_jours", { days: a.daysUntil })}</p>
                   </div>
                 </div>
               ))}

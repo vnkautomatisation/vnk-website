@@ -16,6 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function SettingsPage() {
+  const t = await getTranslations("admin.settings_admin");
   // Hub reglages : settings.write OU une ressource de la famille config
   // (informaticien : portail client / site web / integrations / contenu).
   const perms = await getCurrentAdminPermissions();

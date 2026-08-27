@@ -16,6 +16,7 @@
 //   9. revalidatePath (toléré)
 //  10. Retour JSON { success: true }
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -70,6 +71,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("admin.action_errors");
   const t0 = Date.now();
   let stage = "init";
 
@@ -111,7 +113,7 @@ export async function POST(
     }
     if (docReq.status !== "pending") {
       return NextResponse.json(
-        { error: "La demande n'accepte plus de téléversement" },
+        { error: t("la_demande_n_accepte_plus_de_televersement") },
         { status: 409 },
       );
     }
@@ -123,7 +125,7 @@ export async function POST(
 
     if (!(file instanceof File)) {
       console.warn("[upload-doc-req] no file", { reqId });
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
       console.warn("[upload-doc-req] disallowed mime", { reqId, mime: file.type });
@@ -134,7 +136,7 @@ export async function POST(
     }
     if (file.size === 0) {
       return NextResponse.json(
-        { error: "Fichier vide — sélectionnez un fichier non vide." },
+        { error: t("fichier_vide_selectionnez_un_fichier_non_vide") },
         { status: 400 },
       );
     }
@@ -150,7 +152,7 @@ export async function POST(
     const buf = Buffer.from(await file.arrayBuffer());
     if (buf.length < 12) {
       return NextResponse.json(
-        { error: "Fichier trop petit pour validation" },
+        { error: t("fichier_trop_petit_pour_validation") },
         { status: 415 },
       );
     }
@@ -165,7 +167,7 @@ export async function POST(
     });
     if (!magicOk) {
       return NextResponse.json(
-        { error: "Magic bytes invalides — fichier corrompu ou type erroné" },
+        { error: t("magic_bytes_invalides_fichier_corrompu_ou_type") },
         { status: 415 },
       );
     }
@@ -201,7 +203,7 @@ export async function POST(
         {
           error: dbErr instanceof Error
             ? `Base de données : ${dbErr.message}`
-            : "Erreur base de données",
+            : t("erreur_base_de_donnees"),
         },
         { status: 500 },
       );
@@ -235,7 +237,7 @@ export async function POST(
           recipientType: "admin",
           recipientId: docReq.requestedById,
           type: "info",
-          title: "Document téléversé",
+          title: t("document_televerse"),
           body: `${empName} a téléversé « ${docReq.title} ». À valider.`,
           link: "/admin/employes/documents",
           icon: "upload",

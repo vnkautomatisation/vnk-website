@@ -24,13 +24,13 @@ import { updateSettingsAction } from "@/app/actions/settings";
 
 type StepKey = "company" | "branding" | "fiscal" | "finance" | "law25" | "team";
 
-const STEPS: { key: StepKey; label: string; icon: React.ComponentType<{ className?: string }>; description: string }[] = [
-  { key: "company", label: "Identité de l'entreprise", icon: Building2, description: "Nom, adresse, coordonnées" },
-  { key: "branding", label: "Charte graphique", icon: Palette, description: "Logos et couleurs" },
-  { key: "fiscal", label: "Identifiants fiscaux", icon: Receipt, description: "NEQ, TPS, TVQ" },
-  { key: "finance", label: "Compte bancaire", icon: Wallet, description: "Banque pour virements Interac" },
-  { key: "law25", label: "Loi 25 (Québec)", icon: Shield, description: "RPRP et politique" },
-  { key: "team", label: "Équipe", icon: Users, description: "Créer vos premiers employés" },
+const STEPS: { key: StepKey; labelKey: string; icon: React.ComponentType<{ className?: string }>; descriptionKey: string }[] = [
+  { key: "company", labelKey: "identite_entreprise", icon: Building2, descriptionKey: "nom_adresse_coordonnees" },
+  { key: "branding", labelKey: "charte_graphique", icon: Palette, descriptionKey: "logos_couleurs" },
+  { key: "fiscal", labelKey: "identifiants_fiscaux", icon: Receipt, descriptionKey: "neq_tps_tvq" },
+  { key: "finance", labelKey: "compte_bancaire", icon: Wallet, descriptionKey: "banque_virements_interac" },
+  { key: "law25", labelKey: "loi_25_quebec", icon: Shield, descriptionKey: "rprp_politique" },
+  { key: "team", labelKey: "equipe", icon: Users, descriptionKey: "creer_premiers_employes" },
 ];
 
 export function OnboardingWizard({
@@ -39,16 +39,17 @@ export function OnboardingWizard({
   initial: Record<string, string>;
   progress: Record<StepKey, boolean>;
 }) {
+  const t = useTranslations("admin.onboarding");
   const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [currentStep, setCurrentStep] = useState<StepKey>(() => {
-    // Auto-sélectionne la première étape incomplète
+
     const firstIncomplete = STEPS.find((s) => !progress[s.key]);
     return firstIncomplete?.key ?? "company";
   });
 
-  // États contrôlés par étape
+
   const [companyName, setCompanyName] = useState(initial["company.name"] ?? "");
   const [companyLegalName, setCompanyLegalName] = useState(initial["company.legal_name"] ?? "");
   const [companyEmail, setCompanyEmail] = useState(initial["company.email"] ?? "");
@@ -74,7 +75,7 @@ export function OnboardingWizard({
   const [rprpEmail, setRprpEmail] = useState(initial["legal.rprp_email"] ?? "");
   const [rprpTitle, setRprpTitle] = useState(initial["legal.rprp_title"] ?? "");
 
-  // ── Sauvegardes par étape ─────────────────────────────────
+
   const saveCompany = async () => {
     return updateSettingsAction({
       category: "company",
@@ -146,7 +147,7 @@ export function OnboardingWizard({
         toast.error(r.error);
         return;
       }
-      toast.success("Étape enregistrée");
+      toast.success(t("etape_enregistree"));
       const idx = STEPS.findIndex((s) => s.key === currentStep);
       if (idx < STEPS.length - 1) {
         setCurrentStep(STEPS[idx + 1].key);
@@ -173,14 +174,14 @@ export function OnboardingWizard({
           <Sparkles className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Configuration guidée</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("configuration_guidee")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {completedCount}/{totalSteps} étapes complétées · {progressPct}%
           </p>
         </div>
       </div>
 
-      {/* Barre de progression */}
+
       <div className="h-2 rounded-full bg-muted overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 transition-all duration-500"
@@ -188,9 +189,9 @@ export function OnboardingWizard({
         />
       </div>
 
-      {/* Sidebar étapes + contenu */}
+
       <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
-        {/* Liste des étapes */}
+
         <div className="space-y-1">
           {STEPS.map((s, idx) => {
             const Icon = s.icon;
@@ -217,31 +218,31 @@ export function OnboardingWizard({
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
                     <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <p className={cn("font-medium text-sm", isCurrent && "text-[#0F2D52]")}>{s.label}</p>
+                    <p className={cn("font-medium text-sm", isCurrent && "text-[#0F2D52]")}>{t(s.labelKey)}</p>
                   </div>
-                  <p className="text-[10px] text-muted-foreground mt-0.5">{s.description}</p>
+                  <p className="text-[10px] text-muted-foreground mt-0.5">{t(s.descriptionKey)}</p>
                 </div>
               </button>
             );
           })}
         </div>
 
-        {/* Contenu de l'étape */}
+
         <Card>
           <CardContent className="p-6 space-y-4">
             {currentStep === "company" && (
               <>
-                <StepHeader icon={Building2} title="Identité de l'entreprise" />
+                <StepHeader icon={Building2} title={t("identite_entreprise")} />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <F label="Nom commercial *"><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder="VNK Automatisation" /></F>
-                  <F label="Raison sociale (légale)"><Input value={companyLegalName} onChange={(e) => setCompanyLegalName(e.target.value)} placeholder="VNK Automatisation Inc." /></F>
-                  <F label="Courriel public"><Input type="email" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} placeholder="contact@..." /></F>
-                  <F label="Téléphone"><Input value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} placeholder="+1 514 555-0100" /></F>
+                  <F label={t("nom_commercial")}><Input value={companyName} onChange={(e) => setCompanyName(e.target.value)} placeholder={t("vnk_automatisation")} /></F>
+                  <F label={t("raison_sociale_legale")}><Input value={companyLegalName} onChange={(e) => setCompanyLegalName(e.target.value)} placeholder={t("vnk_automatisation_inc")} /></F>
+                  <F label={t("courriel_public")}><Input type="email" value={companyEmail} onChange={(e) => setCompanyEmail(e.target.value)} placeholder={t("contact")} /></F>
+                  <F label={t("telephone")}><Input value={companyPhone} onChange={(e) => setCompanyPhone(e.target.value)} placeholder="+1 514 555-0100" /></F>
                 </div>
-                <F label="Adresse"><Input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder="123 rue Principale" /></F>
+                <F label={t("adresse")}><Input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} placeholder={t("123_rue_principale")} /></F>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <F label="Ville"><Input value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} /></F>
-                  <F label="Province">
+                  <F label={t("ville")}><Input value={companyCity} onChange={(e) => setCompanyCity(e.target.value)} /></F>
+                  <F label={t("province")}>
                     <Select value={companyProvince} onValueChange={setCompanyProvince}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
@@ -249,25 +250,24 @@ export function OnboardingWizard({
                       </SelectContent>
                     </Select>
                   </F>
-                  <F label="Code postal"><Input value={companyPostal} onChange={(e) => setCompanyPostal(e.target.value)} placeholder="H1A 1A1" className="font-mono uppercase" /></F>
+                  <F label={t("code_postal")}><Input value={companyPostal} onChange={(e) => setCompanyPostal(e.target.value)} placeholder="H1A 1A1" className="font-mono uppercase" /></F>
                 </div>
               </>
             )}
 
             {currentStep === "branding" && (
               <>
-                <StepHeader icon={Palette} title="Charte graphique" />
-                <p className="text-xs text-muted-foreground">
-                  Définissez vos deux couleurs principales. Pour téléverser les logos, utilisez ensuite la page <Link href="/admin/settings/branding" className="text-[#0F2D52] underline">Charte graphique</Link>.
+                <StepHeader icon={Palette} title={t("charte_graphique")} />
+                <p className="text-xs text-muted-foreground">{t("onboarding_wizard_definissez_vos_deux_couleurs_principales_pour_televerser")}<Link href="/admin/settings/branding" className="text-[#0F2D52] underline">{t("charte_graphique")}</Link>.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <F label="Couleur primaire">
+                  <F label={t("couleur_primaire")}>
                     <div className="flex gap-2">
                       <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="h-9 w-12 rounded-md border cursor-pointer" />
                       <Input value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="font-mono flex-1" />
                     </div>
                   </F>
-                  <F label="Couleur secondaire">
+                  <F label={t("couleur_secondaire")}>
                     <div className="flex gap-2">
                       <input type="color" value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="h-9 w-12 rounded-md border cursor-pointer" />
                       <Input value={secondaryColor} onChange={(e) => setSecondaryColor(e.target.value)} className="font-mono flex-1" />
@@ -275,62 +275,62 @@ export function OnboardingWizard({
                   </F>
                 </div>
                 <div className="flex gap-2 mt-4 p-4 rounded-lg border bg-muted/20">
-                  <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: primaryColor }}>Bouton primaire</button>
-                  <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: secondaryColor }}>Bouton secondaire</button>
+                  <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: primaryColor }}>{t("bouton_primaire")}</button>
+                  <button className="px-4 py-2 rounded-md text-sm font-medium text-white" style={{ backgroundColor: secondaryColor }}>{t("bouton_secondaire")}</button>
                 </div>
               </>
             )}
 
             {currentStep === "fiscal" && (
               <>
-                <StepHeader icon={Receipt} title="Identifiants fiscaux" />
+                <StepHeader icon={Receipt} title={t("identifiants_fiscaux")} />
                 <p className="text-xs text-muted-foreground">
-                  Indispensables pour la facturation au Québec. Si vous êtes petit fournisseur (&lt; 30 000 $/an), TPS et TVQ peuvent rester vides.
+                  {t("indispensables_facturation_quebec_si_vous")}
                 </p>
-                <F label="NEQ (Numéro d'entreprise du Québec)">
+                <F label={t("neq_numero_entreprise_quebec")}>
                   <Input value={neq} onChange={(e) => setNeq(e.target.value)} placeholder="1234567890" maxLength={10} className="font-mono" />
                 </F>
-                <F label="N° TPS / GST">
-                  <Input value={gst} onChange={(e) => setGst(e.target.value)} placeholder="123456789 RT0001" className="font-mono" />
+                <F label={t("n_tps_gst")}>
+                  <Input value={gst} onChange={(e) => setGst(e.target.value)} placeholder={t("123456789_rt0001")} className="font-mono" />
                 </F>
-                <F label="N° TVQ / QST">
-                  <Input value={qst} onChange={(e) => setQst(e.target.value)} placeholder="1234567890 TQ0001" className="font-mono" />
+                <F label={t("n_tvq_qst")}>
+                  <Input value={qst} onChange={(e) => setQst(e.target.value)} placeholder={t("1234567890_tq0001")} className="font-mono" />
                 </F>
               </>
             )}
 
             {currentStep === "finance" && (
               <>
-                <StepHeader icon={Wallet} title="Compte bancaire" />
+                <StepHeader icon={Wallet} title={t("compte_bancaire")} />
                 <p className="text-xs text-muted-foreground">
-                  Ces informations servent à générer les modèles de virement Interac sur vos factures.
+                  {t("informations_servent_generer_modeles_virement")}
                 </p>
-                <F label="Institution bancaire">
-                  <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder="Desjardins, RBC, TD..." />
+                <F label={t("institution_bancaire")}>
+                  <Input value={bankName} onChange={(e) => setBankName(e.target.value)} placeholder={t("desjardins_rbc_td")} />
                 </F>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <F label="N° institution"><Input value={bankInstitution} onChange={(e) => setBankInstitution(e.target.value)} maxLength={3} placeholder="815" className="font-mono" /></F>
-                  <F label="N° transit"><Input value={bankTransit} onChange={(e) => setBankTransit(e.target.value)} maxLength={5} placeholder="30000" className="font-mono" /></F>
-                  <F label="N° folio"><Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} maxLength={12} placeholder="1234567" className="font-mono" /></F>
+                  <F label={t("n_institution")}><Input value={bankInstitution} onChange={(e) => setBankInstitution(e.target.value)} maxLength={3} placeholder="815" className="font-mono" /></F>
+                  <F label={t("n_transit")}><Input value={bankTransit} onChange={(e) => setBankTransit(e.target.value)} maxLength={5} placeholder="30000" className="font-mono" /></F>
+                  <F label={t("n_folio")}><Input value={bankAccount} onChange={(e) => setBankAccount(e.target.value)} maxLength={12} placeholder="1234567" className="font-mono" /></F>
                 </div>
               </>
             )}
 
             {currentStep === "law25" && (
               <>
-                <StepHeader icon={Shield} title="Conformité Loi 25 (Québec)" />
+                <StepHeader icon={Shield} title={t("conformite_loi_25_quebec")} />
                 <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-                  La Loi 25 exige qu&apos;une personne responsable de la protection des renseignements personnels (RPRP) soit désignée et identifiée publiquement.
+                  {t("loi_25_exige_qu_apos")}
                 </div>
-                <F label="Nom du RPRP *">
-                  <Input value={rprpName} onChange={(e) => setRprpName(e.target.value)} placeholder="Jean Tremblay" />
+                <F label={t("nom_rprp")}>
+                  <Input value={rprpName} onChange={(e) => setRprpName(e.target.value)} placeholder={t("jean_tremblay")} />
                 </F>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <F label="Titre / fonction">
-                    <Input value={rprpTitle} onChange={(e) => setRprpTitle(e.target.value)} placeholder="Président" />
+                  <F label={t("titre_fonction")}>
+                    <Input value={rprpTitle} onChange={(e) => setRprpTitle(e.target.value)} placeholder={t("president")} />
                   </F>
-                  <F label="Courriel dédié *">
-                    <Input type="email" value={rprpEmail} onChange={(e) => setRprpEmail(e.target.value)} placeholder="confidentialite@..." />
+                  <F label={t("courriel_dedie")}>
+                    <Input type="email" value={rprpEmail} onChange={(e) => setRprpEmail(e.target.value)} placeholder={t("confidentialite")} />
                   </F>
                 </div>
               </>
@@ -338,26 +338,25 @@ export function OnboardingWizard({
 
             {currentStep === "team" && (
               <>
-                <StepHeader icon={Users} title="Équipe" />
+                <StepHeader icon={Users} title={t("equipe")} />
                 <p className="text-xs text-muted-foreground">
-                  Créez vos premiers comptes employés depuis la page dédiée. Vous pourrez leur attribuer un rôle (comptable, vendeur, support, technicien...) ou en créer un sur mesure.
+                  {t("creez_premiers_comptes_employes_depuis")}
                 </p>
                 <div className="rounded-lg border bg-muted/20 p-4">
-                  <p className="text-sm font-medium mb-2">Comptes employés</p>
-                  <p className="text-xs text-muted-foreground mb-3">7 rôles RBAC pré-définis + 6 postes templates prêts à l&apos;emploi.</p>
+                  <p className="text-sm font-medium mb-2">{t("comptes_employes")}</p>
+                  <p className="text-xs text-muted-foreground mb-3">{t("7_roles_rbac_pre_definis")}</p>
                   <Button asChild className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                    <Link href="/admin/settings/team" className="flex items-center gap-2">
-                      Gérer l&apos;équipe <ArrowRight className="h-4 w-4" />
+                    <Link href="/admin/settings/team" className="flex items-center gap-2">{t("onboarding_wizard_gerer_l_equipe")}<ArrowRight className="h-4 w-4" />
                     </Link>
                   </Button>
                 </div>
                 <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-                  Une fois vos employés créés, vous pourrez les inviter à se connecter au portail admin. Pensez à activer la 2FA pour les comptes sensibles.
+                  {t("fois_employes_crees_vous_pourrez")}
                 </div>
               </>
             )}
 
-            {/* Footer navigation */}
+
             <div className="flex items-center justify-between border-t pt-4 mt-6">
               <Button
                 variant="outline"
@@ -371,15 +370,15 @@ export function OnboardingWizard({
               </Button>
               <div className="flex gap-2">
                 <Button variant="ghost" onClick={handleSkip} disabled={pending}>
-                  Passer
+                  {t("passer")}
                 </Button>
                 {STEPS.findIndex((s) => s.key === currentStep) === STEPS.length - 1 ? (
                   <Button asChild className="bg-gradient-to-r from-violet-500 to-fuchsia-500 hover:opacity-90">
-                    <Link href="/admin"><Rocket className="h-4 w-4 mr-1.5" />Terminer</Link>
+                    <Link href="/admin"><Rocket className="h-4 w-4 mr-1.5" />{t("terminer")}</Link>
                   </Button>
                 ) : (
                   <Button onClick={handleNext} disabled={pending} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                    {pending ? "..." : "Suivant"}<ChevronRightIcon className="h-4 w-4 ml-1.5" />
+                    {pending ? "..." : t("suivant")}<ChevronRightIcon className="h-4 w-4 ml-1.5" />
                   </Button>
                 )}
               </div>
@@ -393,8 +392,8 @@ export function OnboardingWizard({
           <CardContent className="p-5 flex items-center gap-3">
             <Rocket className="h-6 w-6 text-emerald-600" />
             <div className="flex-1">
-              <p className="font-semibold text-emerald-900">Configuration complète</p>
-              <p className="text-xs text-emerald-800">Votre portail est prêt à être utilisé.</p>
+              <p className="font-semibold text-emerald-900">{t("configuration_complete")}</p>
+              <p className="text-xs text-emerald-800">{t("portail_pret_etre_utilise")}</p>
             </div>
             <Badge className="bg-emerald-600 hover:bg-emerald-600">100%</Badge>
           </CardContent>

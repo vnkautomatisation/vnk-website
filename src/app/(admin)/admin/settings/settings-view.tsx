@@ -62,7 +62,7 @@ type CategoryMeta = {
 type CategoryMetaExtended = CategoryMeta & {
   custom?: "integrations" | "automations" | "email_templates" | "notifications";
   href?: string; // si défini → la carte navigue vers une autre page au lieu d'ouvrir l'éditeur inline
-  badgeLabel?: string; // libellé custom du badge module
+  badgeLabelKey?: string; // libellé custom du badge module
 };
 
 // ───────────────────────────────────────────────────────────
@@ -83,22 +83,22 @@ const CATEGORIES: CategoryMetaExtended[] = [
   { key: "general", icon: LayoutGrid, accent: FAMILY.navy },
   { key: "company", icon: Building2, accent: FAMILY.navy },
   { key: "portal", icon: Briefcase, accent: FAMILY.navy },
-  { key: "users", icon: Users, accent: FAMILY.navy, href: "/admin/settings/team", badgeLabel: "Utilisateurs · Rôles · Postes" },
-  { key: "catalogs", icon: LayoutGrid, accent: FAMILY.green, href: "/admin/settings/catalogs", badgeLabel: "Services · Codes promo · Listes" },
-  { key: "billing", icon: Receipt, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabel: "Banque · Taxes · Loi 25" },
-  { key: "legal", icon: Scale, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabel: "Voir Finance & Loi 25" },
+  { key: "users", icon: Users, accent: FAMILY.navy, href: "/admin/settings/team", badgeLabelKey: "badge_utilisateurs_roles_postes" },
+  { key: "catalogs", icon: LayoutGrid, accent: FAMILY.green, href: "/admin/settings/catalogs", badgeLabelKey: "badge_services_codes_promo_listes" },
+  { key: "billing", icon: Receipt, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabelKey: "badge_banque_taxes_loi_25" },
+  { key: "legal", icon: Scale, accent: FAMILY.green, href: "/admin/settings/finance", badgeLabelKey: "badge_voir_finance_loi_25" },
   { key: "signature", icon: FileSignature, accent: FAMILY.blue },
   { key: "emails", icon: Mail, accent: FAMILY.blue },
-  { key: "email_templates", icon: FileText, accent: FAMILY.blue, href: "/admin/settings/templates", badgeLabel: "Modèles emails + PDF" },
+  { key: "email_templates", icon: FileText, accent: FAMILY.blue, href: "/admin/settings/templates", badgeLabelKey: "badge_modeles_emails_pdf" },
   { key: "notifications", icon: Bell, accent: FAMILY.blue, custom: "notifications" },
-  { key: "blog", icon: Newspaper, accent: FAMILY.blue, href: "/admin/settings/content", badgeLabel: "Blog · FAQ · Témoignages" },
-  { key: "appearance", icon: Palette, accent: FAMILY.blue, href: "/admin/settings/branding", badgeLabel: "Logos · Couleurs · Polices" },
+  { key: "blog", icon: Newspaper, accent: FAMILY.blue, href: "/admin/settings/content", badgeLabelKey: "badge_blog_faq_temoignages" },
+  { key: "appearance", icon: Palette, accent: FAMILY.blue, href: "/admin/settings/branding", badgeLabelKey: "badge_logos_couleurs_polices" },
   { key: "integrations", icon: Plug, accent: FAMILY.amber, custom: "integrations" },
   { key: "automations", icon: Zap, accent: FAMILY.amber, custom: "automations" },
-  { key: "webhooks", icon: Plug, accent: FAMILY.amber, href: "/admin/settings/webhooks", badgeLabel: "Sortants + entrants debug" },
-  { key: "system", icon: Server, accent: FAMILY.amber, href: "/admin/settings/maintenance", badgeLabel: "Maintenance · Incidents · Annonce" },
-  { key: "diagnostics", icon: Activity, accent: FAMILY.amber, href: "/admin/settings/diagnostics", badgeLabel: "Santé · DB · Intégrations" },
-  { key: "backup", icon: Database, accent: FAMILY.amber, href: "/admin/settings/backup", badgeLabel: "Export · Import JSON" },
+  { key: "webhooks", icon: Plug, accent: FAMILY.amber, href: "/admin/settings/webhooks", badgeLabelKey: "badge_sortants_entrants_debug" },
+  { key: "system", icon: Server, accent: FAMILY.amber, href: "/admin/settings/maintenance", badgeLabelKey: "badge_maintenance_incidents_annonce" },
+  { key: "diagnostics", icon: Activity, accent: FAMILY.amber, href: "/admin/settings/diagnostics", badgeLabelKey: "badge_sante_db_integrations" },
+  { key: "backup", icon: Database, accent: FAMILY.amber, href: "/admin/settings/backup", badgeLabelKey: "badge_export_import_json" },
   { key: "seo", icon: Search, accent: FAMILY.blue },
   { key: "analytics", icon: BarChart3, accent: FAMILY.green },
 ];
@@ -135,7 +135,7 @@ export function SettingsView({
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -146,14 +146,14 @@ export function SettingsView({
     return () => obs.disconnect();
   }, []);
 
-  // Filtrer categories par recherche
+
   const filteredCategories = searchQuery
     ? CATEGORIES.filter((cat) => {
         const q = searchQuery.toLowerCase();
-        // Chercher dans le nom de la categorie
+
         const catName = t(`categories.${cat.key}`).toLowerCase();
         if (catName.includes(q)) return true;
-        // Chercher dans les labels/descriptions des parametres
+
         const settings = settingsByCategory[cat.key] ?? [];
         return settings.some(
           (s) =>
@@ -166,7 +166,7 @@ export function SettingsView({
 
   if (activeCategory) {
     const meta = CATEGORIES.find((c) => c.key === activeCategory)!;
-    // Catégories à rendu personnalisé (composants spécialisés au lieu du formulaire générique)
+
     if (meta.custom) {
       return <CustomCategoryView meta={meta} onBack={() => setActiveCategory(null)} />;
     }
@@ -182,7 +182,7 @@ export function SettingsView({
 
   return (
     <div className="space-y-5">
-      {/* ── Hero navy gradient ───────────────────────────── */}
+
       <div className="relative bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-5 text-white overflow-hidden">
         <div
           aria-hidden
@@ -208,7 +208,7 @@ export function SettingsView({
               className="inline-flex items-center gap-1.5 px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur border border-white/20 text-white text-sm font-medium transition-colors"
             >
               <Users className="h-4 w-4" />
-              <span className="hidden sm:inline">Activité</span>
+              <span className="hidden sm:inline">{t("activite")}</span>
             </Link>
             <Link
               href="/admin/settings/onboarding"
@@ -217,15 +217,15 @@ export function SettingsView({
               <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
                 <path d="M11.9 7.6c-.4 0-.8.3-.9.7l-.6 2.4-2.4.6c-.4.1-.7.5-.7.9s.3.8.7.9l2.4.6.6 2.4c.1.4.5.7.9.7s.8-.3.9-.7l.6-2.4 2.4-.6c.4-.1.7-.5.7-.9s-.3-.8-.7-.9l-2.4-.6-.6-2.4c-.1-.4-.5-.7-.9-.7Z" />
               </svg>
-              <span className="hidden sm:inline">Configuration guidée</span>
-              <span className="sm:hidden">Setup</span>
+              <span className="hidden sm:inline">{t("configuration_guidee")}</span>
+              <span className="sm:hidden">{t("setup")}</span>
             </Link>
             <div className="relative w-full sm:w-64">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/60" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher..."
+                placeholder={t("rechercher")}
                 className="pl-9 bg-white/10 backdrop-blur border-white/20 text-white placeholder:text-white/50 hover:bg-white/15 hover:border-white/30 focus-visible:bg-white/20 focus-visible:border-white/40 focus-visible:ring-white/20"
               />
             </div>
@@ -233,55 +233,55 @@ export function SettingsView({
         </div>
       </div>
 
-      {/* ── Overview cockpit no-code ──────────────────────── */}
+
       {overview && !searchQuery && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <OverviewCard
             href="/admin/settings/team"
             icon={Users}
-            label="Équipe"
+            label={t("equipe")}
             value={overview.adminsActive}
             hint={`${overview.roles} rôle${overview.roles > 1 ? "s" : ""} · ${overview.positions} poste${overview.positions > 1 ? "s" : ""}`}
           />
           <OverviewCard
             href="/admin/settings/branding"
             icon={Palette}
-            label="Branding"
+            label={t("branding")}
             value={`${overview.logosUploaded}/6`}
-            hint="logos téléversés"
+            hint={t("logos_televerses")}
           />
           <OverviewCard
             href="/admin/settings/catalogs"
             icon={LayoutGrid}
-            label="Catalogues"
+            label={t("catalogues")}
             value={overview.catalogItems}
             hint={`${overview.services} service${overview.services > 1 ? "s" : ""} · ${overview.promos} promo${overview.promos > 1 ? "s" : ""}`}
           />
           <OverviewCard
             href="/admin/settings/content"
             icon={Newspaper}
-            label="Contenu"
+            label={t("contenu")}
             value={overview.contentPublished}
             hint={`${overview.posts} blog · ${overview.faqs} FAQ · ${overview.testimonials} avis`}
           />
           <OverviewCard
             href="/admin/settings/templates"
             icon={FileText}
-            label="Modèles"
+            label={t("modeles")}
             value={overview.emailTpl + overview.pdfTpl}
             hint={`${overview.emailTpl} email · ${overview.pdfTpl} PDF`}
           />
           <OverviewCard
             href="/admin/settings/finance"
             icon={Receipt}
-            label="Conformité"
+            label={t("conformite")}
             value={`${(overview.fiscalDone ? 1 : 0) + (overview.rprpDone ? 1 : 0)}/2`}
             hint={`${overview.fiscalDone ? "✓" : "○"} fiscal · ${overview.rprpDone ? "✓" : "○"} Loi 25`}
           />
         </div>
       )}
 
-      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
@@ -291,12 +291,12 @@ export function SettingsView({
               {t("page_title")}
             </span>
             <span className="text-muted-foreground">{filteredCategories.length} catégorie{filteredCategories.length > 1 ? "s" : ""}</span>
-            {searchQuery && <span className="text-muted-foreground">Recherche : <span className="font-semibold">«&nbsp;{searchQuery}&nbsp;»</span></span>}
+            {searchQuery && <span className="text-muted-foreground">{t("recherche")} <span className="font-semibold">«&nbsp;{searchQuery}&nbsp;»</span></span>}
           </div>
         </div>
       )}
 
-      {/* ── Grille de catégories ──────────────────────────── */}
+
       {filteredCategories.length === 0 && searchQuery ? (
         <div className="text-center py-12 text-sm text-muted-foreground">
           Aucun parametre correspondant a &quot;{searchQuery}&quot;
@@ -333,15 +333,15 @@ export function SettingsView({
               <div className="mt-3 pt-3 border-t border-border/50">
                 {hasHref ? (
                   <span className="text-[10px] font-medium text-[#0F2D52]/80 inline-flex items-center gap-1">
-                    {cat.badgeLabel ?? "Module avancé"}
+                    {cat.badgeLabelKey ? t(cat.badgeLabelKey) : t("module_avance")}
                   </span>
                 ) : isCustom ? (
                   <span className="text-[10px] font-medium text-[#0F2D52]/80">
-                    Module avancé
+                    {t("module_avance")}
                   </span>
                 ) : (
                   <span className="text-[10px] text-muted-foreground">
-                    {count} {count > 1 ? "paramètres" : "paramètre"}
+                    {t("parametres_count", { count })}
                   </span>
                 )}
               </div>
@@ -376,12 +376,12 @@ export function SettingsView({
         })}
       </div>
 
-      {/* ── Info footer ─────────────────────────────────── */}
+
       <div className="rounded-lg border border-[#0F2D52]/15 bg-[#0F2D52]/[0.03] px-4 py-3 flex items-start gap-3">
         <AlertCircle className="h-4 w-4 text-[#0F2D52]/60 shrink-0 mt-0.5" />
         <div className="text-xs text-muted-foreground">
-          <span className="font-semibold text-[#0F2D52]">Configuration du portail · </span>
-          Toutes les modifications sont appliquées immédiatement et enregistrées dans l&apos;historique d&apos;activité.
+          <span className="font-semibold text-[#0F2D52]">{t("configuration_portail")} </span>
+          {t("toutes_modifications_appliquees_immediatement_enregistrees")}
         </div>
       </div>
     </div>
@@ -449,7 +449,7 @@ function CategoryEditor({
 
   return (
     <div className="space-y-6">
-      {/* ── Header ───────────────────────────────────────── */}
+
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-4">
           <button
@@ -477,7 +477,7 @@ function CategoryEditor({
           </div>
         </div>
 
-        {/* Actions header */}
+
         {dirty && (
           <div className="flex gap-2 shrink-0">
             <Button variant="outline" size="sm" onClick={handleDiscard} disabled={pending}>
@@ -500,7 +500,7 @@ function CategoryEditor({
         )}
       </div>
 
-      {/* ── Unsaved banner ──────────────────────────────── */}
+
       {dirty && (
         <div className="rounded-lg border border-amber-500/30 bg-amber-50 dark:bg-amber-500/10 p-3 flex items-center gap-3">
           <AlertCircle className="h-4 w-4 text-amber-600 shrink-0" />
@@ -510,12 +510,12 @@ function CategoryEditor({
         </div>
       )}
 
-      {/* ── Settings grid ───────────────────────────────── */}
+
       <Card>
         <CardHeader>
           <CardTitle>{t(`categories.${meta.key}`)}</CardTitle>
           <CardDescription>
-            {settings.length} {settings.length > 1 ? "paramètres disponibles" : "paramètre disponible"}
+            {t("parametres_disponibles_count", { count: settings.length })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -557,19 +557,19 @@ function CategoryEditor({
         </CardContent>
       </Card>
 
-      {/* ── Integration test buttons ────────────────────── */}
+
       {meta.key === "integrations" && (
         <Card>
           <CardHeader>
-            <CardTitle>Tester les connexions</CardTitle>
+            <CardTitle>{t("tester_connexions")}</CardTitle>
             <CardDescription>
-              Vérifiez que vos clés API fonctionnent avant d&apos;enregistrer
+              {t("verifiez_cles_api_fonctionnent_avant")}
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => handleTestConnection("stripe")}>
               <Check className="h-4 w-4" />
-              Stripe
+              {t("stripe")}
             </Button>
             <Button variant="outline" size="sm" onClick={() => handleTestConnection("smtp")}>
               <Check className="h-4 w-4" />
@@ -579,12 +579,12 @@ function CategoryEditor({
         </Card>
       )}
 
-      {/* ── Danger zone ─────────────────────────────────── */}
+
       <Card className="border-destructive/30">
         <CardHeader>
-          <CardTitle className="text-destructive">Zone sensible</CardTitle>
+          <CardTitle className="text-destructive">{t("zone_sensible")}</CardTitle>
           <CardDescription>
-            Ces actions sont irréversibles. Utilisez-les avec précaution.
+            {t("actions_irreversibles_utilisez_precaution")}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -617,8 +617,9 @@ function SettingField({
   onToggleVisible: () => void;
   onCopy: () => void;
 }) {
+  const t = useTranslations("admin.settings_admin");
   const tc = useTranslations("common");
-  // Boolean → Switch
+
   if (setting.type === "boolean") {
     return (
       <div className="flex items-center h-11">
@@ -632,7 +633,7 @@ function SettingField({
     );
   }
 
-  // Number → Input number
+
   if (setting.type === "number") {
     return (
       <Input
@@ -644,7 +645,7 @@ function SettingField({
     );
   }
 
-  // JSON → Textarea
+
   if (setting.type === "json") {
     return (
       <Textarea
@@ -657,7 +658,7 @@ function SettingField({
     );
   }
 
-  // Secret → masked input with show/hide toggle
+
   if (setting.isSecret || setting.type === "secret") {
     return (
       <div className="flex gap-2">
@@ -675,7 +676,7 @@ function SettingField({
             type="button"
             onClick={onToggleVisible}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            aria-label={visible ? "Masquer" : "Afficher"}
+            aria-label={visible ? t("masquer") : t("afficher")}
           >
             {visible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
           </button>
@@ -687,7 +688,7 @@ function SettingField({
     );
   }
 
-  // Long text → Textarea
+
   if (setting.value && setting.value.length > 80) {
     return (
       <Textarea
@@ -699,7 +700,7 @@ function SettingField({
     );
   }
 
-  // Default → Input text
+
   return (
     <Input
       id={`setting-${setting.id}`}
@@ -728,7 +729,7 @@ function CustomCategoryView({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex items-start gap-4">
         <button
           onClick={onBack}
@@ -755,7 +756,7 @@ function CustomCategoryView({
         </div>
       </div>
 
-      {/* Contenu spécialisé selon le type */}
+
       {meta.custom === "integrations" && <TabIntegrations />}
       {meta.custom === "automations" && <TabAutomatisations />}
       {meta.custom === "notifications" && <NotificationsWrapper />}
@@ -763,16 +764,13 @@ function CustomCategoryView({
         <Card>
           <CardContent className="p-6 space-y-4">
             <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900">
-              <p className="font-semibold mb-1">Personnalisation des courriels</p>
-              <p className="text-xs">
-                Modifiez le contenu des courriels envoyés automatiquement à vos clients
-                (devis, factures, rappels, confirmations de signature, etc.). Vous pouvez
-                utiliser des variables dynamiques comme <code className="bg-blue-100 px-1 rounded">{`{{nom_client}}`}</code> ou <code className="bg-blue-100 px-1 rounded">{`{{montant}}`}</code>.
+              <p className="font-semibold mb-1">{t("personnalisation_courriels")}</p>
+              <p className="text-xs">{t("settings_view_modifiez_le_contenu_des_courriels_envoyes_automatiquement")}<code className="bg-blue-100 px-1 rounded">{`{{nom_client}}`}</code> ou <code className="bg-blue-100 px-1 rounded">{`{{montant}}`}</code>.
               </p>
             </div>
             <Button asChild className="w-full sm:w-auto">
               <Link href="/admin/message-templates" className="flex items-center gap-2">
-                Ouvrir l&apos;éditeur de modèles
+                {t("ouvrir_apos_editeur_modeles")}
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

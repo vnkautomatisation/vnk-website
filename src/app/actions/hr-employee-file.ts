@@ -1,6 +1,7 @@
 "use server";
 // Actions dossier employé : coordonnées d'urgence, info bancaire, famille, fichiers, équipement.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -50,10 +51,11 @@ const emergencySchema = z.object({
 });
 
 export async function upsertEmergencyContactAction(input: z.infer<typeof emergencySchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
   const parsed = emergencySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   if (parsed.data.isPrimary) {
     await prisma.emergencyContact.updateMany({
@@ -110,10 +112,11 @@ const bankSchema = z.object({
 });
 
 export async function upsertBankInfoAction(input: z.infer<typeof bankSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
   const parsed = bankSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     const data = {
@@ -152,6 +155,7 @@ export async function getBankInfoMaskedAction(input: { adminId: number }): Promi
   accountMasked: string;
   verifiedAt: string | null;
 } | null>> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
 
@@ -173,7 +177,7 @@ export async function getBankInfoMaskedAction(input: { adminId: number }): Promi
       },
     };
   } catch {
-    return { success: false, error: "Impossible de déchiffrer" };
+    return { success: false, error: t("impossible_de_dechiffrer") };
   }
 }
 
@@ -194,10 +198,11 @@ const licenseSchema = z.object({
 });
 
 export async function upsertLicenseAction(input: z.infer<typeof licenseSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
   const parsed = licenseSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     adminId: parsed.data.adminId,
@@ -250,11 +255,12 @@ const equipmentSchema = z.object({
 });
 
 export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   // Équipement : seuls les RH/admin peuvent gérer (pas self-service)
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   const parsed = equipmentSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     adminId: parsed.data.adminId,
@@ -281,7 +287,7 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
         recipientType: "admin",
         recipientId: parsed.data.adminId,
         type: "info",
-        title: "Équipement assigné",
+        title: t("equipement_assigne"),
         body: `${parsed.data.name}${parsed.data.category ? ` (${parsed.data.category})` : ""}`,
         link: "/admin/mon-espace/equipement",
         icon: "package",
@@ -297,6 +303,7 @@ export async function upsertEquipmentAction(input: z.infer<typeof equipmentSchem
 }
 
 export async function returnEquipmentAction(input: { id: number; condition: "good" | "damaged" | "lost" }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
 
@@ -321,7 +328,7 @@ export async function returnEquipmentAction(input: { id: number; condition: "goo
           recipientId: equipment.adminId,
           type: "info",
           title: `Équipement marqué retourné : ${equipment.name}`,
-          body: `Les RH ont enregistré le retour de cet équipement (état : ${input.condition === "good" ? "bon état" : input.condition === "damaged" ? "endommagé" : "perdu"}). Contactez-les si ce n'est pas exact.`,
+          body: t("rh_ont_enregistre_retour_equipement", { etat: input.condition === "good" ? t("etat_bon") : input.condition === "damaged" ? t("etat_endommage") : t("etat_perdu") }),
           link: "/admin/mon-espace/equipement",
           icon: "package",
         },
@@ -364,10 +371,11 @@ const trainingSchema = z.object({
 });
 
 export async function upsertTrainingAction(input: z.infer<typeof trainingSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
   const parsed = trainingSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     adminId: parsed.data.adminId,
@@ -415,10 +423,11 @@ const familySchema = z.object({
 });
 
 export async function upsertFamilyDependentAction(input: z.infer<typeof familySchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const guard = await requireSelfOrHr(input.adminId);
   if (!guard) return unauthorized();
   const parsed = familySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     adminId: parsed.data.adminId,

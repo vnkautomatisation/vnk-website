@@ -2,6 +2,7 @@
 // message catalogue of several thousand keys is unreviewable.
 
 import about from "./about.json";
+import api_errors from "./api_errors.json";
 import auth from "./auth.json";
 import common from "./common.json";
 import contact from "./contact.json";
@@ -16,6 +17,7 @@ import status from "./status.json";
 import admin from "./admin";
 
 export default {
+  api_errors,
   about,
   auth,
   common,

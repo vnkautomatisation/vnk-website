@@ -133,29 +133,29 @@ type Props = {
   previewEmployees?: PreviewEmployee[];
 };
 
-const CATEGORY_OPTIONS: Record<TemplateWizardType, { value: string; label: string }[]> = {
+const CATEGORY_OPTIONS: Record<TemplateWizardType, { value: string; labelKey: string }[]> = {
   legal: [
-    { value: "policy", label: "Politique" },
-    { value: "nda", label: "Accord de confidentialite (NDA)" },
-    { value: "acknowledgment", label: "Accuse de reception" },
+    { value: "policy", labelKey: "politique" },
+    { value: "nda", labelKey: "accord_confidentialite_nda" },
+    { value: "acknowledgment", labelKey: "accuse_reception" },
   ],
   contract: [
-    ...CONTRACT_TYPES.map((t) => ({ value: t.value, label: t.label })),
-    { value: "autre", label: "Autre" },
+    ...CONTRACT_TYPES.map((ct) => ({ value: ct.value, labelKey: ct.labelKey })),
+    { value: "autre", labelKey: "autre" },
   ],
   policy: [
-    { value: "rh", label: "RH" },
-    { value: "ti", label: "TI / Securite" },
-    { value: "conduct", label: "Code de conduite" },
-    { value: "harcelement", label: "Harcelement" },
-    { value: "autre", label: "Autre" },
+    { value: "rh", labelKey: "rh" },
+    { value: "ti", labelKey: "ti_securite" },
+    { value: "conduct", labelKey: "code_conduite" },
+    { value: "harcelement", labelKey: "harcelement" },
+    { value: "autre", labelKey: "autre" },
   ],
 };
 
-const TYPE_LABELS: Record<TemplateWizardType, { singular: string; icon: typeof FileText }> = {
-  legal: { singular: "document legal", icon: FileText },
-  contract: { singular: "modele de contrat", icon: FileText },
-  policy: { singular: "politique", icon: FileText },
+const TYPE_LABELS: Record<TemplateWizardType, { singularKey: string; icon: typeof FileText }> = {
+  legal: { singularKey: "document_legal", icon: FileText },
+  contract: { singularKey: "modele_contrat", icon: FileText },
+  policy: { singularKey: "politique_2", icon: FileText },
 };
 
 type WizardStep = 1 | 2 | 3 | 4;
@@ -169,12 +169,15 @@ export function TemplateWizard({
   onSave,
   previewEmployees: previewEmployeesProp,
 }: Props) {
+  const t = useTranslations("admin.library");
   const tc = useTranslations("common");
-  // En mode edit : on saute directement a etape 4
+
+  const tAll = (key: string) => (key.startsWith("ct_") ? tc(key) : t(key));
+
   const initialStep: WizardStep = mode === "edit" ? 4 : 1;
   const [step, setStep] = useState<WizardStep>(initialStep);
 
-  // Form state
+
   const [key, setKey] = useState(initial?.key ?? "");
   const [title, setTitle] = useState(initial?.title ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
@@ -192,8 +195,8 @@ export function TemplateWizard({
   const [signatureScope, setSignatureScope] = useState<TemplateSignatureScope>(
     initial?.signatureScope ?? (type === "contract" ? "both" : "employee_only"),
   );
-  // Acknowledgment mode : reading_only par défaut (majorité des docs)
-  // sauf pour les contrats où on force "signature".
+
+
   const [acknowledgmentMode, setAcknowledgmentMode] =
     useState<TemplateAcknowledgmentMode>(
       initial?.acknowledgmentMode ??
@@ -201,7 +204,7 @@ export function TemplateWizard({
     );
   const [submitting, setSubmitting] = useState(false);
 
-  // Preview state
+
   const [previewEmployees, setPreviewEmployees] = useState<PreviewEmployee[]>(
     previewEmployeesProp ?? []
   );
@@ -209,12 +212,12 @@ export function TemplateWizard({
     previewEmployeesProp?.[0]?.id
   );
 
-  // Import dialog state (etape 1 -> option "Importer un document")
+
   const [importOpen, setImportOpen] = useState(false);
-  // Si true, le picker de variables (panneau lateral) est ouvert en overlay
+
   const [variablePickerOpen, setVariablePickerOpen] = useState(false);
 
-  // Reset complet a l'ouverture
+
   useEffect(() => {
     if (!open) return;
     setStep(mode === "edit" ? 4 : 1);
@@ -237,7 +240,7 @@ export function TemplateWizard({
     setSelectedPreviewId(previewEmployeesProp?.[0]?.id);
   }, [open, mode, initial, previewEmployeesProp, type]);
 
-  // Charge les employes pour l'apercu si non fournis (etape 4 atteinte)
+
   useEffect(() => {
     if (!open) return;
     if (previewEmployeesProp && previewEmployeesProp.length > 0) {
@@ -273,13 +276,13 @@ export function TemplateWizard({
     };
   }, [open, step, previewEmployeesProp, selectedPreviewId]);
 
-  // Insertion rapide via les boutons de la toolbar (etape 4).
-  // Le RichEditor parse automatiquement les `{{...}}` ajoutes a la
-  // chaine markdown et les affiche comme pills.
+
+
+
   const handleInsertVariable = (variable: string) => {
     setBodyMarkdown((b) => {
-      // Ajoute un espace separateur si la chaine ne se termine pas
-      // deja par un espace ou un saut de ligne.
+
+
       if (!b || /[\s\n]$/.test(b)) return b + variable;
       return b + " " + variable;
     });
@@ -307,7 +310,7 @@ export function TemplateWizard({
   const handleImported = (data: ImportTemplateDialogResult) => {
     setBodyMarkdown(data.bodyMarkdown);
     if (data.suggestedTitle) setTitle(data.suggestedTitle);
-    // Si le type de doc detecte est un type RH/contrat connu, le pousser dans category
+
     if (data.suggestedDocumentType && !category) {
       setCategory(data.suggestedDocumentType);
     }
@@ -316,13 +319,13 @@ export function TemplateWizard({
     toast.success(
       data.acceptedSubstitutions > 0
         ? `Document importe avec ${data.acceptedSubstitutions} champ${data.acceptedSubstitutions > 1 ? "s" : ""} dynamique${data.acceptedSubstitutions > 1 ? "s" : ""}`
-        : "Document importe"
+        : t("document_importe")
     );
   };
 
   const canGoNext = useMemo(() => {
     if (step === 2) {
-      // Cle + titre requis (cle facultative en mode legal/contract si auto-genere)
+
       if (!title.trim()) return false;
       if (type !== "contract" && !key.trim()) return false;
       return true;
@@ -340,7 +343,7 @@ export function TemplateWizard({
 
   const goNext = () => {
     if (step === 1) {
-      // Skip = bouton dedie. Ne devrait pas etre atteint via "Suivant"
+
       return;
     }
     if (step < 4) setStep((s) => (s + 1) as WizardStep);
@@ -348,7 +351,7 @@ export function TemplateWizard({
 
   const goPrev = () => {
     if (mode === "edit") {
-      // En mode edit on permet la navigation arriere uniquement entre 2-3-4
+
       if (step > 2) setStep((s) => (s - 1) as WizardStep);
       return;
     }
@@ -357,12 +360,12 @@ export function TemplateWizard({
 
   const submit = async () => {
     if (!canSubmit) {
-      toast.error("Verifiez le titre, la cle et le contenu (min. 10 caracteres)");
+      toast.error(t("verifiez_titre_cle_contenu_min"));
       return;
     }
     setSubmitting(true);
     try {
-      // Si lecture seule, on force scope = "none" (pas de signature pad cote employe)
+
       const effectiveScope: TemplateSignatureScope =
         acknowledgmentMode === "reading_only" ? "none" : signatureScope;
       await onSave({
@@ -379,7 +382,7 @@ export function TemplateWizard({
       });
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur lors de l'enregistrement";
+      const msg = err instanceof Error ? err.message : t("erreur_lors_enregistrement");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -393,75 +396,75 @@ export function TemplateWizard({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-6xl sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
-        {/* Header navy gradient */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Icon className="h-4 w-4 shrink-0" />
               <span className="truncate">
-                {mode === "edit" ? "Modifier " : "Nouveau "}
-                {TYPE_LABELS[type].singular}
+                {mode === "edit" ? t("modifier_prefixe") : t("nouveau_prefixe")}
+                {t(TYPE_LABELS[type].singularKey)}
               </span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {mode === "edit"
-                ? "Modifiez le contenu, le ciblage ou la version. Pensez a incrementer la version si le contenu change significativement."
-                : "Suivez les etapes pour creer un nouveau modele reutilisable, avec variables dynamiques et apercu."}
+                ? t("modifiez_contenu_ciblage_version_pensez")
+                : t("suivez_etapes_creer_nouveau_modele")}
             </DialogDescription>
           </DialogHeader>
 
-          {/* Stepper */}
+
           <div className="mt-3 flex items-center gap-1.5">
             <StepDots
               currentStep={currentStepIdx}
               totalSteps={totalSteps}
               labels={
                 mode === "edit"
-                  ? ["Identification", "Public", "Contenu"]
-                  : ["Demarrage", "Identification", "Public", "Contenu"]
+                  ? [t("identification"), t("public"), t("contenu")]
+                  : [t("demarrage"), t("identification"), t("public"), t("contenu")]
               }
             />
           </div>
         </div>
 
-        {/* Body */}
+
         <div className="flex-1 overflow-hidden flex flex-col min-h-0">
           {step === 1 && mode === "create" && (
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
-              {/* 3 options de demarrage */}
+
               <div>
                 <h3 className="text-sm font-semibold text-foreground mb-1">
-                  Comment souhaitez-vous demarrer ?
+                  {t("comment_souhaitez_vous_demarrer")}
                 </h3>
                 <p className="text-[11px] text-muted-foreground mb-3">
-                  Choisissez une option ci-dessous, puis personnalisez le contenu a l&apos;etape suivante.
+                  {t("choisissez_option_ci_dessous_puis")}
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                  {/* Option 1 : Bibliotheque (deroule directement le browser ci-dessous) */}
+
                   <StartOptionCard
                     icon={Library}
-                    title="Modele de bibliotheque"
-                    description="Partez d'un modele VNK pre-redige (politique, contrat, NDA…)."
+                    title={t("modele_bibliotheque")}
+                    description={t("partez_modele_vnk_pre_redige")}
                     onClick={() => {
-                      // Scroll vers le browser ci-dessous
+
                       const el = document.getElementById("starter-library");
                       el?.scrollIntoView({ behavior: "smooth", block: "start" });
                     }}
-                    badge="Recommande"
+                    badge={t("recommande")}
                   />
-                  {/* Option 2 : Import */}
+
                   <StartOptionCard
                     icon={Upload}
-                    title="Importer un document existant"
-                    description="Importez un PDF, DOCX ou TXT — VNK detecte automatiquement les variables (noms, dates, montants)."
+                    title={t("importer_document_existant")}
+                    description={t("importez_pdf_docx_txt_vnk")}
                     onClick={() => setImportOpen(true)}
-                    badge="Intelligent"
+                    badge={t("intelligent")}
                   />
-                  {/* Option 3 : Partir de zero */}
+
                   <StartOptionCard
                     icon={FilePlus}
-                    title="Partir de zero"
-                    description="Creez un modele vide. Vous redigerez tout le contenu manuellement."
+                    title={t("partir_zero")}
+                    description={t("creez_modele_vide_vous_redigerez")}
                     onClick={handleSkipLibrary}
                   />
                 </div>
@@ -479,15 +482,15 @@ export function TemplateWizard({
 
           {step === 2 && (
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
-              <FormSection icon={Layers} title="Identification">
+              <FormSection icon={Layers} title={t("identification")}>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <Field
-                    label="Cle technique"
+                    label={t("cle_technique")}
                     required={type !== "contract"}
                     hint={
                       type === "contract"
-                        ? "Optionnel (auto-genere)"
-                        : "Immuable une fois cree (a-z, 0-9, _)"
+                        ? t("optionnel_auto_genere")
+                        : t("immuable_fois_cree_z_0")
                     }
                   >
                     <Input
@@ -503,7 +506,7 @@ export function TemplateWizard({
                       disabled={mode === "edit" && !!initial?.key}
                     />
                   </Field>
-                  <Field label="Version" required>
+                  <Field label={t("version")} required>
                     <Input
                       value={version}
                       onChange={(e) => setVersion(e.target.value)}
@@ -511,31 +514,31 @@ export function TemplateWizard({
                     />
                   </Field>
                 </div>
-                <Field label="Titre" required>
+                <Field label={t("titre")} required>
                   <Input
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder={
                       type === "legal"
-                        ? "Politique de confidentialite"
+                        ? t("politique_confidentialite")
                         : type === "contract"
-                          ? "Contrat CDI - Technicien"
-                          : "Politique de teletravail"
+                          ? t("contrat_cdi_technicien")
+                          : t("politique_teletravail")
                     }
                   />
                 </Field>
-                <Field label="Categorie">
+                <Field label={t("categorie")}>
                   <Select
                     value={category}
                     onValueChange={(v) => setCategory(v)}
                   >
                     <SelectTrigger className="h-9 text-sm">
-                      <SelectValue placeholder="Choisir une categorie…" />
+                      <SelectValue placeholder={t("choisir_categorie")} />
                     </SelectTrigger>
                     <SelectContent>
                       {CATEGORY_OPTIONS[type].map((c) => (
                         <SelectItem key={c.value} value={c.value}>
-                          {c.label}
+                          {tAll(c.labelKey)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -549,29 +552,29 @@ export function TemplateWizard({
             <div className="p-4 sm:p-5 overflow-y-auto space-y-4 sm:space-y-5">
               <FormSection
                 icon={Users}
-                title="Public cible"
-                description="Laissez vide pour appliquer a tous les employes. Sinon, restreignez aux postes / departements listes."
+                title={t("public_cible")}
+                description={t("laissez_vide_appliquer_tous_employes")}
               >
                 <Field
-                  label="Postes cibles"
-                  hint="Selectionnez des postes existants ou creez-en un nouveau pour cibler ce modele."
+                  label={t("postes_cibles")}
+                  hint={t("selectionnez_postes_existants_creez_nouveau")}
                 >
                   <PositionMultiPicker
                     inline
                     value={targetPositions}
                     onChange={setTargetPositions}
-                    placeholder="Choisir des postes..."
+                    placeholder={t("choisir_postes")}
                   />
                 </Field>
-                <Field label="Departements cibles" hint="Appuyez sur Entree pour ajouter">
+                <Field label={t("departements_cibles")} hint={t("appuyez_entree_ajouter")}>
                   <ChipsInput
                     values={targetDepartments}
                     onChange={setTargetDepartments}
-                    placeholder="Ex : Ingenierie"
+                    placeholder={t("ex_ingenierie")}
                   />
                 </Field>
                 {type !== "contract" && (
-                  <Field label="Options">
+                  <Field label={t("options")}>
                     <label className="flex items-start gap-2 cursor-pointer rounded-md border border-input bg-card px-3 py-2 hover:border-[#0F2D52]/30 transition">
                       <input
                         type="checkbox"
@@ -581,34 +584,31 @@ export function TemplateWizard({
                       />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-foreground">
-                          Document obligatoire
+                          {t("document_obligatoire")}
                         </p>
-                        <p className="text-[11px] text-muted-foreground">
-                          Inclus automatiquement dans le parcours d&apos;onboarding
-                          des nouveaux employes cibles.
-                        </p>
+                        <p className="text-[11px] text-muted-foreground">{t("template_wizard_inclus_automatiquement_dans_le_parcours_d_onboarding")}</p>
                       </div>
                     </label>
                   </Field>
                 )}
-                {/* Bug 2 : Type d'engagement (radio AU-DESSUS de signatureScope) */}
+
                 {type !== "contract" && (
                   <Field
-                    label="Type d'engagement"
-                    hint="La majorité des documents (politiques, codes, communications) ne nécessitent qu'un accusé de lecture. Réservez la signature manuscrite aux contrats légaux."
+                    label={t("type_engagement")}
+                    hint={t("majorite_documents_necessitent_accuse_lecture")}
                   >
                     <div className="space-y-1.5">
                       {(
                         [
                           {
                             v: "reading_only",
-                            title: "Lecture seule (accusé de lecture)",
-                            hint: "Recommandé pour politiques, codes de conduite, communications RH.",
+                            title: t("lecture_seule_accuse_lecture"),
+                            hint: t("recommande_politiques_codes_conduite_communications"),
                           },
                           {
                             v: "signature",
-                            title: "Signature manuscrite",
-                            hint: "Obligatoire pour contrats, ententes légales et engagements formels.",
+                            title: t("signature_manuscrite"),
+                            hint: t("obligatoire_contrats_ententes_legales_engagements"),
                           },
                         ] as const
                       ).map((opt) => {
@@ -644,34 +644,34 @@ export function TemplateWizard({
                     </div>
                   </Field>
                 )}
-                {/* SignatureScope : masque quand reading_only (pas besoin de scope si pas de signature) */}
+
                 {(type === "contract" || acknowledgmentMode === "signature") && (
                   <Field
-                    label="Signataires requis"
-                    hint="Determine quels blocs Signature apparaitront dans le PDF final et dans l'apercu employe."
+                    label={t("signataires_requis")}
+                    hint={t("determine_quels_blocs_signature_apparaitront")}
                   >
                     <div className="space-y-1.5">
                       {(
                         [
                           {
                             v: "employee_only",
-                            title: "Employe seulement",
-                            hint: "Politiques internes, codes de conduite, accuses de reception.",
+                            title: t("employe_seulement"),
+                            hint: t("politiques_internes_codes_conduite_accuses"),
                           },
                           {
                             v: "employer_only",
-                            title: "Employeur seulement",
-                            hint: "Lettres, attestations et confirmations emises par VNK.",
+                            title: t("employeur_seulement"),
+                            hint: t("lettres_attestations_confirmations_emises_vnk"),
                           },
                           {
                             v: "both",
-                            title: "Les deux signatures",
-                            hint: "Contrats et ententes a double signature (employe + employeur).",
+                            title: t("deux_signatures"),
+                            hint: t("contrats_ententes_double_signature"),
                           },
                           {
                             v: "none",
-                            title: "Aucune signature",
-                            hint: "Documents purement informatifs (memos, bulletins internes).",
+                            title: t("aucune_signature"),
+                            hint: t("documents_purement_informatifs_memos_bulletins"),
                           },
                         ] as const
                       ).map((opt) => {
@@ -713,13 +713,13 @@ export function TemplateWizard({
 
           {step === 4 && (
             <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-0 min-h-0 overflow-hidden">
-              {/* Colonne editeur */}
+
               <div className="flex flex-col min-h-0 lg:border-r border-b lg:border-b-0">
                 <div className="px-4 sm:px-5 py-2 sm:py-3 border-b bg-muted/30 shrink-0">
                   <div className="flex items-center gap-2">
                     <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
                     <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
-                      Editeur
+                      {t("editeur")}
                     </h4>
                   </div>
                 </div>
@@ -729,31 +729,30 @@ export function TemplateWizard({
                     <TemplateRichEditor
                       value={bodyMarkdown}
                       onChange={setBodyMarkdown}
-                      placeholder={"Commencez a rediger… Utilisez la barre d'outils ou le bouton « Inserer un champ » pour ajouter des elements dynamiques (nom, date, salaire…)."}
+                      placeholder={t("commencez_rediger_utilisez_barre_outils")}
                       minHeight="380px"
                     />
 
-                    {/* Hint pedagogique */}
+
                     <div className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
                       <Lightbulb className="h-3.5 w-3.5 text-amber-600 shrink-0 mt-0.5" />
                       <p className="text-[11px] text-amber-900 leading-snug">
-                        <span className="font-semibold">Conseil :</span> les champs dynamiques apparaissent en <span className="font-semibold text-blue-900">bleu</span> dans l&apos;editeur. Cliquez sur un champ pour le remplacer ou le supprimer. Ils seront automatiquement remplaces par les vraies donnees de l&apos;employe lors de l&apos;envoi.
-                      </p>
+                        <span className="font-semibold">{t("conseil")}</span> {t("champs_dynamiques_apparaissent")} <span className="font-semibold text-blue-900">bleu</span>{t("template_wizard_dans_l_editeur_cliquez_sur_un_champ")}</p>
                     </div>
                   </div>
 
-                  {/* Variable picker overlay (dropdown "Plus de champs") - DESACTIVE */}
+
                   {false && variablePickerOpen && (
                     <div className="absolute inset-y-0 right-0 w-[260px] bg-card border-l shadow-xl z-10 flex flex-col">
                       <div className="px-3 py-2 border-b bg-muted/30 flex items-center justify-between shrink-0">
                         <span className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
-                          Tous les champs
+                          {t("tous_champs")}
                         </span>
                         <button
                           type="button"
                           onClick={() => setVariablePickerOpen(false)}
                           className="text-muted-foreground hover:text-foreground transition"
-                          aria-label="Fermer le panneau"
+                          aria-label={t("fermer_panneau")}
                         >
                           <X className="h-3.5 w-3.5" />
                         </button>
@@ -771,12 +770,12 @@ export function TemplateWizard({
                 </div>
               </div>
 
-              {/* Colonne apercu PDF live */}
+
               <div className="flex flex-col min-h-0">
                 <div className="px-4 sm:px-5 py-2 sm:py-3 border-b bg-muted/30 shrink-0 flex items-center gap-2">
                   <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
                   <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
-                    Apercu PDF live
+                    {t("apercu_pdf_live")}
                   </h4>
                 </div>
                 <div className="flex-1 px-3 sm:px-4 py-2 sm:py-3 min-h-0 overflow-hidden">
@@ -785,7 +784,7 @@ export function TemplateWizard({
                     selectedEmployeeId={selectedPreviewId}
                     onChangeEmployee={setSelectedPreviewId}
                     employees={previewEmployees}
-                    title={title || `Apercu ${TYPE_LABELS[type].singular}`}
+                    title={title || t("apercu_type", { type: t(TYPE_LABELS[type].singularKey) })}
                     documentType={type}
                     metadata={{ version: version || "1.0" }}
                   />
@@ -795,7 +794,7 @@ export function TemplateWizard({
           )}
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap sm:justify-between">
           <div className="flex items-center gap-2 order-2 sm:order-1 w-full sm:w-auto">
             {((mode === "create" && step > 1) || (mode === "edit" && step > 2)) && (
@@ -808,7 +807,7 @@ export function TemplateWizard({
                 className="gap-1.5 w-full sm:w-auto"
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
-                Precedent
+                {t("precedent")}
               </Button>
             )}
           </div>
@@ -847,14 +846,14 @@ export function TemplateWizard({
                 ) : (
                   <Save className="h-3.5 w-3.5" />
                 )}
-                {mode === "edit" ? "Enregistrer" : "Creer le template"}
+                {mode === "edit" ? t("enregistrer") : t("creer_template")}
               </Button>
             )}
           </div>
         </DialogFooter>
       </DialogContent>
 
-      {/* Import dialog (option "Importer un document existant" - etape 1) */}
+
       <ImportTemplateDialog
         open={importOpen}
         onClose={() => setImportOpen(false)}

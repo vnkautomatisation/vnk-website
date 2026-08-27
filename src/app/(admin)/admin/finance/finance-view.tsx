@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
+import { useCountryName, useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -58,12 +60,7 @@ type ServiceRow = { service: string; total: number; count: number };
 type CityRow = { city: string; country: string; total: number; count: number };
 type ClientRow = { id: number; name: string; company: string | null; total: number; count: number; city: string | null; country: string };
 
-const COUNTRY_NAMES: Record<string, string> = {
-  CA: "Canada", US: "États-Unis", FR: "France", DE: "Allemagne", GB: "Royaume-Uni",
-  IT: "Italie", ES: "Espagne", BE: "Belgique", CH: "Suisse", LU: "Luxembourg",
-  CI: "Côte d'Ivoire", SN: "Sénégal", CM: "Cameroun", MA: "Maroc", TN: "Tunisie",
-  BJ: "Bénin", TG: "Togo", BF: "Burkina Faso",
-};
+
 
 const COUNTRY_FLAGS: Record<string, string> = {
   CA: "🇨🇦", US: "🇺🇸", FR: "🇫🇷", DE: "🇩🇪", GB: "🇬🇧",
@@ -71,14 +68,14 @@ const COUNTRY_FLAGS: Record<string, string> = {
   CI: "🇨🇮", SN: "🇸🇳", CM: "🇨🇲", MA: "🇲🇦", TN: "🇹🇳",
 };
 
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte de crédit",
-  card: "Carte de crédit",
-  interac: "Interac",
-  cheque: "Chèque",
-  transfert: "Virement bancaire",
-  cash: "Comptant",
-  autre: "Autre",
+const PAYMENT_METHOD_KEYS: Record<string, string> = {
+  stripe: "carte_credit",
+  card: "carte_credit",
+  interac: "interac",
+  cheque: "cheque",
+  transfert: "virement_bancaire",
+  cash: "comptant",
+  autre: "autre",
 };
 
 // Palette VNK
@@ -86,15 +83,14 @@ const PIE_COLORS = ["#0F2D52", "#15406d", "#1B4F8A", "#2563eb", "#3b82f6", "#60a
 const NEW_COLOR = "#10B981";
 const RETURNING_COLOR = "#0F2D52";
 
-function formatMonth(yyyymm: string): string {
+function formatMonth(yyyymm: string, locale: string): string {
   const [y, m] = yyyymm.split("-");
-  const months = ["Jan", "Fév", "Mar", "Avr", "Mai", "Juin", "Juil", "Août", "Sept", "Oct", "Nov", "Déc"];
-  return `${months[Number(m) - 1]} ${y.slice(2)}`;
+  const label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString(locale, { month: "short" });
+  return `${label} ${y.slice(2)}`;
 }
 
-function formatDayShort(iso: string): string {
-  const d = new Date(iso + "T12:00:00");
-  return `${d.getDate()} ${["jan", "fév", "mar", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"][d.getMonth()]}`;
+function formatDayShort(iso: string, locale: string): string {
+  return new Date(iso + "T12:00:00").toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
 // Tooltip custom recharts (style Wix). Props typés loose pour matcher l'API recharts.
@@ -141,15 +137,19 @@ export function FinanceView({
   topCities: CityRow[];
   topClients: ClientRow[];
 }) {
+  const t = useTranslations("admin.finance");
+  const dateTag = useDateLocale();
+  const isEn = useLocale().startsWith("en");
+  const countryName = useCountryName();
   const totalCurrencies = byCurrency.length;
   const isInternational = byJurisdiction.length > 1;
   const totalClientsWindow = kpis.newClientCount + kpis.returningClientCount;
   const newPct = totalClientsWindow > 0 ? Math.round((kpis.newClientCount / totalClientsWindow) * 100) : 0;
   const returningPct = totalClientsWindow > 0 ? 100 - newPct : 0;
 
-  // Sticky scroll detection (Wix pattern) — la barre compact apparaît une fois les KPI passés.
-  // rootMargin -64px top compense le topbar sticky (h-[64px], z-30) : le sentinel est
-  // considéré "out" dès qu'il passe SOUS le topbar, pas seulement hors viewport.
+
+
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -163,19 +163,19 @@ export function FinanceView({
     return () => obs.disconnect();
   }, []);
 
-  // Données pour les donuts
+
   const clientMixData = [
-    { name: "Nouveaux", value: kpis.newClientCount, color: NEW_COLOR },
-    { name: "Récurrents", value: kpis.returningClientCount, color: RETURNING_COLOR },
+    { name: t("nouveaux"), value: kpis.newClientCount, color: NEW_COLOR },
+    { name: t("recurrents"), value: kpis.returningClientCount, color: RETURNING_COLOR },
   ];
   const paymentMethodData = byPaymentMethod.map((m, i) => ({
-    name: PAYMENT_METHOD_LABELS[m.method] ?? m.method,
+    name: PAYMENT_METHOD_KEYS[m.method] ? t(PAYMENT_METHOD_KEYS[m.method]) : m.method,
     value: m.total,
     count: m.count,
     color: PIE_COLORS[i % PIE_COLORS.length],
   }));
 
-  // Top villes pour bar chart horizontal
+
   const cityChartData = topCities.slice(0, 6).map((c) => ({
     name: c.city,
     total: c.total,
@@ -190,13 +190,13 @@ export function FinanceView({
 
   return (
     <div className="space-y-5">
-      {/* Hero compact avec accès rapide */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-5 text-white">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
               <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6" />
-              Tableau de bord finance
+              {t("tableau_bord_finance")}
             </h1>
             <p className="text-white/70 text-sm mt-1">
               {totalCurrencies > 1 ? `${totalCurrencies} devises actives · ` : ""}
@@ -206,26 +206,26 @@ export function FinanceView({
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/finance/payments"><CreditCard className="h-3.5 w-3.5 mr-1.5" />Tous les paiements</Link>
+              <Link href="/admin/finance/payments"><CreditCard className="h-3.5 w-3.5 mr-1.5" />{t("tous_paiements")}</Link>
             </Button>
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/finance/settlements"><FileText className="h-3.5 w-3.5 mr-1.5" />Rapport de règlement</Link>
+              <Link href="/admin/finance/settlements"><FileText className="h-3.5 w-3.5 mr-1.5" />{t("rapport_reglement")}</Link>
             </Button>
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/finance/payouts"><Banknote className="h-3.5 w-3.5 mr-1.5" />Versements</Link>
+              <Link href="/admin/finance/payouts"><Banknote className="h-3.5 w-3.5 mr-1.5" />{t("versements")}</Link>
             </Button>
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <Link href="/admin/refunds"><RotateCcw className="h-3.5 w-3.5 mr-1.5" />Remboursements</Link>
+              <Link href="/admin/refunds"><RotateCcw className="h-3.5 w-3.5 mr-1.5" />{t("remboursements")}</Link>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs principaux */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Ce mois</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("mois")}</span>
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
           </div>
           <p className="text-2xl font-bold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</p>
@@ -238,7 +238,7 @@ export function FinanceView({
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">Cette année</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("annee")}</span>
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </div>
           <p className="text-2xl font-bold">{formatCurrency(kpis.paidThisYear)}</p>
@@ -246,15 +246,15 @@ export function FinanceView({
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">À recevoir</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("recevoir")}</span>
             <Clock className="h-4 w-4 text-amber-500" />
           </div>
           <p className="text-2xl font-bold text-amber-600">{formatCurrency(kpis.totalUnpaid)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{kpis.totalUnpaidCount} facture{kpis.totalUnpaidCount > 1 ? "s" : ""} impayée{kpis.totalUnpaidCount > 1 ? "s" : ""}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("factures_impayees_count", { count: kpis.totalUnpaidCount })}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-xs uppercase tracking-wider text-muted-foreground">En retard</span>
+            <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("retard")}</span>
             <AlertCircle className="h-4 w-4 text-red-500" />
           </div>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(kpis.totalOverdue)}</p>
@@ -262,7 +262,7 @@ export function FinanceView({
         </div>
       </div>
 
-      {/* Sentinel — détecte quand les KPI quittent le viewport */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
       {/* Barre sticky compacte — apparaît une fois les KPI passés (pattern Wix).
@@ -273,7 +273,7 @@ export function FinanceView({
         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
             <TrendingUp className="h-4 w-4" />
-            Tableau de bord finance
+            {t("tableau_bord_finance")}
           </span>
           <span className="flex items-baseline gap-1.5 font-semibold">
             <span className="text-muted-foreground">{kpis.windowDays}j :</span>
@@ -285,15 +285,15 @@ export function FinanceView({
             )}
           </span>
           <span className="flex items-baseline gap-1.5">
-            <span className="text-muted-foreground">Ce mois :</span>
+            <span className="text-muted-foreground">{t("mois_2")}</span>
             <span className="font-semibold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span>
           </span>
           <span className="flex items-baseline gap-1.5">
-            <span className="text-muted-foreground">À recevoir :</span>
+            <span className="text-muted-foreground">{t("recevoir_2")}</span>
             <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalUnpaid)}</span>
           </span>
           <span className="flex items-baseline gap-1.5">
-            <span className="text-muted-foreground">En retard :</span>
+            <span className="text-muted-foreground">{t("retard_2")}</span>
             <span className="font-semibold text-red-600">{formatCurrency(kpis.totalOverdue)}</span>
           </span>
           <span className="flex ml-auto items-center gap-3 text-muted-foreground">
@@ -305,11 +305,11 @@ export function FinanceView({
       </div>
       )}
 
-      {/* GRAPHIQUE PRINCIPAL : Évolution journalière (style Wix) */}
+
       <div className="rounded-xl border bg-card p-5">
         <div className="flex items-start justify-between gap-4 flex-wrap mb-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Total des ventes</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("total_ventes")}</p>
             <div className="flex items-baseline gap-3 mt-1">
               <p className="text-3xl font-bold text-[#0F2D52]">{formatCurrency(kpis.windowTotal)}</p>
               {kpis.windowDeltaPct !== null && (
@@ -336,7 +336,7 @@ export function FinanceView({
               <CartesianGrid stroke="#f1f5f9" vertical={false} />
               <XAxis
                 dataKey="date"
-                tickFormatter={formatDayShort}
+                tickFormatter={(v: string) => formatDayShort(v, dateTag)}
                 tick={{ fontSize: 11, fill: "#64748b" }}
                 axisLine={{ stroke: "#e2e8f0" }}
                 tickLine={false}
@@ -354,7 +354,7 @@ export function FinanceView({
                 content={(props) => (
                   <ChartTooltip
                     {...props}
-                    label={props.label ? formatDayShort(String(props.label)) : ""}
+                    label={props.label ? formatDayShort(String(props.label), dateTag) : ""}
                     formatter={(v: number) => formatCurrency(v)}
                   />
                 )}
@@ -373,16 +373,16 @@ export function FinanceView({
         </div>
       </div>
 
-      {/* Donuts : Total / Nouveaux vs récurrents / Moyens de paiement */}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Donut Total des ventes — un seul anneau plein avec montant au centre */}
+
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-sm font-semibold mb-3">Total des ventes</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("total_ventes")}</h2>
           <div className="relative h-[200px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={[{ name: "En ligne", value: kpis.windowTotal || 1 }]}
+                  data={[{ name: t("ligne"), value: kpis.windowTotal || 1 }]}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -397,27 +397,27 @@ export function FinanceView({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("total")}</p>
               <p className="text-lg font-bold text-[#0F2D52]">{formatCurrency(kpis.windowTotal)}</p>
             </div>
           </div>
           <div className="flex items-center justify-between mt-3 text-xs">
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-blue-600 inline-block" />
-              <span className="text-muted-foreground">En ligne</span>
+              <span className="text-muted-foreground">{t("ligne")}</span>
             </div>
             <span className="font-semibold">100% · {formatCurrency(kpis.windowTotal)}</span>
           </div>
         </div>
 
-        {/* Donut Nouveaux vs récurrents */}
+
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-sm font-semibold mb-3">Nouveaux vs clients réguliers</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("nouveaux_vs_clients_reguliers")}</h2>
           <div className="relative h-[200px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={totalClientsWindow > 0 ? clientMixData : [{ name: "Aucun", value: 1, color: "#e2e8f0" }]}
+                  data={totalClientsWindow > 0 ? clientMixData : [{ name: t("aucun"), value: 1, color: "#e2e8f0" }]}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -432,7 +432,7 @@ export function FinanceView({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Clients</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("clients")}</p>
               <p className="text-2xl font-bold text-[#0F2D52]">{totalClientsWindow}</p>
             </div>
           </div>
@@ -441,7 +441,7 @@ export function FinanceView({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: NEW_COLOR }} />
                 <UserPlus className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Nouveaux</span>
+                <span className="text-muted-foreground">{t("nouveaux")}</span>
               </div>
               <span className="font-semibold">{newPct}% · {kpis.newClientCount}</span>
             </div>
@@ -449,21 +449,21 @@ export function FinanceView({
               <div className="flex items-center gap-2">
                 <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ backgroundColor: RETURNING_COLOR }} />
                 <Repeat className="h-3 w-3 text-muted-foreground" />
-                <span className="text-muted-foreground">Réguliers</span>
+                <span className="text-muted-foreground">{t("reguliers")}</span>
               </div>
               <span className="font-semibold">{returningPct}% · {kpis.returningClientCount}</span>
             </div>
           </div>
         </div>
 
-        {/* Donut Moyens de paiement */}
+
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-sm font-semibold mb-3">Moyens de paiement</h2>
+          <h2 className="text-sm font-semibold mb-3">{t("moyens_paiement")}</h2>
           <div className="relative h-[200px] flex items-center justify-center">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={paymentMethodData.length > 0 ? paymentMethodData : [{ name: "Aucun", value: 1, color: "#e2e8f0" }]}
+                  data={paymentMethodData.length > 0 ? paymentMethodData : [{ name: t("aucun"), value: 1, color: "#e2e8f0" }]}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
@@ -483,13 +483,13 @@ export function FinanceView({
               </PieChart>
             </ResponsiveContainer>
             <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Modes</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("modes")}</p>
               <p className="text-2xl font-bold text-[#0F2D52]">{paymentMethodData.length}</p>
             </div>
           </div>
           <div className="space-y-1 mt-3 text-xs max-h-[80px] overflow-y-auto">
             {paymentMethodData.length === 0 ? (
-              <p className="text-muted-foreground italic text-center">Aucun paiement</p>
+              <p className="text-muted-foreground italic text-center">{t("aucun_paiement")}</p>
             ) : paymentMethodData.map((m) => (
               <div key={m.name} className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
@@ -503,15 +503,15 @@ export function FinanceView({
         </div>
       </div>
 
-      {/* Top villes (bar chart horizontal) + Carte juridictions */}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="h-4 w-4" />Ventes par ville</h2>
+            <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="h-4 w-4" />{t("ventes_ville")}</h2>
             <span className="text-[10px] text-muted-foreground">{topCities.length} villes</span>
           </div>
           {cityChartData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic text-center py-12">Aucune ville enregistrée</p>
+            <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucune_ville_enregistree")}</p>
           ) : (
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -541,7 +541,7 @@ export function FinanceView({
                       <ChartTooltip {...props} formatter={(v: number) => formatCurrency(v)} />
                     )}
                   />
-                  <Bar dataKey="total" name="Total" fill="#2563eb" radius={[0, 6, 6, 0]} />
+                  <Bar dataKey="total" name={t("total")} fill="#2563eb" radius={[0, 6, 6, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -550,11 +550,11 @@ export function FinanceView({
 
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold flex items-center gap-2"><Globe className="h-4 w-4" />Répartition par juridiction</h2>
-            {isInternational && <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">International</span>}
+            <h2 className="text-sm font-semibold flex items-center gap-2"><Globe className="h-4 w-4" />{t("repartition_juridiction")}</h2>
+            {isInternational && <span className="text-[10px] uppercase tracking-wider font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">{t("international")}</span>}
           </div>
           {byJurisdiction.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic text-center py-12">Aucune transaction</p>
+            <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucune_transaction")}</p>
           ) : (
             <div className="space-y-2">
               {byJurisdiction.map((j) => {
@@ -565,7 +565,7 @@ export function FinanceView({
                     <div className="flex items-center gap-3">
                       <span className="text-xl shrink-0">{COUNTRY_FLAGS[j.country] ?? "🌍"}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{COUNTRY_NAMES[j.country] || j.country}</p>
+                        <p className="font-medium text-sm">{countryName(j.country)}</p>
                         <p className="text-[10px] text-muted-foreground">{j.clientCount} client{j.clientCount > 1 ? "s" : ""} · {j.count} transaction{j.count > 1 ? "s" : ""}</p>
                       </div>
                       <div className="text-right shrink-0">
@@ -584,20 +584,20 @@ export function FinanceView({
         </div>
       </div>
 
-      {/* Devises (séparation par devise + équivalent CAD) + Top services */}
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><CreditCard className="h-4 w-4" />Encaissements par devise</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><CreditCard className="h-4 w-4" />{t("encaissements_devise")}</h2>
           {byCurrency.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic text-center py-12">Aucune devise enregistrée</p>
+            <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucune_devise_enregistree")}</p>
           ) : (
             <div className="space-y-2">
               <div className="grid grid-cols-12 gap-2 px-2 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                <div className="col-span-2">Devise</div>
-                <div className="col-span-3 text-right">Brut (devise)</div>
-                <div className="col-span-3 text-right">≈ CAD</div>
-                <div className="col-span-2 text-right">Clients</div>
-                <div className="col-span-2 text-right">Tx</div>
+                <div className="col-span-2">{t("devise")}</div>
+                <div className="col-span-3 text-right">{t("brut_devise")}</div>
+                <div className="col-span-3 text-right">{t("cad")}</div>
+                <div className="col-span-2 text-right">{t("clients")}</div>
+                <div className="col-span-2 text-right">{t("tx")}</div>
               </div>
               {byCurrency.map((c) => (
                 <div key={c.currency} className="grid grid-cols-12 gap-2 items-center p-2 rounded bg-muted/30 hover:bg-muted/50 transition-colors text-sm">
@@ -609,16 +609,16 @@ export function FinanceView({
                 </div>
               ))}
               <p className="text-[10px] text-muted-foreground italic mt-2 pt-2 border-t">
-                Chaque paiement est conservé dans sa devise d&apos;origine. La conversion en CAD est figée au taux du jour de la transaction (Banque du Canada / ECB) pour conformité IFRS &amp; ARC.
+                {t("chaque_paiement_conserve_devise_apos")}
               </p>
             </div>
           )}
         </div>
 
         <div className="rounded-xl border bg-card p-5">
-          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><Briefcase className="h-4 w-4" />Ventes par type de service</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2 mb-3"><Briefcase className="h-4 w-4" />{t("ventes_type_service")}</h2>
           {serviceChartData.length === 0 ? (
-            <p className="text-sm text-muted-foreground italic text-center py-12">Aucun service enregistré</p>
+            <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucun_service_enregistre")}</p>
           ) : (
             <div className="h-[260px]">
               <ResponsiveContainer width="100%" height="100%">
@@ -644,7 +644,7 @@ export function FinanceView({
                       <ChartTooltip {...props} formatter={(v: number) => formatCurrency(v)} />
                     )}
                   />
-                  <Bar dataKey="total" name="Total" fill="#0F2D52" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="total" name={t("total")} fill="#0F2D52" radius={[6, 6, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -652,20 +652,19 @@ export function FinanceView({
         </div>
       </div>
 
-      {/* Évolution mensuelle (12 mois) — bar chart compact */}
+
       <div className="rounded-xl border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />Revenus mensuels — 12 derniers mois</h2>
-          <Link href="/admin/finance/payments" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-            Détail <ArrowRight className="h-3 w-3" />
+          <h2 className="text-sm font-semibold flex items-center gap-2"><TrendingUp className="h-4 w-4" />{t("revenus_mensuels_12_derniers_mois")}</h2>
+          <Link href="/admin/finance/payments" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">{t("finance_view_detail")}<ArrowRight className="h-3 w-3" />
           </Link>
         </div>
         {monthlyRevenue.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic text-center py-12">Aucun revenu enregistré</p>
+          <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucun_revenu_enregistre")}</p>
         ) : (
           <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyRevenue.slice(-12).map((m) => ({ name: formatMonth(m.month), total: m.ttc, count: m.count }))} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
+              <BarChart data={monthlyRevenue.slice(-12).map((m) => ({ name: formatMonth(m.month, dateTag), total: m.ttc, count: m.count }))} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v} $`} />
@@ -674,23 +673,23 @@ export function FinanceView({
                     <ChartTooltip {...props} formatter={(v: number) => formatCurrency(v)} />
                   )}
                 />
-                <Bar dataKey="total" name="Total" fill="#10B981" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="total" name={t("total")} fill="#10B981" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
         )}
       </div>
 
-      {/* Top 10 clients (90 jours) avec ville */}
+
       <div className="rounded-xl border bg-card p-5">
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4" />Top 10 clients — 90 derniers jours</h2>
+          <h2 className="text-sm font-semibold flex items-center gap-2"><Users className="h-4 w-4" />{t("top_10_clients_90_derniers")}</h2>
           <Link href="/admin/clients" className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center gap-1">
-            Voir tous <ArrowRight className="h-3 w-3" />
+            {t("voir_tous")} <ArrowRight className="h-3 w-3" />
           </Link>
         </div>
         {topClients.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic text-center py-12">Aucun client encore</p>
+          <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucun_client_encore")}</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-1">
             {topClients.map((c, i) => (
@@ -704,7 +703,7 @@ export function FinanceView({
                   <p className="font-medium truncate">{c.name}</p>
                   <p className="text-[10px] text-muted-foreground truncate">
                     {c.company ? `${c.company} · ` : ""}
-                    {COUNTRY_FLAGS[c.country] ?? "🌍"} {c.city ?? COUNTRY_NAMES[c.country] ?? c.country}
+                    {COUNTRY_FLAGS[c.country] ?? "🌍"} {c.city ?? countryName(c.country)}
                   </p>
                 </div>
                 <div className="text-right shrink-0">
@@ -717,39 +716,39 @@ export function FinanceView({
         )}
       </div>
 
-      {/* KPIs secondaires : remboursements, litiges, total facturé */}
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <div className="rounded-lg border bg-card p-3 text-sm flex items-center gap-3">
           <RotateCcw className="h-5 w-5 text-red-500 shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Remboursements</p>
+            <p className="text-xs text-muted-foreground">{t("remboursements")}</p>
             <p className="font-bold">{formatCurrency(kpis.totalRefunded)} <span className="text-xs text-muted-foreground font-normal">· {kpis.refundedCount}</span></p>
           </div>
         </div>
         <div className="rounded-lg border bg-card p-3 text-sm flex items-center gap-3">
           <AlertCircle className="h-5 w-5 text-rose-500 shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Litiges en cours</p>
+            <p className="text-xs text-muted-foreground">{t("litiges_cours")}</p>
             <p className="font-bold">{formatCurrency(kpis.totalDisputed)} <span className="text-xs text-muted-foreground font-normal">· {kpis.disputedCount}</span></p>
           </div>
         </div>
         <div className="rounded-lg border bg-card p-3 text-sm flex items-center gap-3">
           <FileText className="h-5 w-5 text-blue-500 shrink-0" />
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground">Total facturé (vie)</p>
+            <p className="text-xs text-muted-foreground">{t("total_facture_vie")}</p>
             <p className="font-bold">{formatCurrency(kpis.totalInvoiced)}</p>
           </div>
         </div>
       </div>
 
-      {/* Note pédagogique */}
+
       <div className="rounded-lg border bg-blue-50 p-3 text-xs text-blue-900 space-y-1">
-        <p className="font-semibold">Lecture du tableau de bord</p>
+        <p className="font-semibold">{t("lecture_tableau_bord")}</p>
         <ul className="list-disc list-inside space-y-0.5">
-          <li>Les montants en CAD sont figés au taux du jour de la transaction (audit IFRS / ARC).</li>
-          <li>La fenêtre principale est de {kpis.windowDays} jours, comparée à la période précédente de même durée.</li>
-          <li>Un client est compté &quot;nouveau&quot; si son tout premier paiement est dans la fenêtre courante.</li>
-          <li>La répartition par juridiction utilise le pays inscrit sur la fiche client (par défaut : Canada).</li>
+          <li>{t("montants_cad_figes_taux_jour")}</li>
+          <li>{t("fenetre_principale_jours_comparee", { days: kpis.windowDays })}</li>
+          <li>{t("client_compte_quot_nouveau_quot")}</li>
+          <li>{t("repartition_juridiction_utilise_pays_fiche")}</li>
         </ul>
       </div>
     </div>

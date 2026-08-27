@@ -2,6 +2,7 @@
 // Genere le PDF formel d'une declaration fiscale unique (1 page, document officiel).
 // Inclut les taxes payees (CTI) sur les depenses de la meme periode pour calculer le net a remettre.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -17,6 +18,7 @@ export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -33,7 +35,7 @@ export async function GET(
 
   const decl = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!decl) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
 
   // Bornes inclusif sur le dernier jour

@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════
 
 import { useMemo, useState, useCallback, useEffect, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Search,
   ArrowUp,
@@ -80,19 +81,20 @@ export function DataTable<T>({
   renderCard,
   onRowClick,
   storageKey,
-  searchPlaceholder = "Rechercher...",
+  searchPlaceholder,
   searchFn,
   filterOptions,
   filterFn,
-  filterLabel = "Tous les statuts",
+  filterLabel,
   pageSize: defaultPageSize = 50,
   headerActions,
-  emptyMessage = "Aucun resultat",
+  emptyMessage,
   emptyIcon,
   emptyAction,
   exportFilename,
   stickyHeader,
 }: DataTableProps<T>) {
+  const t = useTranslations("admin.data_table");
   // ── View toggle ────────────────────────────────────────
   const lsKey = storageKey ? `vnk-view-${storageKey}` : null;
   const [view, setView] = useState<"list" | "grid">(() => {
@@ -201,8 +203,12 @@ export function DataTable<T>({
   const pageData = processed.slice(startIdx, startIdx + pageSize);
   const showingText =
     processed.length === 0
-      ? "0 resultat"
-      : `${startIdx + 1}–${Math.min(startIdx + pageSize, processed.length)} sur ${processed.length}`;
+      ? t("n_resultats", { count: 0 })
+      : t("plage_sur_total", {
+          from: startIdx + 1,
+          to: Math.min(startIdx + pageSize, processed.length),
+          total: processed.length,
+        });
 
   // ── CSV Export ─────────────────────────────────────────
   const handleExport = () => {
@@ -245,9 +251,9 @@ export function DataTable<T>({
               type="search"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder={searchPlaceholder}
+              placeholder={searchPlaceholder ?? t("rechercher_points")}
               className="pl-8 sm:pl-9 h-8 sm:h-9 text-xs sm:text-sm"
-              aria-label="Rechercher"
+              aria-label={t("rechercher")}
             />
           </div>
 
@@ -257,9 +263,9 @@ export function DataTable<T>({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               className="h-8 sm:h-9 rounded-md border border-input bg-background px-2 sm:px-3 text-xs sm:text-sm min-w-0 max-w-[130px] sm:min-w-[140px]"
-              aria-label="Filtrer par statut"
+              aria-label={t("filtrer_par_statut")}
             >
-              <option value="all">{filterLabel}</option>
+              <option value="all">{filterLabel ?? t("tous_statuts")}</option>
               {filterOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>
                   {opt.label}
@@ -271,7 +277,7 @@ export function DataTable<T>({
 
         <div className="flex gap-1.5 sm:gap-2 items-center">
           <span className="text-[10px] sm:text-xs text-muted-foreground hidden sm:inline">
-            {processed.length} {processed.length > 1 ? "resultats" : "resultat"}
+            {t("n_resultats", { count: processed.length })}
           </span>
 
           {/* View toggle */}
@@ -319,9 +325,9 @@ export function DataTable<T>({
       {processed.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center border rounded-lg bg-card">
           {emptyIcon ?? <Inbox className="h-12 w-12 text-muted-foreground/40 mb-4" />}
-          <h3 className="font-semibold text-lg mb-1">{emptyMessage}</h3>
+          <h3 className="font-semibold text-lg mb-1">{emptyMessage ?? t("aucun_resultat")}</h3>
           <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-            Il n'y a rien a afficher pour le moment.
+            {t("rien_a_afficher")}
           </p>
           {emptyAction}
         </div>
@@ -453,18 +459,19 @@ function PaginationBar({
   onPageSizeChange: (n: number) => void;
   totalCount: number;
 }) {
+  const t = useTranslations("admin.data_table");
   // Selector visible dès qu'on a + de 25 lignes (sinon inutile)
   const showSizeSelector = totalCount > 25;
   const noPagination = totalPages <= 1;
 
   const PageSizeSelector = showSizeSelector ? (
     <label className="text-[10px] sm:text-xs text-muted-foreground inline-flex items-center gap-1.5">
-      <span>Lignes :</span>
+      <span>{t("lignes")}</span>
       <select
         value={pageSize}
         onChange={(e) => onPageSizeChange(Number(e.target.value))}
         className="h-7 rounded border border-input bg-background px-1.5 text-[10px] sm:text-xs"
-        aria-label="Lignes par page"
+        aria-label={t("lignes_par_page")}
       >
         {PAGE_SIZE_OPTIONS.map((n) => (
           <option key={n} value={n}>{n}</option>

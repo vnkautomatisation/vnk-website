@@ -1,6 +1,7 @@
 "use client";
 // Modal de signature de contrat — design pro VNK
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -29,6 +30,7 @@ export function SignatureDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("common");
   const router = useRouter();
   const [sending, setSending] = useState(false);
 
@@ -42,18 +44,18 @@ export function SignatureDialog({
       });
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.error ?? "Erreur signature");
+        throw new Error(err.error ?? t("erreur_signature"));
       }
       const data = await res.json();
       toast.success(
         data.fullySigned
-          ? "Contrat signé par les deux parties — facture générée"
-          : "Votre signature a été enregistrée"
+          ? t("contrat_signe_deux_parties")
+          : t("signature_enregistree")
       );
       onOpenChange(false);
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setSending(false);
     }
@@ -79,7 +81,7 @@ export function SignatureDialog({
               <FileSignature className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Signer le contrat</h2>
+              <h2 className="text-lg font-bold">{t("signer_le_contrat")}</h2>
               <p className="text-white/60 text-sm mt-0.5">
                 {contractNumber} — {contractTitle}
               </p>
@@ -87,7 +89,7 @@ export function SignatureDialog({
           </div>
           {contractAmount != null && contractAmount > 0 && (
             <div className="mt-4 flex items-center gap-2 bg-white/10 rounded-lg px-3 py-2 w-fit">
-              <span className="text-white/70 text-sm">Montant :</span>
+              <span className="text-white/70 text-sm">{t("montant_deux_points")}</span>
               <span className="text-white font-bold">{formatCurrency(contractAmount)}</span>
             </div>
           )}
@@ -98,7 +100,7 @@ export function SignatureDialog({
           <SignatureCanvas
             onSave={handleSave}
             disabled={sending}
-            legalText="les conditions du contrat"
+            legalText={t("conditions_du_contrat")}
           />
         </div>
 
@@ -106,7 +108,7 @@ export function SignatureDialog({
         <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <ShieldCheck className="h-3.5 w-3.5" />
-            <span>Signature juridiquement valide</span>
+            <span>{t("signature_juridiquement_valide")}</span>
           </div>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)} disabled={sending}>
             Annuler

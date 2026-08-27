@@ -42,6 +42,7 @@ export type DelegationState = {
 type Candidate = { id: number; fullName: string | null; email: string };
 
 export function DelegationBanner({ onChange }: { onChange?: () => void }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [state, setState] = useState<DelegationState | null>(null);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -91,14 +92,14 @@ export function DelegationBanner({ onChange }: { onChange?: () => void }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-[#0F2D52]">
-                  Vous déléguez vos approbations
+                  {t("vous_deleguez_approbations")}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5 truncate">
                   À <strong>{state.outgoing.delegateAdmin?.fullName || state.outgoing.delegateAdmin?.email}</strong>
                   {" "}jusqu&apos;à nouvel ordre.
                 </p>
               </div>
-              <ActionTooltip label="Modifier la délégation">
+              <ActionTooltip label={t("modifier_delegation")}>
                 <Button
                   variant="outline"
                   size="sm"
@@ -118,13 +119,13 @@ export function DelegationBanner({ onChange }: { onChange?: () => void }) {
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-emerald-800">
-                  Délégation{state.incoming.length > 1 ? "s" : ""} reçue{state.incoming.length > 1 ? "s" : ""}
+                  {t("n_delegations_recues", { count: state.incoming.length })}
                 </p>
                 <p className="text-[11px] text-muted-foreground mt-0.5">
                   {state.incoming
                     .map((d) => d.fullName || d.email)
                     .join(", ")}
-                  {" "}vous a{state.incoming.length > 1 ? "ont" : ""} délégué leurs approbations (en plus des vôtres).
+                  {" "}{t("vous_ont_delegue_approbations", { count: state.incoming.length })}
                 </p>
               </div>
             </div>
@@ -158,6 +159,7 @@ function ManageDelegationDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [sel, setSel] = useState<string>(currentDelegate ? String(currentDelegate.id) : "");
   const [pending, startTransition] = useTransition();
@@ -166,10 +168,10 @@ function ManageDelegationDialog({
     startTransition(async () => {
       const r = await delegateLeaveApprovalAction({ delegateId });
       if (r.success) {
-        toast.success(delegateId === null ? "Délégation désactivée" : "Délégation enregistrée");
+        toast.success(delegateId === null ? t("delegation_desactivee") : t("delegation_enregistree"));
         onSaved();
       } else {
-        toast.error(r.error || "Erreur");
+        toast.error(r.error || t("erreur"));
       }
     });
   };
@@ -181,10 +183,10 @@ function ManageDelegationDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Shield className="h-4 w-4" />
-              Gérer mes délégations
+              {t("gerer_mes_delegations")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Désignez un collègue qui pourra approuver les congés à votre place.
+              {t("designez_collegue_pourra_approuver_conges")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -199,16 +201,16 @@ function ManageDelegationDialog({
           )}
           <div className="space-y-1.5">
             <Label className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground">
-              {currentDelegate ? "Changer le délégué" : "Désigner un délégué"}
+              {currentDelegate ? t("changer_delegue") : t("designer_delegue")}
             </Label>
             <Select value={sel} onValueChange={setSel}>
               <SelectTrigger className="h-9">
-                <SelectValue placeholder="Sélectionner un administrateur" />
+                <SelectValue placeholder={t("selectionner_administrateur")} />
               </SelectTrigger>
               <SelectContent>
                 {candidates.length === 0 ? (
                   <div className="px-2 py-3 text-xs text-muted-foreground italic">
-                    Aucun candidat éligible
+                    {t("aucun_candidat_eligible")}
                   </div>
                 ) : (
                   candidates.map((c) => (
@@ -230,7 +232,7 @@ function ManageDelegationDialog({
               className="border-destructive/30 text-destructive hover:bg-destructive/10"
             >
               <UserMinus className="h-3.5 w-3.5 mr-1" />
-              Retirer
+              {t("retirer")}
             </Button>
           )}
           <div className="flex-1" />
@@ -240,7 +242,7 @@ function ManageDelegationDialog({
           <Button
             onClick={() => {
               if (!sel) {
-                toast.error("Sélectionnez un délégué");
+                toast.error(t("selectionnez_delegue"));
                 return;
               }
               save(Number(sel));
@@ -255,7 +257,7 @@ function ManageDelegationDialog({
             ) : (
               <>
                 <UserPlus className="h-3.5 w-3.5 mr-1" />
-                {currentDelegate ? "Mettre à jour" : "Activer"}
+                {currentDelegate ? t("mettre_jour") : t("activer")}
               </>
             )}
           </Button>

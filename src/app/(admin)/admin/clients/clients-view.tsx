@@ -47,11 +47,11 @@ type Client = {
 
 type StatusFilter = "all" | "active" | "inactive" | "archived";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "active", label: "Actifs" },
-  { key: "inactive", label: "Inactifs" },
-  { key: "archived", label: "Archivés" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "active", labelKey: "actifs" },
+  { key: "inactive", labelKey: "inactifs" },
+  { key: "archived", labelKey: "archives" },
 ];
 
 export function ClientsView({
@@ -61,6 +61,7 @@ export function ClientsView({
   clients: Client[];
   counts: { total: number; active: number; inactive: number; newThisMonth: number };
 }) {
+  const t = useTranslations("admin.clients");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -68,25 +69,25 @@ export function ClientsView({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filtres avances
+
   const [filterSectors, setFilterSectors] = useState<Set<string>>(new Set());
   const [filterCities, setFilterCities] = useState<Set<string>>(new Set());
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  // Selection multiple (bulk actions)
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  // Modales
+
   const { open: openEntity } = useEntityPanels();
   const [createOpen, setCreateOpen] = useState(false);
   const [editClient, setEditClient] = useState<Client | null>(null);
   const [deleteClient, setDeleteClient] = useState<Client | null>(null);
-  // Mot de passe genere — affiche une fois pour que l'admin le copie
+
   const [generatedCreds, setGeneratedCreds] = useState<{ email: string; password: string; isReset?: boolean } | null>(null);
   const [busyId, setBusyId] = useState<number | null>(null);
 
-  // ── Creation form (complet, multi-pays) ──────────────
+
   const [newName, setNewName] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [newCompany, setNewCompany] = useState("");
@@ -100,7 +101,7 @@ export function ClientsView({
   const [newTech, setNewTech] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
-  // ── Edit form (complet, multi-pays) ──────────────────
+
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
   const [editCompany, setEditCompany] = useState("");
@@ -121,18 +122,18 @@ export function ClientsView({
     setNewPostalCode(""); setNewPhone(""); setNewTech(""); setNewNotes("");
   };
 
-  // Charge le client complet via API pour avoir tous les champs (address, tech, notes...)
+
   const openEdit = async (c: Client) => {
     setEditClient(c);
     setEditLoading(true);
-    // Pre-remplit avec les donnees deja en main
+
     setEditName(c.fullName);
     setEditEmail(c.email);
     setEditCompany(c.companyName ?? "");
     setEditSector(c.sector ?? "");
     setEditCity(c.city ?? "");
     setEditPhone(c.phone ?? "");
-    // Fetch full client pour adresse complete + tech + notes
+
     try {
       const res = await fetch(`/api/clients/${c.id}`, { cache: "no-store" });
       if (res.ok) {
@@ -149,7 +150,7 @@ export function ClientsView({
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!newName.trim() || !newEmail.trim()) return { success: false, error: "Nom et courriel requis" };
+    if (!newName.trim() || !newEmail.trim()) return { success: false, error: t("nom_courriel_requis") };
     try {
       const res = await fetch("/api/clients", {
         method: "POST",
@@ -178,11 +179,11 @@ export function ClientsView({
         router.refresh();
         return { success: true };
       }
-      return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: data.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
-  // ── Restaurer un client archive ──────────────────────
+
   const handleRestore = async (c: Client) => {
     setBusyId(c.id);
     try {
@@ -192,19 +193,19 @@ export function ClientsView({
         body: JSON.stringify({ archived: false, isActive: true }),
       });
       if (res.ok) { toast.success(`${c.fullName} restauré`); router.refresh(); }
-      else { toast.error("Erreur lors de la restauration"); }
+      else { toast.error(t("erreur_lors_restauration")); }
     } finally { setBusyId(null); }
   };
 
-  // ── Toggle isActive ──────────────────────────────────
+
   const handleToggleActive = async (c: Client) => {
     const willActivate = !c.isActive;
     const ok = await confirm({
-      title: willActivate ? "Activer ce client ?" : "Désactiver ce client ?",
+      title: willActivate ? t("activer_client") : t("desactiver_client"),
       description: willActivate
         ? `${c.fullName} pourra de nouveau accéder au portail.`
         : `${c.fullName} ne pourra plus se connecter au portail (compte conservé).`,
-      confirmLabel: willActivate ? "Activer" : "Désactiver",
+      confirmLabel: willActivate ? t("activer") : t("desactiver"),
       variant: willActivate ? "default" : "destructive",
     });
     if (!ok) return;
@@ -215,17 +216,17 @@ export function ClientsView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: willActivate }),
       });
-      if (res.ok) { toast.success(willActivate ? "Client activé" : "Client désactivé"); router.refresh(); }
-      else { toast.error("Erreur"); }
+      if (res.ok) { toast.success(willActivate ? t("client_active") : t("client_desactive")); router.refresh(); }
+      else { toast.error(t("erreur")); }
     } finally { setBusyId(null); }
   };
 
-  // ── Reset password (genere nouveau MDP) ──────────────
+
   const handleResetPassword = async (c: Client) => {
     const ok = await confirm({
-      title: "Réinitialiser le mot de passe ?",
+      title: t("reinitialiser_mot_passe"),
       description: `Un nouveau mot de passe sera généré pour ${c.fullName}. L'ancien sera invalidé immédiatement. Tu pourras copier le nouveau dans la fenêtre suivante.`,
-      confirmLabel: "Générer nouveau",
+      confirmLabel: t("generer_nouveau"),
       variant: "default",
     });
     if (!ok) return;
@@ -237,18 +238,18 @@ export function ClientsView({
         setGeneratedCreds({ email: data.email, password: data.generatedPassword, isReset: true });
         router.refresh();
       } else {
-        toast.error(data.error || "Erreur");
+        toast.error(data.error || t("erreur"));
       }
     } finally { setBusyId(null); }
   };
 
-  // ── Bulk actions ─────────────────────────────────────
+
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Archiver ${selectedIds.size} client(s) ?`,
-      description: "Les clients sélectionnés seront archivés. Cette action est réversible.",
-      confirmLabel: "Archiver tous",
+      description: t("clients_selectionnes_seront_archives_action"),
+      confirmLabel: t("archiver_tous"),
     });
     if (!ok) return;
     const ids = Array.from(selectedIds);
@@ -277,7 +278,7 @@ export function ClientsView({
   };
 
   const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!editClient || !editName.trim()) return { success: false, error: "Nom requis" };
+    if (!editClient || !editName.trim()) return { success: false, error: t("nom_requis") };
     try {
       const res = await fetch(`/api/clients/${editClient.id}`, {
         method: "PATCH",
@@ -298,18 +299,18 @@ export function ClientsView({
       });
       if (res.ok) { router.refresh(); return { success: true }; }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: data.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
   const handleArchive = async () => {
     if (!deleteClient) return;
     const res = await fetch(`/api/clients/${deleteClient.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Client archivé"); setDeleteClient(null); router.refresh(); }
-    else { toast.error("Erreur lors de l'archivage"); }
+    if (res.ok) { toast.success(t("client_archive")); setDeleteClient(null); router.refresh(); }
+    else { toast.error(t("erreur_lors_archivage")); }
   };
 
-  // ── Listes distinctes pour filtres avances ───────────
+
   const availableSectors = useMemo(() => {
     const set = new Set<string>();
     for (const c of clients) if (c.sector) set.add(c.sector);
@@ -322,7 +323,7 @@ export function ClientsView({
     return Array.from(set).sort();
   }, [clients]);
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -333,7 +334,7 @@ export function ClientsView({
     return () => obs.disconnect();
   }, []);
 
-  // ── Filtrage ──────────────────────────────────────────
+
   const filtered = useMemo(() => {
     let result = clients;
     if (statusFilter === "active") result = result.filter((c) => c.isActive && !c.archived);
@@ -370,48 +371,48 @@ export function ClientsView({
     setFilterDateTo("");
   };
 
-  // Actions menu pour EntityCard — adaptees selon archived/isActive
+
   const getActions = useCallback((c: Client) => {
     const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
+      { label: t("voir_detail"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", c.id) },
     ];
     actions.push({
-      label: "Dossier ZIP (FR)",
+      label: t("dossier_zip_fr"),
       icon: <Download className="h-3.5 w-3.5" />,
       onClick: () => {
         const a = document.createElement("a");
         a.href = `/api/clients/${c.id}/export-zip?lang=fr`;
         a.click();
-        toast.success("Préparation du dossier ZIP (FR)…");
+        toast.success(t("preparation_dossier_zip_fr"));
       },
     });
     actions.push({
-      label: "Dossier ZIP (EN)",
+      label: t("dossier_zip"),
       icon: <Download className="h-3.5 w-3.5" />,
       onClick: () => {
         const a = document.createElement("a");
         a.href = `/api/clients/${c.id}/export-zip?lang=en`;
         a.click();
-        toast.success("Generating ZIP (EN)…");
+        toast.success(t("generating_zip"));
       },
     });
     if (!c.archived) {
-      actions.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c), separator: true });
-      actions.push({ label: "Réinitialiser MDP", icon: <KeyRound className="h-3.5 w-3.5" />, onClick: () => handleResetPassword(c) });
+      actions.push({ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c), separator: true });
+      actions.push({ label: t("reinitialiser_mdp"), icon: <KeyRound className="h-3.5 w-3.5" />, onClick: () => handleResetPassword(c) });
       actions.push({
-        label: c.isActive ? "Désactiver" : "Activer",
+        label: c.isActive ? t("desactiver") : t("activer"),
         icon: <Power className="h-3.5 w-3.5" />,
         onClick: () => handleToggleActive(c),
       });
-      actions.push({ label: "Archiver", icon: <Archive className="h-3.5 w-3.5" />, onClick: () => setDeleteClient(c), separator: true, variant: "destructive" as const });
+      actions.push({ label: t("archiver"), icon: <Archive className="h-3.5 w-3.5" />, onClick: () => setDeleteClient(c), separator: true, variant: "destructive" as const });
     } else {
-      actions.push({ label: "Restaurer", icon: <RotateCcw className="h-3.5 w-3.5" />, onClick: () => handleRestore(c), separator: true });
+      actions.push({ label: t("restaurer"), icon: <RotateCcw className="h-3.5 w-3.5" />, onClick: () => handleRestore(c), separator: true });
     }
     return actions;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [openEntity]);
 
-  // ── Colonnes DataTable ────────────────────────────────
+
   const allFilteredIds = filtered.map((r) => r.id);
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
 
@@ -422,7 +423,7 @@ export function ClientsView({
         <Checkbox
           checked={allSelected}
           onCheckedChange={() => toggleSelectAll(allFilteredIds)}
-          aria-label="Tout sélectionner"
+          aria-label={t("tout_selectionner")}
         />
       ),
       accessor: (r) => (
@@ -434,23 +435,23 @@ export function ClientsView({
         />
       ),
     },
-    { key: "client", header: "Client", accessor: (r) => (
+    { key: "client", header: t("client"), accessor: (r) => (
       <button onClick={() => openEntity("client", r.id)} className="flex items-center gap-3 text-left hover:opacity-80 transition-opacity">
         <Avatar className="h-9 w-9"><AvatarFallback className="vnk-gradient text-white text-xs">{initials(r.fullName)}</AvatarFallback></Avatar>
         <div><div className="font-medium text-sm">{r.fullName}</div><div className="text-xs text-muted-foreground">{r.email}</div></div>
       </button>
     ), sortable: true, sortBy: (r) => r.fullName },
-    { key: "company", header: "Entreprise", accessor: (r) => r.companyName ?? "—", sortable: true, sortBy: (r) => r.companyName ?? "", hiddenOnMobile: true },
-    { key: "sector", header: "Secteur", accessor: (r) => r.sector ?? "—", hiddenOnMobile: true },
-    { key: "city", header: "Ville", accessor: (r) => r.city ?? "—", hiddenOnMobile: true },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.archived ? "cancelled" : r.isActive ? "active" : "paused"} /> },
-    { key: "mandates", header: "Mandats", accessor: (r) => r.mandateCount > 0 ? r.mandateCount : "—", sortable: true, sortBy: (r) => r.mandateCount, hiddenOnMobile: true },
-    { key: "last_login", header: "Connexion", accessor: (r) => (r.lastLogin ? formatDate(new Date(r.lastLogin)) : "Jamais"), hiddenOnMobile: true },
+    { key: "company", header: t("entreprise"), accessor: (r) => r.companyName ?? "—", sortable: true, sortBy: (r) => r.companyName ?? "", hiddenOnMobile: true },
+    { key: "sector", header: t("secteur"), accessor: (r) => r.sector ?? "—", hiddenOnMobile: true },
+    { key: "city", header: t("ville"), accessor: (r) => r.city ?? "—", hiddenOnMobile: true },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.archived ? "cancelled" : r.isActive ? "active" : "paused"} /> },
+    { key: "mandates", header: t("mandats"), accessor: (r) => r.mandateCount > 0 ? r.mandateCount : "—", sortable: true, sortBy: (r) => r.mandateCount, hiddenOnMobile: true },
+    { key: "last_login", header: t("connexion"), accessor: (r) => (r.lastLogin ? formatDate(new Date(r.lastLogin)) : t("jamais")), hiddenOnMobile: true },
   ];
 
   return (
     <div className="space-y-6">
-      {/* Hero header navy VNK */}
+
       <div className="rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
@@ -460,71 +461,71 @@ export function ClientsView({
               <Users className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Clients</h1>
-              <p className="text-white/70 text-sm mt-0.5">Gérez vos clients et leurs informations</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("clients")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("gerez_clients_leurs_informations")}</p>
             </div>
           </div>
           <Button
             className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
             onClick={() => { resetCreate(); setCreateOpen(true); }}
           >
-            <Plus className="h-4 w-4" />Nouveau client
+            <Plus className="h-4 w-4" />{t("nouveau_client")}
           </Button>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total" value={counts.total} icon={Users} accent="bg-blue-500" />
-        <StatCard label="Actifs" value={counts.active} icon={UserCheck} accent="bg-emerald-500" />
-        <StatCard label="Inactifs" value={counts.inactive} icon={UserX} accent="bg-amber-500" />
-        <StatCard label="Nouveaux ce mois" value={counts.newThisMonth} icon={UserPlus} accent="bg-violet-500" />
+        <StatCard label={t("total")} value={counts.total} icon={Users} accent="bg-blue-500" />
+        <StatCard label={t("actifs")} value={counts.active} icon={UserCheck} accent="bg-emerald-500" />
+        <StatCard label={t("inactifs")} value={counts.inactive} icon={UserX} accent="bg-amber-500" />
+        <StatCard label={t("nouveaux_mois")} value={counts.newThisMonth} icon={UserPlus} accent="bg-violet-500" />
       </div>
 
-      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Users className="h-4 w-4" />
-              Clients
+              {t("clients")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Actifs <span className="font-semibold text-emerald-600">{counts.active}</span></span>
-            <span className="text-muted-foreground">Inactifs <span className="font-semibold text-amber-600">{counts.inactive}</span></span>
-            <span className="ml-auto text-muted-foreground">Nouveaux ce mois <span className="font-semibold text-violet-600">{counts.newThisMonth}</span></span>
+            <span className="text-muted-foreground">{t("actifs")} <span className="font-semibold text-emerald-600">{counts.active}</span></span>
+            <span className="text-muted-foreground">{t("inactifs")} <span className="font-semibold text-amber-600">{counts.inactive}</span></span>
+            <span className="ml-auto text-muted-foreground">{t("nouveaux_mois")} <span className="font-semibold text-violet-600">{counts.newThisMonth}</span></span>
           </div>
         </div>
       )}
 
-      {/* Toolbar */}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Nom, entreprise, courriel, ville..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("nom_entreprise_courriel_ville")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)} className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors", statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
 
-        {/* Filtres avances popover */}
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[320px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             {availableSectors.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Secteur</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("secteur")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {availableSectors.map((s) => {
                     const isOn = filterSectors.has(s);
@@ -547,7 +548,7 @@ export function ClientsView({
             )}
             {availableCities.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Ville</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("ville")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {availableCities.map((s) => {
                     const isOn = filterCities.has(s);
@@ -569,7 +570,7 @@ export function ClientsView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période de création</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_creation")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -577,8 +578,7 @@ export function ClientsView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("clients_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -586,7 +586,7 @@ export function ClientsView({
         <ViewToggle storageKey="clients" defaultView="list" onChange={setView} />
       </div>
 
-      {/* Bulk actions bar — visible quand selection */}
+
       {selectedIds.size > 0 && (
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -604,7 +604,7 @@ export function ClientsView({
         </div>
       )}
 
-      {/* Vue grille */}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((c) => (
@@ -614,33 +614,33 @@ export function ClientsView({
               subtitle={c.companyName ?? c.email}
               avatarName={c.fullName}
               badges={[
-                { label: c.isActive ? "Actif" : c.archived ? "Archivé" : "Inactif", variant: c.isActive ? "secondary" : "outline" },
+                { label: c.isActive ? t("actif") : c.archived ? t("archive_statut") : t("inactif"), variant: c.isActive ? "secondary" : "outline" },
                 ...(c.sector ? [{ label: c.sector, variant: "outline" as const }] : []),
               ]}
               stats={[
-                { label: "Mandats", value: c.mandateCount },
-                { label: "Factures", value: c.invoiceCount },
+                { label: t("mandats"), value: c.mandateCount },
+                { label: t("factures"), value: c.invoiceCount },
               ]}
               actions={getActions(c)}
               onClick={() => openEntity("client", c.id)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{c.city ?? "—"}</span>
-                  <span>{c.lastLogin ? formatDate(new Date(c.lastLogin)) : "Jamais connecté"}</span>
+                  <span>{c.lastLogin ? formatDate(new Date(c.lastLogin)) : t("jamais_connecte")}</span>
                 </div>
               }
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun client trouvé</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucun_client_trouve")}</div>
           )}
         </div>
       ) : (
-        /* Vue liste */
-        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="clients" storageKey="admin-clients" />
+
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder={t("rechercher")} exportFilename="clients" storageKey="admin-clients" />
       )}
 
-      {/* Modale creation — VNK navy theme avec FormSections */}
+
       <ClientFormDialog
         open={createOpen}
         onOpenChange={setCreateOpen}
@@ -661,7 +661,7 @@ export function ClientsView({
         onSubmit={handleCreate}
       />
 
-      {/* Modale edition — VNK navy theme avec FormSections + adresse multi-pays + tech + notes */}
+
       <ClientFormDialog
         open={!!editClient}
         onOpenChange={(o) => { if (!o) setEditClient(null); }}
@@ -682,19 +682,19 @@ export function ClientsView({
         onSubmit={handleEdit}
       />
 
-      {/* Confirmation archivage */}
+
       <ConfirmDialog
         open={!!deleteClient}
         onOpenChange={(o) => { if (!o) setDeleteClient(null); }}
-        title="Archiver ce client ?"
+        title={t("archiver_client")}
         description={`Le client "${deleteClient?.fullName}" sera archivé. Cette action est réversible.`}
-        confirmLabel="Archiver"
+        confirmLabel={t("archiver")}
         onConfirm={handleArchive}
       />
 
       {ConfirmModal}
 
-      {/* Dialog credentials (creation OU reset) — affiche une seule fois */}
+
       <Dialog open={!!generatedCreds} onOpenChange={(o) => { if (!o) setGeneratedCreds(null); }}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-[#0F2D52] px-6 py-5 text-white">
@@ -704,50 +704,49 @@ export function ClientsView({
               </div>
               <div>
                 <DialogTitle className="text-white">
-                  {generatedCreds?.isReset ? "Mot de passe réinitialisé" : "Compte client créé"}
+                  {generatedCreds?.isReset ? t("mot_passe_reinitialise") : t("compte_client_cree")}
                 </DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
-                  Transmettez ces accès au client — ils ne seront plus affichés
+                  {t("transmettez_acces_client_ils_ne")}
                 </DialogDescription>
               </div>
             </div>
           </div>
           <div className="px-6 py-5 space-y-3">
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Courriel</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("courriel")}</Label>
               <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2">
                 <Input value={generatedCreds?.email ?? ""} readOnly className="border-0 bg-transparent p-0 h-auto font-mono text-sm focus-visible:ring-0" />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => {
                   navigator.clipboard.writeText(generatedCreds?.email ?? "");
-                  toast.success("Courriel copié");
+                  toast.success(t("courriel_copie"));
                 }}>
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
             <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Mot de passe temporaire</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("mot_passe_temporaire")}</Label>
               <div className="flex items-center gap-2 rounded-lg border-2 border-amber-200 bg-amber-50 px-3 py-2">
                 <Input value={generatedCreds?.password ?? ""} readOnly className="border-0 bg-transparent p-0 h-auto font-mono text-sm focus-visible:ring-0" />
                 <Button size="sm" variant="ghost" className="h-7 w-7 p-0 shrink-0" onClick={() => {
                   navigator.clipboard.writeText(generatedCreds?.password ?? "");
-                  toast.success("Mot de passe copié");
+                  toast.success(t("mot_passe_copie"));
                 }}>
                   <Copy className="h-3.5 w-3.5" />
                 </Button>
               </div>
               <p className="text-[11px] text-muted-foreground leading-relaxed">
-                Le client devra le changer à la première connexion. Ce mot de passe ne sera plus affiché après fermeture de cette fenêtre.
+                {t("client_devra_changer_premiere_connexion")}
               </p>
             </div>
           </div>
           <DialogFooter className="px-6 pb-5">
             <Button className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={() => {
               navigator.clipboard.writeText(`Courriel : ${generatedCreds?.email}\nMot de passe : ${generatedCreds?.password}`);
-              toast.success("Identifiants copiés");
+              toast.success(t("identifiants_copies"));
             }}>
-              <Copy className="h-4 w-4 mr-1.5" />Copier les deux
-            </Button>
+              <Copy className="h-4 w-4 mr-1.5" />{t("clients_view_copier_les_deux")}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -784,6 +783,7 @@ function ClientFormDialog({
   setters: FormSetters;
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
 }) {
+  const t = useTranslations("admin.clients");
   const tc = useTranslations("common");
   const [submitting, setSubmitting] = useState(false);
   const isCreate = mode === "create";
@@ -793,10 +793,10 @@ function ClientFormDialog({
     try {
       const result = await onSubmit();
       if (result.success) {
-        toast.success(isCreate ? "Client créé avec succès" : "Client mis à jour");
+        toast.success(isCreate ? t("client_cree_succes") : t("client_mis_jour"));
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue");
+        toast.error(result.error || t("erreur_survenue"));
       }
     } finally { setSubmitting(false); }
   };
@@ -804,7 +804,7 @@ function ClientFormDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl p-0 overflow-hidden flex flex-col" style={{ maxHeight: "90vh" }}>
-        {/* Header navy gradient */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-5 text-white relative shrink-0">
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/5 rounded-full -translate-y-24 translate-x-24" />
           <div className="relative flex items-center gap-4">
@@ -813,28 +813,28 @@ function ClientFormDialog({
             </div>
             <div>
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouveau client" : "Modifier le client"}
+                {isCreate ? t("nouveau_client") : t("modifier_client")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
                 {isCreate
-                  ? "Un mot de passe sera généré automatiquement après création"
-                  : (clientEmail || "Modification du client")}
+                  ? t("mot_passe_sera_genere_automatiquement")
+                  : (clientEmail || t("modification_client"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
-        {/* Body scrollable */}
+
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
           {loading ? (
             <div className="text-center py-12 text-sm text-muted-foreground">{tc("loading")}</div>
           ) : (
             <>
-              <FormSection title="Identité" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
+              <FormSection title={t("identite")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 0 0-16 0"/></svg>}>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Nom complet *</Label>
-                    <Input value={values.name} onChange={(e) => setters.setName(e.target.value)} placeholder="Jean Dupont" />
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("nom_complet")}</Label>
+                    <Input value={values.name} onChange={(e) => setters.setName(e.target.value)} placeholder={t("jean_dupont")} />
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs uppercase tracking-wider text-muted-foreground">Courriel {isCreate && "*"}</Label>
@@ -850,21 +850,21 @@ function ClientFormDialog({
                 </div>
                 <div className="grid sm:grid-cols-2 gap-3">
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Entreprise</Label>
-                    <Input value={values.company} onChange={(e) => setters.setCompany(e.target.value)} placeholder="Industries XYZ" />
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("entreprise")}</Label>
+                    <Input value={values.company} onChange={(e) => setters.setCompany(e.target.value)} placeholder={t("industries_xyz")} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Secteur</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("secteur")}</Label>
                     <SectorPicker value={values.sector} onChange={setters.setSector} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Téléphone</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("telephone")}</Label>
                   <Input value={values.phone} onChange={(e) => setters.setPhone(e.target.value)} placeholder="(819) 555-1234" />
                 </div>
               </FormSection>
 
-              <FormSection title="Adresse" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}>
+              <FormSection title={t("adresse")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>}>
                 <AddressFields
                   country={values.country} onCountryChange={setters.setCountry}
                   address={values.address} onAddressChange={setters.setAddress}
@@ -874,18 +874,18 @@ function ClientFormDialog({
                 />
               </FormSection>
 
-              <FormSection title="Technologies & notes" icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>}>
+              <FormSection title={t("technologies_notes")} icon={<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>}>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Technologies utilisées</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("technologies_utilisees")}</Label>
                   <TechPicker value={values.tech} onChange={setters.setTech} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes internes (privées)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("notes_internes_privees")}</Label>
                   <Textarea
                     value={values.notes}
                     onChange={(e) => setters.setNotes(e.target.value)}
                     rows={3}
-                    placeholder="Notes privées, jamais visibles par le client…"
+                    placeholder={t("notes_privees_jamais_visibles_client")}
                     className="bg-amber-50/30"
                   />
                 </div>
@@ -894,7 +894,7 @@ function ClientFormDialog({
           )}
         </div>
 
-        {/* Footer fixe */}
+
         <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
             {tc("cancel")}
@@ -904,7 +904,7 @@ function ClientFormDialog({
             disabled={submitting || loading || !values.name.trim() || (isCreate && !values.email.trim())}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer le client" : "Enregistrer")}
+            {submitting ? t("enregistrement") : (isCreate ? t("creer_client") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

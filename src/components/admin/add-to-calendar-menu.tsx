@@ -6,6 +6,7 @@
 // Convention VNK : tous les boutons "ajouter au calendrier" passent par ce menu
 // (jamais de download .ics direct).
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuLabel,
@@ -32,7 +33,7 @@ function toYYYYMMDD(dateStr: string): string {
   return dateStr.replace(/-/g, "").slice(0, 8);
 }
 function toISO(dateStr: string): string {
-  // YYYY-MM-DD → YYYY-MM-DDT00:00:00 (timezone local implicite)
+
   return `${dateStr.slice(0, 10)}T00:00:00`;
 }
 function addOneDay(dateStr: string): string {
@@ -42,7 +43,7 @@ function addOneDay(dateStr: string): string {
 }
 
 function buildGoogleUrl(ev: CalendarEventInput): string {
-  // Google Calendar : end est EXCLUSIVE pour all-day events
+
   const start = toYYYYMMDD(ev.startDate);
   const end = toYYYYMMDD(addOneDay(ev.endDate));
   const params = new URLSearchParams({
@@ -55,7 +56,7 @@ function buildGoogleUrl(ev: CalendarEventInput): string {
 }
 
 function buildOutlookComUrl(ev: CalendarEventInput): string {
-  // Outlook.com (compte perso Microsoft)
+
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
     rru: "addevent",
@@ -69,7 +70,7 @@ function buildOutlookComUrl(ev: CalendarEventInput): string {
 }
 
 function buildOffice365Url(ev: CalendarEventInput): string {
-  // Office 365 / Microsoft 365 (compte pro, dont Teams)
+
   const params = new URLSearchParams({
     path: "/calendar/action/compose",
     rru: "addevent",
@@ -83,7 +84,7 @@ function buildOffice365Url(ev: CalendarEventInput): string {
 }
 
 function buildYahooUrl(ev: CalendarEventInput): string {
-  // Yahoo Calendar — bonus (couvre les comptes Yahoo encore actifs)
+
   const start = toYYYYMMDD(ev.startDate);
   const end = toYYYYMMDD(addOneDay(ev.endDate));
   const params = new URLSearchParams({
@@ -103,66 +104,67 @@ export function AddToCalendarMenu({
   variant = "default",
   size = "sm",
   align = "end",
-  triggerLabel = "Calendrier",
+  triggerLabel,
   iconOnly = false,
 }: {
   event: CalendarEventInput;
-  /** Style du bouton trigger */
+
   variant?: "default" | "outline" | "ghost";
   size?: "sm" | "default";
   align?: "start" | "end" | "center";
-  /** Texte du trigger (défaut "Calendrier") */
+
   triggerLabel?: string;
-  /** Si vrai, n'affiche que l'icône (icon-only button) */
+
   iconOnly?: boolean;
 }) {
+  const t = useTranslations("admin.ui");
   const [opened, setOpened] = useState<string | null>(null);
 
   const handleOpen = (kind: "google" | "outlook" | "office365" | "yahoo", url: string) => {
     setOpened(kind);
     window.open(url, "_blank", "noopener,noreferrer");
     toast.success(
-      kind === "google" ? "Ouverture de Google Calendar..." :
-      kind === "office365" ? "Ouverture d'Outlook / Microsoft 365..." :
+      kind === "google" ? t("ouverture_google_calendar") :
+      kind === "office365" ? t("ouverture_outlook_microsoft_365") :
       kind === "outlook" ? "Ouverture d'Outlook.com..." :
-      "Ouverture du calendrier..."
+      t("ouverture_calendrier")
     );
     setTimeout(() => setOpened(null), 2000);
   };
 
   const handleIcsDownload = () => {
-    // Le endpoint existant /api/admin/leaves/[id]/ics retourne un fichier .ics
-    // avec Content-Disposition: attachment → le navigateur déclenche le download.
+
+
     const a = document.createElement("a");
     a.href = `/api/admin/leaves/${event.leaveId}/ics`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    toast.success("Fichier .ics téléchargé — importez-le dans Apple Calendar ou autre");
+    toast.success(t("fichier_ics_telecharge_importez_apple"));
   };
 
   return (
     <DropdownMenu>
-      <ActionTooltip label="Ajouter ce congé à votre calendrier (Google, Outlook, etc.)">
+      <ActionTooltip label={t("ajouter_conge_calendrier_google_outlook")}>
         <DropdownMenuTrigger asChild>
           <Button variant={variant} size={size} className="h-7 text-xs">
             <CalendarPlus className="h-3.5 w-3.5" />
-            {!iconOnly && <span className="ml-1.5">{triggerLabel}</span>}
+            {!iconOnly && <span className="ml-1.5">{triggerLabel ?? t("calendrier")}</span>}
           </Button>
         </DropdownMenuTrigger>
       </ActionTooltip>
       <DropdownMenuContent align={align} className="w-56">
         <DropdownMenuLabel className="text-[10px] uppercase tracking-wider text-muted-foreground">
-          Ajouter au calendrier
+          {t("ajouter_calendrier")}
         </DropdownMenuLabel>
         <DropdownMenuItem onSelect={() => handleOpen("google", buildGoogleUrl(event))}>
           <GoogleIcon className="h-3.5 w-3.5 mr-2" />
-          <span className="flex-1">Google Calendar</span>
+          <span className="flex-1">{t("google_calendar")}</span>
           {opened === "google" ? <Check className="h-3 w-3 text-emerald-600" /> : <ExternalLink className="h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleOpen("office365", buildOffice365Url(event))}>
           <MicrosoftIcon className="h-3.5 w-3.5 mr-2" />
-          <span className="flex-1">Outlook / Teams (M365)</span>
+          <span className="flex-1">{t("outlook_teams_m365")}</span>
           {opened === "office365" ? <Check className="h-3 w-3 text-emerald-600" /> : <ExternalLink className="h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleOpen("outlook", buildOutlookComUrl(event))}>
@@ -172,13 +174,13 @@ export function AddToCalendarMenu({
         </DropdownMenuItem>
         <DropdownMenuItem onSelect={() => handleOpen("yahoo", buildYahooUrl(event))}>
           <YahooIcon className="h-3.5 w-3.5 mr-2" />
-          <span className="flex-1">Yahoo Calendar</span>
+          <span className="flex-1">{t("yahoo_calendar")}</span>
           {opened === "yahoo" ? <Check className="h-3 w-3 text-emerald-600" /> : <ExternalLink className="h-3 w-3 text-muted-foreground" />}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={handleIcsDownload}>
           <Download className="h-3.5 w-3.5 mr-2" />
-          <span className="flex-1">Fichier .ics (Apple, autre)</span>
+          <span className="flex-1">{t("fichier_ics_apple_autre")}</span>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

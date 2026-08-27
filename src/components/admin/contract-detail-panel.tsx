@@ -42,6 +42,7 @@ export function ContractDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -80,7 +81,7 @@ export function ContractDetailPanel({
         open={open}
         onOpenChange={onOpenChange}
         loading={loading || !contract}
-        title={contract?.title ?? "Contrat"}
+        title={contract?.title ?? t("contrat")}
         subtitle={contract ? `${contract.contractNumber} · ${contract.client.fullName}` : undefined}
         icon={<FileSignature className="h-7 w-7 text-white" />}
         preventClose={pdfOpen}
@@ -116,8 +117,8 @@ export function ContractDetailPanel({
         {contract && (
           <Tabs defaultValue="info">
             <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="info">Infos</TabsTrigger>
-              <TabsTrigger value="signatures">Signatures</TabsTrigger>
+              <TabsTrigger value="info">{t("infos")}</TabsTrigger>
+              <TabsTrigger value="signatures">{t("signatures")}</TabsTrigger>
             </TabsList>
 
             <TabsContent value="info" className="space-y-4 mt-4">
@@ -127,12 +128,12 @@ export function ContractDetailPanel({
                   <StatusBadge status={contract.status} />
                 </div>
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">Numero</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("numero")}</span>
                   <span className="text-sm font-mono">{contract.contractNumber}</span>
                 </div>
                 {contract.amountTtc != null && (
                   <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs uppercase tracking-wider text-muted-foreground">Montant TTC</span>
+                    <span className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ttc")}</span>
                     <span className="text-sm font-bold">{formatCurrency(Number(contract.amountTtc))}</span>
                   </div>
                 )}
@@ -148,7 +149,7 @@ export function ContractDetailPanel({
 
               {contract.content && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">Contenu / Clauses</p>
+                  <p className="text-xs uppercase tracking-wider text-muted-foreground mb-2">{t("contenu_clauses")}</p>
                   <div className="p-3 rounded-md bg-muted/30 border text-xs whitespace-pre-wrap max-h-64 overflow-y-auto">
                     {contract.content}
                   </div>
@@ -158,14 +159,14 @@ export function ContractDetailPanel({
 
             <TabsContent value="signatures" className="space-y-3 mt-4">
               <SigCard
-                label="Client"
+                label={t("client")}
                 icon={UserCheck}
                 signed={!!contract.clientSignatureData}
                 date={contract.signedAt}
                 meta={contract.clientSignatureIp ? `IP: ${contract.clientSignatureIp}` : undefined}
               />
               <SigCard
-                label="Administrateur"
+                label={t("administrateur")}
                 icon={ShieldCheck}
                 signed={!!contract.adminSignatureData}
                 date={contract.adminSignedAt}

@@ -58,13 +58,13 @@ type MandateOption = { id: number; title: string; clientId: number; status: stri
 type LinkedQuote = { id: number; quoteNumber: string; clientId: number; title: string; amountTtc: number };
 type StatusFilter = "all" | "pending" | "draft" | "signed" | "expired" | "cancelled";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "pending", label: "En attente" },
-  { key: "draft", label: "Brouillon" },
-  { key: "signed", label: "Signés" },
-  { key: "expired", label: "Expirés" },
-  { key: "cancelled", label: "Annulés" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "pending", labelKey: "attente" },
+  { key: "draft", labelKey: "brouillon" },
+  { key: "signed", labelKey: "signes" },
+  { key: "expired", labelKey: "expires" },
+  { key: "cancelled", labelKey: "annules" },
 ];
 
 export function ContractsView({
@@ -80,6 +80,7 @@ export function ContractsView({
   acceptedQuotes: LinkedQuote[];
   kpis: { total: number; pendingCount: number; signedCount: number; signedThisMonth: number; totalValue: number };
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -164,7 +165,7 @@ export function ContractsView({
 
   const handleCreate = async () => {
     if (submitting) return;
-    if (!fClientId || !fTitle.trim()) { toast.error("Client et titre requis"); return; }
+    if (!fClientId || !fTitle.trim()) { toast.error(t("client_titre_requis")); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/contracts", {
@@ -181,17 +182,17 @@ export function ContractsView({
         }),
       });
       if (res.ok) {
-        toast.success("Contrat créé");
+        toast.success(t("contrat_cree"));
         setCreateOpen(false);
         resetForm();
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleEdit = async () => {
     if (submitting || !editContract) return;
-    if (!fTitle.trim()) { toast.error("Titre requis"); return; }
+    if (!fTitle.trim()) { toast.error(t("titre_requis")); return; }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/contracts/${editContract.id}`, {
@@ -207,22 +208,22 @@ export function ContractsView({
           quoteId: fQuoteId ? Number(fQuoteId) : null,
         }),
       });
-      if (res.ok) { toast.success("Contrat modifié"); setEditContract(null); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("contrat_modifie")); setEditContract(null); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteContract) return;
     const res = await fetch(`/api/contracts/${deleteContract.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Contrat supprimé"); setDeleteContract(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("contrat_supprime")); setDeleteContract(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSetStatus = async (c: Contract, status: string, label: string) => {
     const ok = await confirm({
       title: `${label} ce contrat ?`,
-      description: `${c.contractNumber} passera au statut « ${status === "cancelled" ? "Annulé" : status === "expired" ? "Expiré" : status === "draft" ? "Brouillon" : status} ».`,
+      description: `${c.contractNumber} passera au statut « ${status === "cancelled" ? t("annule") : status === "expired" ? t("expire") : status === "draft" ? t("brouillon") : status} ».`,
       confirmLabel: label,
       variant: status === "cancelled" ? "destructive" : "default",
     });
@@ -232,15 +233,15 @@ export function ContractsView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    if (res.ok) { toast.success("Statut mis à jour"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("statut_mis_jour")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSendToClient = async (c: Contract) => {
     const ok = await confirm({
-      title: "Envoyer ce contrat au client ?",
-      description: `Le contrat ${c.contractNumber} sera ajouté dans la catégorie "Contrats" du portail + message chat + notification.`,
-      confirmLabel: "Envoyer",
+      title: t("envoyer_contrat_client"),
+      description: `Le contrat ${c.contractNumber} sera ajouté dans la catégorie t("contrats") du portail + message chat + notification.`,
+      confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/contracts/${c.id}/send`, { method: "POST" });
@@ -248,15 +249,15 @@ export function ContractsView({
       const data = await res.json();
       toast.success(`Contrat envoyé à ${data.clientName ?? c.clientName} (portail + chat + notification)`);
       router.refresh();
-    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   // ── Envoyer pour signature légale (Dropbox Sign) ──────────
   const handleSendForEsign = async (c: Contract) => {
     const ok = await confirm({
-      title: "Envoyer pour signature légale ?",
+      title: t("envoyer_signature_legale"),
       description: `Le client recevra un courriel de Dropbox Sign avec un lien de signature électronique. Une fois signé, le PDF final sera automatiquement enregistré dans le portail.`,
-      confirmLabel: "Envoyer pour signature",
+      confirmLabel: t("envoyer_signature"),
     });
     if (!ok) return;
     const res = await fetch(`/api/contracts/${c.id}/send-for-esign`, { method: "POST" });
@@ -265,7 +266,7 @@ export function ContractsView({
       router.refresh();
     } else {
       const d = await res.json();
-      toast.error(d.error || "Erreur — vérifiez que l'intégration Dropbox Sign est configurée dans Profil > Intégrations.");
+      toast.error(d.error || t("erreur_verifiez_integration_dropbox_sign"));
     }
   };
 
@@ -274,8 +275,8 @@ export function ContractsView({
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} contrat(s) ?`,
-      description: "Les contrats signés ou liés à des factures seront refusés (409). Cette action est irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("contrats_signes_lies_factures_refuses"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -352,23 +353,23 @@ export function ContractsView({
   const getActions = useCallback((c: Contract) => {
     const editable = !c.clientSignatureData && !c.signedAt && c.status !== "cancelled";
     const a: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("contract", c.id) },
-      { label: "Voir le PDF", icon: <FileText className="h-3.5 w-3.5" />, onClick: () => setPdfContract(c) },
+      { label: t("voir_detail"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("contract", c.id) },
+      { label: t("voir_pdf"), icon: <FileText className="h-3.5 w-3.5" />, onClick: () => setPdfContract(c) },
     ];
     if (c.status === "pending" || c.status === "draft") {
-      a.push({ label: "Envoyer au client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(c) });
-      a.push({ label: "Envoyer pour signature légale", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => handleSendForEsign(c) });
+      a.push({ label: t("envoyer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(c) });
+      a.push({ label: t("envoyer_signature_legale_2"), icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => handleSendForEsign(c) });
     }
     if (c.status === "pending" && !c.adminSignatureData) {
-      a.push({ label: "Signer (admin)", icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => setSigningContract(c) });
+      a.push({ label: t("signer_admin"), icon: <PenTool className="h-3.5 w-3.5" />, onClick: () => setSigningContract(c) });
     }
     if (c.status === "pending") {
-      a.push({ label: "Marquer expiré", icon: <AlertTriangle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(c, "expired", "Marquer expiré") });
+      a.push({ label: t("marquer_expire"), icon: <AlertTriangle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(c, "expired", t("marquer_expire")) });
     }
     if (editable) {
-      a.push({ label: "Annuler", icon: <X className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(c, "cancelled", "Annuler") });
-      a.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c), separator: true });
-      a.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteContract(c), variant: "destructive" });
+      a.push({ label: t("annuler"), icon: <X className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(c, "cancelled", t("annuler_action")) });
+      a.push({ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(c), separator: true });
+      a.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteContract(c), variant: "destructive" });
     }
     return a;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -381,14 +382,14 @@ export function ContractsView({
   const columns: Column<Contract>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.contractNumber}`} />
       ),
     },
-    { key: "number", header: "Numéro", accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
+    { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -398,7 +399,7 @@ export function ContractsView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "title", header: "Titre",
+      key: "title", header: t("titre"),
       accessor: (r) => (
         <div>
           <p className="text-sm font-medium">{r.title}</p>
@@ -407,10 +408,10 @@ export function ContractsView({
       ),
       sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true,
     },
-    { key: "amount", header: "Montant", accessor: (r) => r.amountTtc ? <span className="font-semibold tabular-nums">{formatCurrency(r.amountTtc)}</span> : "—", sortable: true, sortBy: (r) => r.amountTtc ?? 0, hiddenOnMobile: true },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "amount", header: t("montant"), accessor: (r) => r.amountTtc ? <span className="font-semibold tabular-nums">{formatCurrency(r.amountTtc)}</span> : "—", sortable: true, sortBy: (r) => r.amountTtc ?? 0, hiddenOnMobile: true },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     {
-      key: "signatures", header: "Signatures", accessor: (r) => (
+      key: "signatures", header: t("signatures"), accessor: (r) => (
         <div className="flex items-center gap-2">
           <span className={cn("flex items-center gap-1 text-xs", r.clientSignatureData ? "text-emerald-600" : "text-muted-foreground")}>
             <UserCheck className="h-3 w-3" /> Client
@@ -421,7 +422,7 @@ export function ContractsView({
         </div>
       ), hiddenOnMobile: true,
     },
-    { key: "created", header: "Créé le", accessor: (r) => formatDate(new Date(r.createdAt)), hiddenOnMobile: true },
+    { key: "created", header: t("cree"), accessor: (r) => formatDate(new Date(r.createdAt)), hiddenOnMobile: true },
     {
       key: "actions",
       header: "",
@@ -462,20 +463,20 @@ export function ContractsView({
               <FileSignature className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Contrats</h1>
-              <p className="text-white/70 text-sm mt-0.5">Signature électronique double — admin + client — facture auto à la signature complète</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("contrats")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("signature_electronique_double_admin_client")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
             {kpis.pendingCount > 0 && (
               <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2 backdrop-blur">
                 <Clock className="h-4 w-4 text-amber-200" />
-                <span className="text-sm font-semibold text-white">{kpis.pendingCount} en attente</span>
+                <span className="text-sm font-semibold text-white">{t("n_en_attente", { count: kpis.pendingCount })}</span>
               </div>
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
               onClick={() => { resetForm(); setCreateOpen(true); }}>
-              <Plus className="h-4 w-4" />Nouveau contrat
+              <Plus className="h-4 w-4" />{t("nouveau_contrat")}
             </Button>
           </div>
         </div>
@@ -483,10 +484,10 @@ export function ContractsView({
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total contrats" value={kpis.total} icon={FileSignature} accent="bg-indigo-500" />
-        <StatCard label="En attente" value={kpis.pendingCount} icon={Clock} accent="bg-amber-500" />
-        <StatCard label="Signés" value={kpis.signedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={`${kpis.signedThisMonth} ce mois`} />
-        <StatCard label="Valeur signée" value={formatCurrency(kpis.totalValue)} icon={DollarSign} accent="bg-blue-500" />
+        <StatCard label={t("total_contrats")} value={kpis.total} icon={FileSignature} accent="bg-indigo-500" />
+        <StatCard label={t("attente")} value={kpis.pendingCount} icon={Clock} accent="bg-amber-500" />
+        <StatCard label={t("signes")} value={kpis.signedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={`${kpis.signedThisMonth} ce mois`} />
+        <StatCard label={t("valeur_signee")} value={formatCurrency(kpis.totalValue)} icon={DollarSign} accent="bg-blue-500" />
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
@@ -496,12 +497,12 @@ export function ContractsView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileSignature className="h-4 w-4" />
-              Contrats
+              {t("contrats")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{kpis.pendingCount}</span></span>
-            <span className="text-muted-foreground">Signés <span className="font-semibold text-emerald-600">{kpis.signedCount}</span></span>
-            <span className="ml-auto text-muted-foreground">Valeur <span className="font-semibold text-blue-600">{formatCurrency(kpis.totalValue)}</span></span>
+            <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{kpis.pendingCount}</span></span>
+            <span className="text-muted-foreground">{t("signes")} <span className="font-semibold text-emerald-600">{kpis.signedCount}</span></span>
+            <span className="ml-auto text-muted-foreground">{t("valeur")} <span className="font-semibold text-blue-600">{formatCurrency(kpis.totalValue)}</span></span>
           </div>
         </div>
       )}
@@ -510,14 +511,14 @@ export function ContractsView({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numéro, titre, client..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("numero_titre_client")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -526,14 +527,14 @@ export function ContractsView({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             {clients.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Client</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("client")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {clients.map((c) => {
                     const isOn = filterClients.has(c.id);
@@ -554,14 +555,14 @@ export function ContractsView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Montant TTC</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("montant_ttc")}</p>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="number" placeholder="Min" value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
-                <Input type="number" placeholder="Max" value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("min")} value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("max")} value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période d&apos;émission</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_apos_emission")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -569,8 +570,7 @@ export function ContractsView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("contracts_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -606,9 +606,9 @@ export function ContractsView({
               avatarName={c.clientName}
               alert={c.status === "expired"}
               badges={[
-                { label: c.status === "pending" ? "En attente" : c.status === "draft" ? "Brouillon" : c.status === "signed" ? "Signé" : c.status === "expired" ? "Expiré" : c.status === "cancelled" ? "Annulé" : c.status, variant: c.status === "signed" ? "secondary" : c.status === "expired" || c.status === "cancelled" ? "destructive" : "outline" },
+                { label: c.status === "pending" ? t("attente") : c.status === "draft" ? t("brouillon") : c.status === "signed" ? t("signe") : c.status === "expired" ? t("expire") : c.status === "cancelled" ? t("annule") : c.status, variant: c.status === "signed" ? "secondary" : c.status === "expired" || c.status === "cancelled" ? "destructive" : "outline" },
               ]}
-              stats={[{ label: "Montant", value: c.amountTtc ? formatCurrency(c.amountTtc) : "—" }]}
+              stats={[{ label: t("montant"), value: c.amountTtc ? formatCurrency(c.amountTtc) : "—" }]}
               actions={getActions(c)}
               onClick={() => setPdfContract(c)}
               footer={
@@ -627,7 +627,7 @@ export function ContractsView({
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun contrat trouvé</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucun_contrat_trouve")}</div>
           )}
         </div>
       ) : (
@@ -636,7 +636,7 @@ export function ContractsView({
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={(r) => setPdfContract(r)}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           exportFilename="contrats"
           storageKey="admin-contracts"
         />
@@ -680,7 +680,7 @@ export function ContractsView({
       <ConfirmDialog
         open={!!deleteContract}
         onOpenChange={(o) => { if (!o) setDeleteContract(null); }}
-        title="Supprimer ce contrat ?"
+        title={t("supprimer_contrat")}
         description={`Le contrat "${deleteContract?.contractNumber}" sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -744,7 +744,7 @@ export function ContractsView({
               // Auto-send au client si pas encore signe par client
               if (!just.clientSignatureData) {
                 fetch(`/api/contracts/${just.id}/send`, { method: "POST" })
-                  .then((r) => { if (r.ok) toast.success("Contrat envoyé au client automatiquement"); })
+                  .then((r) => { if (r.ok) toast.success(t("contrat_envoye_client_automatiquement")); })
                   .catch(() => {});
               }
             }
@@ -780,6 +780,7 @@ function ContractFormDialog({
   setters: CFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const isCreate = mode === "create";
   const clientIdNum = Number(values.clientId) || 0;
@@ -805,22 +806,22 @@ function ContractFormDialog({
             </div>
             <div>
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouveau contrat" : "Modifier le contrat"}
+                {isCreate ? t("nouveau_contrat") : t("modifier_contrat")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
-                {isCreate ? "Le numéro sera généré automatiquement (CT-AAAA-NNN)" : (editingContractNumber || "Modification")}
+                {isCreate ? t("numero_sera_genere_automatiquement_ct") : (editingContractNumber || t("modification"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          <FormSection title="Identité" icon={<FileSignature className="h-3.5 w-3.5" />}>
+          <FormSection title={t("identite")} icon={<FileSignature className="h-3.5 w-3.5" />}>
             {isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                 <Select value={values.clientId} onValueChange={setters.setClientId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectionner_client")} /></SelectTrigger>
                   <SelectContent>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
@@ -832,37 +833,37 @@ function ContractFormDialog({
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
-              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Contrat de service automatisation PLC" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("titre")}</Label>
+              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder={t("contrat_service_automatisation_plc")} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description du mandat (optionnel)</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description_mandat_optionnel")}</Label>
               <Textarea
                 value={values.content}
                 onChange={(e) => setters.setContent(e.target.value)}
                 rows={5}
                 placeholder={isCreate
-                  ? "Portée spécifique du contrat (ex: Audit PLC sur 3 lignes de production)…"
-                  : "Laisser vide pour ne pas modifier"}
+                  ? t("portee_specifique_contrat_ex_audit")
+                  : t("laisser_vide_ne_pas_modifier")}
               />
             </div>
           </FormSection>
 
           {clientIdNum === 0 && isCreate && (
             <div className="rounded-lg border-2 border-dashed border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3 text-center">
-              <p className="text-xs text-[#0F2D52] font-semibold">Sélectionnez d&apos;abord un client</p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">pour voir mandats et devis associés (auto-remplissage titre & montant)</p>
+              <p className="text-xs text-[#0F2D52] font-semibold">{t("selectionnez_apos_abord_client")}</p>
+              <p className="text-[10px] text-muted-foreground mt-0.5">{t("voir_mandats_devis_associes_auto")}</p>
             </div>
           )}
           {clientIdNum > 0 && (
-            <FormSection title="Liens (optionnel)" icon={<DollarSign className="h-3.5 w-3.5" />}>
+            <FormSection title={t("liens_optionnel")} icon={<DollarSign className="h-3.5 w-3.5" />}>
               {filteredMandates.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat associé</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("mandat_associe")}</Label>
                   <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun mandat" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucun_mandat")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun mandat</SelectItem>
+                      <SelectItem value="none">{t("aucun_mandat")}</SelectItem>
                       {filteredMandates.map((m) => (<SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>))}
                     </SelectContent>
                   </Select>
@@ -870,32 +871,32 @@ function ContractFormDialog({
               )}
               {filteredQuotes.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Devis source (auto-remplit titre & montant)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("devis_source_auto_remplit_titre")}</Label>
                   <Select value={values.quoteId || "none"} onValueChange={(v) => fillFromQuote(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun devis" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucun_devis")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun devis</SelectItem>
+                      <SelectItem value="none">{t("aucun_devis")}</SelectItem>
                       {filteredQuotes.map((q) => (<SelectItem key={q.id} value={String(q.id)}>{q.quoteNumber} — {q.title}</SelectItem>))}
                     </SelectContent>
                   </Select>
                 </div>
               )}
               {filteredMandates.length === 0 && filteredQuotes.length === 0 && (
-                <p className="text-[11px] text-muted-foreground">Aucun mandat / devis accepté pour ce client.</p>
+                <p className="text-[11px] text-muted-foreground">{t("aucun_mandat_devis_accepte_client")}</p>
               )}
             </FormSection>
           )}
 
-          <FormSection title="Montant & échéance" icon={<DollarSign className="h-3.5 w-3.5" />}>
+          <FormSection title={t("montant_echeance")} icon={<DollarSign className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant TTC (CAD)</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ttc_cad")}</Label>
                 <Input type="number" min="0" step="0.01" value={values.amount} onChange={(e) => setters.setAmount(e.target.value)} placeholder="0.00" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date d&apos;expiration</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_apos_expiration")}</Label>
                 <Input type="date" value={values.expiresAt} onChange={(e) => setters.setExpiresAt(e.target.value)} />
-                {isCreate && <p className="text-[10px] text-muted-foreground">Date limite pour signer (optionnel)</p>}
+                {isCreate && <p className="text-[10px] text-muted-foreground">{t("date_limite_signer_optionnel")}</p>}
               </div>
             </div>
             {!isCreate && (
@@ -904,9 +905,9 @@ function ContractFormDialog({
                 <Select value={values.status} onValueChange={setters.setStatus}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">En attente</SelectItem>
-                    <SelectItem value="draft">Brouillon</SelectItem>
-                    <SelectItem value="expired">Expiré</SelectItem>
+                    <SelectItem value="pending">{t("attente")}</SelectItem>
+                    <SelectItem value="draft">{t("brouillon")}</SelectItem>
+                    <SelectItem value="expired">{t("expire")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -921,7 +922,7 @@ function ContractFormDialog({
             disabled={submitting || !values.title.trim() || (isCreate && !values.clientId)}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer le contrat" : "Enregistrer")}
+            {submitting ? t("enregistrement") : (isCreate ? t("creer_contrat") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

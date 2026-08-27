@@ -37,6 +37,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
   isEmployee: boolean;
   currentAdminId: number;
 }) {
+  const t = useTranslations("admin.one_on_ones");
   const tc = useTranslations("common");
   const router = useRouter();
   const [agenda, setAgenda] = useState(meeting.agenda ?? "");
@@ -47,7 +48,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
   const [pending, setPending] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
 
-  // Sync proper sur changement de meeting
+
   useEffect(() => {
     setAgenda(meeting.agenda ?? "");
     setNotes(meeting.notes ?? "");
@@ -57,7 +58,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
     setIsDirty(false);
   }, [meeting]);
 
-  // Warning beforeunload si modifications non sauvegardées
+
   useEffect(() => {
     if (!isDirty) return;
     const handler = (e: BeforeUnloadEvent) => {
@@ -86,11 +87,11 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
     });
     setPending(false);
     if (r.success) {
-      toast.success(newStatus === "held" ? "Marquée comme tenue" : "Enregistré");
+      toast.success(newStatus === "held" ? t("marquee_comme_tenue") : t("enregistre"));
       setIsDirty(false);
       if (newStatus) setStatus(newStatus);
       router.refresh();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   const other = meeting.adminId === currentAdminId ? meeting.manager : meeting.admin;
@@ -119,57 +120,57 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
             <span>{meeting.durationMin} min</span>
             <span>·</span>
             <Badge variant="outline" className="text-[10px]">
-              {status === "held" ? "Tenue" : status === "cancelled" ? "Annulée" : status === "rescheduled" ? "Reportée" : isUpcoming ? "À venir" : "Passée"}
+              {status === "held" ? t("tenue") : status === "cancelled" ? t("annulee") : status === "rescheduled" ? t("reportee") : isUpcoming ? t("venir") : t("passee")}
             </Badge>
-            {isDirty && <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">Non sauvegardé</Badge>}
+            {isDirty && <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">{t("non_sauvegarde")}</Badge>}
           </p>
         </div>
       </div>
 
       <Card className="p-5 space-y-4">
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Ordre du jour</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("ordre_jour")}</Label>
           <textarea
             value={agenda}
             onChange={(e) => { setAgenda(e.target.value); markDirty(); }}
             rows={3}
             disabled={!canEdit}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70"
-            placeholder="Sujets à aborder, objectifs de la rencontre…"
+            placeholder={t("sujets_aborder_objectifs_rencontre")}
           />
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Notes de réunion</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("notes_reunion")}</Label>
           <textarea
             value={notes}
             onChange={(e) => { setNotes(e.target.value); markDirty(); }}
             rows={6}
             disabled={!canEdit}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y disabled:opacity-70"
-            placeholder="Discussion, points clés, décisions prises…"
+            placeholder={t("discussion_points_cles_decisions_prises")}
           />
-          <p className="text-[11px] text-muted-foreground">Visible par l&apos;employé et le manager.</p>
+          <p className="text-[11px] text-muted-foreground">{t("visible_apos_employe_manager")}</p>
         </div>
 
         {isManager && (
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Notes privées (manager seulement)</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("notes_privees_manager_seulement")}</Label>
             <textarea
               value={privateNotes}
               onChange={(e) => { setPrivateNotes(e.target.value); markDirty(); }}
               rows={3}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-              placeholder="Réflexions confidentielles, points à suivre avec RH…"
+              placeholder={t("reflexions_confidentielles_points_suivre_rh")}
             />
-            <p className="text-[11px] text-muted-foreground">Visible uniquement par vous (manager).</p>
+            <p className="text-[11px] text-muted-foreground">{t("visible_uniquement_vous_manager")}</p>
           </div>
         )}
 
-        {/* Action items */}
+
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Actions à suivre</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("actions_suivre")}</Label>
             {canEdit && (
               <Button
                 type="button"
@@ -183,7 +184,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
             )}
           </div>
           {actionItems.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic px-1">Aucune action définie.</p>
+            <p className="text-xs text-muted-foreground italic px-1">{t("aucune_action_definie")}</p>
           ) : (
             <div className="space-y-1.5">
               {actionItems.map((item, idx) => (
@@ -207,7 +208,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
                       markDirty();
                     }}
                     disabled={!canEdit}
-                    placeholder="Description de l'action"
+                    placeholder={t("description_action")}
                     className={`h-8 text-sm flex-1 ${item.done ? "line-through text-muted-foreground" : ""}`}
                   />
                   <select
@@ -220,8 +221,8 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
                     disabled={!canEdit}
                     className="h-8 px-2 text-xs rounded-md border border-input bg-background"
                   >
-                    <option value="employee">Employé</option>
-                    <option value="manager">Manager</option>
+                    <option value="employee">{t("employe")}</option>
+                    <option value="manager">{t("manager")}</option>
                   </select>
                   {canEdit && (
                     <Button
@@ -229,7 +230,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7 hover:text-destructive"
-                      aria-label="Retirer"
+                      aria-label={t("retirer")}
                       onClick={() => {
                         setActionItems((arr) => arr.filter((_, i) => i !== idx));
                         markDirty();
@@ -247,7 +248,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
         <div className="flex flex-wrap justify-end gap-2 pt-3 border-t">
           {canEdit && (
             <Button variant="outline" onClick={() => save()} disabled={pending || !isDirty}>
-              {pending ? "..." : "Enregistrer"}
+              {pending ? "..." : t("enregistrer")}
             </Button>
           )}
           {canMarkHeld && (
@@ -261,9 +262,9 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
               className="hover:text-destructive"
               onClick={async () => {
                 const ok = await confirmDialog({
-                  title: "Annuler la réunion ?",
-                  description: "L'employé sera notifié de l'annulation.",
-                  confirmLabel: "Annuler la réunion",
+                  title: t("annuler_reunion"),
+                  description: t("employe_sera_notifie_annulation"),
+                  confirmLabel: t("annuler_reunion"),
                   variant: "destructive",
                 });
                 if (!ok) return;

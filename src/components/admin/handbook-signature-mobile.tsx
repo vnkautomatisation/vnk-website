@@ -64,33 +64,34 @@ export function HandbookSignatureMobile({
     checkboxStates: CheckboxStates,
   ) => Promise<void> | void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
-  // Onglet actif
+
   const [tab, setTab] = useState<Tab>("preview");
 
-  // States actions
+
   const [finalRead, setFinalRead] = useState(false);
   const [finalInitials, setFinalInitials] = useState("");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  // Verrouillage lecture : la case "J'ai lu" devient active apres READ_DELAY_MS.
+
   const [readUnlocked, setReadUnlocked] = useState(false);
   const readTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // URL blob PDF pour ouvrir dans le navigateur natif
+
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfRefreshing, setPdfRefreshing] = useState(false);
   const currentBlobUrlRef = useRef<string | null>(null);
-  // Debounce du refresh PDF live (1500ms) quand finalRead/initiales/signature changent
+
   const refreshTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Marqueur "PDF deja ouvert au moins une fois" : on l'utilise pour
-  // donner un signal visuel "lecture confirmee" dans l'onglet Actions.
+
+
   const [pdfOpenedOnce, setPdfOpenedOnce] = useState(false);
 
-  // Reset a chaque ouverture
+
   useEffect(() => {
     if (open) {
       setTab("preview");
@@ -119,7 +120,7 @@ export function HandbookSignatureMobile({
     };
   }, [open, handbook?.id]);
 
-  // Fetch PDF blob au open
+
   useEffect(() => {
     if (!open || !handbook?.id) return;
     let cancelled = false;
@@ -151,14 +152,14 @@ export function HandbookSignatureMobile({
     };
   }, [open, handbook?.id, employeeId]);
 
-  // Refresh PDF live (debounced 1500ms) quand finalRead / initiales / signature
-  // changent. Meme pattern que HandbookSignatureDialog desktop : POST sur
-  // /preview-pdf avec etat live, le PDF reflete LU ET ACCEPTE rempli +
-  // initiales + signature dans la page d'acceptation.
+
+
+
+
   useEffect(() => {
     if (!open || !handbook?.id) return;
-    // Skip tant que l'utilisateur n'a rien rempli (etat initial = PDF deja
-    // fetch sans live ci-dessus).
+
+
     if (!finalRead && !finalInitials && !signatureData) return;
     if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     refreshTimerRef.current = setTimeout(async () => {
@@ -199,7 +200,7 @@ export function HandbookSignatureMobile({
         refreshTimerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open, handbook?.id, employeeId, finalRead, finalInitials, signatureData]);
 
   if (!handbook) return null;
@@ -232,14 +233,14 @@ export function HandbookSignatureMobile({
     }
   };
 
-  const submitLabel = requiresSignature ? "Confirmer ma signature" : "Confirmer ma lecture";
+  const submitLabel = requiresSignature ? t("confirmer_ma_signature") : t("confirmer_ma_lecture");
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !pending && onClose()}>
       <DialogContent
         className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none"
       >
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 py-3 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-white text-sm flex items-center gap-2 pr-8">
@@ -255,7 +256,7 @@ export function HandbookSignatureMobile({
           </DialogHeader>
         </div>
 
-        {/* Onglets : Apercu / Actions */}
+
         <div className="shrink-0 bg-white border-b flex">
           <button
             type="button"
@@ -268,7 +269,7 @@ export function HandbookSignatureMobile({
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
-            <span>Apercu</span>
+            <span>{t("apercu")}</span>
             {pdfOpenedOnce && (
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
             )}
@@ -299,7 +300,7 @@ export function HandbookSignatureMobile({
           {/* ───── Onglet APERCU ─────
               Iframe PDF inline directement dans l'onglet, prend toute la
               hauteur disponible. Le user peut zoomer/scroller dans l'iframe.
-              Bouton "Ouvrir en plein ecran" en option si l'iframe est trop
+              Bouton t("ouvrir_plein_ecran") en option si l'iframe est trop
               petite. */}
           {tab === "preview" && (
             <div className="flex-1 overflow-hidden bg-white flex flex-col">
@@ -308,14 +309,14 @@ export function HandbookSignatureMobile({
               {pdfRefreshing && (
                 <div className="shrink-0 px-3 py-1.5 bg-[#0F2D52]/5 border-b border-[#0F2D52]/10 text-[10px] text-[#0F2D52] inline-flex items-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Apercu actualise...</span>
+                  <span>{t("apercu_actualise")}</span>
                 </div>
               )}
               {pdfLoading || !pdfBlobUrl ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                   <Loader2 className="h-10 w-10 animate-spin text-[#0F2D52] mb-4" />
                   <p className="text-sm text-slate-600">
-                    Generation de l&apos;apercu...
+                    {t("generation_apos_apercu")}
                   </p>
                 </div>
               ) : (
@@ -329,10 +330,10 @@ export function HandbookSignatureMobile({
             </div>
           )}
 
-          {/* ───── Onglet ACTIONS ───── */}
+
           {tab === "actions" && (
             <div className="p-4 sm:p-5 space-y-4">
-              {/* Bandeau progression */}
+
               <div
                 className={cn(
                   "rounded-md border px-3 py-2.5 space-y-2",
@@ -348,7 +349,7 @@ export function HandbookSignatureMobile({
                     <AlertCircle className="h-4 w-4 text-[#0F2D52] shrink-0" />
                   )}
                   <span className={finalAckDone ? "text-emerald-900" : "text-[#0F2D52]"}>
-                    Etat de la signature
+                    {t("etat_signature")}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
@@ -386,15 +387,15 @@ export function HandbookSignatureMobile({
                 {!readUnlocked && (
                   <p className="text-[10px] text-amber-700 inline-flex items-center gap-1">
                     <Loader2 className="h-3 w-3 animate-spin" />
-                    Prenez quelques secondes pour parcourir le document...
+                    {t("prenez_quelques_secondes_parcourir_document")}
                   </p>
                 )}
               </div>
 
-              {/* Acceptation finale */}
+
               <div className="space-y-1.5">
                 <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52] px-1">
-                  Acceptation finale du manuel
+                  {t("acceptation_finale_manuel")}
                 </p>
                 <Card
                   className={cn(
@@ -404,12 +405,7 @@ export function HandbookSignatureMobile({
                       : "border-[#0F2D52]",
                   )}
                 >
-                  <p className="text-xs text-slate-700 leading-relaxed">
-                    En cochant la case ci-dessous, je reconnais avoir lu et
-                    compris l&apos;ensemble du présent Manuel de l&apos;employé
-                    VNK Automatisation Inc., j&apos;en accepte les termes et
-                    m&apos;engage à les respecter dans le cadre de mon emploi.
-                  </p>
+                  <p className="text-xs text-slate-700 leading-relaxed">{t("handbook_signature_mobile_en_cochant_la_case_ci_dessous_je")}</p>
                   <label
                     className={cn(
                       "flex items-start gap-2 text-xs p-2.5 rounded border",
@@ -427,12 +423,12 @@ export function HandbookSignatureMobile({
                       className="h-4 w-4 mt-0.5 rounded border-input shrink-0 accent-[#0F2D52]"
                     />
                     <span className="font-semibold text-[#0F2D52]">
-                      J&apos;ai lu et compris l&apos;ensemble du manuel
+                      {t("j_ai_lu_compris_manuel")}
                     </span>
                   </label>
                   <div className="flex items-center gap-2">
                     <label className="text-[11px] text-muted-foreground shrink-0">
-                      Mes initiales :
+                      {t("mes_initiales")}
                     </label>
                     <Input
                       value={finalInitials}
@@ -459,7 +455,7 @@ export function HandbookSignatureMobile({
               {requiresSignature && (
                 <div className="space-y-1.5">
                   <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52] px-1">
-                    Signature manuscrite
+                    {t("signature_manuscrite")}
                   </p>
                   <div
                     className={cn(
@@ -478,7 +474,7 @@ export function HandbookSignatureMobile({
           )}
         </div>
 
-        {/* Footer sticky : Annuler + bouton primary */}
+
         <div className="shrink-0 border-t bg-muted/30 px-3 py-2.5 flex items-center gap-2">
           <Button
             type="button"
@@ -497,7 +493,7 @@ export function HandbookSignatureMobile({
               onClick={() => setTab("actions")}
               className="flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
-              Passer aux actions
+              {t("passer_actions")}
             </Button>
           ) : (
             <Button

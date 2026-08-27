@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -72,6 +73,7 @@ export function TaxReportDialog({
   defaultFrom: string;
   defaultTo: string;
 }) {
+  const t = useTranslations("admin.transactions");
   const [from, setFrom] = useState(defaultFrom);
   const [to, setTo] = useState(defaultTo);
   const [report, setReport] = useState<TaxReport | null>(null);
@@ -87,17 +89,17 @@ export function TaxReportDialog({
 
   const fetchReport = async () => {
     if (!from || !to) {
-      toast.error("Période requise");
+      toast.error(t("periode_requise"));
       return;
     }
     setLoading(true);
     try {
       const res = await fetch(`/api/payments/tax-report?from=${from}&to=${to}`);
-      if (!res.ok) throw new Error("Erreur");
+      if (!res.ok) throw new Error(t("erreur"));
       const data = await res.json();
       setReport(data);
     } catch {
-      toast.error("Impossible de charger le rapport");
+      toast.error(t("impossible_charger_rapport"));
     } finally {
       setLoading(false);
     }
@@ -112,21 +114,21 @@ export function TaxReportDialog({
   const exportCsv = () => {
     if (!report) return;
     const rows: string[][] = [];
-    rows.push(["Rapport fiscal — VNK Automatisation Inc."]);
+    rows.push([t("rapport_fiscal_vnk_automatisation_inc")]);
     rows.push([`Période : ${report.period.from} au ${report.period.to}`]);
     rows.push([]);
     rows.push(["SOMMAIRE"]);
     rows.push(["", "HT", "TPS (5%)", "TVQ (9.975%)", "Total TTC", "Nb"]);
-    rows.push(["Revenus", report.summary.revenue.ht.toFixed(2), report.summary.revenue.tps.toFixed(2), report.summary.revenue.tvq.toFixed(2), report.summary.revenue.ttc.toFixed(2), String(report.summary.revenue.count)]);
-    rows.push(["Remboursements", report.summary.refunds.ht.toFixed(2), report.summary.refunds.tps.toFixed(2), report.summary.refunds.tvq.toFixed(2), report.summary.refunds.ttc.toFixed(2), String(report.summary.refunds.count)]);
-    rows.push(["NET À DÉCLARER", report.summary.net.ht.toFixed(2), report.summary.net.tps.toFixed(2), report.summary.net.tvq.toFixed(2), report.summary.net.ttc.toFixed(2), ""]);
+    rows.push([t("revenus"), report.summary.revenue.ht.toFixed(2), report.summary.revenue.tps.toFixed(2), report.summary.revenue.tvq.toFixed(2), report.summary.revenue.ttc.toFixed(2), String(report.summary.revenue.count)]);
+    rows.push([t("remboursements"), report.summary.refunds.ht.toFixed(2), report.summary.refunds.tps.toFixed(2), report.summary.refunds.tvq.toFixed(2), report.summary.refunds.ttc.toFixed(2), String(report.summary.refunds.count)]);
+    rows.push([t("net_declarer"), report.summary.net.ht.toFixed(2), report.summary.net.tps.toFixed(2), report.summary.net.tvq.toFixed(2), report.summary.net.ttc.toFixed(2), ""]);
     rows.push([]);
-    rows.push(["DÉTAIL PAR MOIS"]);
-    rows.push(["Mois", "HT", "TPS", "TVQ", "TTC", "Nb"]);
+    rows.push([t("detail_mois")]);
+    rows.push([t("mois"), "HT", "TPS", "TVQ", "TTC", t("nb")]);
     report.byMonth.forEach((m) => rows.push([m.month, m.ht.toFixed(2), m.tps.toFixed(2), m.tvq.toFixed(2), m.ttc.toFixed(2), String(m.count)]));
     rows.push([]);
-    rows.push(["DÉTAIL PAR MÉTHODE"]);
-    rows.push(["Méthode", "Total", "Nb"]);
+    rows.push([t("detail_methode")]);
+    rows.push([t("methode"), t("total"), t("nb")]);
     report.byMethod.forEach((m) => rows.push([m.method, m.total.toFixed(2), String(m.count)]));
 
     const csv = "﻿" + rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(",")).join("\r\n");
@@ -145,49 +147,49 @@ export function TaxReportDialog({
         <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Rapport fiscal — TPS / TVQ
+            {t("rapport_fiscal_tps_tvq")}
           </DialogTitle>
           <DialogDescription className="text-white/70 text-xs">
-            Totaux à déclarer aux gouvernements (Revenu Canada + Revenu Québec) pour la période sélectionnée
+            {t("totaux_declarer_gouvernements_revenu_canada")}
           </DialogDescription>
         </DialogHeader>
 
         <div className="overflow-y-auto p-5 space-y-4 flex-1">
-          {/* Période */}
+
           <div className="space-y-2">
-            <Label className="text-xs">Période</Label>
+            <Label className="text-xs">{t("periode")}</Label>
             <div className="flex flex-wrap gap-2 items-end">
               <Select onValueChange={applyPreset}>
                 <SelectTrigger className="w-[180px]">
-                  <SelectValue placeholder="Préréglage..." />
+                  <SelectValue placeholder={t("prereglage")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="this_month">Ce mois</SelectItem>
-                  <SelectItem value="last_month">Mois dernier</SelectItem>
-                  <SelectItem value="q1">T1 (Jan–Mar)</SelectItem>
-                  <SelectItem value="q2">T2 (Avr–Juin)</SelectItem>
-                  <SelectItem value="q3">T3 (Juil–Sept)</SelectItem>
-                  <SelectItem value="q4">T4 (Oct–Déc)</SelectItem>
-                  <SelectItem value="this_year">Cette année</SelectItem>
-                  <SelectItem value="last_year">Année dernière</SelectItem>
+                  <SelectItem value="this_month">{t("mois")}</SelectItem>
+                  <SelectItem value="last_month">{t("mois_dernier")}</SelectItem>
+                  <SelectItem value="q1">{t("t1_jan_mar")}</SelectItem>
+                  <SelectItem value="q2">{t("t2_avr_juin")}</SelectItem>
+                  <SelectItem value="q3">{t("t3_juil_sept")}</SelectItem>
+                  <SelectItem value="q4">{t("t4_oct_dec")}</SelectItem>
+                  <SelectItem value="this_year">{t("annee")}</SelectItem>
+                  <SelectItem value="last_year">{t("annee_derniere")}</SelectItem>
                 </SelectContent>
               </Select>
               <div>
-                <Label className="text-[10px] text-muted-foreground">Du</Label>
+                <Label className="text-[10px] text-muted-foreground">{t("du")}</Label>
                 <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="w-[140px]" />
               </div>
               <div>
-                <Label className="text-[10px] text-muted-foreground">Au</Label>
+                <Label className="text-[10px] text-muted-foreground">{t("au")}</Label>
                 <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="w-[140px]" />
               </div>
               <Button size="sm" onClick={fetchReport} disabled={loading || !from || !to}>
                 <Calendar className="h-3.5 w-3.5 mr-1.5" />
-                {loading ? "Calcul…" : "Calculer"}
+                {loading ? t("calcul") : t("calculer")}
               </Button>
               {report && (
                 <Button size="sm" variant="outline" onClick={exportCsv}>
                   <Download className="h-3.5 w-3.5 mr-1.5" />
-                  Export CSV
+                  {t("export_csv")}
                 </Button>
               )}
             </div>
@@ -195,35 +197,35 @@ export function TaxReportDialog({
 
           {report && (
             <>
-              {/* Sommaire net à déclarer */}
+
               <div className="space-y-3">
                 <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">
-                  Net à déclarer
+                  {t("net_declarer")}
                 </p>
                 <div className="grid grid-cols-4 gap-3">
                   <div className="p-3 rounded-md border bg-emerald-50">
-                    <p className="text-[10px] text-muted-foreground">HT (revenus)</p>
+                    <p className="text-[10px] text-muted-foreground">{t("ht_revenus")}</p>
                     <p className="text-lg font-bold text-emerald-700 mt-1">{formatCurrency(report.summary.net.ht)}</p>
                   </div>
                   <div className="p-3 rounded-md border bg-blue-50">
-                    <p className="text-[10px] text-muted-foreground">TPS perçue (5%)</p>
+                    <p className="text-[10px] text-muted-foreground">{t("tps_percue")}</p>
                     <p className="text-lg font-bold text-blue-700 mt-1">{formatCurrency(report.summary.net.tps)}</p>
                   </div>
                   <div className="p-3 rounded-md border bg-violet-50">
-                    <p className="text-[10px] text-muted-foreground">TVQ perçue (9.975%)</p>
+                    <p className="text-[10px] text-muted-foreground">{t("tvq_percue")}</p>
                     <p className="text-lg font-bold text-violet-700 mt-1">{formatCurrency(report.summary.net.tvq)}</p>
                   </div>
                   <div className="p-3 rounded-md border bg-[#0F2D52] text-white">
-                    <p className="text-[10px] text-white/60">Total TTC</p>
+                    <p className="text-[10px] text-white/60">{t("total_ttc")}</p>
                     <p className="text-lg font-bold mt-1">{formatCurrency(report.summary.net.ttc)}</p>
                   </div>
                 </div>
                 <div className="text-[10px] text-muted-foreground italic">
-                  Net = Revenus encaissés − Remboursements émis. Ces montants sont à reporter sur vos formulaires TPS (FPZ-500) et TVQ (VDZ-471).
+                  {t("net_revenus_encaisses_remboursements_emis")}
                 </div>
               </div>
 
-              {/* Détail revenus / remboursements */}
+
               <div className="grid grid-cols-2 gap-3">
                 <div className="p-3 rounded-md border bg-card">
                   <p className="text-xs uppercase tracking-wider font-semibold text-emerald-600">Revenus ({report.summary.revenue.count})</p>
@@ -245,20 +247,20 @@ export function TaxReportDialog({
                 </div>
               </div>
 
-              {/* Détail par mois */}
+
               {report.byMonth.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Détail par mois</p>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("detail_mois")}</p>
                   <div className="border rounded-md overflow-hidden">
                     <table className="w-full text-xs">
                       <thead className="bg-muted">
                         <tr className="text-left">
-                          <th className="p-2">Mois</th>
+                          <th className="p-2">{t("mois_2")}</th>
                           <th className="p-2 text-right">HT</th>
                           <th className="p-2 text-right">TPS</th>
                           <th className="p-2 text-right">TVQ</th>
                           <th className="p-2 text-right">TTC</th>
-                          <th className="p-2 text-right">Nb</th>
+                          <th className="p-2 text-right">{t("nb")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -278,10 +280,10 @@ export function TaxReportDialog({
                 </div>
               )}
 
-              {/* Par méthode */}
+
               {report.byMethod.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Par méthode de paiement</p>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("methode_paiement")}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                     {report.byMethod.map((m) => (
                       <div key={m.method} className="p-2 rounded-md border bg-card">
@@ -294,10 +296,10 @@ export function TaxReportDialog({
                 </div>
               )}
 
-              {/* Top clients */}
+
               {report.topClients.length > 0 && (
                 <div>
-                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">Top 10 clients de la période</p>
+                  <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("top_10_clients_periode")}</p>
                   <div className="space-y-1">
                     {report.topClients.map((c, i) => (
                       <div key={c.clientId} className="flex items-center justify-between p-2 rounded-md border bg-card text-xs">

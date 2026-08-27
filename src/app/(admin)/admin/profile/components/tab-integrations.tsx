@@ -33,11 +33,12 @@ type IntegrationRow = {
 };
 
 export function TabIntegrations() {
+  const t = useTranslations("admin.profile");
   const [list, setList] = useState<IntegrationRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeProvider, setActiveProvider] = useState<IntegrationProvider | null>(null);
 
-  // Charger la liste initiale
+
   const reload = async () => {
     setLoading(true);
     try {
@@ -55,7 +56,7 @@ export function TabIntegrations() {
 
   const findIntegration = (provider: string) => list.find((i) => i.provider === provider);
 
-  // Filtrer par catégorie
+
   const grouped: Record<string, IntegrationProvider[]> = {};
   INTEGRATION_PROVIDERS.forEach((p) => {
     if (!grouped[p.category]) grouped[p.category] = [];
@@ -68,12 +69,9 @@ export function TabIntegrations() {
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">
             <Plug className="h-4 w-4" />
-            Intégrations tierces
+            {t("integrations_tierces")}
           </CardTitle>
-          <p className="text-xs text-muted-foreground mt-1">
-            Connectez votre portail VNK aux services externes que vous utilisez : paiement, signature
-            électronique, calendrier, communication, automatisation.
-          </p>
+          <p className="text-xs text-muted-foreground mt-1">{t("tab_integrations_connectez_votre_portail_vnk_aux_services_externes")}</p>
         </CardHeader>
         <CardContent className="space-y-6">
           {loading ? (
@@ -111,7 +109,7 @@ export function TabIntegrations() {
                               <p className="text-sm font-semibold truncate">{p.name}</p>
                               <StatusBadge status={status} />
                             </div>
-                            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{p.description}</p>
+                            <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{t(p.descriptionKey)}</p>
                             {integ?.lastError && (
                               <p className="text-[10px] text-red-600 mt-1 line-clamp-2"><AlertCircle className="h-2.5 w-2.5 inline mr-0.5" />{integ.lastError}</p>
                             )}
@@ -125,21 +123,21 @@ export function TabIntegrations() {
                                 onCheckedChange={async (v) => {
                                   const r = await toggleIntegrationAction(p.key, v);
                                   if (r.success) {
-                                    toast.success(v ? "Activée" : "Désactivée");
+                                    toast.success(v ? t("activee") : t("desactivee"));
                                     reload();
                                   } else toast.error(r.error);
                                 }}
                               />
                             )}
                             <Button variant="ghost" size="sm" asChild className="h-7 px-1.5">
-                              <a href={p.docsUrl} target="_blank" rel="noopener noreferrer" title="Documentation">
+                              <a href={p.docsUrl} target="_blank" rel="noopener noreferrer" title={t("documentation")}>
                                 <ExternalLink className="h-3.5 w-3.5" />
                               </a>
                             </Button>
                           </div>
                           <Button size="sm" variant={integ ? "outline" : "default"} onClick={() => setActiveProvider(p)} className="h-8">
                             <Settings className="h-3.5 w-3.5" />
-                            {integ ? "Configurer" : "Connecter"}
+                            {integ ? t("configurer") : t("connecter")}
                           </Button>
                         </div>
                       </div>
@@ -165,11 +163,12 @@ export function TabIntegrations() {
 }
 
 function StatusBadge({ status }: { status: string }) {
-  if (status === "connected")  return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />Connecté</Badge>;
-  if (status === "error")      return <Badge variant="destructive" className="text-[10px]"><AlertCircle className="h-2.5 w-2.5 mr-0.5" />Erreur</Badge>;
-  if (status === "paused")     return <Badge className="bg-zinc-100 text-zinc-700 hover:bg-zinc-100 text-[10px]">En pause</Badge>;
-  if (status === "incomplete") return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px]">Incomplet</Badge>;
-  return <Badge variant="outline" className="text-[10px]">Non configuré</Badge>;
+  const t = useTranslations("admin.profile");
+  if (status === "connected")  return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 text-[10px]"><CheckCircle2 className="h-2.5 w-2.5 mr-0.5" />{t("connecte")}</Badge>;
+  if (status === "error")      return <Badge variant="destructive" className="text-[10px]"><AlertCircle className="h-2.5 w-2.5 mr-0.5" />{t("erreur")}</Badge>;
+  if (status === "paused")     return <Badge className="bg-zinc-100 text-zinc-700 hover:bg-zinc-100 text-[10px]">{t("pause")}</Badge>;
+  if (status === "incomplete") return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 text-[10px]">{t("incomplet")}</Badge>;
+  return <Badge variant="outline" className="text-[10px]">{t("non_configure")}</Badge>;
 }
 
 // ─────────────────────────────────────────────────────────
@@ -183,10 +182,11 @@ function IntegrationDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.profile");
   const tc = useTranslations("common");
-  // Pour chaque champ, on garde l'état :
-  // - valeur affichée (vide si jamais configuré, "••••" si configuré et non révélé, vraie valeur si révélé/édité)
-  // - "isMasked" = true si on n'a pas révélé, donc en cas de save on ignore ce champ
+
+
+
   const [values, setValues] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     provider.fields.forEach((f) => {
@@ -199,7 +199,7 @@ function IntegrationDialog({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
-  // Dialog de révélation 2FA
+
   const [revealDialog, setRevealDialog] = useState(false);
   const [revealMethod, setRevealMethod] = useState<"totp" | "email" | "backup">("totp");
   const [revealCode, setRevealCode] = useState("");
@@ -217,9 +217,9 @@ function IntegrationDialog({
       if (res.ok) {
         setEmailChallengeId(data.challengeId);
         setEmailSentTo(data.sentTo);
-        toast.success("Code envoyé par courriel");
+        toast.success(t("code_envoye_courriel"));
       } else {
-        setRevealError(data.error ?? "Erreur");
+        setRevealError(data.error ?? t("erreur"));
       }
     } finally {
       setRevealing(false);
@@ -227,7 +227,7 @@ function IntegrationDialog({
   };
 
   const handleRevealSubmit = async () => {
-    if (!revealCode.trim()) { setRevealError("Saisissez un code"); return; }
+    if (!revealCode.trim()) { setRevealError(t("saisissez_code")); return; }
     setRevealing(true);
     setRevealError(null);
     try {
@@ -242,7 +242,7 @@ function IntegrationDialog({
       });
       const data = await res.json();
       if (res.ok) {
-        // Remplir les champs avec les valeurs déchiffrées et marquer comme révélés
+
         const newValues = { ...values };
         const newRevealed = { ...revealed };
         for (const [k, v] of Object.entries(data.credentials as Record<string, string>)) {
@@ -255,12 +255,12 @@ function IntegrationDialog({
         setRevealCode("");
         setEmailChallengeId(null);
         setEmailSentTo(null);
-        toast.success("Identifiants révélés. Modification en clair activée.");
+        toast.success(t("identifiants_reveles_modification_clair_activee"));
       } else {
-        setRevealError(data.error ?? "Code invalide");
+        setRevealError(data.error ?? t("code_invalide"));
       }
     } catch {
-      setRevealError("Erreur réseau");
+      setRevealError(t("erreur_reseau"));
     } finally {
       setRevealing(false);
     }
@@ -286,14 +286,14 @@ function IntegrationDialog({
     setTesting(true);
     setTestResult(null);
     try {
-      // D'abord on sauvegarde puis on teste
+
       const save = await upsertIntegrationAction({ provider: provider.key, credentials: values, enable: existing?.isEnabled ?? false });
-      if (!save.success) { toast.error(save.error); return; }
+      if (!save.success) { toast.error(save.errorField ? t("champ_obligatoire_manquant", { field: t(save.errorField) }) : save.error); return; }
       const res = await fetch(`/api/integrations/${provider.key}/test`, { method: "POST" });
       const data = await res.json();
-      setTestResult({ ok: data.ok, message: data.message ?? data.error ?? "Aucune réponse" });
+      setTestResult({ ok: data.ok, message: data.message ?? data.error ?? t("aucune_reponse") });
     } catch {
-      setTestResult({ ok: false, message: "Erreur réseau" });
+      setTestResult({ ok: false, message: t("erreur_reseau") });
     } finally {
       setTesting(false);
     }
@@ -304,7 +304,7 @@ function IntegrationDialog({
     startTransition(async () => {
       const r = await deleteIntegrationAction(provider.key);
       if (r.success) {
-        toast.success("Déconnecté");
+        toast.success(t("deconnecte"));
         onSaved();
       } else {
         toast.error(r.error);
@@ -315,7 +315,7 @@ function IntegrationDialog({
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="sm:max-w-lg p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
-        {/* Header navy VNK + logo officiel du fournisseur */}
+
         <div className="vnk-gradient text-white p-5">
           <div className="flex items-start gap-3">
             <div className="h-12 w-12 rounded-lg flex items-center justify-center flex-shrink-0 bg-white shadow-sm" style={{ color: provider.brandColor }}>
@@ -324,27 +324,24 @@ function IntegrationDialog({
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-white">{provider.name}</DialogTitle>
               <DialogDescription className="text-white/85 text-sm mt-1">
-                {provider.description}
+                {t(provider.descriptionKey)}
               </DialogDescription>
             </div>
           </div>
         </div>
 
         <div className="p-5 space-y-3">
-          {/* ─── Mode OAuth (Microsoft / Google) ─── */}
+
           {provider.oauthFlow ? (
             <OAuthPanel provider={provider} existing={existing} onChanged={onSaved} />
           ) : (
           <>
-          {/* Info : chiffrement + révélation */}
+
           <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900 flex gap-2">
             <ShieldCheck className="h-4 w-4 flex-shrink-0 mt-0.5" />
             <div className="space-y-1 flex-1">
-              <p className="font-semibold">Vos identifiants sont sécurisés</p>
-              <p>
-                Pour afficher ou modifier les informations déjà enregistrées, vous devrez valider votre identité
-                (code de votre application 2FA ou code reçu par courriel).
-              </p>
+              <p className="font-semibold">{t("identifiants_securises")}</p>
+              <p>{t("tab_integrations_pour_afficher_ou_modifier_les_informations_deja")}</p>
               {existing && (
                 <button
                   type="button"
@@ -352,24 +349,23 @@ function IntegrationDialog({
                   className="mt-1 inline-flex items-center gap-1 underline font-semibold hover:no-underline"
                 >
                   <Eye className="h-3 w-3" />
-                  Afficher ou modifier les identifiants
+                  {t("afficher_modifier_identifiants")}
                 </button>
               )}
             </div>
           </div>
 
           {provider.fields.map((f) => {
-            // Champ déjà configuré ET non révélé = lecture seule + masqué
+
             const isExistingMasked = existing && values[f.key] && !revealed[f.key] && /^•+$/.test(values[f.key]);
 
             return (
               <div key={f.key} className="space-y-1.5">
                 <Label htmlFor={`f-${f.key}`} className="text-xs flex items-center gap-1.5">
-                  {f.label} {f.required && <span className="text-red-500">*</span>}
+                  {t(f.labelKey)} {f.required && <span className="text-red-500">*</span>}
                   {f.type === "secret" && isExistingMasked && (
                     <span className="text-[9px] uppercase tracking-wider bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
-                      <Lock className="h-2.5 w-2.5" /> Chiffré
-                    </span>
+                      <Lock className="h-2.5 w-2.5" />{t("tab_integrations_chiffre")}</span>
                   )}
                   {f.type === "secret" && revealed[f.key] && (
                     <span className="text-[9px] uppercase tracking-wider bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-bold flex items-center gap-1">
@@ -381,7 +377,7 @@ function IntegrationDialog({
                   <Select value={values[f.key] ?? ""} onValueChange={(v) => setValues({ ...values, [f.key]: v })}>
                     <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
                     <SelectContent>
-                      {f.options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+                      {f.options.map((o) => <SelectItem key={o.value} value={o.value}>{t(o.labelKey)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 ) : f.type === "secret" ? (
@@ -392,7 +388,7 @@ function IntegrationDialog({
                       value={values[f.key] ?? ""}
                       onChange={(e) => { if (!isExistingMasked) setValues({ ...values, [f.key]: e.target.value }); }}
                       readOnly={!!isExistingMasked}
-                      placeholder={isExistingMasked ? "Déjà configuré — cliquez sur Afficher pour modifier" : f.placeholder}
+                      placeholder={isExistingMasked ? t("deja_configure_cliquez_afficher_modifier") : f.placeholder}
                       className={`pr-10 h-9 font-mono text-xs ${isExistingMasked ? "bg-muted cursor-not-allowed" : ""}`}
                       autoComplete="off"
                     />
@@ -403,7 +399,7 @@ function IntegrationDialog({
                         else setRevealed({ ...revealed, [f.key]: !revealed[f.key] });
                       }}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      title={isExistingMasked ? "Authentifiez-vous pour afficher" : "Afficher/masquer"}
+                      title={isExistingMasked ? t("authentifiez_vous_afficher") : "Afficher/masquer"}
                     >
                       {revealed[f.key] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                     </button>
@@ -418,7 +414,7 @@ function IntegrationDialog({
                     className="h-9"
                   />
                 )}
-                {f.helper && <p className="text-[10px] text-muted-foreground">{f.helper}</p>}
+                {f.helperKey && <p className="text-[10px] text-muted-foreground">{t(f.helperKey)}</p>}
               </div>
             );
           })}
@@ -439,19 +435,19 @@ function IntegrationDialog({
               {existing && (
                 <Button variant="ghost" size="sm" onClick={handleDelete} disabled={pending} className="text-destructive hover:bg-destructive/10">
                   <Trash2 className="h-3.5 w-3.5" />
-                  Déconnecter
+                  {t("deconnecter")}
                 </Button>
               )}
             </div>
             <div className="flex gap-2">
               {provider.testable && (
                 <Button variant="outline" onClick={handleTest} disabled={testing || pending}>
-                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Tester"}
+                  {testing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : t("tester")}
                 </Button>
               )}
               <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
               <Button onClick={handleSave} disabled={pending}>
-                {pending ? "Enregistrement…" : "Enregistrer"}
+                {pending ? t("enregistrement") : t("enregistrer")}
               </Button>
             </div>
           </DialogFooter>
@@ -464,26 +460,26 @@ function IntegrationDialog({
         )}
       </DialogContent>
 
-      {/* ───────────────────── Dialog Reveal 2FA ───────────────────── */}
+
       <Dialog open={revealDialog} onOpenChange={(o) => !o && setRevealDialog(false)}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
             <DialogTitle className="text-white flex items-center gap-2">
               <ShieldCheck className="h-5 w-5" />
-              Authentification renforcée requise
+              {t("authentification_renforcee_requise")}
             </DialogTitle>
             <DialogDescription className="text-white/85 text-sm mt-1">
-              Pour afficher ou modifier les identifiants chiffrés, validez votre identité.
+              {t("afficher_modifier_identifiants_chiffres_validez")}
             </DialogDescription>
           </div>
 
           <div className="p-5 space-y-4">
-            {/* Onglets méthode */}
+
             <div className="grid grid-cols-3 gap-1.5">
               {([
-                { v: "totp", icon: KeyRound, label: "App 2FA" },
-                { v: "email", icon: Mail, label: "Courriel" },
-                { v: "backup", icon: KeyRound, label: "Récup." },
+                { v: "totp", icon: KeyRound, label: t("app_2fa") },
+                { v: "email", icon: Mail, label: t("courriel") },
+                { v: "backup", icon: KeyRound, label: t("recup") },
               ] as const).map(({ v, icon: Icon, label }) => (
                 <button
                   key={v}
@@ -499,7 +495,7 @@ function IntegrationDialog({
 
             {revealMethod === "totp" && (
               <div className="space-y-2">
-                <Label className="text-xs">Code à 6 chiffres de votre application 2FA</Label>
+                <Label className="text-xs">{t("code_6_chiffres_application_2fa")}</Label>
                 <Input
                   value={revealCode}
                   onChange={(e) => setRevealCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -508,7 +504,7 @@ function IntegrationDialog({
                   maxLength={6}
                   autoFocus
                 />
-                <p className="text-[10px] text-muted-foreground">Google Authenticator, Authy, 1Password, etc.</p>
+                <p className="text-[10px] text-muted-foreground">{t("google_authenticator_authy_1password_etc")}</p>
               </div>
             )}
 
@@ -517,19 +513,17 @@ function IntegrationDialog({
                 {!emailChallengeId ? (
                   <>
                     <p className="text-sm text-muted-foreground">
-                      Un code à 6 chiffres sera envoyé à votre adresse courriel. Valide 10 minutes.
+                      {t("code_6_chiffres_sera_envoye")}
                     </p>
                     <Button onClick={handleSendEmailCode} disabled={revealing} size="sm">
                       <Mail className="h-3.5 w-3.5" />
-                      {revealing ? "Envoi…" : "Envoyer le code par courriel"}
+                      {revealing ? t("envoi") : t("envoyer_code_courriel")}
                     </Button>
                   </>
                 ) : (
                   <>
-                    <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2">
-                      Code envoyé à <strong>{emailSentTo}</strong>. Vérifiez votre boîte de réception.
-                    </p>
-                    <Label className="text-xs">Code reçu par courriel</Label>
+                    <p className="text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md p-2">{t("tab_integrations_code_envoye_a")}<strong>{emailSentTo}</strong>{t("tab_integrations_verifiez_votre_boite_de_reception")}</p>
+                    <Label className="text-xs">{t("code_recu_courriel")}</Label>
                     <Input
                       value={revealCode}
                       onChange={(e) => setRevealCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
@@ -542,7 +536,7 @@ function IntegrationDialog({
                       onClick={handleSendEmailCode}
                       className="text-[10px] underline text-muted-foreground hover:text-foreground"
                     >
-                      Renvoyer un nouveau code
+                      {t("renvoyer_nouveau_code")}
                     </button>
                   </>
                 )}
@@ -551,7 +545,7 @@ function IntegrationDialog({
 
             {revealMethod === "backup" && (
               <div className="space-y-2">
-                <Label className="text-xs">Code de récupération à usage unique</Label>
+                <Label className="text-xs">{t("code_recuperation_usage_unique")}</Label>
                 <Input
                   value={revealCode}
                   onChange={(e) => setRevealCode(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "").slice(0, 9))}
@@ -559,7 +553,7 @@ function IntegrationDialog({
                   className="text-center text-base font-mono tracking-wider"
                   autoFocus
                 />
-                <p className="text-[10px] text-muted-foreground">Format xxxx-xxxx — le code sera consommé.</p>
+                <p className="text-[10px] text-muted-foreground">{t("format_xxxx_xxxx_code_sera")}</p>
               </div>
             )}
 
@@ -577,7 +571,7 @@ function IntegrationDialog({
               onClick={handleRevealSubmit}
               disabled={revealing || !revealCode.trim() || (revealMethod === "email" && !emailChallengeId)}
             >
-              {revealing ? "Validation…" : "Valider et afficher"}
+              {revealing ? t("validation") : t("valider_afficher")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -600,6 +594,7 @@ function OAuthPanel({
   existing: IntegrationRow | undefined;
   onChanged: () => void;
 }) {
+  const t = useTranslations("admin.profile");
   const [status, setStatus] = useState<{
     connected: boolean;
     accountEmail: string | null;
@@ -610,7 +605,7 @@ function OAuthPanel({
   const [loading, setLoading] = useState(true);
   const [disconnecting, setDisconnecting] = useState(false);
 
-  // Formulaire de configuration de l'app OAuth (client_id/secret/tenant)
+
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [tenantId, setTenantId] = useState("common");
@@ -643,11 +638,11 @@ function OAuthPanel({
     try {
       const res = await fetch(statusUrl, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Déconnecté");
+        toast.success(t("deconnecte"));
         await loadStatus();
         onChanged();
       } else {
-        toast.error("Erreur");
+        toast.error(t("erreur"));
       }
     } finally {
       setDisconnecting(false);
@@ -656,7 +651,7 @@ function OAuthPanel({
 
   const handleSaveAppConfig = () => {
     if (!clientId.trim() || !clientSecret.trim()) {
-      toast.error("Identifiant et secret obligatoires");
+      toast.error(t("identifiant_secret_obligatoires"));
       return;
     }
     startSaveConfig(async () => {
@@ -673,7 +668,7 @@ function OAuthPanel({
         enable: false, // pas encore connecté côté compte
       });
       if (r.success) {
-        toast.success("Configuration enregistrée. Vous pouvez maintenant vous connecter.");
+        toast.success(t("configuration_enregistree_vous_pouvez_maintenant"));
         setClientId(""); setClientSecret(""); setTenantId("common");
         await loadStatus();
         onChanged();
@@ -690,7 +685,7 @@ function OAuthPanel({
       setRedirectCopied(true);
       setTimeout(() => setRedirectCopied(false), 2000);
     } catch {
-      toast.error("Impossible de copier");
+      toast.error(t("impossible_copier"));
     }
   };
 
@@ -702,35 +697,35 @@ function OAuthPanel({
     );
   }
 
-  // App pas configurée — afficher le formulaire de setup OAuth
+
   if (!status?.configured) {
     return (
       <div className="space-y-4">
         <div className="rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900 space-y-2">
-          <p className="font-semibold">Étape 1 — Créez votre application OAuth</p>
+          <p className="font-semibold">{t("etape_1_creez_application_oauth")}</p>
           {provider.oauthFlow === "microsoft" ? (
             <ol className="text-xs space-y-1 list-decimal list-inside">
-              <li>Allez sur <a href="https://portal.azure.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">portal.azure.com</a> &rarr; Microsoft Entra ID &rarr; App registrations &rarr; Nouvelle inscription</li>
-              <li>Donnez-lui un nom (ex : « VNK Portal »)</li>
-              <li>Type de comptes pris en charge : choisissez ce qui correspond à votre organisation</li>
-              <li>URI de redirection (type « Web ») : copiez l&apos;URL ci-dessous</li>
-              <li>Une fois créée : ouvrez « Certificates &amp; secrets » &rarr; « Nouveau secret client » &rarr; copiez la <strong>Valeur</strong> (pas l&apos;ID)</li>
-              <li>Onglet « Permissions API » &rarr; ajoutez les permissions <strong>Calendars.ReadWrite</strong>, <strong>OnlineMeetings.ReadWrite</strong>, <strong>User.Read</strong>, <strong>offline_access</strong></li>
+              <li>{t("allez")} <a href="https://portal.azure.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">portal.azure.com</a> {t("rarr_microsoft_entra_id_rarr")}</li>
+              <li>{t("donnez_lui_nom_ex_vnk")}</li>
+              <li>{t("type_comptes_pris_charge_choisissez")}</li>
+              <li>{t("uri_redirection_type_web_copiez")}</li>
+              <li>{t("fois_creee_ouvrez_certificates_amp")} <strong>{t("valeur")}</strong> {t("pas_apos_id")}</li>
+              <li>{t("onglet_permissions_api_rarr_ajoutez")} <strong>Calendars.ReadWrite</strong>, <strong>OnlineMeetings.ReadWrite</strong>, <strong>User.Read</strong>, <strong>offline_access</strong></li>
             </ol>
           ) : (
             <ol className="text-xs space-y-1 list-decimal list-inside">
-              <li>Allez sur <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">console.cloud.google.com</a> &rarr; APIs &amp; Services &rarr; Credentials</li>
-              <li>Cliquez « Create credentials » &rarr; « OAuth client ID » &rarr; Type : Web application</li>
-              <li>« Authorized redirect URIs » : ajoutez l&apos;URL ci-dessous</li>
-              <li>Une fois créé : notez l&apos;identifiant et le secret</li>
-              <li>Activez l&apos;API <strong>Google Calendar API</strong> dans la section « APIs &amp; Services » &rarr; « Library »</li>
+              <li>{t("allez")} <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" className="underline font-medium">console.cloud.google.com</a> {t("rarr_apis_amp_services_rarr")}</li>
+              <li>{t("cliquez_create_credentials_rarr_oauth")}</li>
+              <li>{t("authorized_redirect_uris_ajoutez_apos")}</li>
+              <li>{t("fois_cree_notez_apos_identifiant")}</li>
+              <li>{t("activez_apos_api")} <strong>{t("google_calendar_api")}</strong> {t("section_apis_amp_services_rarr")}</li>
             </ol>
           )}
         </div>
 
-        {/* URL de redirection à copier-coller */}
+
         <div className="rounded-md border bg-muted/30 p-3 space-y-2">
-          <Label className="text-xs font-semibold">URL de redirection à coller</Label>
+          <Label className="text-xs font-semibold">{t("url_redirection_coller")}</Label>
           <div className="flex gap-2">
             <Input
               value={status?.redirectUri ?? ""}
@@ -746,11 +741,11 @@ function OAuthPanel({
           </p>
         </div>
 
-        {/* Formulaire de saisie des credentials */}
+
         <div className="space-y-3">
-          <p className="text-sm font-semibold">Étape 2 — Collez les identifiants ici</p>
+          <p className="text-sm font-semibold">{t("etape_2_collez_identifiants_ici")}</p>
           <div className="space-y-1.5">
-            <Label className="text-xs">Identifiant client (Client ID)</Label>
+            <Label className="text-xs">{t("identifiant_client_client_id")}</Label>
             <Input
               value={clientId}
               onChange={(e) => setClientId(e.target.value)}
@@ -759,13 +754,13 @@ function OAuthPanel({
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs">Secret client</Label>
+            <Label className="text-xs">{t("secret_client")}</Label>
             <div className="relative">
               <Input
                 type={secretVisible ? "text" : "password"}
                 value={clientSecret}
                 onChange={(e) => setClientSecret(e.target.value)}
-                placeholder={provider.oauthFlow === "microsoft" ? "Valeur du secret (pas l'ID)" : "GOCSPX-…"}
+                placeholder={provider.oauthFlow === "microsoft" ? t("valeur_secret_pas_id") : t("gocspx")}
                 className="h-9 font-mono text-xs pr-10"
               />
               <button type="button" onClick={() => setSecretVisible(!secretVisible)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
@@ -775,33 +770,33 @@ function OAuthPanel({
           </div>
           {provider.oauthFlow === "microsoft" && (
             <div className="space-y-1.5">
-              <Label className="text-xs">Identifiant de répertoire (Tenant ID)</Label>
+              <Label className="text-xs">{t("identifiant_repertoire_tenant_id")}</Label>
               <Input
                 value={tenantId}
                 onChange={(e) => setTenantId(e.target.value)}
                 placeholder="common"
                 className="h-9 font-mono text-xs"
               />
-              <p className="text-[10px] text-muted-foreground">Laissez <code>common</code> pour accepter tous les comptes Microsoft personnels et professionnels.</p>
+              <p className="text-[10px] text-muted-foreground">{t("laissez")} <code>common</code> {t("accepter_tous_comptes_microsoft_personnels")}</p>
             </div>
           )}
           <Button onClick={handleSaveAppConfig} disabled={savingConfig || !clientId.trim() || !clientSecret.trim()} className="w-full">
-            {savingConfig ? "Enregistrement…" : "Enregistrer la configuration"}
+            {savingConfig ? t("enregistrement") : t("enregistrer_configuration")}
           </Button>
         </div>
       </div>
     );
   }
 
-  // Connecté
+
   if (status?.connected) {
     return (
       <div className="space-y-3">
         <div className="rounded-md border border-emerald-200 bg-emerald-50 p-4 flex items-start gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
-            <p className="font-semibold text-emerald-900 text-sm">Compte connecté</p>
-            <p className="text-xs text-emerald-700 mt-0.5 break-all">{status.accountEmail ?? "Authentifié"}</p>
+            <p className="font-semibold text-emerald-900 text-sm">{t("compte_connecte")}</p>
+            <p className="text-xs text-emerald-700 mt-0.5 break-all">{status.accountEmail ?? t("authentifie")}</p>
             {status.expiresAt && (
               <p className="text-[10px] text-emerald-600 mt-1">
                 Jeton valide jusqu&apos;au {new Date(status.expiresAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })} — renouvellement automatique
@@ -811,21 +806,21 @@ function OAuthPanel({
         </div>
 
         <div className="rounded-md border bg-muted/30 p-3 text-xs space-y-1.5">
-          <p className="font-semibold flex items-center gap-1.5"><Info className="h-3 w-3" /> Ce qui est synchronisé</p>
+          <p className="font-semibold flex items-center gap-1.5"><Info className="h-3 w-3" /> {t("synchronise")}</p>
           <ul className="list-disc list-inside text-muted-foreground space-y-0.5">
             {provider.oauthFlow === "microsoft" ? (
               <>
-                <li>Création automatique de réunions Teams lors des rendez-vous (type vidéo)</li>
-                <li>Évènements ajoutés à votre calendrier Outlook</li>
-                <li>Annulation automatique du Teams meeting quand un RDV est annulé/supprimé</li>
-                <li>Renouvellement automatique du jeton d&apos;accès via refresh token</li>
+                <li>{t("creation_automatique_reunions_teams_lors")}</li>
+                <li>{t("evenements_ajoutes_calendrier_outlook")}</li>
+                <li>{t("annulation_automatique_teams_meeting_quand")}</li>
+                <li>{t("renouvellement_automatique_jeton_apos_acces")}</li>
               </>
             ) : (
               <>
-                <li>Création automatique de liens Google Meet lors des rendez-vous</li>
-                <li>Évènements ajoutés à votre Google Calendar</li>
-                <li>Annulation automatique du meeting Google Meet</li>
-                <li>Renouvellement automatique du jeton d&apos;accès</li>
+                <li>{t("creation_automatique_liens_google_meet")}</li>
+                <li>{t("evenements_ajoutes_google_calendar")}</li>
+                <li>{t("annulation_automatique_meeting_google_meet")}</li>
+                <li>{t("renouvellement_automatique_jeton_apos_acces_2")}</li>
               </>
             )}
           </ul>
@@ -833,11 +828,11 @@ function OAuthPanel({
 
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" size="sm" onClick={handleConnect}>
-            Reconnecter
+            {t("reconnecter")}
           </Button>
           <Button variant="ghost" size="sm" onClick={handleDisconnect} disabled={disconnecting} className="text-destructive hover:bg-destructive/10">
             <Trash2 className="h-3.5 w-3.5" />
-            {disconnecting ? "Déconnexion…" : "Déconnecter"}
+            {disconnecting ? t("deconnexion") : t("deconnecter")}
           </Button>
         </div>
 
@@ -851,11 +846,11 @@ function OAuthPanel({
     );
   }
 
-  // Non connecté
+
   return (
     <div className="space-y-3">
       <div className="rounded-md border bg-muted/30 p-4 text-sm space-y-2">
-        <p className="font-semibold">Autorisation requise</p>
+        <p className="font-semibold">{t("autorisation_requise")}</p>
         <p className="text-xs text-muted-foreground">
           Cliquez sur le bouton ci-dessous pour vous connecter à votre compte {provider.name}.
           Vous serez redirigé vers le fournisseur pour autoriser l&apos;accès au calendrier et aux réunions.
@@ -866,7 +861,7 @@ function OAuthPanel({
         Se connecter à {provider.name}
       </Button>
       <p className="text-[10px] text-muted-foreground text-center">
-        Permissions demandées : lecture/écriture du calendrier, création de réunions en ligne, accès profil.
+        {t("permissions_demandees_lecture_ecriture_calendrier")}
       </p>
     </div>
   );

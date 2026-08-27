@@ -62,6 +62,7 @@ export function MandateDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.mandates");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -70,7 +71,7 @@ export function MandateDetailPanel({
   const [loading, setLoading] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // State local du slider (instant feedback) — commit a l'API seulement onPointerUp
+
   const [localProgress, setLocalProgress] = useState(0);
   const isDraggingRef = useRef(false);
 
@@ -87,7 +88,7 @@ export function MandateDetailPanel({
       .finally(() => setLoading(false));
   }, [mandateId, open]);
 
-  // Synchronise localProgress avec mandate.progress quand on n'est pas en train de drag
+
   useEffect(() => {
     if (!isDraggingRef.current && mandate) setLocalProgress(mandate.progress);
   }, [mandate]);
@@ -100,7 +101,7 @@ export function MandateDetailPanel({
     router.refresh();
   };
 
-  // ── Patch generique pour toute mise a jour ────────────
+
   const patch = async (data: Record<string, unknown>, successMessage?: string) => {
     if (!mandate) return false;
     setBusy(true);
@@ -116,31 +117,31 @@ export function MandateDetailPanel({
         return true;
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
         return false;
       }
     } finally { setBusy(false); }
   };
 
-  // Slider: commit du progress sur release du drag
+
   const commitProgress = async () => {
     isDraggingRef.current = false;
     if (!mandate || localProgress === mandate.progress) return;
-    await patch({ progress: localProgress }, "Progression mise à jour");
+    await patch({ progress: localProgress }, t("progression_mise_jour"));
   };
 
   const markCompleted = async () => {
     if (!mandate) return;
     const ok = await confirm({
-      title: "Marquer comme terminé ?",
+      title: t("marquer_comme_termine"),
       description: `Le mandat "${mandate.title}" sera marqué comme complété (100%).`,
-      confirmLabel: "Marquer terminé",
+      confirmLabel: t("marquer_termine"),
     });
     if (!ok) return;
-    await patch({ status: "completed", progress: 100 }, "Mandat terminé");
+    await patch({ status: "completed", progress: 100 }, t("mandat_termine"));
   };
 
-  // Calculs derives
+
   const estimatedRevenue = mandate && mandate.estimatedHours && mandate.hourlyRate
     ? Number(mandate.estimatedHours) * Number(mandate.hourlyRate)
     : null;
@@ -155,15 +156,15 @@ export function MandateDetailPanel({
       open={open}
       onOpenChange={onOpenChange}
       loading={loading || !mandate}
-      title={mandate?.title ?? "Mandat"}
+      title={mandate?.title ?? t("mandat")}
       subtitle={mandate ? `${mandate.client.fullName}${mandate.client.companyName ? ` · ${mandate.client.companyName}` : ""}` : undefined}
       icon={<Briefcase className="h-7 w-7 text-white" />}
       headerStats={
         mandate ? (
           <div className="grid grid-cols-3 gap-2">
-            <PanelStatBox icon={CheckCircle2} label="Progression" value={`${mandate.progress}%`} />
-            <PanelStatBox icon={Clock} label="Heures" value={`${mandate.actualHours ?? 0} / ${mandate.estimatedHours ?? "—"}`} />
-            <PanelStatBox icon={DollarSign} label="Revenu" value={estimatedRevenue ? formatCurrency(estimatedRevenue) : "—"} />
+            <PanelStatBox icon={CheckCircle2} label={t("progression")} value={`${mandate.progress}%`} />
+            <PanelStatBox icon={Clock} label={t("heures")} value={`${mandate.actualHours ?? 0} / ${mandate.estimatedHours ?? "—"}`} />
+            <PanelStatBox icon={DollarSign} label={t("revenu")} value={estimatedRevenue ? formatCurrency(estimatedRevenue) : "—"} />
           </div>
         ) : undefined
       }
@@ -188,8 +189,8 @@ export function MandateDetailPanel({
     >
       {mandate && (
         <div className="space-y-4">
-          {/* Section Statut & progression */}
-          <PanelSection icon={CheckCircle2} title="Statut & progression">
+
+          <PanelSection icon={CheckCircle2} title={t("statut_progression")}>
             <EditableField
               label={tc("status")}
               display={<StatusBadge status={mandate.status} />}
@@ -197,22 +198,22 @@ export function MandateDetailPanel({
                 <Select value={value} onValueChange={setValue}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">En attente</SelectItem>
+                    <SelectItem value="pending">{t("attente")}</SelectItem>
                     <SelectItem value="active">{tc("active")}</SelectItem>
-                    <SelectItem value="in_progress">En cours</SelectItem>
-                    <SelectItem value="completed">Complété</SelectItem>
-                    <SelectItem value="paused">En pause</SelectItem>
-                    <SelectItem value="cancelled">Annulé</SelectItem>
+                    <SelectItem value="in_progress">{t("cours")}</SelectItem>
+                    <SelectItem value="completed">{t("complete")}</SelectItem>
+                    <SelectItem value="paused">{t("pause")}</SelectItem>
+                    <SelectItem value="cancelled">{t("annule")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
               initialValue={mandate.status}
-              onSave={(v) => patch({ status: v }, "Statut modifié")}
+              onSave={(v) => patch({ status: v }, t("statut_modifie"))}
               disabled={busy}
             />
             <div className="space-y-2">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-foreground">Progression</span>
+                <span className="text-sm text-muted-foreground">{t("progression")}</span>
                 <span className="text-sm font-bold text-[#0F2D52] tabular-nums">{localProgress}%</span>
               </div>
               <input
@@ -228,119 +229,119 @@ export function MandateDetailPanel({
                 style={{ background: `linear-gradient(to right, #0F2D52 0%, #0F2D52 ${localProgress}%, hsl(var(--muted)) ${localProgress}%, hsl(var(--muted)) 100%)` }}
               />
               <p className="text-[10px] text-muted-foreground">
-                {isLocked ? "Mandat verrouillé — la progression ne peut plus être modifiée"
-                  : "Glisse pour mettre à jour (sauvegarde au relâchement)"}
+                {isLocked ? t("mandat_verrouille_progression_ne_peut")
+                  : t("glisse_mettre_jour_sauvegarde_relachement")}
               </p>
             </div>
           </PanelSection>
 
-          {/* Section Identité */}
-          <PanelSection icon={FileText} title="Identité">
+
+          <PanelSection icon={FileText} title={t("identite")}>
             <EditableField
-              label="Titre"
+              label={t("titre")}
               display={<span className="text-sm font-medium">{mandate.title}</span>}
               renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} />}
               initialValue={mandate.title}
-              onSave={(v) => v.trim() ? patch({ title: v.trim() }, "Titre modifié") : false}
+              onSave={(v) => v.trim() ? patch({ title: v.trim() }, t("titre_modifie")) : false}
               disabled={busy}
             />
             <EditableField
-              label="Type de service"
+              label={t("type_service")}
               display={<span className="text-sm">{mandate.serviceType ? (SERVICE_LABELS[mandate.serviceType] ?? mandate.serviceType) : "—"}</span>}
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
-                  <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
                     {SERVICE_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
               )}
               initialValue={mandate.serviceType ?? ""}
-              onSave={(v) => patch({ serviceType: v || null }, "Service modifié")}
+              onSave={(v) => patch({ serviceType: v || null }, t("service_modifie"))}
               disabled={busy}
             />
-            <InfoRow label="Créé le" value={formatDate(new Date(mandate.createdAt))} />
+            <InfoRow label={t("cree")} value={formatDate(new Date(mandate.createdAt))} />
             <EditableTextarea
-              label="Description"
+              label={t("description")}
               display={mandate.description}
               initialValue={mandate.description ?? ""}
-              onSave={(v) => patch({ description: v || null }, "Description modifiée")}
+              onSave={(v) => patch({ description: v || null }, t("description_modifiee"))}
               disabled={busy}
-              placeholder="Aucune description — clique pour ajouter"
+              placeholder={t("aucune_description_clique_ajouter")}
               rows={3}
             />
           </PanelSection>
 
-          {/* Section Planification */}
-          <PanelSection icon={Calendar} title="Planification">
+
+          <PanelSection icon={Calendar} title={t("planification")}>
             <div className="grid grid-cols-2 gap-3">
               <EditableDateBox
-                label="Date début"
+                label={t("date_debut")}
                 value={mandate.startDate}
-                onSave={(v) => patch({ startDate: v || null }, "Date début modifiée")}
+                onSave={(v) => patch({ startDate: v || null }, t("date_debut_modifiee"))}
                 disabled={busy}
               />
               <EditableDateBox
-                label="Date fin estimée"
+                label={t("date_fin_estimee")}
                 value={mandate.endDate}
-                onSave={(v) => patch({ endDate: v || null }, "Date fin modifiée")}
+                onSave={(v) => patch({ endDate: v || null }, t("date_fin_modifiee"))}
                 disabled={busy}
               />
             </div>
           </PanelSection>
 
-          {/* Section Estimations */}
-          <PanelSection icon={DollarSign} title="Estimations">
+
+          <PanelSection icon={DollarSign} title={t("estimations")}>
             <div className="grid grid-cols-2 gap-3">
               <EditableNumberBox
-                label="Heures estimées"
+                label={t("heures_estimees")}
                 value={mandate.estimatedHours}
                 suffix="h"
-                onSave={(v) => patch({ estimatedHours: v }, "Heures modifiées")}
+                onSave={(v) => patch({ estimatedHours: v }, t("heures_modifiees"))}
                 disabled={busy}
               />
               <div className="rounded-lg border bg-card p-3">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Heures réelles</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("heures_reelles")}</p>
                 <p className="text-base font-bold mt-1 tabular-nums">{mandate.actualHours ?? 0}h</p>
               </div>
               <EditableNumberBox
-                label="Taux horaire"
+                label={t("taux_horaire_plain")}
                 value={mandate.hourlyRate}
                 prefix="$"
-                onSave={(v) => patch({ hourlyRate: v }, "Taux modifié")}
+                onSave={(v) => patch({ hourlyRate: v }, t("taux_modifie"))}
                 disabled={busy}
               />
               <div className="rounded-lg border-2 border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3">
-                <p className="text-[10px] uppercase tracking-wider text-[#0F2D52]/70 font-semibold">Revenu estimé</p>
+                <p className="text-[10px] uppercase tracking-wider text-[#0F2D52]/70 font-semibold">{t("revenu_estime")}</p>
                 <p className="text-base font-bold mt-1 tabular-nums text-[#0F2D52]">{estimatedRevenue ? formatCurrency(estimatedRevenue) : "—"}</p>
               </div>
             </div>
             {actualRevenue && estimatedRevenue && (
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5 flex items-center justify-between text-sm">
-                <span className="text-emerald-700">Revenu réel à ce jour</span>
+                <span className="text-emerald-700">{t("revenu_reel_jour")}</span>
                 <span className="font-bold text-emerald-700 tabular-nums">{formatCurrency(actualRevenue)}</span>
               </div>
             )}
           </PanelSection>
 
-          {/* Section Notes internes */}
-          <PanelSection icon={ClipboardList} title="Notes internes (privées)">
+
+          <PanelSection icon={ClipboardList} title={t("notes_internes_privees")}>
             <EditableTextarea
               label=""
               display={mandate.notes}
               initialValue={mandate.notes ?? ""}
-              onSave={(v) => patch({ notes: v || null }, "Notes modifiées")}
+              onSave={(v) => patch({ notes: v || null }, t("notes_modifiees"))}
               disabled={busy}
-              placeholder="Aucune note interne — clique pour ajouter"
+              placeholder={t("aucune_note_interne_clique_ajouter")}
               rows={4}
               ambered
             />
           </PanelSection>
 
-          {/* Section Activité */}
+
           <PanelSection icon={ListChecks} title={`Activité (${mandate.logs.length})`}>
             {mandate.logs.length === 0 ? (
-              <PanelEmptyState text="Aucune activité enregistrée" icon={ListChecks} />
+              <PanelEmptyState text={t("aucune_activite_enregistree")} icon={ListChecks} />
             ) : (
               <div className="space-y-2">
                 {mandate.logs.map((l) => (
@@ -456,6 +457,7 @@ function EditableTextarea({
   rows?: number;
   ambered?: boolean;
 }) {
+  const t = useTranslations("admin.mandates");
   const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
@@ -499,7 +501,7 @@ function EditableTextarea({
       {label && <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">{label}</p>}
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm whitespace-pre-wrap leading-relaxed flex-1 min-w-0">
-          {display || placeholder || "Cliquer pour ajouter"}
+          {display || placeholder || t("cliquer_ajouter")}
         </p>
         <Pencil className="h-3 w-3 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>
@@ -567,6 +569,7 @@ function EditableNumberBox({
   prefix?: string;
   suffix?: string;
 }) {
+  const t = useTranslations("admin.mandates");
   const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [v, setV] = useState(value != null ? String(value) : "");
@@ -574,7 +577,7 @@ function EditableNumberBox({
 
   const handleSave = async () => {
     const num = v.trim() === "" ? null : Number(v);
-    if (num !== null && Number.isNaN(num)) { toast.error("Valeur invalide"); return; }
+    if (num !== null && Number.isNaN(num)) { toast.error(t("valeur_invalide")); return; }
     const ok = await onSave(num);
     if (ok !== false) setEditing(false);
   };

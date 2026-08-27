@@ -9,6 +9,7 @@
 // Setup Railway : chainer avec les autres crons quotidiens
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/signature-reminders
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
@@ -26,6 +27,7 @@ const SOON_MS = 2 * 24 * 60 * 60 * 1000; // "échéance proche" = ≤ 2 jours
 const ESCALATE_AFTER_MS = 5 * 24 * 60 * 60 * 1000; // escalade manager après 5 j de retard
 
 async function run(): Promise<NextResponse> {
+  const t = await getTranslations("api_errors");
   const now = new Date();
   const soonLimit = new Date(now.getTime() + SOON_MS);
 
@@ -98,7 +100,7 @@ async function run(): Promise<NextResponse> {
             recipientType: "admin",
             recipientId: adminId,
             type: isOverdue ? "warning" : "info",
-            title: isOverdue ? "Signature en retard" : "Signature à faire bientôt",
+            title: isOverdue ? t("signature_en_retard") : t("signature_bientot"),
             body: isOverdue
               ? `« ${req.template.title} » devait être signé avant le ${dueFr}. Merci de signer dès que possible.`
               : `« ${req.template.title} » doit être signé avant le ${dueFr}.`,
@@ -130,7 +132,7 @@ async function run(): Promise<NextResponse> {
               recipientType: "admin",
               recipientId: managerId,
               type: "warning",
-              title: "Signature(s) en retard dans votre équipe",
+              title: t("signature_s_en_retard_dans_votre_equipe"),
               body: `« ${req.template.title} » (échéance ${dueFr}) n'est pas signé par : ${names.join(", ")}.`,
               link: "/admin/employes/documents",
               icon: "alert-triangle",
@@ -144,7 +146,7 @@ async function run(): Promise<NextResponse> {
           recipientType: "admin",
           recipientId: req.requestedById,
           type: "warning",
-          title: "Demande de signature en retard",
+          title: t("demande_de_signature_en_retard"),
           body: `« ${req.template.title} » (échéance ${dueFr}) : ${pendingIds.length} signature(s) manquante(s).`,
           link: "/admin/employes/documents",
           icon: "alert-triangle",

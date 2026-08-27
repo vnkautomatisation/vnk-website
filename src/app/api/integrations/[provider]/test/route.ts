@@ -1,14 +1,16 @@
 // API · Tester la connexion d'une intégration
 // Vérifie les credentials enregistrés (déchiffrement automatique).
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { getIntegrationCredentials } from "@/lib/integrations/credentials";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ provider: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return NextResponse.json({ ok: false, error: "Non autorisé" }, { status: 401 });
+    return NextResponse.json({ ok: false, error: t("non_autorise") }, { status: 401 });
   }
 
   const { provider } = await params;
@@ -16,7 +18,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
   // Déchiffrement AES-256-GCM via le helper unifié
   const creds = await getIntegrationCredentials(provider);
   if (!creds || Object.keys(creds).length === 0) {
-    return NextResponse.json({ ok: false, error: "Intégration non configurée ou désactivée" }, { status: 404 });
+    return NextResponse.json({ ok: false, error: t("integration_non_configuree_ou_desactivee") }, { status: 404 });
   }
 
   try {
@@ -33,8 +35,8 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
       const res = await fetch("https://api.sendgrid.com/v3/user/profile", {
         headers: { Authorization: `Bearer ${creds.api_key}` },
       });
-      if (!res.ok) return NextResponse.json({ ok: false, error: "Clé API SendGrid invalide" }, { status: 400 });
-      return NextResponse.json({ ok: true, message: "Clé API SendGrid valide" });
+      if (!res.ok) return NextResponse.json({ ok: false, error: t("cle_api_sendgrid_invalide") }, { status: 400 });
+      return NextResponse.json({ ok: true, message: t("cle_api_sendgrid_valide") });
     }
 
     if (provider === "slack") {
@@ -44,14 +46,14 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
         body: JSON.stringify({ text: ":white_check_mark: Test de connexion VNK Automatisation — votre webhook Slack fonctionne." }),
       });
       if (!res.ok) return NextResponse.json({ ok: false, error: "Webhook Slack invalide" }, { status: 400 });
-      return NextResponse.json({ ok: true, message: "Message test envoyé dans Slack" });
+      return NextResponse.json({ ok: true, message: t("message_test_envoye_dans_slack") });
     }
 
     if (provider === "dropbox_sign") {
       const res = await fetch("https://api.hellosign.com/v3/account", {
         headers: { Authorization: `Basic ${Buffer.from(creds.api_key + ":").toString("base64")}` },
       });
-      if (!res.ok) return NextResponse.json({ ok: false, error: "Clé API Dropbox Sign invalide" }, { status: 400 });
+      if (!res.ok) return NextResponse.json({ ok: false, error: t("cle_api_dropbox_sign_invalide") }, { status: 400 });
       const data = await res.json();
       return NextResponse.json({ ok: true, message: `Connecté en tant que ${data.account?.email_address ?? "compte Dropbox Sign"}` });
     }
@@ -71,12 +73,12 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
 
     if (provider === "zapier") {
       if (!creds.webhook_url) {
-        return NextResponse.json({ ok: false, error: "URL du webhook Zapier manquante" }, { status: 400 });
+        return NextResponse.json({ ok: false, error: t("url_du_webhook_zapier_manquante") }, { status: 400 });
       }
       const testPayload = {
         event: "test.ping",
         timestamp: new Date().toISOString(),
-        data: { message: "Ceci est un message de test depuis le portail VNK Automatisation.", from: "vnk-portal" },
+        data: { message: t("ceci_est_un_message_de_test_depuis"), from: "vnk-portal" },
       };
       const res = await fetch(creds.webhook_url, {
         method: "POST",
@@ -84,7 +86,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
         body: JSON.stringify(testPayload),
       });
       if (!res.ok) return NextResponse.json({ ok: false, error: "Webhook Zapier injoignable" }, { status: 400 });
-      return NextResponse.json({ ok: true, message: "Évènement test envoyé à Zapier" });
+      return NextResponse.json({ ok: true, message: t("evenement_test_envoye_a_zapier") });
     }
 
     if (provider === "calendly") {
@@ -99,7 +101,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
       return NextResponse.json({ ok: true, message: `Connecté en tant que ${data.resource?.name ?? "compte Calendly"}` });
     }
 
-    return NextResponse.json({ ok: false, error: "Test non disponible pour ce fournisseur" }, { status: 400 });
+    return NextResponse.json({ ok: false, error: t("test_non_disponible_pour_ce_fournisseur") }, { status: 400 });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Erreur inconnue";
     await prisma.integration.update({

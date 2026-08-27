@@ -236,25 +236,25 @@ function fmtMoney(n: number | null | undefined): string {
   return `${Number(n).toLocaleString("fr-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 }
 
-function seniorityLabel(start: string | null): string {
+function seniorityLabel(start: string | null, t: (k: string, v?: Record<string, string | number | Date>) => string): string {
   if (!start) return "—";
   const s = new Date(start);
   const now = new Date();
   const months = (now.getFullYear() - s.getFullYear()) * 12 + (now.getMonth() - s.getMonth());
-  if (months < 1) return "Moins d'un mois";
-  if (months < 12) return `${months} mois`;
+  if (months < 1) return t("moins_mois");
+  if (months < 12) return t("mois_count", { count: months });
   const y = Math.floor(months / 12);
   const m = months % 12;
-  return m === 0 ? `${y} an${y > 1 ? "s" : ""}` : `${y} an${y > 1 ? "s" : ""} ${m} mois`;
+  return m === 0 ? t("ans_count", { count: y }) : t("ans_mois_count", { years: y, months: m });
 }
 
-function genderLabel(g: string | null | undefined): string {
+function genderKey(g: string | null | undefined): string | null {
   switch (g) {
-    case "male": return "Homme";
-    case "female": return "Femme";
-    case "non_binary": return "Non-binaire";
-    case "prefer_not_to_say": return "Préfère ne pas dire";
-    default: return "—";
+    case "male": return "homme";
+    case "female": return "femme";
+    case "non_binary": return "non_binaire";
+    case "prefer_not_to_say": return "prefere_ne_pas_dire";
+    default: return null;
   }
 }
 
@@ -277,6 +277,7 @@ export function DossierView(props: {
   family: FamilyRow[];
   bank: BankRow | null;
 }) {
+  const t = useTranslations("admin.employee_file");
   const tc = useTranslations("common");
   const router = useRouter();
   const {
@@ -294,7 +295,7 @@ export function DossierView(props: {
   const initials = (admin.fullName || admin.email)
     .split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase();
 
-  // Notes triees par categorie (discipline en premier)
+
   const notesOrdered = [...notes].sort((a, b) => {
     const order: Record<string, number> = {
       discipline: 0, exit: 1, medical: 2, observation: 3, onboarding: 4, commendation: 5, general: 6,
@@ -308,14 +309,14 @@ export function DossierView(props: {
   const onDeleteNote = async () => {
     if (!confirmDel) return;
     const r = await deleteEmployeeNoteAction({ id: confirmDel.id });
-    if (r.success) { toast.success("Note supprimee"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("note_supprimee")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDel(null);
   };
 
   return (
     <div className="space-y-4">
-      {/* ── Header ───────────────────────────────────────── */}
+
       <Card className="overflow-hidden">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] px-5 py-4 text-white flex items-center gap-4 flex-wrap">
           <div className="h-16 w-16 rounded-full bg-white/10 ring-2 ring-white/30 flex items-center justify-center text-lg font-bold"
@@ -337,7 +338,7 @@ export function DossierView(props: {
               )}
             </div>
             <p className="text-sm text-white/85 truncate">
-              {admin.position?.name || admin.title || "Sans poste"}
+              {admin.position?.name || admin.title || t("sans_poste")}
               {admin.team ? ` · ${admin.team.name}` : ""}
               {admin.manager ? ` · Manager : ${admin.manager.fullName || admin.manager.email}` : ""}
             </p>
@@ -364,7 +365,7 @@ export function DossierView(props: {
               onClick={() => setDocRequestOpen(true)}
             >
               <Upload className="h-4 w-4 mr-1.5" />
-              Demander un document
+              {t("demander_document")}
             </Button>
             <Button
               variant="outline"
@@ -378,7 +379,7 @@ export function DossierView(props: {
               })}
             >
               <FileDown className="h-4 w-4 mr-1.5" />
-              Apercu PDF
+              {t("apercu_pdf")}
             </Button>
           </div>
         </div>
@@ -401,38 +402,38 @@ export function DossierView(props: {
 
       <Tabs defaultValue="identity" className="w-full">
         <TabsList className="flex flex-wrap h-auto justify-start gap-1">
-          <TabsTrigger value="identity"><User className="h-3.5 w-3.5 mr-1.5" />Identite</TabsTrigger>
+          <TabsTrigger value="identity"><User className="h-3.5 w-3.5 mr-1.5" />{t("identite")}</TabsTrigger>
           <TabsTrigger value="notes"><FileText className="h-3.5 w-3.5 mr-1.5" />Notes ({notes.length})</TabsTrigger>
           <TabsTrigger value="reviews"><Award className="h-3.5 w-3.5 mr-1.5" />Evaluations ({reviews.length})</TabsTrigger>
           <TabsTrigger value="contracts"><FilePen className="h-3.5 w-3.5 mr-1.5" />Contrats ({contracts.length})</TabsTrigger>
           <TabsTrigger value="documents"><FolderClosed className="h-3.5 w-3.5 mr-1.5" />Documents ({files.length})</TabsTrigger>
           <TabsTrigger value="leaves"><Calendar className="h-3.5 w-3.5 mr-1.5" />Conges ({leaves.length})</TabsTrigger>
           <TabsTrigger value="equipment"><Package className="h-3.5 w-3.5 mr-1.5" />Equipement ({equipment.length})</TabsTrigger>
-          <TabsTrigger value="learning"><GraduationCap className="h-3.5 w-3.5 mr-1.5" />Permis et Formations</TabsTrigger>
-          <TabsTrigger value="payroll"><Banknote className="h-3.5 w-3.5 mr-1.5" />Paie</TabsTrigger>
+          <TabsTrigger value="learning"><GraduationCap className="h-3.5 w-3.5 mr-1.5" />{t("permis_formations")}</TabsTrigger>
+          <TabsTrigger value="payroll"><Banknote className="h-3.5 w-3.5 mr-1.5" />{t("paie")}</TabsTrigger>
           <TabsTrigger value="cnesst"><AlertTriangle className="h-3.5 w-3.5 mr-1.5" />CNESST ({cnesst.length})</TabsTrigger>
         </TabsList>
 
-        {/* ── Identite ───────────────────────────────────── */}
+
         <TabsContent value="identity" className="mt-4 space-y-4">
           <Card className="p-5">
-            <FormSection icon={User} title="Identite et emploi">
+            <FormSection icon={User} title={t("identite_emploi")}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <InfoRow icon={Mail} label="Courriel" value={admin.email} />
-                <InfoRow icon={Phone} label="Telephone" value={admin.phone || "—"} />
-                <InfoRow icon={Briefcase} label="Poste" value={admin.position?.name || admin.title || "—"} />
-                <InfoRow icon={Building2} label="Departement" value={admin.department || "—"} />
-                <InfoRow icon={Crown} label="Role" value={admin.customRole?.name || "—"} />
-                <InfoRow icon={Building2} label="Equipe" value={admin.team?.name || "—"} />
-                <InfoRow icon={User} label="Manager" value={admin.manager ? (admin.manager.fullName || admin.manager.email) : "—"} />
+                <InfoRow icon={Mail} label={t("courriel")} value={admin.email} />
+                <InfoRow icon={Phone} label={t("telephone")} value={admin.phone || "—"} />
+                <InfoRow icon={Briefcase} label={t("poste")} value={admin.position?.name || admin.title || "—"} />
+                <InfoRow icon={Building2} label={t("departement")} value={admin.department || "—"} />
+                <InfoRow icon={Crown} label={t("role")} value={admin.customRole?.name || "—"} />
+                <InfoRow icon={Building2} label={t("equipe")} value={admin.team?.name || "—"} />
+                <InfoRow icon={User} label={t("manager")} value={admin.manager ? (admin.manager.fullName || admin.manager.email) : "—"} />
                 <InfoRow icon={Calendar} label="Date d'embauche" value={fmtDate(admin.startDate)} />
-                <InfoRow icon={Calendar} label="Anciennete" value={seniorityLabel(admin.startDate)} />
-                <InfoRow icon={Calendar} label="Date de fin" value={fmtDate(admin.endDate)} />
-                <InfoRow icon={Calendar} label="Naissance" value={fmtDate(admin.birthdate)} />
-                <InfoRow icon={User} label="Civilité" value={admin.civility || "—"} />
-                <InfoRow icon={User} label="Genre" value={genderLabel(admin.gender)} />
+                <InfoRow icon={Calendar} label={t("anciennete")} value={seniorityLabel(admin.startDate, t)} />
+                <InfoRow icon={Calendar} label={t("date_fin")} value={fmtDate(admin.endDate)} />
+                <InfoRow icon={Calendar} label={t("naissance")} value={fmtDate(admin.birthdate)} />
+                <InfoRow icon={User} label={t("civilite")} value={admin.civility || "—"} />
+                <InfoRow icon={User} label={t("genre")} value={genderKey(admin.gender) ? t(genderKey(admin.gender)!) : "—"} />
                 {admin.preferredPronouns && (
-                  <InfoRow icon={User} label="Pronoms" value={admin.preferredPronouns} />
+                  <InfoRow icon={User} label={t("pronoms")} value={admin.preferredPronouns} />
                 )}
               </div>
             </FormSection>
@@ -440,35 +441,35 @@ export function DossierView(props: {
 
           {(emergencyContacts.length > 0 || family.length > 0 || bank) && (
             <Card className="p-5">
-              <FormSection icon={Heart} title="Coordonnees et famille">
+              <FormSection icon={Heart} title={t("coordonnees_famille")}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Contacts d&apos;urgence</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">{t("contacts_apos_urgence")}</p>
                     {emergencyContacts.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Aucun contact</p>
+                      <p className="text-xs text-muted-foreground italic">{t("aucun_contact")}</p>
                     ) : (
                       <ul className="space-y-1.5">
                         {emergencyContacts.map((c) => (
                           <li key={c.id} className="text-sm">
                             <span className="font-medium">{c.name}</span>
                             <span className="text-muted-foreground"> · {c.relationship} · {c.phone}</span>
-                            {c.isPrimary && <Badge variant="outline" className="ml-2 text-[10px]">Principal</Badge>}
+                            {c.isPrimary && <Badge variant="outline" className="ml-2 text-[10px]">{t("principal")}</Badge>}
                           </li>
                         ))}
                       </ul>
                     )}
                   </div>
                   <div>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Famille a charge</p>
+                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">{t("famille_charge")}</p>
                     {family.length === 0 ? (
-                      <p className="text-xs text-muted-foreground italic">Aucun dependant</p>
+                      <p className="text-xs text-muted-foreground italic">{t("aucun_dependant")}</p>
                     ) : (
                       <ul className="space-y-1.5">
                         {family.map((f) => (
                           <li key={f.id} className="text-sm">
                             <span className="font-medium">{f.fullName}</span>
                             <span className="text-muted-foreground"> · {f.type}</span>
-                            {f.isInsured && <Badge variant="outline" className="ml-1 text-[10px]">Assure</Badge>}
+                            {f.isInsured && <Badge variant="outline" className="ml-1 text-[10px]">{t("assure")}</Badge>}
                           </li>
                         ))}
                       </ul>
@@ -476,11 +477,11 @@ export function DossierView(props: {
                   </div>
                   {bank && (
                     <div className="md:col-span-2">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">Depot direct</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">{t("depot_direct")}</p>
                       <p className="text-sm">
                         {bank.institutionLabel || "—"}
                         {bank.accountLast4 ? ` · Compte ****${bank.accountLast4}` : ""}
-                        {bank.verifiedAt ? <Badge variant="outline" className="ml-2 text-[10px] text-emerald-700 border-emerald-300">Verifie</Badge> : <Badge variant="outline" className="ml-2 text-[10px] text-amber-700 border-amber-300">Non verifie</Badge>}
+                        {bank.verifiedAt ? <Badge variant="outline" className="ml-2 text-[10px] text-emerald-700 border-emerald-300">{t("verifie")}</Badge> : <Badge variant="outline" className="ml-2 text-[10px] text-amber-700 border-amber-300">{t("non_verifie")}</Badge>}
                       </p>
                     </div>
                   )}
@@ -490,7 +491,7 @@ export function DossierView(props: {
           )}
         </TabsContent>
 
-        {/* ── Notes ────────────────────────────────────────── */}
+
         <TabsContent value="notes" className="mt-4 space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-sm text-muted-foreground">
@@ -498,13 +499,13 @@ export function DossierView(props: {
             </p>
             <Button size="sm" onClick={() => setNoteDialog({ open: true, note: null })}>
               <Plus className="h-4 w-4 mr-1.5" />
-              Ajouter une note
+              {t("ajouter_note")}
             </Button>
           </div>
 
           {notesOrdered.length === 0 ? (
             <Card className="p-8 text-center text-sm text-muted-foreground">
-              Aucune note dans ce dossier.
+              {t("aucune_note_dossier")}
             </Card>
           ) : (
             <div className="space-y-2">
@@ -526,7 +527,7 @@ export function DossierView(props: {
                         )}
                         {n.isConfidential && (
                           <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50">
-                            Confidentiel
+                            {t("confidentiel")}
                           </Badge>
                         )}
                         {n.acknowledgedAt && (
@@ -551,7 +552,7 @@ export function DossierView(props: {
                     <h3 className="font-semibold text-sm mb-1">{n.title}</h3>
                     <div className="text-sm whitespace-pre-wrap text-foreground/90">{n.body}</div>
                     <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground gap-2 flex-wrap">
-                      <span>Par <span className="font-medium">{n.author.fullName || n.author.email}</span></span>
+                      <span>{t("par")} <span className="font-medium">{n.author.fullName || n.author.email}</span></span>
                       <span>
                         {n.occurredAt ? `Evenement : ${fmtDateShort(n.occurredAt)} · ` : ""}
                         Cree : {fmtDateShort(n.createdAt)}
@@ -569,12 +570,12 @@ export function DossierView(props: {
           )}
         </TabsContent>
 
-        {/* ── Evaluations ──────────────────────────────────── */}
+
         <TabsContent value="reviews" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={Award} title="Evaluations de performance">
+            <FormSection icon={Award} title={t("evaluations_performance")}>
               {reviews.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucune evaluation</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucune_evaluation")}</p>
               ) : (
                 <ul className="divide-y">
                   {reviews.map((r) => (
@@ -595,7 +596,7 @@ export function DossierView(props: {
                         )}
                         <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
                         <Button variant="ghost" size="sm" asChild>
-                          <Link href={`/admin/employes/evaluations/${r.id}`}>Ouvrir</Link>
+                          <Link href={`/admin/employes/evaluations/${r.id}`}>{t("ouvrir")}</Link>
                         </Button>
                       </div>
                     </li>
@@ -606,12 +607,12 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Contrats ─────────────────────────────────────── */}
+
         <TabsContent value="contracts" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={FilePen} title="Historique des contrats">
+            <FormSection icon={FilePen} title={t("historique_contrats")}>
               {contracts.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun contrat</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_contrat")}</p>
               ) : (
                 <ul className="divide-y">
                   {contracts.map((c) => (
@@ -633,7 +634,7 @@ export function DossierView(props: {
                           filename: `contrat-${c.id}.pdf`,
                         })}>
                           <FileText className="h-3.5 w-3.5 mr-1" />
-                          Apercu PDF
+                          {t("apercu_pdf")}
                         </Button>
                       </div>
                     </li>
@@ -644,12 +645,12 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Documents ────────────────────────────────────── */}
+
         <TabsContent value="documents" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={FolderClosed} title="Documents employe">
+            <FormSection icon={FolderClosed} title={t("documents_employe")}>
               {files.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun document</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_document")}</p>
               ) : (
                 <ul className="divide-y">
                   {files.map((f) => (
@@ -663,7 +664,7 @@ export function DossierView(props: {
                       <Button variant="ghost" size="sm" asChild>
                         <a href={f.fileUrl} target="_blank" rel="noopener noreferrer">
                           <Download className="h-3.5 w-3.5 mr-1" />
-                          Ouvrir
+                          {t("ouvrir")}
                         </a>
                       </Button>
                     </li>
@@ -674,12 +675,12 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Conges ───────────────────────────────────────── */}
+
         <TabsContent value="leaves" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={Calendar} title="Historique des conges">
+            <FormSection icon={Calendar} title={t("historique_conges")}>
               {leaves.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun conge</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_conge")}</p>
               ) : (
                 <ul className="divide-y">
                   {leaves.map((l) => (
@@ -702,12 +703,12 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Equipement ───────────────────────────────────── */}
+
         <TabsContent value="equipment" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={Package} title="Equipement actif">
+            <FormSection icon={Package} title={t("equipement_actif")}>
               {equipment.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun equipement assigne</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_equipement_assigne")}</p>
               ) : (
                 <ul className="divide-y">
                   {equipment.map((e) => (
@@ -729,12 +730,12 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Permis & Formations ──────────────────────────── */}
+
         <TabsContent value="learning" className="mt-4 space-y-4">
           <Card className="p-5">
-            <FormSection icon={ClipboardList} title="Permis professionnels">
+            <FormSection icon={ClipboardList} title={t("permis_professionnels")}>
               {licenses.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun permis</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_permis")}</p>
               ) : (
                 <ul className="divide-y">
                   {licenses.map((l) => (
@@ -758,9 +759,9 @@ export function DossierView(props: {
             </FormSection>
           </Card>
           <Card className="p-5">
-            <FormSection icon={GraduationCap} title="Formations">
+            <FormSection icon={GraduationCap} title={t("formations")}>
               {trainings.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucune formation</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucune_formation")}</p>
               ) : (
                 <ul className="divide-y">
                   {trainings.map((t) => (
@@ -784,30 +785,30 @@ export function DossierView(props: {
           </Card>
         </TabsContent>
 
-        {/* ── Paie ──────────────────────────────────────────── */}
+
         <TabsContent value="payroll" className="mt-4">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Bulletins emis</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("bulletins_emis")}</p>
               <p className="text-2xl font-bold mt-1 text-[#0F2D52]">{payAgg.count}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total brut</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("total_brut")}</p>
               <p className="text-2xl font-bold mt-1 text-[#0F2D52]">{fmtMoney(payAgg.grossPay)}</p>
             </Card>
             <Card className="p-4">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Total net</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("total_net")}</p>
               <p className="text-2xl font-bold mt-1 text-emerald-700">{fmtMoney(payAgg.netPay)}</p>
             </Card>
           </div>
         </TabsContent>
 
-        {/* ── CNESST ────────────────────────────────────────── */}
+
         <TabsContent value="cnesst" className="mt-4">
           <Card className="p-5">
-            <FormSection icon={AlertTriangle} title="Incidents CNESST">
+            <FormSection icon={AlertTriangle} title={t("incidents_cnesst")}>
               {cnesst.length === 0 ? (
-                <p className="text-sm text-muted-foreground italic">Aucun incident declare</p>
+                <p className="text-sm text-muted-foreground italic">{t("aucun_incident_declare")}</p>
               ) : (
                 <ul className="divide-y">
                   {cnesst.map((c) => (
@@ -832,7 +833,7 @@ export function DossierView(props: {
         </TabsContent>
       </Tabs>
 
-      {/* Dialogs */}
+
       <EmployeeNoteDialog
         open={noteDialog.open}
         note={noteDialog.note}
@@ -845,7 +846,7 @@ export function DossierView(props: {
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer la note "${confirmDel?.title}" ?`}
-        description="Cette action est irreversible et reservee aux super_admin."
+        description={t("action_irreversible_reservee_super_admin")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={onDeleteNote}
@@ -886,6 +887,7 @@ function EmployeeNoteDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.employee_file");
   const tc = useTranslations("common");
   const [category, setCategory] = useState<NoteCategory>((note?.category as NoteCategory) || "general");
   const [severity, setSeverity] = useState<NoteSeverity | "">((note?.severity as NoteSeverity) || "");
@@ -896,7 +898,7 @@ function EmployeeNoteDialog({
   const [attachmentUrl, setAttachmentUrl] = useState(note?.attachmentUrl ?? "");
   const [pending, setPending] = useState(false);
 
-  // Reset a l'ouverture
+
   const reset = () => {
     setCategory((note?.category as NoteCategory) || "general");
     setSeverity((note?.severity as NoteSeverity) || "");
@@ -908,8 +910,8 @@ function EmployeeNoteDialog({
   };
 
   const submit = async () => {
-    if (!title.trim()) { toast.error("Titre requis"); return; }
-    if (!body.trim()) { toast.error("Corps requis"); return; }
+    if (!title.trim()) { toast.error(t("titre_requis")); return; }
+    if (!body.trim()) { toast.error(t("corps_requis")); return; }
     setPending(true);
     const payload = {
       category,
@@ -925,11 +927,11 @@ function EmployeeNoteDialog({
       : await createEmployeeNoteAction({ adminId, ...payload });
     setPending(false);
     if (r.success) {
-      toast.success(note ? "Note modifiee" : "Note ajoutee");
+      toast.success(note ? t("note_modifiee") : t("note_ajoutee"));
       onSaved();
       onClose();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -940,18 +942,18 @@ function EmployeeNoteDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              {note ? "Modifier la note" : "Nouvelle note au dossier"}
+              {note ? t("modifier_note") : t("nouvelle_note_dossier")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Documentez un evenement, un avis disciplinaire, une felicitation ou une observation.
+              {t("documentez_evenement_avis_disciplinaire_felicitation")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-5 max-h-[70vh] overflow-y-auto">
-          <FormSection icon={FileText} title="Contenu">
+          <FormSection icon={FileText} title={t("contenu")}>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Field label="Categorie" required>
+              <Field label={t("categorie")} required>
                 <Select value={category} onValueChange={(v) => setCategory(v as NoteCategory)}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
@@ -962,39 +964,39 @@ function EmployeeNoteDialog({
                 </Select>
               </Field>
               {category === "discipline" && (
-                <Field label="Severite" required>
+                <Field label={t("severite")} required>
                   <Select value={severity || "info"} onValueChange={(v) => setSeverity(v as NoteSeverity)}>
-                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selectionner" /></SelectTrigger>
+                    <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="info">Info</SelectItem>
-                      <SelectItem value="warning">Avertissement</SelectItem>
-                      <SelectItem value="critical">Critique</SelectItem>
+                      <SelectItem value="info">{t("info")}</SelectItem>
+                      <SelectItem value="warning">{t("avertissement")}</SelectItem>
+                      <SelectItem value="critical">{t("critique")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </Field>
               )}
             </div>
 
-            <Field label="Titre" required>
-              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex : Avis disciplinaire — retards repetes" />
+            <Field label={t("titre")} required>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("ex_avis_disciplinaire_retards_repetes")} />
             </Field>
 
-            <Field label="Corps" required hint="Markdown supporte">
-              <MarkdownEditor value={body} onChange={setBody} rows={8} placeholder="Decrivez l'evenement, le contexte, les mesures prises..." />
+            <Field label={t("corps")} required hint={t("markdown_supporte")}>
+              <MarkdownEditor value={body} onChange={setBody} rows={8} placeholder={t("decrivez_evenement_contexte_mesures_prises")} />
             </Field>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Field label="Date de l'evenement">
+              <Field label={t("date_evenement")}>
                 <Input type="date" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} />
               </Field>
-              <Field label="URL piece jointe">
+              <Field label={t("url_piece_jointe")}>
                 <Input value={attachmentUrl} onChange={(e) => setAttachmentUrl(e.target.value)} placeholder="https://..." />
               </Field>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer pt-1">
               <Checkbox checked={isConfidential} onCheckedChange={(v) => setIsConfidential(v === true)} />
-              <span className="text-sm">Confidentiel (RH + manager + super_admin uniquement)</span>
+              <span className="text-sm">{t("confidentiel_rh_manager_super_admin")}</span>
             </label>
           </FormSection>
         </div>
@@ -1002,7 +1004,7 @@ function EmployeeNoteDialog({
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || !title.trim() || !body.trim()}>
-            {pending ? "..." : note ? "Enregistrer" : "Ajouter"}
+            {pending ? "..." : note ? t("enregistrer") : t("ajouter")}
           </Button>
         </DialogFooter>
       </DialogContent>

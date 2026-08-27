@@ -1,12 +1,16 @@
 // Settings · API — tokens d'accès personnels.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { ApiTokensView } from "./api-tokens-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "API tokens — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("api_tokens_vnk") };
+}
 
 export default async function ApiTokensPage() {
   const session = await auth();

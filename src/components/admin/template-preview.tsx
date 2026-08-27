@@ -24,6 +24,7 @@
 // markdown dans un <pre> pour debug. Désactivé par défaut.
 // ─────────────────────────────────────────────────────────
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   AlertTriangle,
   Code as CodeIcon,
@@ -101,6 +102,7 @@ export function TemplatePreview({
   metadata,
   className,
 }: Props) {
+  const t = useTranslations("admin.library");
   const [pdfDataUrl, setPdfDataUrl] = useState<string | null>(null);
   const [missingVars, setMissingVars] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -115,8 +117,8 @@ export function TemplatePreview({
     [employees],
   );
 
-  // Stabilise la clé metadata pour éviter de refetcher à chaque render du parent
-  // (qui passerait un nouvel objet `{ version }` à chaque render).
+
+
   const metadataKey = useMemo(
     () =>
       JSON.stringify({
@@ -133,9 +135,9 @@ export function TemplatePreview({
     ],
   );
 
-  // ────────────────────────────────────────────────────────
-  // Détection des variables inconnues (registre client)
-  // ────────────────────────────────────────────────────────
+
+
+
   useEffect(() => {
     if (!bodyMarkdown.trim()) {
       setMissingVars([]);
@@ -147,9 +149,9 @@ export function TemplatePreview({
     setMissingVars(unknown);
   }, [bodyMarkdown]);
 
-  // ────────────────────────────────────────────────────────
-  // Fetch PDF live (debounce 800 ms)
-  // ────────────────────────────────────────────────────────
+
+
+
   useEffect(() => {
     if (mode !== "pdf") return;
     if (!bodyMarkdown.trim()) {
@@ -159,7 +161,7 @@ export function TemplatePreview({
       return;
     }
 
-    // Annule fetch en cours
+
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -174,7 +176,7 @@ export function TemplatePreview({
         signal: controller.signal,
         body: JSON.stringify({
           bodyMarkdown,
-          title: title ?? "Apercu document",
+          title: title ?? t("apercu_document"),
           documentType: documentType ?? "legal",
           employeeId: selectedEmployeeId,
           contractId: contractId ?? undefined,
@@ -188,14 +190,14 @@ export function TemplatePreview({
               const data = await res.json();
               if (data?.error) msg = String(data.error);
             } catch {
-              /* ignore */
+
             }
             throw new Error(msg);
           }
           const blob = await res.blob();
           if (controller.signal.aborted) return null;
-          if (blob.size === 0) throw new Error("PDF vide retourne par le serveur");
-          // Vérifie la signature %PDF-
+          if (blob.size === 0) throw new Error(t("pdf_vide_retourne_serveur"));
+
           const head = new Uint8Array(await blob.slice(0, 5).arrayBuffer());
           const isPdf =
             head[0] === 0x25 &&
@@ -203,7 +205,7 @@ export function TemplatePreview({
             head[2] === 0x44 &&
             head[3] === 0x46 &&
             head[4] === 0x2d;
-          if (!isPdf) throw new Error("Reponse serveur invalide (pas un PDF)");
+          if (!isPdf) throw new Error(t("reponse_serveur_invalide_pas_pdf"));
           return blobToDataUrl(blob);
         })
         .then((url) => {
@@ -212,7 +214,7 @@ export function TemplatePreview({
         })
         .catch((e) => {
           if ((e as Error).name === "AbortError") return;
-          const msg = e instanceof Error ? e.message : "Erreur de rendu PDF";
+          const msg = e instanceof Error ? e.message : t("erreur_rendu_pdf");
           setError(msg);
           setPdfDataUrl(null);
         })
@@ -225,7 +227,7 @@ export function TemplatePreview({
       clearTimeout(timer);
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [
     mode,
     bodyMarkdown,
@@ -238,9 +240,9 @@ export function TemplatePreview({
 
   const selected = selectedEmployeeId ? employeeMap.get(selectedEmployeeId) : null;
 
-  // ────────────────────────────────────────────────────────
-  // Actions
-  // ────────────────────────────────────────────────────────
+
+
+
   const handleDownload = useCallback(() => {
     if (!pdfDataUrl) return;
     const a = document.createElement("a");
@@ -259,23 +261,23 @@ export function TemplatePreview({
 
   return (
     <div className={cn("flex flex-col h-full min-h-0", className)}>
-      {/* Header : select employé + indicateurs */}
+
       <div className="shrink-0 space-y-2 pb-3 border-b">
         <Field
-          label="Employe test"
-          hint="Selectionnez un employe pour voir le rendu avec ses vraies donnees."
+          label={t("employe_test")}
+          hint={t("selectionnez_employe_voir_rendu_vraies")}
         >
           <Select
             value={selectedEmployeeId ? String(selectedEmployeeId) : ""}
             onValueChange={(v) => onChangeEmployee(Number(v))}
           >
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder="Selectionner un employe…" />
+              <SelectValue placeholder={t("selectionner_employe")} />
             </SelectTrigger>
             <SelectContent>
               {employees.length === 0 ? (
                 <div className="px-2 py-2 text-xs text-muted-foreground">
-                  Aucun employe disponible
+                  {t("aucun_employe_disponible")}
                 </div>
               ) : (
                 employees.map((e) => (
@@ -308,10 +310,7 @@ export function TemplatePreview({
         {!selectedEmployeeId && bodyMarkdown.trim().length > 0 && (
           <div className="flex items-start gap-2 rounded-md bg-blue-50 border border-blue-200 px-2.5 py-1.5">
             <Tag className="h-3.5 w-3.5 text-blue-700 shrink-0 mt-0.5" />
-            <p className="text-[11px] text-blue-800 leading-snug">
-              Les champs employe/contrat affichent un placeholder.
-              Selectionnez un employe pour les remplacer par les vraies donnees.
-            </p>
+            <p className="text-[11px] text-blue-800 leading-snug">{t("template_preview_les_champs_employe_contrat_affichent_un_placeholder")}</p>
           </div>
         )}
 
@@ -334,14 +333,14 @@ export function TemplatePreview({
         {error && (
           <div className="rounded-md bg-red-50 border border-red-200 px-2.5 py-1.5">
             <p className="text-[11px] text-red-700 leading-snug">
-              <span className="font-semibold">Erreur de rendu :</span> {error}
+              <span className="font-semibold">{t("erreur_rendu")}</span> {error}
             </p>
           </div>
         )}
 
-        {/* Toolbar actions : mode + download + fullscreen */}
+
         <div className="flex items-center justify-between gap-2">
-          {/* Toggle PDF / Markdown brut */}
+
           <div className="inline-flex items-center gap-0.5 rounded-md bg-muted/40 p-0.5">
             <button
               type="button"
@@ -352,7 +351,7 @@ export function TemplatePreview({
                   ? "bg-background text-[#0F2D52] shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
-              title="Apercu PDF live"
+              title={t("apercu_pdf_live")}
             >
               <FileText className="h-3 w-3" />
               PDF
@@ -366,32 +365,32 @@ export function TemplatePreview({
                   ? "bg-background text-[#0F2D52] shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
-              title="Source Markdown (debug)"
+              title={t("source_markdown_debug")}
             >
               <CodeIcon className="h-3 w-3" />
-              Source
+              {t("source")}
             </button>
           </div>
 
           <div className="flex items-center gap-1">
-            <ActionTooltip label="Telecharger le PDF">
+            <ActionTooltip label={t("telecharger_pdf")}>
               <button
                 type="button"
                 onClick={handleDownload}
                 disabled={!pdfDataUrl || loading}
                 className="inline-flex items-center justify-center h-7 w-7 rounded text-foreground/70 hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition"
-                aria-label="Telecharger le PDF"
+                aria-label={t("telecharger_pdf")}
               >
                 <Download className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
-            <ActionTooltip label="Ouvrir en plein ecran">
+            <ActionTooltip label={t("ouvrir_plein_ecran")}>
               <button
                 type="button"
                 onClick={() => setFullscreenOpen(true)}
                 disabled={!pdfDataUrl || loading}
                 className="inline-flex items-center justify-center h-7 w-7 rounded text-foreground/70 hover:bg-accent hover:text-foreground disabled:opacity-40 disabled:cursor-not-allowed transition"
-                aria-label="Ouvrir le PDF en plein ecran"
+                aria-label={t("ouvrir_pdf_plein_ecran")}
               >
                 <Maximize2 className="h-3.5 w-3.5" />
               </button>
@@ -400,49 +399,49 @@ export function TemplatePreview({
         </div>
       </div>
 
-      {/* Rendu */}
+
       <div className="flex-1 overflow-hidden py-3 min-h-0">
         {!bodyMarkdown.trim() ? (
           <div className="flex flex-col items-center justify-center py-10 text-center h-full">
             <Eye className="h-7 w-7 text-muted-foreground/40 mb-2" />
             <p className="text-xs text-muted-foreground">
-              Le contenu apparaitra ici une fois le template redige.
+              {t("contenu_apparaitra_ici_fois_template")}
             </p>
           </div>
         ) : mode === "raw" ? (
-          // Mode source markdown (debug)
+
           <div className="h-full overflow-auto rounded-md border bg-muted/20">
             <pre className="text-[11px] font-mono p-3 whitespace-pre-wrap break-words text-foreground/80">
               {bodyMarkdown}
             </pre>
           </div>
         ) : (
-          // Mode PDF live (par defaut)
+
           <div className="relative h-full w-full rounded-md border bg-white overflow-hidden">
             {loading && (
               <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 rounded bg-white/95 border border-input px-2 py-1 shadow-sm">
                 <Loader2 className="h-3 w-3 animate-spin text-[#0F2D52]" />
                 <span className="text-[10px] text-muted-foreground">
-                  Rendu PDF…
+                  {t("rendu_pdf")}
                 </span>
               </div>
             )}
             {pdfDataUrl ? (
               <iframe
-                title="Apercu PDF du document"
+                title={t("apercu_pdf_document")}
                 src={pdfDataUrl}
                 className="h-full w-full border-0"
               />
             ) : !error ? (
               <div className="flex flex-col items-center justify-center h-full gap-2 text-muted-foreground">
                 <Loader2 className="h-5 w-5 animate-spin text-[#0F2D52]" />
-                <span className="text-xs">Generation du PDF…</span>
+                <span className="text-xs">{t("generation_pdf")}</span>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full gap-2 px-4 text-center">
                 <AlertTriangle className="h-7 w-7 text-amber-500" />
                 <p className="text-xs text-foreground font-medium">
-                  Apercu PDF indisponible
+                  {t("apercu_pdf_indisponible")}
                 </p>
                 <p className="text-[11px] text-muted-foreground leading-snug max-w-xs">
                   {error}
@@ -453,16 +452,16 @@ export function TemplatePreview({
         )}
       </div>
 
-      {/* Modal plein écran */}
+
       <PdfPreviewModal
         open={fullscreenOpen}
         url={pdfDataUrl}
-        title={`Apercu : ${title ?? "Document"}`}
+        title={`Apercu : ${title ?? t("document")}`}
         description={
           selected?.fullName
             ? `Destinataire : ${selected.fullName}`
             : !selectedEmployeeId
-              ? "Aucun employe selectionne (placeholders affiches)"
+              ? t("aucun_employe_selectionne_placeholders_affiches")
               : undefined
         }
         downloadFilename={`${(title ?? "apercu")
@@ -474,12 +473,12 @@ export function TemplatePreview({
         onClose={() => setFullscreenOpen(false)}
       />
 
-      {/* Hint : badge "Ouvrir en nouvel onglet" lien direct */}
+
       {pdfDataUrl && mode === "pdf" && !loading && (
         <div className="shrink-0 pt-1.5 text-[10px] text-muted-foreground flex items-center gap-1">
           <ExternalLink className="h-2.5 w-2.5" />
           <span>
-            L&apos;apercu est rafraichi automatiquement (~800ms apres chaque modification).
+            {t("apos_apercu_rafraichi_automatiquement_800ms")}
           </span>
         </div>
       )}

@@ -1,11 +1,15 @@
 // Redirige vers la liste avec onglet Rôles actif (réutilise TeamView).
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { TeamView } from "../../settings/team/team-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Rôles" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_roles") };
+}
 
 export default async function EmployesRolesPage() {
   const session = await auth();

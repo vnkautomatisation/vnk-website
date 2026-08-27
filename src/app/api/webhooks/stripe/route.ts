@@ -1,5 +1,6 @@
 // POST /api/webhooks/stripe — Stripe webhook (signature HMAC vérifiée)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { markInvoicePaid, createWorkflowEvent } from "@/lib/workflow";
 import { getSetting } from "@/lib/settings";
@@ -9,6 +10,7 @@ import { notifyInvoicePaid } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const signature = req.headers.get("stripe-signature");
   const rawBody = await req.text();
 
@@ -365,7 +367,7 @@ export async function POST(req: Request) {
                 recipientType: "admin",
                 recipientId: 0,
                 type: "warning",
-                title: "Chargeback Stripe reçu",
+                title: t("chargeback_stripe_recu"),
                 body: `${amountDisputed.toFixed(2)} ${currency} — ${dispute.reason ?? "raison inconnue"}`,
                 link: `/admin/disputes`,
               },

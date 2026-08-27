@@ -1,5 +1,6 @@
 // POST /api/messages/[id]/reactions — toggle une reaction emoji sur un message
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,7 @@ const schema = z.object({
 type ReactionsMap = Record<string, string[]>;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) return unauthorizedJson();
 
@@ -23,7 +25,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   if (session.user.role === "client" && msg.clientId !== session.user.clientId) {
     return unauthorizedJson(403);
   }
-  if (msg.deletedAt) return NextResponse.json({ error: "Message supprimé" }, { status: 410 });
+  if (msg.deletedAt) return NextResponse.json({ error: t("message_supprime") }, { status: 410 });
 
   const body = await req.json();
   const parsed = schema.safeParse(body);

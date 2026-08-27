@@ -1,6 +1,7 @@
 "use server";
 // Actions documents légaux (NDA, code conduite, etc.) + signatures employés.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -23,7 +24,7 @@ async function requireHrWrite(): Promise<number | null> {
 }
 
 const docSchema = z.object({
-  key: z.string().min(1).max(60).regex(/^[a-z0-9_]+$/, "Clé : a-z, 0-9, _"),
+  key: z.string().min(1).max(60).regex(/^[a-z0-9_]+$/, "cle_a_z_0_9"),
   title: z.string().min(1).max(160),
   category: z.enum(["policy", "nda", "acknowledgment"]).default("policy"),
   version: z.string().min(1).max(20),
@@ -42,10 +43,11 @@ const docSchema = z.object({
 });
 
 export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { id?: number }): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
   const parsed = docSchema.extend({ id: z.number().int().optional() }).safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Si reading_only, on force scope = "none" (pas de bloc signature en PDF)
   const effectiveScope =
@@ -126,7 +128,7 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
                     recipientType: "admin",
                     recipientId: id,
                     type: "warning",
-                    title: "Document mis à jour — re-signature requise",
+                    title: t("document_mis_a_jour_re_signature_requise"),
                     body: `« ${parsed.data.title} » est passé en version ${parsed.data.version}. Merci de le relire et le re-signer.`,
                     link: "/admin/mon-espace/documents",
                     icon: "file-signature",
@@ -172,7 +174,7 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
               recipientType: "admin",
               recipientId: a.id,
               type: "warning",
-              title: "Nouveau document à signer",
+              title: t("nouveau_document_a_signer"),
               body: parsed.data.title,
               link: "/admin/mon-espace/documents",
               icon: "file-signature",
@@ -189,11 +191,12 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
 
 // Duplique un template legal : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateLegalDocTemplateAction(input: { id: number }): Promise<Result<{ id: number; title: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
   const src = await prisma.legalDocumentTemplate.findUnique({ where: { id: input.id } });
-  if (!src) return { success: false, error: "Modèle introuvable" };
+  if (!src) return { success: false, error: t("modele_introuvable") };
 
   // Trouver une clé unique : key_copy, key_copy_2, …
   const baseKey = `${src.key}_copy`;
@@ -201,7 +204,7 @@ export async function duplicateLegalDocTemplateAction(input: { id: number }): Pr
   let n = 2;
   while (await prisma.legalDocumentTemplate.findUnique({ where: { key: newKey }, select: { id: true } })) {
     newKey = `${baseKey}_${n++}`;
-    if (n > 50) return { success: false, error: "Trop de copies existantes" };
+    if (n > 50) return { success: false, error: t("trop_de_copies_existantes") };
   }
 
   const newTitle = `${src.title} (copie)`;
@@ -275,8 +278,9 @@ const signSchema = z.object({
 export async function signLegalDocAction(
   input: z.infer<typeof signSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = signSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
@@ -308,7 +312,7 @@ export async function signLegalDocAction(
       if (states[String(i)] !== true) {
         return {
           success: false,
-          error: "Toutes les confirmations doivent être cochées avant de signer",
+          error: t("toutes_les_confirmations_doivent_etre_cochees_avant"),
         };
       }
     }
@@ -529,7 +533,7 @@ export async function signLegalDocAction(
         recipientType: "admin",
         recipientId: adminId,
         type: "success",
-        title: "Document signé",
+        title: t("document_signe"),
         body: `Votre signature de « ${tpl.title} » est enregistrée. Le PDF final est disponible.`,
         link: "/admin/mon-espace/documents",
         icon: "file-check",
@@ -615,6 +619,7 @@ async function applyDsrValuesForRender(
 async function rebuildFinalPdf(
   signatureId: number,
 ): Promise<{ ok: true; finalPdfUrl: string } | { ok: false; error: string }> {
+  const t = await getTranslations("admin.action_errors");
   const sig = await prisma.legalDocumentSignature.findUnique({
     where: { id: signatureId },
     include: {
@@ -631,7 +636,7 @@ async function rebuildFinalPdf(
     ?? "reading_only";
   const isReadingOnly = ackMode === "reading_only";
   if (!isReadingOnly && !sig.signatureData?.startsWith("data:image/")) {
-    return { ok: false, error: "Donnees de signature corrompues" };
+    return { ok: false, error: t("donnees_de_signature_corrompues") };
   }
 
   try {
@@ -766,6 +771,7 @@ export async function regenerateSignedPdfAction(
 export async function regenerateMyOwnSignedPdfAction(
   input: { signatureId: number },
 ): Promise<Result<{ finalPdfUrl: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -778,7 +784,7 @@ export async function regenerateMyOwnSignedPdfAction(
   });
   if (!sig) return { success: false, error: "Signature introuvable" };
   if (sig.adminId !== adminId) {
-    return { success: false, error: "Cette signature ne vous appartient pas" };
+    return { success: false, error: t("cette_signature_ne_vous_appartient_pas") };
   }
 
   const res = await rebuildFinalPdf(input.signatureId);
@@ -805,6 +811,7 @@ export async function regenerateMyOwnSignedPdfAction(
 export async function employerSignLegalDocAction(
   input: { signatureId: number; signatureDataUrl: string },
 ): Promise<Result<{ finalPdfUrl: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
@@ -829,11 +836,11 @@ export async function employerSignLegalDocAction(
     (sig.template as { acknowledgmentMode?: string }).acknowledgmentMode
     ?? "reading_only";
   if (ackMode === "reading_only") {
-    return { success: false, error: "Document en accusé de lecture : pas de contresignature" };
+    return { success: false, error: t("document_en_accuse_de_lecture_pas_de") };
   }
   const scope = (sig.template as { signatureScope?: string }).signatureScope;
   if (scope !== "both" && scope !== "employer_only") {
-    return { success: false, error: "Ce document ne prévoit pas de signature employeur" };
+    return { success: false, error: t("ce_document_ne_prevoit_pas_de_signature") };
   }
 
   // Org-chart rule: cannot counter-sign your OWN document (founder excepted).
@@ -841,7 +848,7 @@ export async function employerSignLegalDocAction(
     const { selfApprovalError } = await import("@/lib/services/org-guard");
     const selfErr = await selfApprovalError(adminId, sig.adminId);
     if (selfErr) {
-      return { success: false, error: "Vous ne pouvez pas contresigner votre propre document — seul votre supérieur peut le faire" };
+      return { success: false, error: t("vous_ne_pouvez_pas_contresigner_votre_propre") };
     }
   }
 
@@ -878,7 +885,7 @@ export async function employerSignLegalDocAction(
       recipientType: "admin",
       recipientId: sig.adminId,
       type: "success",
-      title: "Document contresigné",
+      title: t("document_contresigne"),
       body: `« ${sig.template.title} » a été contresigné par l'employeur. Le PDF final est à jour.`,
       link: "/admin/mon-espace/documents",
       icon: "file-check",

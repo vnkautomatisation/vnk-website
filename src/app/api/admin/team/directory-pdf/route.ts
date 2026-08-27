@@ -1,16 +1,20 @@
 // GET /api/admin/team/directory-pdf
 // Export PDF de l'annuaire interne (nom, email, téléphone, poste, département)
 import { NextResponse } from "next/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import PDFDocument from "pdfkit";
 import { Readable } from "stream";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
+import { dateLocale } from "@/lib/i18n-format";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
+  const t = await getTranslations("admin.action_errors");
+  const dl = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -46,16 +50,16 @@ export async function GET(req: Request) {
 
   // Résoudre nom du filtre pour l'afficher dans le header PDF
   let filterLabel = "";
-  if (filterDepartment) filterLabel = `département ${filterDepartment}`;
+  if (filterDepartment) filterLabel = t("filtre_departement", { nom: filterDepartment });
   else if (filterTeamId) {
-    const t = await prisma.team.findUnique({ where: { id: Number(filterTeamId) }, select: { name: true } });
-    if (t) filterLabel = `équipe ${t.name}`;
+    const team = await prisma.team.findUnique({ where: { id: Number(filterTeamId) }, select: { name: true } });
+    if (team) filterLabel = t("filtre_equipe", { nom: team.name });
   } else if (filterRoleId) {
     const r = await prisma.role.findUnique({ where: { id: Number(filterRoleId) }, select: { name: true } });
-    if (r) filterLabel = `rôle ${r.name}`;
+    if (r) filterLabel = t("filtre_role", { nom: r.name });
   } else if (filterPositionId) {
     const p = await prisma.position.findUnique({ where: { id: Number(filterPositionId) }, select: { name: true } });
-    if (p) filterLabel = `poste ${p.name}`;
+    if (p) filterLabel = t("filtre_poste", { nom: p.name });
   }
 
   await logAudit({
@@ -74,10 +78,15 @@ export async function GET(req: Request) {
   doc.rect(0, 0, doc.page.width, 80).fill("#0F2D52");
   doc.fillColor("#ffffff")
     .fontSize(20).font("Helvetica-Bold")
-    .text("Annuaire interne — VNK Automatisation", 50, 28);
+    .text(t("pdf_annuaire_interne"), 50, 28);
   doc.fontSize(10).font("Helvetica")
     .text(
-      `Généré le ${new Date().toLocaleDateString("fr-CA", { day: "2-digit", month: "long", year: "numeric" })} · ${users.length} membre${users.length > 1 ? "s" : ""}${includeInactive ? " (incluant inactifs)" : " (actifs)"}${filterLabel ? ` · filtré par ${filterLabel}` : ""}`,
+      t("genere_le_n_membres", {
+        date: new Date().toLocaleDateString(dl, { day: "2-digit", month: "long", year: "numeric" }),
+        count: users.length,
+        portee: includeInactive ? t("incluant_inactifs") : t("actifs_seulement"),
+        filtre: filterLabel ? t("filtre_par", { filtre: filterLabel }) : "",
+      }),
       50, 55
     );
 
@@ -87,11 +96,11 @@ export async function GET(req: Request) {
   // ── Table headers ──
   const colX = { name: 50, role: 200, dept: 320, phone: 420, email: 510 };
   doc.fontSize(8).font("Helvetica-Bold").fillColor("#6b7280");
-  doc.text("NOM · POSTE", colX.name, doc.y);
-  doc.text("RÔLE", colX.role, doc.y);
-  doc.text("DÉPARTEMENT", colX.dept, doc.y);
-  doc.text("TÉLÉPHONE", colX.phone, doc.y);
-  doc.text("COURRIEL", colX.email, doc.y);
+  doc.text(t("pdf_h_nom_poste"), colX.name, doc.y);
+  doc.text(t("pdf_h_role"), colX.role, doc.y);
+  doc.text(t("pdf_h_departement"), colX.dept, doc.y);
+  doc.text(t("pdf_h_telephone"), colX.phone, doc.y);
+  doc.text(t("pdf_h_courriel"), colX.email, doc.y);
   doc.moveDown(0.5);
   doc.strokeColor("#e5e7eb").lineWidth(0.5)
     .moveTo(50, doc.y).lineTo(doc.page.width - 50, doc.y).stroke();
@@ -105,7 +114,7 @@ export async function GET(req: Request) {
       doc.y = 50;
     }
     const rowY = doc.y;
-    const nameLine = `${u.fullName || u.email}${!u.isActive ? "  (inactif)" : ""}`;
+    const nameLine = `${u.fullName || u.email}${!u.isActive ? `  ${t("pdf_inactif")}` : ""}`;
     doc.font("Helvetica-Bold").fillColor(u.isActive ? "#0F2D52" : "#9ca3af")
       .text(nameLine, colX.name, rowY, { width: 145 });
     if (u.title || u.position) {
@@ -133,7 +142,7 @@ export async function GET(req: Request) {
     doc.switchToPage(i);
     doc.fontSize(7).fillColor("#9ca3af").font("Helvetica")
       .text(
-        `VNK Automatisation Inc. · Annuaire interne · Page ${i + 1} / ${pageRange.count} · CONFIDENTIEL`,
+        t("pdf_pied_annuaire", { page: i + 1, total: pageRange.count }),
         50, doc.page.height - 30, { align: "center", width: doc.page.width - 100 }
       );
   }

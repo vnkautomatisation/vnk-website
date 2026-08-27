@@ -22,7 +22,7 @@ export function CreateModal({
   icon: Icon,
   accent = "bg-blue-500",
   children,
-  submitLabel = "Créer",
+  submitLabel,
   onSubmit,
   className,
 }: {
@@ -37,6 +37,7 @@ export function CreateModal({
   onSubmit: () => Promise<{ success: boolean; error?: string }>;
   className?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [pending, startTransition] = useTransition();
 
@@ -47,7 +48,7 @@ export function CreateModal({
         toast.success(`${title} effectué avec succès`);
         onOpenChange(false);
       } else {
-        toast.error(result.error || "Une erreur est survenue");
+        toast.error(result.error || t("erreur_survenue"));
       }
     });
   };
@@ -80,7 +81,7 @@ export function CreateModal({
                 </DialogDescription>
               ) : (
                 <DialogDescription className="sr-only">
-                  Formulaire de création
+                  {t("formulaire_creation")}
                 </DialogDescription>
               )}
             </div>
@@ -100,7 +101,7 @@ export function CreateModal({
             {tc("cancel")}
           </Button>
           <Button onClick={handleSubmit} disabled={pending}>
-            {pending ? "En cours..." : submitLabel}
+            {pending ? t("cours") : submitLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

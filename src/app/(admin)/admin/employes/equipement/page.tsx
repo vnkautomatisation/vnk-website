@@ -1,11 +1,15 @@
 // Page admin Équipement — RH assigne du matériel aux employés.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { EquipmentView } from "./equipment-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Équipement" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_equipement") };
+}
 
 export default async function HrEquipmentPage() {
   const session = await auth();

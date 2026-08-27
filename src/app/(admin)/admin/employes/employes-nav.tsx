@@ -10,80 +10,81 @@ import {
   SlidersHorizontal,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
+import { useTranslations } from "next-intl";
 
-const SECTIONS: NavSection[] = [
+const SECTION_KEYS: Array<{ groupKey: string; groupIcon?: React.ComponentType<{ className?: string }>; items: Array<{ href: string; labelKey: string; icon: React.ComponentType<{ className?: string }> }> }> = [
   {
-    group: "Personnes",
+    groupKey: "grp_personnes",
     groupIcon: UsersRound,
     items: [
-      { href: "/admin/employes", label: "Liste", icon: Users },
-      { href: "/admin/employes/equipes", label: "Équipes", icon: Network },
-      { href: "/admin/employes/organigramme", label: "Organigramme", icon: GitBranch },
-      { href: "/admin/employes/roles", label: "Rôles", icon: Shield },
-      { href: "/admin/employes/postes", label: "Postes", icon: Briefcase },
+      { href: "/admin/employes", labelKey: "liste", icon: Users },
+      { href: "/admin/employes/equipes", labelKey: "equipes", icon: Network },
+      { href: "/admin/employes/organigramme", labelKey: "organigramme", icon: GitBranch },
+      { href: "/admin/employes/roles", labelKey: "roles", icon: Shield },
+      { href: "/admin/employes/postes", labelKey: "postes", icon: Briefcase },
     ],
   },
   {
-    group: "Documents",
+    groupKey: "grp_documents",
     groupIcon: FolderOpen,
     items: [
-      { href: "/admin/employes/contrats", label: "Contrats", icon: FileSignature },
-      { href: "/admin/employes/documents", label: "Documents", icon: FileText },
-      { href: "/admin/employes/documents/cahiers", label: "Cahiers", icon: BookOpen },
-      { href: "/admin/employes/documents/bibliotheque", label: "Bibliothèque", icon: BookOpen },
-      { href: "/admin/employes/politiques", label: "Politiques", icon: ScrollText },
+      { href: "/admin/employes/contrats", labelKey: "contrats", icon: FileSignature },
+      { href: "/admin/employes/documents", labelKey: "documents", icon: FileText },
+      { href: "/admin/employes/documents/cahiers", labelKey: "cahiers", icon: BookOpen },
+      { href: "/admin/employes/documents/bibliotheque", labelKey: "bibliotheque", icon: BookOpen },
+      { href: "/admin/employes/politiques", labelKey: "politiques", icon: ScrollText },
     ],
   },
   {
-    group: "Temps & paie",
+    groupKey: "grp_temps_paie",
     groupIcon: Timer,
     items: [
-      { href: "/admin/employes/pointage", label: "Pointage", icon: Clock },
-      { href: "/admin/employes/pointage/parametres", label: "Paramètres pointage", icon: SlidersHorizontal },
-      { href: "/admin/employes/codes-taches", label: "Codes de tâche", icon: Briefcase },
-      { href: "/admin/employes/conges", label: "Congés", icon: CalendarDays },
-      { href: "/admin/employes/conges/fenetres", label: "Fenêtres de sélection", icon: CalendarRange },
-      { href: "/admin/employes/conges/politiques", label: "Politiques congés", icon: ShieldCheck },
-      { href: "/admin/employes/calendrier", label: "Calendrier RH", icon: CalendarDays },
-      { href: "/admin/employes/paie", label: "Paie", icon: Calculator },
-      { href: "/admin/employes/compensation", label: "Salaires & bonus", icon: BarChart },
+      { href: "/admin/employes/pointage", labelKey: "pointage", icon: Clock },
+      { href: "/admin/employes/pointage/parametres", labelKey: "parametres_pointage", icon: SlidersHorizontal },
+      { href: "/admin/employes/codes-taches", labelKey: "codes_tache", icon: Briefcase },
+      { href: "/admin/employes/conges", labelKey: "conges", icon: CalendarDays },
+      { href: "/admin/employes/conges/fenetres", labelKey: "fenetres_selection", icon: CalendarRange },
+      { href: "/admin/employes/conges/politiques", labelKey: "politiques_conges", icon: ShieldCheck },
+      { href: "/admin/employes/calendrier", labelKey: "calendrier_rh", icon: CalendarDays },
+      { href: "/admin/employes/paie", labelKey: "paie", icon: Calculator },
+      { href: "/admin/employes/compensation", labelKey: "salaires_bonus", icon: BarChart },
     ],
   },
   {
-    group: "Qualifications",
+    groupKey: "grp_qualifications",
     groupIcon: Wrench,
     items: [
-      { href: "/admin/employes/permis", label: "Permis", icon: BadgeCheck },
-      { href: "/admin/employes/formations", label: "Formations", icon: GraduationCap },
-      { href: "/admin/employes/equipement", label: "Équipement", icon: Laptop },
-      { href: "/admin/employes/onboarding", label: "Onboarding", icon: ScrollText },
+      { href: "/admin/employes/permis", labelKey: "permis", icon: BadgeCheck },
+      { href: "/admin/employes/formations", labelKey: "formations", icon: GraduationCap },
+      { href: "/admin/employes/equipement", labelKey: "equipement", icon: Laptop },
+      { href: "/admin/employes/onboarding", labelKey: "onboarding", icon: ScrollText },
     ],
   },
   {
-    group: "Suivi RH",
+    groupKey: "grp_suivi_rh",
     groupIcon: HeartPulse,
     items: [
-      { href: "/admin/employes/evaluations", label: "Évaluations", icon: Award },
-      { href: "/admin/employes/one-on-ones", label: "1-on-1", icon: MessageSquare },
-      { href: "/admin/employes/cnesst", label: "CNESST", icon: AlertTriangle },
+      { href: "/admin/employes/evaluations", labelKey: "evaluations", icon: Award },
+      { href: "/admin/employes/one-on-ones", labelKey: "1_on_1", icon: MessageSquare },
+      { href: "/admin/employes/cnesst", labelKey: "cnesst", icon: AlertTriangle },
     ],
   },
   {
-    group: "Communications",
+    groupKey: "grp_communications",
     groupIcon: Radio,
     items: [
-      { href: "/admin/employes/annonces", label: "Annonces", icon: Megaphone },
-      { href: "/admin/employes/anniversaires", label: "Anniversaires", icon: Cake },
+      { href: "/admin/employes/annonces", labelKey: "annonces", icon: Megaphone },
+      { href: "/admin/employes/anniversaires", labelKey: "anniversaires", icon: Cake },
     ],
   },
   {
-    group: "Fiscal & sortie",
+    groupKey: "grp_fiscal_sortie",
     groupIcon: Archive,
     items: [
-      { href: "/admin/employes/docs-fiscaux", label: "Docs fiscaux", icon: FileText },
-      { href: "/admin/employes/lettres", label: "Lettres d'emploi", icon: FileSignature },
-      { href: "/admin/employes/offboarding", label: "Offboarding", icon: LogOut },
-      { href: "/admin/employes/rapports", label: "Rapports", icon: FileBarChart },
+      { href: "/admin/employes/docs-fiscaux", labelKey: "docs_fiscaux", icon: FileText },
+      { href: "/admin/employes/lettres", labelKey: "lettres_emploi", icon: FileSignature },
+      { href: "/admin/employes/offboarding", labelKey: "offboarding", icon: LogOut },
+      { href: "/admin/employes/rapports", labelKey: "rapports", icon: FileBarChart },
     ],
   },
 ];
@@ -128,6 +129,7 @@ export function EmployesNav({
   isHr?: boolean;
   domains?: string[];
 }) {
+  const t = useTranslations("admin.hr_nav");
   const granted = new Set(domains);
   const visible = (href: string): boolean => {
     const req = HREF_DOMAIN[href];
@@ -135,16 +137,21 @@ export function EmployesNav({
     if (isHr) return true; // passe-partout RH
     return req !== "hr" && granted.has(req);
   };
+  const translated: NavSection[] = SECTION_KEYS.map((s) => ({
+    group: t(s.groupKey),
+    groupIcon: s.groupIcon,
+    items: s.items.map((i) => ({ href: i.href, label: t(i.labelKey), icon: i.icon })),
+  }));
   const sections = isHr
-    ? SECTIONS
-    : SECTIONS
-        .map((s) => ({ ...s, items: s.items.filter((i) => visible(i.href)) }))
+    ? translated
+    : SECTION_KEYS
+        .map((s, idx) => ({ ...translated[idx], items: translated[idx].items.filter((_, k) => visible(s.items[k].href)) }))
         .filter((s) => s.items.length > 0);
   return (
     <ModuleSidebarNav
       moduleLabel="RH"
       moduleIcon={Users}
-      moduleTagline="VNK · Module RH"
+      moduleTagline={t("vnk_module_rh")}
       sections={sections}
       storageKey="employes-nav-collapsed"
     />

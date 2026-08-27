@@ -2,6 +2,7 @@
 // Actions pour Contrats employés (templates + contrats individuels).
 // Workflow : draft → sent → signed_employee → signed_employer → active.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -55,12 +56,13 @@ const templateSchema = z.object({
 });
 
 export async function createContractTemplateAction(input: z.infer<typeof templateSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
   const parsed = templateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
-  const t = await prisma.contractTemplate.create({
+  const row = await prisma.contractTemplate.create({
     data: {
       name: parsed.data.name,
       positionId: parsed.data.positionId ?? null,
@@ -76,16 +78,17 @@ export async function createContractTemplateAction(input: z.infer<typeof templat
     },
     select: { id: true },
   });
-  await logAudit({ adminId, action: "create", entityType: "contract_template", entityId: t.id });
+  await logAudit({ adminId, action: "create", entityType: "contract_template", entityId: row.id });
   revalidatePath("/admin/employes/contrats");
-  return { success: true, data: { id: t.id } };
+  return { success: true, data: { id: row.id } };
 }
 
 export async function updateContractTemplateAction(input: z.infer<typeof templateSchema> & { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
   const parsed = templateSchema.extend({ id: z.number().int() }).safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   await prisma.contractTemplate.update({
     where: { id: parsed.data.id },
@@ -110,11 +113,12 @@ export async function updateContractTemplateAction(input: z.infer<typeof templat
 
 // Duplique un template de contrat : copie avec suffix " (copie)" + isStarter = false
 export async function duplicateContractTemplateAction(input: { id: number }): Promise<Result<{ id: number; name: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
   const src = await prisma.contractTemplate.findUnique({ where: { id: input.id } });
-  if (!src) return { success: false, error: "Modèle introuvable" };
+  if (!src) return { success: false, error: t("modele_introuvable") };
 
   const newName = `${src.name} (copie)`;
   const copy = await prisma.contractTemplate.create({
@@ -189,13 +193,14 @@ const contractSchema = z.object({
 });
 
 export async function createContractAction(input: z.infer<typeof contractSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   const parsed = contractSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const employee = await prisma.admin.findUnique({ where: { id: parsed.data.adminId }, select: { id: true } });
-  if (!employee) return { success: false, error: "Employé introuvable" };
+  if (!employee) return { success: false, error: t("employe_introuvable") };
 
   const c = await prisma.employeeContract.create({
     data: {
@@ -221,6 +226,7 @@ export async function createContractAction(input: z.infer<typeof contractSchema>
 }
 
 export async function sendContractAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   await prisma.employeeContract.update({
@@ -238,7 +244,7 @@ export async function sendContractAction(input: { id: number }): Promise<Result>
         recipientType: "admin",
         recipientId: contract.adminId,
         type: "warning",
-        title: "Contrat à signer",
+        title: t("contrat_a_signer"),
         body: `Veuillez consulter et signer votre contrat : ${contract.title}`,
         link: "/admin/mon-espace/contrats",
         icon: "file-signature",
@@ -252,14 +258,15 @@ export async function sendContractAction(input: { id: number }): Promise<Result>
 
 // Signature employé (le user lui-même signe son contrat)
 export async function signContractAsEmployeeAction(input: { id: number; signatureData: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const contract = await prisma.employeeContract.findUnique({ where: { id: input.id } });
   if (!contract) return { success: false, error: "Contrat introuvable" };
-  if (contract.adminId !== adminId) return { success: false, error: "Vous ne pouvez signer que votre propre contrat" };
-  if (contract.employeeSignedAt) return { success: false, error: "Déjà signé par l'employé" };
+  if (contract.adminId !== adminId) return { success: false, error: t("vous_ne_pouvez_signer_que_votre_propre") };
+  if (contract.employeeSignedAt) return { success: false, error: t("deja_signe_par_l_employe") };
   if (!input.signatureData?.startsWith("data:image/")) return { success: false, error: "Signature invalide" };
 
   const h = await headers().catch(() => null);
@@ -295,7 +302,7 @@ export async function signContractAsEmployeeAction(input: { id: number; signatur
             recipientType: "admin",
             recipientId: a.id,
             type: "info",
-            title: "Contrat signé par l'employé",
+            title: t("contrat_signe_par_l_employe"),
             body: `${signed.admin.fullName || signed.admin.email} a signé : ${signed.title}. À signer en tant qu'employeur.`,
             link: "/admin/employes/contrats",
             icon: "file-signature",
@@ -312,13 +319,14 @@ export async function signContractAsEmployeeAction(input: { id: number; signatur
 
 // Signature employeur (un super-admin / RH valide le contrat signé par l'employé)
 export async function signContractAsEmployerAction(input: { id: number; signatureData: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   if (!input.signatureData?.startsWith("data:image/")) return { success: false, error: "Signature invalide" };
 
   const contract = await prisma.employeeContract.findUnique({ where: { id: input.id } });
   if (!contract) return { success: false, error: "Contrat introuvable" };
-  if (contract.employerSignedAt) return { success: false, error: "Déjà signé par l'employeur" };
+  if (contract.employerSignedAt) return { success: false, error: t("deja_signe_par_l_employeur") };
 
   const h = await headers().catch(() => null);
   const ip = getClientIpFromHeaders(h);

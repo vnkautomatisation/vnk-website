@@ -1,52 +1,52 @@
 // Variables dynamiques pour les templates de messages
 // + parser conditional {{#if var}}...{{/if}}
 
-export type VariableDef = { key: string; label: string; example: string; group: string };
+export type VariableDef = { key: string; labelKey: string; example: string; group: string };
 
 export const TEMPLATE_VARIABLES: VariableDef[] = [
   // Client
-  { key: "client_name", label: "Nom complet du client", example: "Jean Tremblay", group: "Client" },
-  { key: "client_first_name", label: "Prénom du client", example: "Jean", group: "Client" },
-  { key: "client_last_name", label: "Nom de famille", example: "Tremblay", group: "Client" },
-  { key: "client_company", label: "Entreprise du client", example: "ACME Inc.", group: "Client" },
-  { key: "client_email", label: "Courriel du client", example: "jean@acme.com", group: "Client" },
-  { key: "client_phone", label: "Téléphone du client", example: "514-555-1234", group: "Client" },
-  { key: "client_city", label: "Ville du client", example: "Montréal", group: "Client" },
-  { key: "client_address", label: "Adresse du client", example: "123 rue Principale", group: "Client" },
+  { key: "client_name", labelKey: "tv_lbl_nom_complet_du_client", example: "Jean Tremblay", group: "Client" },
+  { key: "client_first_name", labelKey: "tv_lbl_prenom_du_client", example: "Jean", group: "Client" },
+  { key: "client_last_name", labelKey: "tv_lbl_nom_de_famille", example: "Tremblay", group: "Client" },
+  { key: "client_company", labelKey: "tv_lbl_entreprise_du_client", example: "ACME Inc.", group: "Client" },
+  { key: "client_email", labelKey: "tv_lbl_courriel_du_client", example: "jean@acme.com", group: "Client" },
+  { key: "client_phone", labelKey: "tv_lbl_telephone_du_client", example: "514-555-1234", group: "Client" },
+  { key: "client_city", labelKey: "tv_lbl_ville_du_client", example: "Montréal", group: "Client" },
+  { key: "client_address", labelKey: "tv_lbl_adresse_du_client", example: "123 rue Principale", group: "Client" },
 
   // Admin
-  { key: "admin_name", label: "Votre nom", example: "Yan Verone", group: "Admin" },
-  { key: "admin_email", label: "Votre courriel", example: "yan@vnkautomatisation.ca", group: "Admin" },
-  { key: "admin_phone", label: "Votre téléphone", example: "450-555-9876", group: "Admin" },
-  { key: "admin_signature", label: "Signature complète", example: "Cordialement,\nYan Verone\nVNK Automatisation", group: "Admin" },
+  { key: "admin_name", labelKey: "tv_lbl_votre_nom", example: "Yan Verone", group: "Admin" },
+  { key: "admin_email", labelKey: "tv_lbl_votre_courriel", example: "yan@vnkautomatisation.ca", group: "Admin" },
+  { key: "admin_phone", labelKey: "tv_lbl_votre_telephone", example: "450-555-9876", group: "Admin" },
+  { key: "admin_signature", labelKey: "tv_lbl_signature_complete", example: "Cordialement,\nYan Verone\nVNK Automatisation", group: "Admin" },
 
   // Entreprise
-  { key: "company", label: "Nom entreprise", example: "VNK Automatisation", group: "Entreprise" },
-  { key: "company_address", label: "Adresse entreprise", example: "...", group: "Entreprise" },
-  { key: "company_phone", label: "Téléphone entreprise", example: "...", group: "Entreprise" },
-  { key: "company_email", label: "Courriel entreprise", example: "info@vnkautomatisation.ca", group: "Entreprise" },
-  { key: "portal_url", label: "URL du portail client", example: "https://vnk.ca/portail", group: "Entreprise" },
-  { key: "website_url", label: "URL du site web", example: "https://vnkautomatisation.ca", group: "Entreprise" },
+  { key: "company", labelKey: "tv_lbl_nom_entreprise", example: "VNK Automatisation", group: "Entreprise" },
+  { key: "company_address", labelKey: "tv_lbl_adresse_entreprise", example: "...", group: "Entreprise" },
+  { key: "company_phone", labelKey: "tv_lbl_telephone_entreprise", example: "...", group: "Entreprise" },
+  { key: "company_email", labelKey: "tv_lbl_courriel_entreprise", example: "info@vnkautomatisation.ca", group: "Entreprise" },
+  { key: "portal_url", labelKey: "tv_lbl_url_du_portail_client", example: "https://vnk.ca/portail", group: "Entreprise" },
+  { key: "website_url", labelKey: "tv_lbl_url_du_site_web", example: "https://vnkautomatisation.ca", group: "Entreprise" },
 
   // Date / Heure
-  { key: "date", label: "Date du jour", example: "10 mai 2026", group: "Temps" },
-  { key: "date_short", label: "Date courte (AAAA-MM-JJ)", example: "2026-05-10", group: "Temps" },
-  { key: "time", label: "Heure", example: "14:30", group: "Temps" },
-  { key: "day", label: "Jour de la semaine", example: "lundi", group: "Temps" },
-  { key: "month", label: "Mois en lettres", example: "mai", group: "Temps" },
-  { key: "year", label: "Année", example: "2026", group: "Temps" },
-  { key: "tomorrow", label: "Date de demain", example: "11 mai 2026", group: "Temps" },
-  { key: "next_week", label: "Date dans 7 jours", example: "17 mai 2026", group: "Temps" },
+  { key: "date", labelKey: "tv_lbl_date_du_jour", example: "10 mai 2026", group: "Temps" },
+  { key: "date_short", labelKey: "tv_lbl_date_courte_aaaa_mm_jj", example: "2026-05-10", group: "Temps" },
+  { key: "time", labelKey: "tv_lbl_heure", example: "14:30", group: "Temps" },
+  { key: "day", labelKey: "tv_lbl_jour_de_la_semaine", example: "lundi", group: "Temps" },
+  { key: "month", labelKey: "tv_lbl_mois_en_lettres", example: "mai", group: "Temps" },
+  { key: "year", labelKey: "tv_lbl_annee", example: "2026", group: "Temps" },
+  { key: "tomorrow", labelKey: "tv_lbl_date_de_demain", example: "11 mai 2026", group: "Temps" },
+  { key: "next_week", labelKey: "tv_lbl_date_dans_7_jours", example: "17 mai 2026", group: "Temps" },
 
   // Documents (utilisé seulement si template appliqué dans le contexte)
-  { key: "quote_number", label: "Numéro de devis (contexte)", example: "D-2026-001", group: "Documents" },
-  { key: "quote_amount", label: "Montant devis TTC", example: "1 250,00 $", group: "Documents" },
-  { key: "invoice_number", label: "Numéro de facture (contexte)", example: "F-2026-042", group: "Documents" },
-  { key: "invoice_amount", label: "Montant facture TTC", example: "874,33 $", group: "Documents" },
-  { key: "invoice_due_date", label: "Date d'échéance facture", example: "15 juin 2026", group: "Documents" },
-  { key: "contract_number", label: "Numéro de contrat", example: "CT-2026-007", group: "Documents" },
-  { key: "appointment_date", label: "Date du rendez-vous", example: "12 mai 2026", group: "Documents" },
-  { key: "appointment_time", label: "Heure du rendez-vous", example: "10:00", group: "Documents" },
+  { key: "quote_number", labelKey: "tv_lbl_numero_de_devis_contexte", example: "D-2026-001", group: "Documents" },
+  { key: "quote_amount", labelKey: "tv_lbl_montant_devis_ttc", example: "1 250,00 $", group: "Documents" },
+  { key: "invoice_number", labelKey: "tv_lbl_numero_de_facture_contexte", example: "F-2026-042", group: "Documents" },
+  { key: "invoice_amount", labelKey: "tv_lbl_montant_facture_ttc", example: "874,33 $", group: "Documents" },
+  { key: "invoice_due_date", labelKey: "tv_lbl_date_d_echeance_facture", example: "15 juin 2026", group: "Documents" },
+  { key: "contract_number", labelKey: "tv_lbl_numero_de_contrat", example: "CT-2026-007", group: "Documents" },
+  { key: "appointment_date", labelKey: "tv_lbl_date_du_rendez_vous", example: "12 mai 2026", group: "Documents" },
+  { key: "appointment_time", labelKey: "tv_lbl_heure_du_rendez_vous", example: "10:00", group: "Documents" },
 ];
 
 export type TemplateContext = {

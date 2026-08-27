@@ -1,6 +1,7 @@
 // GET /api/messages — messages (admin: tous, client: les siens, exclut soft-deleted/internal-notes)
 // POST /api/messages — envoyer un message (texte + 0..N pieces jointes, reponse, note interne, programmation)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -37,7 +38,7 @@ const createSchema = z.object({
   scheduledFor: z.string().datetime().optional(),
 }).refine(
   (d) => (d.content && d.content.trim().length > 0) || !!d.attachmentData || (d.attachmentsData && d.attachmentsData.length > 0),
-  { message: "Message ou pièce jointe requis" },
+  { message: "message_ou_piece_jointe_requis" },
 );
 
 export async function GET(req: Request) {
@@ -73,6 +74,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -81,12 +83,12 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message ?? "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   // Note interne reservee admin
   if (parsed.data.isInternalNote && session.user.role !== "admin") {
-    return NextResponse.json({ error: "Notes internes réservées admin" }, { status: 403 });
+    return NextResponse.json({ error: t("notes_internes_reservees_admin") }, { status: 403 });
   }
   if (await adminApiForbidden("messages", "write")) {
     return forbiddenJson();
@@ -115,7 +117,7 @@ export async function POST(req: Request) {
   if (parsed.data.replyToId) {
     const replyTarget = await prisma.message.findUnique({ where: { id: parsed.data.replyToId } });
     if (!replyTarget || replyTarget.clientId !== clientId) {
-      return NextResponse.json({ error: "Message cité introuvable" }, { status: 400 });
+      return NextResponse.json({ error: t("message_cite_introuvable") }, { status: 400 });
     }
   }
 
@@ -145,22 +147,27 @@ export async function POST(req: Request) {
   if (shouldSendEmail) {
     const recipient = await prisma.client.findUnique({
       where: { id: clientId },
-      select: { email: true, fullName: true },
+      select: { email: true, fullName: true, locale: true },
     });
     if (recipient?.email) {
+      const tm = await getTranslations({
+        locale: recipient.locale?.split("-")[0] ?? "fr",
+        namespace: "admin.emails",
+      });
       const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://vnkautomatisation.ca";
       const trackingPixelUrl = `${baseUrl}/api/email/track/${message.id}`;
       const portalUrl = `${baseUrl}/portail`;
-      const tpl = renderChatEmail({
+      const tpl = await renderChatEmail({
         clientName: recipient.fullName,
-        content: parsed.data.content?.trim() || "(message sans texte)",
+        content: parsed.data.content?.trim() || tm("chat_message_sans_texte"),
         attachmentNames: attachmentsArray?.map((a) => a.name) ?? [],
         trackingPixelUrl,
         portalUrl,
+        locale: recipient.locale ?? undefined,
       });
       sendEmail({
         to: recipient.email,
-        subject: `VNK Automatisation — nouveau message`,
+        subject: tm("chat_sujet_nouveau_message"),
         html: tpl.html,
         text: tpl.text,
       }).catch((err) => console.error("[messages] email send failed:", err));

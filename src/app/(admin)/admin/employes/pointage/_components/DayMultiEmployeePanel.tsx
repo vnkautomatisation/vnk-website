@@ -39,6 +39,7 @@ export function DayMultiEmployeePanel({
   onUnapprove: (ids: number[]) => Promise<void>;
   onEditEntry: (entry: Entry) => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
   const [data, setData] = useState<{
@@ -52,8 +53,8 @@ export function DayMultiEmployeePanel({
   const [refreshKey, setRefreshKey] = useState(0);
   const [pending, setPending] = useState(false);
   const [manualForAdmin, setManualForAdmin] = useState<{ id: number; name: string } | null>(null);
-  // One group per employee, each listing its punches: a full team is a dozen
-  // screens of scrolling inside a side panel.
+
+
   const EMP_PER_PAGE = 10;
   const [empPage, setEmpPage] = useState(1);
 
@@ -105,7 +106,7 @@ export function DayMultiEmployeePanel({
 
   const allPendingIds = useMemo(() => {
     if (!data) return [];
-    // Workflow rule: only SUBMITTED entries are approvable.
+
     return data.entries.filter((e) => e.submittedAt && !e.approvedAt && e.clockOut).map((e) => e.id);
   }, [data]);
 
@@ -145,11 +146,11 @@ export function DayMultiEmployeePanel({
       <>
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
           <SheetHeader>
-            <SheetTitle className="text-white">Chargement...</SheetTitle>
+            <SheetTitle className="text-white">{t("chargement")}</SheetTitle>
           </SheetHeader>
         </div>
         <div className="p-5">
-          <InlineLoader label="Chargement de la journée…" />
+          <InlineLoader label={t("chargement_journee")} />
         </div>
       </>
     );
@@ -160,10 +161,10 @@ export function DayMultiEmployeePanel({
       <>
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5">
           <SheetHeader>
-            <SheetTitle className="text-white">Erreur</SheetTitle>
+            <SheetTitle className="text-white">{t("erreur")}</SheetTitle>
           </SheetHeader>
         </div>
-        <div className="p-5 text-sm text-red-700">{error ?? "Impossible de charger la journée."}</div>
+        <div className="p-5 text-sm text-red-700">{error ?? t("impossible_charger_journee")}</div>
       </>
     );
   }
@@ -176,7 +177,7 @@ export function DayMultiEmployeePanel({
             <div className="flex items-center gap-3">
               <Calendar className="h-5 w-5 shrink-0" />
               <div className="min-w-0">
-                <p className="text-base">Journée multi-employés</p>
+                <p className="text-base">{t("journee_multi_employes")}</p>
                 <p className="text-xs text-white/70 font-normal">{dayLabel}</p>
               </div>
             </div>
@@ -184,19 +185,19 @@ export function DayMultiEmployeePanel({
         </SheetHeader>
         <div className="grid grid-cols-4 gap-2 mt-4">
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">Pointages</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("pointages")}</p>
             <p className="text-lg font-bold tabular-nums">{stats.totalEntries}</p>
           </div>
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">À approuver</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("a_approuver")}</p>
             <p className="text-lg font-bold tabular-nums">{stats.pending}</p>
           </div>
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">Approuvés</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("approuves")}</p>
             <p className="text-lg font-bold tabular-nums">{stats.approved}</p>
           </div>
           <div className="rounded-md bg-white/10 p-2 text-center">
-            <p className="text-[9px] uppercase tracking-wider text-white/70">Heures</p>
+            <p className="text-[9px] uppercase tracking-wider text-white/70">{t("heures")}</p>
             <p className="text-lg font-bold tabular-nums">{fmtDuration(stats.workMin)}</p>
           </div>
         </div>
@@ -206,10 +207,7 @@ export function DayMultiEmployeePanel({
         {data.entriesTruncated && (
           <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-2.5 text-[11px] text-amber-900">
             <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-            <span>
-              Journée trop volumineuse : seuls les premiers pointages sont affichés.
-              Utilisez l&apos;export CSV pour la liste complète.
-            </span>
+            <span>{t("daymultiemployeepanel_journee_trop_volumineuse_seuls_les_premiers_pointages")}</span>
           </div>
         )}
         <div>
@@ -223,16 +221,16 @@ export function DayMultiEmployeePanel({
               </span>
               <div className="flex items-center gap-1">
                 <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
-                  disabled={empPage <= 1} onClick={() => setEmpPage((n) => n - 1)}>Préc.</Button>
+                  disabled={empPage <= 1} onClick={() => setEmpPage((n) => n - 1)}>{t("prec")}</Button>
                 <span className="text-[11px] text-muted-foreground tabular-nums px-0.5">{empPage}/{empTotalPages}</span>
                 <Button variant="outline" size="sm" className="h-7 text-[11px] px-2"
-                  disabled={empPage >= empTotalPages} onClick={() => setEmpPage((n) => n + 1)}>Suiv.</Button>
+                  disabled={empPage >= empTotalPages} onClick={() => setEmpPage((n) => n + 1)}>{t("suiv")}</Button>
               </div>
             </div>
           )}
           {groupedByAdmin.length === 0 ? (
             <Card className="p-4 text-center text-xs text-muted-foreground">
-              Aucun pointage enregistré ce jour-là.
+              {t("aucun_pointage_enregistre_jour")}
             </Card>
           ) : (
             <div className="space-y-2">
@@ -314,9 +312,9 @@ export function DayMultiEmployeePanel({
                       </p>
                     </div>
                     <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50 shrink-0">
-                      Aucune entrée
+                      {t("aucune_entree")}
                     </Badge>
-                    <ActionTooltip label="Saisir manuellement pour cet employé">
+                    <ActionTooltip label={t("saisir_manuellement_cet_employe")}>
                       <Button
                         size="sm"
                         variant="outline"

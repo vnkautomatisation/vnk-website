@@ -2,6 +2,7 @@
 // DELETE /api/message-templates/[id] — supprimer
 // POST /api/message-templates/[id] — incrementer usageCount + lastUsedAt
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -31,9 +32,10 @@ const patchSchema = z.object({
   tags: z.array(z.string().max(40)).max(15).nullable().optional(),
   locale: z.enum(["fr", "en"]).optional(),
   isActive: z.boolean().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee" });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -44,7 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await req.json();
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
 
   const existing = await prisma.messageTemplate.findUnique({ where: { id: Number(id) } });
   if (!existing) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
@@ -79,7 +81,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json({ success: true, template: tpl });
   } catch (err) {
     if (err instanceof Error && err.message.includes("Unique")) {
-      return NextResponse.json({ error: "Ce raccourci existe déjà" }, { status: 409 });
+      return NextResponse.json({ error: t("ce_raccourci_existe_deja") }, { status: 409 });
     }
     return NextResponse.json({ error: "Erreur" }, { status: 500 });
   }

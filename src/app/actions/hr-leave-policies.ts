@@ -1,6 +1,7 @@
 "use server";
 // CRUD politiques de conges (LeavePolicy) — admin only.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -36,10 +37,11 @@ const policySchema = z.object({
 });
 
 export async function createLeavePolicyAction(input: z.infer<typeof policySchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
   if (!adminId) return unauthorized();
   const parsed = policySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // S'il y a un default, le decoche d'abord
   if (parsed.data.isDefault) {

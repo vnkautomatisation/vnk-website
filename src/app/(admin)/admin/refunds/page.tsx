@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { RefundsView } from "./refunds-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Remboursements" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("remboursements") };
+}
 
 export default async function RefundsPage() {
   const [rawRefunds, clients, invoices] = await Promise.all([

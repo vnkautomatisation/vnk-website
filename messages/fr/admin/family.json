@@ -1,0 +1,21 @@
+{
+  "assure": "Assuré",
+  "aucun_dependant_enregistre": "Aucun dépendant enregistré.",
+  "autre": "Autre",
+  "couvert_apos_assurance_collective": "Couvert par l&apos;assurance collective",
+  "date_naissance": "Date de naissance",
+  "dependant_fiscal": "Dépendant fiscal",
+  "dependant_fiscal_t4_releve_1": "Dépendant fiscal (pour T4/Relevé 1)",
+  "dependant_sera_retire_dossier": "Ce dépendant sera retiré de votre dossier.",
+  "enfant": "Enfant",
+  "enregistre": "Enregistré",
+  "enregistrer": "Enregistrer",
+  "family_view_conjoint_e_et_enfants_couverts_par_votre": "Conjoint(e) et enfants couverts par votre assurance collective ou déclarés au fisc.",
+  "family_view_famille_dependants": "Famille / Dépendants",
+  "modifier": "Modifier",
+  "nom_complet": "Nom complet *",
+  "nom_requis": "Nom requis",
+  "nouveau": "Nouveau",
+  "supprime": "Supprimé",
+  "type": "Type"
+}

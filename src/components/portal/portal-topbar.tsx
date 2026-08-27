@@ -4,7 +4,7 @@
 // + avatar client + notifications + langue (cookie-based)
 
 import { useState, useEffect, useTransition } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { signOut } from "next-auth/react";
@@ -46,6 +46,7 @@ export function PortalTopbar({
   clientName: string;
   clientCompany?: string;
 }) {
+  const t = useTranslations("portal");
   const currentLocale = useLocale();
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
@@ -174,7 +175,7 @@ export function PortalTopbar({
                 <DropdownMenuItem asChild>
                   <Link href="/portail" prefetch>
                     <Home className="h-4 w-4 mr-2" />
-                    Tableau de bord
+                    {t("sidebar.dashboard_link")}
                   </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

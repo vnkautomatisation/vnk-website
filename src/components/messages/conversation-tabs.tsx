@@ -1,6 +1,7 @@
 "use client";
 // Onglets Messages / Fichiers / Liens dans une conversation
 import { useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { MessageSquare, Paperclip, Link as LinkIcon, FileText, Image as ImageIcon, Music } from "lucide-react";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -66,11 +67,12 @@ export function ConversationTabsBar({
   filesCount: number;
   linksCount: number;
 }) {
+  const t = useTranslations("admin.messages");
   return (
     <div className="border-b shrink-0 flex items-center gap-1 px-2 py-1 bg-muted/20">
-      <TabBtn active={active === "messages"} onClick={() => onChange("messages")} icon={<MessageSquare className="h-3.5 w-3.5" />} label="Messages" />
-      <TabBtn active={active === "files"} onClick={() => onChange("files")} icon={<Paperclip className="h-3.5 w-3.5" />} label="Fichiers" badge={filesCount} />
-      <TabBtn active={active === "links"} onClick={() => onChange("links")} icon={<LinkIcon className="h-3.5 w-3.5" />} label="Liens" badge={linksCount} />
+      <TabBtn active={active === "messages"} onClick={() => onChange("messages")} icon={<MessageSquare className="h-3.5 w-3.5" />} label={t("messages")} />
+      <TabBtn active={active === "files"} onClick={() => onChange("files")} icon={<Paperclip className="h-3.5 w-3.5" />} label={t("fichiers")} badge={filesCount} />
+      <TabBtn active={active === "links"} onClick={() => onChange("links")} icon={<LinkIcon className="h-3.5 w-3.5" />} label={t("liens")} badge={linksCount} />
     </div>
   );
 }
@@ -95,6 +97,7 @@ function TabBtn({ active, onClick, icon, label, badge }: { active: boolean; onCl
 }
 
 export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
+  const t = useTranslations("admin.messages");
   const [pdfPreview, setPdfPreview] = useState<AttachmentLite | null>(null);
   const [imgPreview, setImgPreview] = useState<AttachmentLite | null>(null);
 
@@ -114,7 +117,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
       <div className="flex-1 flex items-center justify-center text-center p-8">
         <div>
           <Paperclip className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Aucun fichier partagé</p>
+          <p className="text-sm text-muted-foreground">{t("aucun_fichier_partage")}</p>
         </div>
       </div>
     );
@@ -170,7 +173,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{att.name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {fmtSize(att.size)} · {sender === "vnk" ? "Vous" : "Client"} · {new Date(date).toLocaleDateString("fr-CA")}
+                        {fmtSize(att.size)} · {sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(date).toLocaleDateString("fr-CA")}
                       </p>
                     </div>
                     {att.kind !== "pdf" && (
@@ -180,7 +183,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
                         onClick={(e) => e.stopPropagation()}
                         className="text-[10px] px-2 py-0.5 rounded bg-[#0F2D52] text-white hover:bg-[#1a3a66] shrink-0"
                       >
-                        Télécharger
+                        {t("telecharger")}
                       </a>
                     )}
                   </button>
@@ -210,7 +213,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
                 <p className="text-xs text-muted-foreground truncate">{imgPreview.name} · {fmtSize(imgPreview.size)}</p>
                 <a href={imgPreview.dataUrl} download={imgPreview.name}
                    className="inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-md bg-[#0F2D52] text-white hover:bg-[#1a3a66]">
-                  Télécharger
+                  {t("telecharger")}
                 </a>
               </div>
             </>
@@ -222,6 +225,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
 }
 
 export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: MsgLite[]; onJumpToMessage: (id: number) => void }) {
+  const t = useTranslations("admin.messages");
   const links = useMemo(() => extractLinks(messages), [messages]);
 
   if (links.length === 0) {
@@ -229,7 +233,7 @@ export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: 
       <div className="flex-1 flex items-center justify-center text-center p-8">
         <div>
           <LinkIcon className="h-12 w-12 mx-auto text-muted-foreground/30 mb-3" />
-          <p className="text-sm text-muted-foreground">Aucun lien partagé</p>
+          <p className="text-sm text-muted-foreground">{t("aucun_lien_partage")}</p>
         </div>
       </div>
     );
@@ -256,7 +260,7 @@ export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: 
                     {l.url}
                   </a>
                   <p className="text-[10px] text-muted-foreground">
-                    {host} · {l.sender === "vnk" ? "Vous" : "Client"} · {new Date(l.date).toLocaleDateString("fr-CA")}
+                    {host} · {l.sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(l.date).toLocaleDateString("fr-CA")}
                   </p>
                 </div>
                 <button
@@ -264,7 +268,7 @@ export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: 
                   onClick={() => onJumpToMessage(l.msgId)}
                   className="text-[10px] px-2 py-0.5 rounded bg-muted hover:bg-background border shrink-0"
                 >
-                  Voir
+                  {t("voir")}
                 </button>
               </div>
             </li>

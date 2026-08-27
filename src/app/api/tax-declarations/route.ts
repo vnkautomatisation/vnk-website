@@ -1,6 +1,7 @@
 // GET /api/tax-declarations — liste declarations fiscales
 // POST /api/tax-declarations — creer une declaration (admin)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -16,7 +17,7 @@ const createSchema = z.object({
   notes: z.string().optional(),
 }).refine(
   (d) => new Date(d.periodEnd) >= new Date(d.periodStart),
-  { message: "La date de fin doit être après la date de début", path: ["periodEnd"] },
+  { message: "la_date_de_fin_doit_etre_apres", path: ["periodEnd"] },
 );
 
 export async function GET() {
@@ -36,6 +37,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -47,7 +49,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message ?? "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   // Calculer le revenu et les taxes pour la periode

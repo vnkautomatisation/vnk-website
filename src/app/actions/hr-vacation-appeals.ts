@@ -9,6 +9,7 @@
 //   - reviewAppealAction   : super_admin/RH -> approved | rejected
 //   - withdrawAppealAction : proprietaire -> appealStatus null
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,7 +19,7 @@ import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
-const ERR_NO_AUTHORITY = "Vous n'avez pas l'autorite pour reviser les appels.";
+const ERR_NO_AUTHORITY = "vous_n_avez_pas_l_autorite_pour_3";
 
 // ─── Helper : check si l'acteur peut reviser un appel ────────────
 async function canReviewAppeals(adminId: number): Promise<boolean> {
@@ -43,13 +44,14 @@ const submitAppealSchema = z.object({
 export async function submitAppealAction(
   input: z.infer<typeof submitAppealSchema>,
 ): Promise<Result<{ preferenceId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
   }
   const actorId = session.user.adminId!;
   const parsed = submitAppealSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const pref = await prisma.vacationPreference.findUnique({
     where: { id: parsed.data.preferenceId },
@@ -64,16 +66,16 @@ export async function submitAppealAction(
   //   - status window doit etre allocated
   //   - aucun appel deja pending sur cette preference
   if (pref.adminId !== actorId) {
-    return { success: false, error: "Vous ne pouvez faire appel que sur vos propres preferences." };
+    return { success: false, error: t("vous_ne_pouvez_faire_appel_que_sur") };
   }
   if (pref.status !== "granted" && pref.status !== "denied") {
-    return { success: false, error: "L'appel n'est possible que sur une preference granted ou denied." };
+    return { success: false, error: t("l_appel_n_est_possible_que_sur") };
   }
   if (pref.window.status !== "allocated") {
-    return { success: false, error: "L'appel n'est possible que sur une fenetre allocated." };
+    return { success: false, error: t("l_appel_n_est_possible_que_sur_2") };
   }
   if (pref.appealStatus === "pending") {
-    return { success: false, error: "Un appel est deja en cours pour cette preference." };
+    return { success: false, error: t("un_appel_est_deja_en_cours_pour") };
   }
 
   await prisma.vacationPreference.update({
@@ -157,14 +159,15 @@ const reviewAppealSchema = z.object({
 export async function reviewAppealAction(
   input: z.infer<typeof reviewAppealSchema>,
 ): Promise<Result<{ preferenceId: number; decision: "approved" | "rejected" }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = reviewAppealSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const allowed = await canReviewAppeals(actorId);
-  if (!allowed) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!allowed) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   const pref = await prisma.vacationPreference.findUnique({
     where: { id: parsed.data.preferenceId },
@@ -173,13 +176,13 @@ export async function reviewAppealAction(
   if (!pref) return { success: false, error: "Preference introuvable" };
   if (!pref.window) return { success: false, error: "Fenetre introuvable" };
   if (pref.appealStatus !== "pending") {
-    return { success: false, error: "Aucun appel en attente sur cette preference." };
+    return { success: false, error: t("aucun_appel_en_attente_sur_cette_preference") };
   }
   if (pref.adminId === actorId) {
     // Founder is the only exception (no superior in the org chart).
     const { isFounder } = await import("@/lib/services/org-guard");
     if (!(await isFounder(actorId))) {
-      return { success: false, error: "Vous ne pouvez pas reviser votre propre appel." };
+      return { success: false, error: t("vous_ne_pouvez_pas_reviser_votre_propre") };
     }
   }
 
@@ -201,7 +204,7 @@ export async function reviewAppealAction(
         select: { id: true },
       });
       if (overlap) {
-        return { success: false, error: "Conflit avec une demande de conge existante — appel non approuve." };
+        return { success: false, error: t("conflit_avec_une_demande_de_conge_existante") };
       }
       try {
         await prisma.$transaction(async (tx) => {
@@ -233,7 +236,7 @@ export async function reviewAppealAction(
         });
       } catch (err) {
         console.error("[reviewAppealAction] approval txn failed", err);
-        return { success: false, error: "Echec de l'approbation — aucune modification." };
+        return { success: false, error: t("echec_de_l_approbation_aucune_modification") };
       }
     } else {
       // pref etait granted -> on n'inverse rien, on note simplement l'approbation
@@ -316,11 +319,12 @@ const withdrawAppealSchema = z.object({
 export async function withdrawAppealAction(
   input: z.infer<typeof withdrawAppealSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = withdrawAppealSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const pref = await prisma.vacationPreference.findUnique({
     where: { id: parsed.data.preferenceId },
@@ -328,7 +332,7 @@ export async function withdrawAppealAction(
   });
   if (!pref) return { success: false, error: "Preference introuvable" };
   if (pref.adminId !== actorId) {
-    return { success: false, error: "Vous ne pouvez retirer que vos propres appels." };
+    return { success: false, error: t("vous_ne_pouvez_retirer_que_vos_propres") };
   }
   if (pref.appealStatus !== "pending") {
     return { success: false, error: "Aucun appel pending a retirer." };

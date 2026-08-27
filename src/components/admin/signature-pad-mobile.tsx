@@ -84,6 +84,7 @@ export function SignaturePadMobile({
   requireAcknowledgment?: boolean;
   acknowledgmentLabel?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [tab, setTab] = useState<Tab>("preview");
   const [signatureData, setSignatureData] = useState<string | null>(null);
@@ -92,7 +93,7 @@ export function SignaturePadMobile({
   const [padKey, setPadKey] = useState(0);
   const [pdfOpenedOnce, setPdfOpenedOnce] = useState(false);
 
-  // Cases a cocher detectees dans le markdown
+
   const sourceMd = doc?.resolvedMarkdown ?? doc?.bodyMarkdown ?? "";
   const { items: checkboxItems, initialStates: defaultCheckStates } = useMemo(
     () => detectCheckboxes(sourceMd),
@@ -106,8 +107,8 @@ export function SignaturePadMobile({
   );
   const allChecked = totalCheckboxes === 0 || checkedCount === totalCheckboxes;
 
-  // Champs `[CHAMP]` que l'employe doit remplir lui-meme (numero de membre
-  // OIQ/CPA, permis, etc.) — parite avec le variant desktop.
+
+
   const employeeFields = useMemo(
     () => detectPlaceholdersWithInfo(sourceMd).filter((p) => p.fillBy === "employee"),
     [sourceMd],
@@ -116,7 +117,7 @@ export function SignaturePadMobile({
   const allEmployeeFieldsFilled = employeeFields.length === 0
     || employeeFields.every((p) => (employeeFieldValues[p.key] ?? "").trim().length > 0);
 
-  // PDF blob URL
+
   const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [pdfRefreshing, setPdfRefreshing] = useState(false);
@@ -124,7 +125,7 @@ export function SignaturePadMobile({
   const currentBlobUrlRef = useRef<string | null>(null);
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Reset a chaque ouverture
+
   useEffect(() => {
     if (open) {
       setTab("preview");
@@ -143,10 +144,10 @@ export function SignaturePadMobile({
         currentBlobUrlRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open, doc?.title]);
 
-  // Fetch PDF preview a l'ouverture
+
   useEffect(() => {
     if (!open || !doc || !doc.templateId) return;
     let cancelled = false;
@@ -178,7 +179,7 @@ export function SignaturePadMobile({
       } catch (err) {
         if (cancelled) return;
         console.warn("[SignaturePadMobile] PDF preview fetch failed:", err);
-        setPdfError("Impossible de charger l'apercu du document.");
+        setPdfError(t("impossible_charger_apercu_document"));
       } finally {
         if (!cancelled) setPdfLoading(false);
       }
@@ -189,8 +190,8 @@ export function SignaturePadMobile({
     };
   }, [open, doc]);
 
-  // Live refresh PDF debounce quand acknowledged / signatureData / cases /
-  // champs employe changent.
+
+
   useEffect(() => {
     if (!open || !doc || !doc.templateId) return;
     const hasEmployeeValues = Object.values(employeeFieldValues).some(
@@ -240,7 +241,7 @@ export function SignaturePadMobile({
         refreshTimerRef.current = null;
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open, doc, acknowledged, signatureData, checkedCount, checkboxStates, employeeFieldValues]);
 
   if (!doc) return null;
@@ -249,8 +250,8 @@ export function SignaturePadMobile({
   const effectiveAckLabel =
     acknowledgmentLabel ??
     (isReadingOnly
-      ? "J'ai lu et compris intégralement le document ci-dessus."
-      : "J'ai lu intégralement le document ci-dessus et j'accepte ses termes en toute connaissance de cause.");
+      ? t("j_ai_lu_compris_integralement")
+      : t("j_ai_lu_integralement_document"));
 
   const canSubmit = isReadingOnly
     ? (!requireAcknowledgment || acknowledged) && allChecked && allEmployeeFieldsFilled && !pending
@@ -260,9 +261,9 @@ export function SignaturePadMobile({
       allEmployeeFieldsFilled &&
       !pending;
 
-  // Encode les valeurs employe sous la cle reservee __employeeFieldValues
-  // (extraites par my-documents-view avant l'appel a signLegalDocAction).
-  // Meme pattern que le variant desktop (buildSubmitStates).
+
+
+
   const buildSubmitStates = (): CheckboxStates => {
     if (employeeFields.length === 0 || Object.keys(employeeFieldValues).length === 0) {
       return checkboxStates;
@@ -303,10 +304,10 @@ export function SignaturePadMobile({
 
   const HeaderIcon = isReadingOnly ? BookOpen : FileSignature;
   const submitLabel = isReadingOnly
-    ? "Confirmer ma lecture"
-    : "Confirmer ma signature";
+    ? t("confirmer_ma_lecture")
+    : t("confirmer_ma_signature");
 
-  // Etat synthese pour les pastilles d'onglets
+
   const actionsComplete = allChecked && (!requireAcknowledgment || acknowledged)
     && (isReadingOnly || !!signatureData);
 
@@ -316,7 +317,7 @@ export function SignaturePadMobile({
         className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none"
         aria-describedby={undefined}
       >
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 py-3 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-white text-sm flex items-center gap-2 pr-8">
@@ -336,7 +337,7 @@ export function SignaturePadMobile({
           </DialogHeader>
         </div>
 
-        {/* Onglets : Apercu / Actions */}
+
         <div className="shrink-0 bg-white border-b flex">
           <button
             type="button"
@@ -349,7 +350,7 @@ export function SignaturePadMobile({
             )}
           >
             <BookOpen className="h-3.5 w-3.5" />
-            <span>Aperçu</span>
+            <span>{t("apercu")}</span>
             {pdfOpenedOnce && (
               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
             )}
@@ -372,22 +373,22 @@ export function SignaturePadMobile({
           </button>
         </div>
 
-        {/* Body : un seul onglet visible a la fois */}
+
         <div className="flex-1 overflow-hidden bg-slate-50 flex flex-col">
-          {/* ───── Onglet APERCU ───── */}
+
           {tab === "preview" && (
             <div className="flex-1 overflow-hidden bg-white flex flex-col">
               {pdfRefreshing && (
                 <div className="shrink-0 px-3 py-1.5 bg-[#0F2D52]/5 border-b border-[#0F2D52]/10 text-[10px] text-[#0F2D52] inline-flex items-center gap-1.5">
                   <Loader2 className="h-3 w-3 animate-spin" />
-                  <span>Aperçu actualisé…</span>
+                  <span>{t("apercu_actualise")}</span>
                 </div>
               )}
               {pdfLoading && !pdfBlobUrl ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center gap-3">
                   <Loader2 className="h-10 w-10 animate-spin text-[#0F2D52]" />
                   <p className="text-sm text-slate-600">
-                    Génération de l&apos;aperçu…
+                    {t("generation_apos_apercu")}
                   </p>
                 </div>
               ) : pdfError && !pdfBlobUrl ? (
@@ -397,7 +398,7 @@ export function SignaturePadMobile({
                     {pdfError}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Réessayez ou contactez le support si le problème persiste.
+                    {t("reessayez_contactez_support_si_probleme")}
                   </p>
                 </div>
               ) : pdfBlobUrl ? (
@@ -411,10 +412,10 @@ export function SignaturePadMobile({
             </div>
           )}
 
-          {/* ───── Onglet ACTIONS ───── */}
+
           {tab === "actions" && (
             <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-3">
-              {/* Bandeau progression */}
+
               <div
                 className={cn(
                   "rounded-md border px-3 py-2.5 space-y-2",
@@ -430,7 +431,7 @@ export function SignaturePadMobile({
                     <AlertCircle className="h-4 w-4 text-[#0F2D52] shrink-0" />
                   )}
                   <span className={actionsComplete ? "text-emerald-900" : "text-[#0F2D52]"}>
-                    État de la signature
+                    {t("etat_signature")}
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
@@ -475,7 +476,7 @@ export function SignaturePadMobile({
                 </div>
               </div>
 
-              {/* Champs personnels a remplir par l'employe */}
+
               {employeeFields.length > 0 && (
                 <div className="rounded-md border bg-white overflow-hidden">
                   <div className="px-3 py-2 bg-[#0F2D52]/5 border-b border-[#0F2D52]/10">
@@ -512,7 +513,7 @@ export function SignaturePadMobile({
                 </div>
               )}
 
-              {/* Cases a cocher detectees */}
+
               {checkboxItems.length > 0 && (
                 <div className="rounded-md border bg-white overflow-hidden">
                   <div className="px-3 py-2 bg-amber-50 border-b border-amber-200 flex items-center gap-2">
@@ -545,11 +546,11 @@ export function SignaturePadMobile({
                 </div>
               )}
 
-              {/* Accuse de lecture */}
+
               {requireAcknowledgment && (
                 <div className="space-y-1.5">
                   <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52] px-1">
-                    Accusé de lecture
+                    {t("accuse_lecture")}
                   </p>
                   <label
                     className={cn(
@@ -572,11 +573,11 @@ export function SignaturePadMobile({
                 </div>
               )}
 
-              {/* Signature manuscrite — SignaturePad gere son propre bouton Effacer. */}
+
               {!isReadingOnly && (
                 <div className="space-y-1.5">
                   <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52] px-1">
-                    Signature manuscrite
+                    {t("signature_manuscrite")}
                   </p>
                   <div
                     className={cn(
@@ -591,10 +592,7 @@ export function SignaturePadMobile({
                     />
                   </div>
                   {!allChecked && totalCheckboxes > 0 && (
-                    <p className="text-[10px] text-amber-700 italic px-1">
-                      Cochez toutes les confirmations pour activer la zone
-                      de signature.
-                    </p>
+                    <p className="text-[10px] text-amber-700 italic px-1">{t("signature_pad_mobile_cochez_toutes_les_confirmations_pour_activer_la")}</p>
                   )}
                 </div>
               )}
@@ -602,7 +600,7 @@ export function SignaturePadMobile({
           )}
         </div>
 
-        {/* Footer sticky : Annuler + Passer aux actions / Confirmer */}
+
         <div className="shrink-0 border-t bg-muted/30 px-3 py-2.5 flex items-center gap-2">
           <Button
             type="button"
@@ -622,7 +620,7 @@ export function SignaturePadMobile({
               className="flex-1 bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-              Passer aux actions
+              {t("passer_actions")}
             </Button>
           ) : (
             <Button
@@ -642,12 +640,12 @@ export function SignaturePadMobile({
           )}
         </div>
 
-        {/* Annotation discrete : pdf-loading background */}
+
         {pdfLoading && pdfBlobUrl && (
           <div className="absolute bottom-16 right-3 bg-white/95 border rounded-full shadow-sm px-2.5 py-1 text-[10px] text-[#0F2D52] inline-flex items-center gap-1.5 pointer-events-none">
             <Loader2 className="h-3 w-3 animate-spin" />
             <FileText className="h-3 w-3" />
-            <span>Aperçu actualisé…</span>
+            <span>{t("apercu_actualise")}</span>
           </div>
         )}
       </DialogContent>

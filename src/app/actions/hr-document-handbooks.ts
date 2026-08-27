@@ -15,6 +15,7 @@
 // dans la liste "a signer" de l'employe (filtre cote page.tsx).
 // ─────────────────────────────────────────────────────────
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
@@ -126,12 +127,13 @@ export async function resolveHandbookItemsForEmployee(
 export async function createHandbookAction(
   input: z.infer<typeof createHandbookSchema>,
 ): Promise<Result<{ id: number; key: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
   const parsed = createHandbookSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
+    return { success: false, error: t(parsed.error.errors[0].message) };
   }
 
   // Genere une cle unique : base = slug du titre, +_2, _3... si conflit.
@@ -146,7 +148,7 @@ export async function createHandbookAction(
     })
   ) {
     key = `${baseKey}_${n++}`;
-    if (n > 50) return { success: false, error: "Trop de cahiers similaires" };
+    if (n > 50) return { success: false, error: t("trop_de_cahiers_similaires") };
   }
 
   // Verifie que les templates existent et sont actifs
@@ -208,12 +210,13 @@ const updateHandbookSchema = handbookBaseSchema.extend({
 export async function updateHandbookAction(
   input: z.infer<typeof updateHandbookSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
   const parsed = updateHandbookSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
+    return { success: false, error: t(parsed.error.errors[0].message) };
   }
 
   const existing = await prisma.documentHandbook.findUnique({
@@ -282,6 +285,7 @@ export async function updateHandbookAction(
 export async function duplicateHandbookAction(input: {
   id: number;
 }): Promise<Result<{ id: number; key: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireHrWrite();
   if (!adminId) return unauthorized();
 
@@ -302,7 +306,7 @@ export async function duplicateHandbookAction(input: {
     })
   ) {
     key = `${baseKey}_${n++}`;
-    if (n > 50) return { success: false, error: "Trop de copies similaires" };
+    if (n > 50) return { success: false, error: t("trop_de_copies_similaires") };
   }
 
   const copy = await prisma.documentHandbook.create({
@@ -382,9 +386,10 @@ const signHandbookSchema = z.object({
 export async function signHandbookAction(
   input: z.infer<typeof signHandbookSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = signHandbookSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0].message };
+    return { success: false, error: t(parsed.error.errors[0].message) };
   }
 
   const session = await auth();
@@ -415,7 +420,7 @@ export async function signHandbookAction(
     },
   });
   if (!handbook || !handbook.isActive) {
-    return { success: false, error: "Cahier introuvable ou archive" };
+    return { success: false, error: t("cahier_introuvable_ou_archive") };
   }
 
   // Mission 4 : valider acceptation finale (Demande 4 : une seule case finale) + scope signature.
@@ -454,7 +459,7 @@ export async function signHandbookAction(
     if (!hasFinalRead && !hasLegacyChapters) {
       return {
         success: false,
-        error: "Confirmation finale de lecture requise",
+        error: t("confirmation_finale_de_lecture_requise"),
       };
     }
     if (hasFinalRead && finalInitials.length < 2) {
@@ -491,7 +496,7 @@ export async function signHandbookAction(
     },
   });
   if (already) {
-    return { success: false, error: "Cahier deja signe pour cette version" };
+    return { success: false, error: t("cahier_deja_signe_pour_cette_version") };
   }
 
   const h = await headers().catch(() => null);

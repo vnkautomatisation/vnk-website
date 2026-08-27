@@ -1,9 +1,13 @@
 // Admin · Factures — KPIs + table filtres + creation + actions (mark paid, PDF, send)
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { InvoicesView } from "./invoices-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Factures" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("factures") };
+}
 
 export default async function InvoicesPage() {
   const now = new Date();

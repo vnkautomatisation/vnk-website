@@ -60,21 +60,21 @@ type Invoice = {
 type ClientOption = { id: number; fullName: string; companyName: string | null };
 type StatusFilter = "all" | "unpaid" | "overdue" | "paid" | "cancelled";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Toutes" },
-  { key: "unpaid", label: "Non payées" },
-  { key: "overdue", label: "En retard" },
-  { key: "paid", label: "Payées" },
-  { key: "cancelled", label: "Annulées" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "toutes" },
+  { key: "unpaid", labelKey: "non_payees" },
+  { key: "overdue", labelKey: "retard" },
+  { key: "paid", labelKey: "payees" },
+  { key: "cancelled", labelKey: "annulees" },
 ];
 
 const PAYMENT_METHODS = [
-  { value: "interac", label: "Virement Interac" },
-  { value: "bank_transfer", label: "Virement bancaire" },
-  { value: "card", label: "Carte (Stripe)" },
-  { value: "check", label: "Chèque" },
-  { value: "cash", label: "Espèces" },
-  { value: "other", label: "Autre" },
+  { value: "interac", labelKey: "virement_interac" },
+  { value: "bank_transfer", labelKey: "virement_bancaire" },
+  { value: "card", labelKey: "carte_stripe" },
+  { value: "check", labelKey: "cheque" },
+  { value: "cash", labelKey: "especes" },
+  { value: "other", labelKey: "autre" },
 ];
 
 type MandateOption = { id: number; title: string; clientId: number; status: string };
@@ -82,31 +82,31 @@ type LinkedQuote = { id: number; quoteNumber: string; clientId: number; title: s
 type LinkedContract = { id: number; contractNumber: string; clientId: number; title: string; amountTtc: number | null };
 
 const SERVICE_TYPES = [
-  { value: "plc-support", label: "Support PLC" },
-  { value: "audit", label: "Audit technique" },
-  { value: "documentation", label: "Documentation" },
-  { value: "refactoring", label: "Refactorisation" },
-  { value: "modernization", label: "Modernisation" },
-  { value: "training", label: "Formation" },
-  { value: "other", label: "Autre" },
+  { value: "plc-support", labelKey: "support_plc" },
+  { value: "audit", labelKey: "audit_technique" },
+  { value: "documentation", labelKey: "documentation" },
+  { value: "refactoring", labelKey: "refactorisation" },
+  { value: "modernization", labelKey: "modernisation" },
+  { value: "training", labelKey: "formation" },
+  { value: "other", labelKey: "autre" },
 ];
 
 const PHASE_OPTIONS = [
-  { value: "acompte", label: "Acompte" },
-  { value: "solde", label: "Solde" },
-  { value: "phase_1", label: "Phase 1" },
-  { value: "phase_2", label: "Phase 2" },
-  { value: "phase_3", label: "Phase 3" },
-  { value: "honoraires", label: "Honoraires" },
-  { value: "frais", label: "Frais" },
-  { value: "autre", label: "Autre" },
+  { value: "acompte", labelKey: "acompte" },
+  { value: "solde", labelKey: "solde" },
+  { value: "phase_1", labelKey: "phase_1" },
+  { value: "phase_2", labelKey: "phase_2" },
+  { value: "phase_3", labelKey: "phase_3" },
+  { value: "honoraires", labelKey: "honoraires" },
+  { value: "frais", labelKey: "frais" },
+  { value: "autre", labelKey: "autre" },
 ];
 
 const STATUS_OPTIONS = [
-  { value: "unpaid", label: "Non payée" },
-  { value: "overdue", label: "En retard" },
-  { value: "paid", label: "Payée" },
-  { value: "cancelled", label: "Annulée" },
+  { value: "unpaid", labelKey: "non_payee" },
+  { value: "overdue", labelKey: "retard" },
+  { value: "paid", labelKey: "payee" },
+  { value: "cancelled", labelKey: "annulee" },
 ];
 
 export function InvoicesView({
@@ -124,6 +124,7 @@ export function InvoicesView({
   signedContracts: LinkedContract[];
   kpis: { unpaidTotal: number; overdueTotal: number; paidThisMonth: number; overdueCount: number; unpaidCount: number };
 }) {
+  const t = useTranslations("admin.invoices");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -237,8 +238,8 @@ export function InvoicesView({
 
   const handleCreate = async () => {
     if (submitting) return;
-    if (!fClientId || !fTitle.trim() || !fAmount) { toast.error("Client, titre et montant requis"); return; }
-    if (Number(fAmount) <= 0) { toast.error("Montant invalide"); return; }
+    if (!fClientId || !fTitle.trim() || !fAmount) { toast.error(t("client_titre_montant_requis")); return; }
+    if (Number(fAmount) <= 0) { toast.error(t("montant_invalide")); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/invoices", {
@@ -261,17 +262,17 @@ export function InvoicesView({
         }),
       });
       if (res.ok) {
-        toast.success("Facture créée");
+        toast.success(t("facture_creee"));
         setCreateOpen(false);
         resetForm();
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleEdit = async () => {
     if (submitting || !editInvoice) return;
-    if (!fTitle.trim() || !fAmount) { toast.error("Titre et montant requis"); return; }
+    if (!fTitle.trim() || !fAmount) { toast.error(t("titre_montant_requis")); return; }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/invoices/${editInvoice.id}`, {
@@ -292,16 +293,16 @@ export function InvoicesView({
           status: fStatus,
         }),
       });
-      if (res.ok) { toast.success("Facture modifiée"); setEditInvoice(null); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("facture_modifiee")); setEditInvoice(null); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteInvoice) return;
     const res = await fetch(`/api/invoices/${deleteInvoice.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Facture supprimée"); setDeleteInvoice(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("facture_supprimee")); setDeleteInvoice(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   // Mark paid avec choix méthode
@@ -324,14 +325,14 @@ export function InvoicesView({
         toast.success(`Facture ${paidDialog.invoiceNumber} marquée payée`);
         setPaidDialog(null);
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleSetStatus = async (inv: Invoice, status: string, label: string) => {
     const ok = await confirm({
       title: `${label} cette facture ?`,
-      description: `${inv.invoiceNumber} passera au statut « ${status === "cancelled" ? "Annulée" : status === "overdue" ? "En retard" : status === "unpaid" ? "Non payée" : status} ».`,
+      description: t("passera_statut", { number: inv.invoiceNumber, status: status === "cancelled" ? t("annulee") : status === "overdue" ? t("retard") : status === "unpaid" ? t("non_payee") : status }),
       confirmLabel: label,
       variant: status === "cancelled" ? "destructive" : "default",
     });
@@ -341,15 +342,15 @@ export function InvoicesView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    if (res.ok) { toast.success("Statut mis à jour"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("statut_mis_jour")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSendToClient = async (inv: Invoice) => {
     const ok = await confirm({
-      title: "Envoyer cette facture au client ?",
-      description: `La facture ${inv.invoiceNumber} sera ajoutée dans la catégorie "Factures" du portail + message chat + notification.`,
-      confirmLabel: "Envoyer",
+      title: t("envoyer_facture_client"),
+      description: `La facture ${inv.invoiceNumber} sera ajoutée dans la catégorie t("factures") du portail + message chat + notification.`,
+      confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/invoices/${inv.id}/send`, { method: "POST" });
@@ -357,19 +358,19 @@ export function InvoicesView({
       const data = await res.json();
       toast.success(`Facture envoyée à ${data.clientName ?? inv.clientName} (portail + chat + notification)`);
       router.refresh();
-    } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSendReminder = async (inv: Invoice) => {
     const ok = await confirm({
-      title: "Envoyer un rappel de paiement ?",
+      title: t("envoyer_rappel_paiement"),
       description: `Un message de relance sera envoyé à ${inv.clientName} pour la facture ${inv.invoiceNumber}.`,
-      confirmLabel: "Envoyer rappel",
+      confirmLabel: t("envoyer_rappel"),
     });
     if (!ok) return;
     const res = await fetch(`/api/invoices/${inv.id}/remind`, { method: "POST" });
-    if (res.ok) { toast.success("Rappel envoyé"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("rappel_envoye")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   // Bulk
@@ -377,8 +378,8 @@ export function InvoicesView({
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} facture(s) ?`,
-      description: "Les factures payées ou liées à des paiements seront refusées (409). Cette action est irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("factures_payees_liees_paiements_refusees"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -444,24 +445,24 @@ export function InvoicesView({
   const getActions = useCallback((inv: Invoice) => {
     const editable = inv.status !== "paid" && inv.status !== "cancelled";
     const a: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", inv.id) },
-      { label: "Voir le PDF", icon: <FileText className="h-3.5 w-3.5" />, onClick: () => setPdfInvoice(inv) },
-      { label: "Envoyer au client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(inv) },
+      { label: t("voir_detail"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("invoice", inv.id) },
+      { label: t("voir_pdf"), icon: <FileText className="h-3.5 w-3.5" />, onClick: () => setPdfInvoice(inv) },
+      { label: t("envoyer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(inv) },
     ];
     if (inv.status === "unpaid" || inv.status === "overdue") {
-      a.push({ label: "Marquer payée", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => openMarkPaid(inv) });
-      a.push({ label: "Envoyer rappel", icon: <Bell className="h-3.5 w-3.5" />, onClick: () => handleSendReminder(inv) });
+      a.push({ label: t("marquer_payee"), icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => openMarkPaid(inv) });
+      a.push({ label: t("envoyer_rappel"), icon: <Bell className="h-3.5 w-3.5" />, onClick: () => handleSendReminder(inv) });
     }
     if (inv.status === "unpaid") {
-      a.push({ label: "Marquer en retard", icon: <AlertTriangle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "overdue", "Marquer en retard") });
+      a.push({ label: t("marquer_retard"), icon: <AlertTriangle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "overdue", t("marquer_retard")) });
     }
     if (inv.status === "overdue") {
-      a.push({ label: "Remettre à jour", icon: <Clock className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "unpaid", "Remettre non payée") });
+      a.push({ label: t("remettre_jour"), icon: <Clock className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "unpaid", t("remettre_non_payee")) });
     }
     if (editable) {
-      a.push({ label: "Annuler", icon: <X className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "cancelled", "Annuler") });
-      a.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(inv), separator: true });
-      a.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteInvoice(inv), variant: "destructive" });
+      a.push({ label: t("annuler"), icon: <X className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(inv, "cancelled", t("annuler_action")) });
+      a.push({ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(inv), separator: true });
+      a.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteInvoice(inv), variant: "destructive" });
     }
     return a;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -474,14 +475,14 @@ export function InvoicesView({
   const columns: Column<Invoice>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.invoiceNumber}`} />
       ),
     },
-    { key: "number", header: "Numéro", accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>, sortable: true, sortBy: (r) => r.invoiceNumber },
+    { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>, sortable: true, sortBy: (r) => r.invoiceNumber },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -491,7 +492,7 @@ export function InvoicesView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "title", header: "Titre",
+      key: "title", header: t("titre"),
       accessor: (r) => (
         <div>
           <p className="text-sm font-medium">{r.title}</p>
@@ -501,9 +502,9 @@ export function InvoicesView({
       sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true,
     },
     { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "due", header: "Échéance", accessor: (r) => r.dueDate ? formatDate(new Date(r.dueDate)) : "—", sortable: true, sortBy: (r) => r.dueDate ?? "", hiddenOnMobile: true },
-    { key: "paid", header: "Payée le", accessor: (r) => r.paidAt ? formatDate(new Date(r.paidAt)) : "—", hiddenOnMobile: true },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "due", header: t("echeance"), accessor: (r) => r.dueDate ? formatDate(new Date(r.dueDate)) : "—", sortable: true, sortBy: (r) => r.dueDate ?? "", hiddenOnMobile: true },
+    { key: "paid", header: t("paye_le"), accessor: (r) => r.paidAt ? formatDate(new Date(r.paidAt)) : "—", hiddenOnMobile: true },
     {
       key: "actions",
       header: "",
@@ -544,8 +545,8 @@ export function InvoicesView({
               <Receipt className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Factures</h1>
-              <p className="text-white/70 text-sm mt-0.5">TPS et TVQ calculés automatiquement — paiement Stripe ou manuel</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("factures")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("tps_tvq_calcules_automatiquement_paiement")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -557,7 +558,7 @@ export function InvoicesView({
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
               onClick={() => { resetForm(); setCreateOpen(true); }}>
-              <Plus className="h-4 w-4" />Nouvelle facture
+              <Plus className="h-4 w-4" />{t("nouvelle_facture")}
             </Button>
           </div>
         </div>
@@ -565,10 +566,10 @@ export function InvoicesView({
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total impayé" value={formatCurrency(kpis.unpaidTotal)} icon={Clock} accent="bg-amber-500" deltaLabel={`${kpis.unpaidCount} facture${kpis.unpaidCount > 1 ? "s" : ""}`} />
-        <StatCard label="En retard" value={formatCurrency(kpis.overdueTotal)} icon={AlertTriangle} accent="bg-red-500" deltaLabel={`${kpis.overdueCount} facture${kpis.overdueCount > 1 ? "s" : ""}`} />
-        <StatCard label="Encaissé ce mois" value={formatCurrency(kpis.paidThisMonth)} icon={CheckCircle2} accent="bg-emerald-500" />
-        <StatCard label="Total factures" value={invoices.length} icon={Receipt} accent="bg-blue-500" />
+        <StatCard label={t("total_impaye")} value={formatCurrency(kpis.unpaidTotal)} icon={Clock} accent="bg-amber-500" deltaLabel={`${kpis.unpaidCount} facture${kpis.unpaidCount > 1 ? "s" : ""}`} />
+        <StatCard label={t("retard")} value={formatCurrency(kpis.overdueTotal)} icon={AlertTriangle} accent="bg-red-500" deltaLabel={`${kpis.overdueCount} facture${kpis.overdueCount > 1 ? "s" : ""}`} />
+        <StatCard label={t("encaisse_mois")} value={formatCurrency(kpis.paidThisMonth)} icon={CheckCircle2} accent="bg-emerald-500" />
+        <StatCard label={t("total_factures")} value={invoices.length} icon={Receipt} accent="bg-blue-500" />
       </div>
 
       {/* Sentinel — détecte quand les KPIs quittent le viewport */}
@@ -581,12 +582,12 @@ export function InvoicesView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Receipt className="h-4 w-4" />
-              Factures
+              {t("factures")}
             </span>
             <span className="font-semibold">{filtered.length} affichées</span>
-            <span className="text-muted-foreground">Impayé <span className="font-semibold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span></span>
-            <span className="text-muted-foreground">En retard <span className="font-semibold text-red-600">{formatCurrency(kpis.overdueTotal)}</span></span>
-            <span className="ml-auto text-muted-foreground">Encaissé ce mois <span className="font-semibold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span></span>
+            <span className="text-muted-foreground">{t("impaye")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span></span>
+            <span className="text-muted-foreground">{t("retard")} <span className="font-semibold text-red-600">{formatCurrency(kpis.overdueTotal)}</span></span>
+            <span className="ml-auto text-muted-foreground">{t("encaisse_mois")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span></span>
           </div>
         </div>
       )}
@@ -596,14 +597,14 @@ export function InvoicesView({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numéro, titre, client..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("numero_titre_client")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -612,14 +613,14 @@ export function InvoicesView({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             {clients.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Client</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("client")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {clients.map((c) => {
                     const isOn = filterClients.has(c.id);
@@ -640,14 +641,14 @@ export function InvoicesView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Montant TTC</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("montant_ttc")}</p>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="number" placeholder="Min" value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
-                <Input type="number" placeholder="Max" value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("min")} value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("max")} value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période d&apos;émission</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_apos_emission")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -655,8 +656,7 @@ export function InvoicesView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("invoices_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -693,7 +693,7 @@ export function InvoicesView({
               avatarName={inv.clientName}
               alert={inv.status === "overdue"}
               badges={[
-                { label: inv.status === "unpaid" ? "Non payée" : inv.status === "overdue" ? "En retard" : inv.status === "paid" ? "Payée" : inv.status === "cancelled" ? "Annulée" : inv.status, variant: inv.status === "paid" ? "secondary" : inv.status === "overdue" ? "destructive" : "outline" },
+                { label: inv.status === "unpaid" ? t("non_payee") : inv.status === "overdue" ? t("retard") : inv.status === "paid" ? t("payee_statut") : inv.status === "cancelled" ? t("annulee") : inv.status, variant: inv.status === "paid" ? "secondary" : inv.status === "overdue" ? "destructive" : "outline" },
               ]}
               stats={[{ label: "TTC", value: formatCurrency(inv.amountTtc) }]}
               actions={getActions(inv)}
@@ -701,13 +701,13 @@ export function InvoicesView({
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(inv.amountHt)} HT</span>
-                  <span>{inv.dueDate ? `Échéance ${formatDate(new Date(inv.dueDate))}` : "Pas d'échéance"}</span>
+                  <span>{inv.dueDate ? `Échéance ${formatDate(new Date(inv.dueDate))}` : t("pas_echeance")}</span>
                 </div>
               }
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune facture trouvée</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucune_facture_trouvee")}</div>
           )}
         </div>
       ) : (
@@ -716,7 +716,7 @@ export function InvoicesView({
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={(r) => setPdfInvoice(r)}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           exportFilename="factures"
           storageKey="admin-invoices"
         />
@@ -778,7 +778,7 @@ export function InvoicesView({
       <ConfirmDialog
         open={!!deleteInvoice}
         onOpenChange={(o) => { if (!o) setDeleteInvoice(null); }}
-        title="Supprimer cette facture ?"
+        title={t("supprimer_facture")}
         description={`La facture "${deleteInvoice?.invoiceNumber}" sera supprimée définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -793,7 +793,7 @@ export function InvoicesView({
                 <CreditCard className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-white">Marquer comme payée</DialogTitle>
+                <DialogTitle className="text-white">{t("marquer_comme_payee")}</DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
                   Facture {paidDialog?.invoiceNumber} — sélectionnez la méthode de paiement utilisée.
                 </DialogDescription>
@@ -802,23 +802,23 @@ export function InvoicesView({
           </div>
           <div className="px-6 py-5 space-y-3">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Méthode</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("methode")}</Label>
               <Select value={paidMethod} onValueChange={setPaidMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                  {PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{t(m.labelKey)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Note (optionnel)</Label>
-              <Input value={paidNote} onChange={(e) => setPaidNote(e.target.value)} placeholder="N° de transaction, référence..." />
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("note_optionnel")}</Label>
+              <Input value={paidNote} onChange={(e) => setPaidNote(e.target.value)} placeholder={t("n_transaction_reference")} />
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
             <Button variant="outline" onClick={() => setPaidDialog(null)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={confirmMarkPaid} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
-              {submitting ? "Enregistrement…" : "Confirmer le paiement"}
+              {submitting ? t("enregistrement") : t("confirmer_paiement")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -874,6 +874,7 @@ function InvoiceFormDialog({
   setters: IFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.invoices");
   const tc = useTranslations("common");
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
@@ -918,22 +919,22 @@ function InvoiceFormDialog({
             </div>
             <div>
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouvelle facture" : "Modifier la facture"}
+                {isCreate ? t("nouvelle_facture") : t("modifier_facture")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
-                {isCreate ? "Le numéro sera généré automatiquement (F-AAAA-NNN)" : (editingInvoiceNumber || "Modification")}
+                {isCreate ? t("numero_sera_genere_automatiquement_f") : (editingInvoiceNumber || t("modification"))}
               </DialogDescription>
             </div>
           </div>
         </div>
 
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          <FormSection title="Identité" icon={<Receipt className="h-3.5 w-3.5" />}>
+          <FormSection title={t("identite")} icon={<Receipt className="h-3.5 w-3.5" />}>
             {isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                 <Select value={values.clientId} onValueChange={setters.setClientId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectionner_client")} /></SelectTrigger>
                   <SelectContent>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
@@ -945,85 +946,85 @@ function InvoiceFormDialog({
               </div>
             )}
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
-              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Audit PLC — phase 1" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("titre")}</Label>
+              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder={t("audit_plc_phase_1")} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de service</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_service")}</Label>
               <Select value={values.serviceType || "none"} onValueChange={(v) => setters.setServiceType(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner un service" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("selectionner_service")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{tc("none")}</SelectItem>
-                  {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{t(s.labelKey)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
-              <Textarea value={values.desc} onChange={(e) => setters.setDesc(e.target.value)} rows={3} placeholder="Détails de la facturation…" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description")}</Label>
+              <Textarea value={values.desc} onChange={(e) => setters.setDesc(e.target.value)} rows={3} placeholder={t("details_facturation")} />
             </div>
           </FormSection>
 
-          <FormSection title="Montant & taxes" icon={<DollarSign className="h-3.5 w-3.5" />}>
+          <FormSection title={t("montant_taxes")} icon={<DollarSign className="h-3.5 w-3.5" />}>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant HT (CAD) *</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ht_cad")}</Label>
               <Input type="number" min="0" step="0.01" value={values.amount} onChange={(e) => setters.setAmount(e.target.value)} placeholder="0.00" />
             </div>
             {amountNum > 0 && (
               <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Sous-total HT</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TPS (5%)</span><span className="tabular-nums">{formatCurrency(tps)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TVQ (9.975%)</span><span className="tabular-nums">{formatCurrency(tvq)}</span></div>
-                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>Total TTC</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("sous_total_ht")}</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_5")}</span><span className="tabular-nums">{formatCurrency(tps)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_9_975")}</span><span className="tabular-nums">{formatCurrency(tvq)}</span></div>
+                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>{t("total_ttc")}</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
               </div>
             )}
           </FormSection>
 
-          <FormSection title="Échéance" icon={<Clock className="h-3.5 w-3.5" />}>
+          <FormSection title={t("echeance")} icon={<Clock className="h-3.5 w-3.5" />}>
             {isCreate ? (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Délai de paiement (jours)</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("delai_paiement_jours")}</Label>
                 <Select value={values.dueDays} onValueChange={setters.setDueDays}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="7">7 jours</SelectItem>
-                    <SelectItem value="15">15 jours</SelectItem>
-                    <SelectItem value="30">30 jours (standard)</SelectItem>
-                    <SelectItem value="45">45 jours</SelectItem>
-                    <SelectItem value="60">60 jours</SelectItem>
-                    <SelectItem value="90">90 jours</SelectItem>
+                    <SelectItem value="7">{t("7_jours")}</SelectItem>
+                    <SelectItem value="15">{t("15_jours")}</SelectItem>
+                    <SelectItem value="30">{t("30_jours_standard")}</SelectItem>
+                    <SelectItem value="45">{t("45_jours")}</SelectItem>
+                    <SelectItem value="60">{t("60_jours")}</SelectItem>
+                    <SelectItem value="90">{t("90_jours")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             ) : (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date d&apos;échéance</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_apos_echeance")}</Label>
                 <Input type="date" value={values.dueDate} onChange={(e) => setters.setDueDate(e.target.value)} />
               </div>
             )}
             {isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date précise (optionnel — override le délai)</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_precise_optionnel_override_delai")}</Label>
                 <Input type="date" value={values.dueDate} onChange={(e) => setters.setDueDate(e.target.value)} />
               </div>
             )}
           </FormSection>
 
           {/* Phase de facturation */}
-          <FormSection title="Phase de facturation" icon={<Receipt className="h-3.5 w-3.5" />}>
+          <FormSection title={t("phase_facturation")} icon={<Receipt className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de phase</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_phase")}</Label>
                 <Select value={values.invoicePhase || "none"} onValueChange={(v) => setters.setInvoicePhase(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Aucune phase" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("aucune_phase")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucune phase</SelectItem>
-                    {PHASE_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                    <SelectItem value="none">{t("aucune_phase")}</SelectItem>
+                    {PHASE_OPTIONS.map((p) => <SelectItem key={p.value} value={p.value}>{t(p.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Numéro de phase</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("numero_phase")}</Label>
                 <Input type="number" min="1" value={values.phaseNumber} onChange={(e) => setters.setPhaseNumber(e.target.value)} />
               </div>
             </div>
@@ -1031,14 +1032,14 @@ function InvoiceFormDialog({
 
           {/* Liens (mandate, quote, contract) */}
           {clientIdNum > 0 && (
-            <FormSection title="Liens (optionnel)" icon={<DollarSign className="h-3.5 w-3.5" />}>
+            <FormSection title={t("liens_optionnel")} icon={<DollarSign className="h-3.5 w-3.5" />}>
               {filteredMandates.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat associé</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("mandat_associe")}</Label>
                   <Select value={values.mandateId || "none"} onValueChange={(v) => setters.setMandateId(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun mandat" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucun_mandat")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun mandat</SelectItem>
+                      <SelectItem value="none">{t("aucun_mandat")}</SelectItem>
                       {filteredMandates.map((m) => (
                         <SelectItem key={m.id} value={String(m.id)}>{m.title}{m.status !== "active" && m.status !== "in_progress" ? ` (${m.status})` : ""}</SelectItem>
                       ))}
@@ -1048,11 +1049,11 @@ function InvoiceFormDialog({
               )}
               {filteredQuotes.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Devis source (auto-remplit titre & montant)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("devis_source_auto_remplit_titre")}</Label>
                   <Select value={values.quoteId || "none"} onValueChange={(v) => fillFromQuote(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun devis" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucun_devis")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun devis</SelectItem>
+                      <SelectItem value="none">{t("aucun_devis")}</SelectItem>
                       {filteredQuotes.map((q) => (
                         <SelectItem key={q.id} value={String(q.id)}>{q.quoteNumber} — {q.title} ({formatCurrency(q.amountTtc)})</SelectItem>
                       ))}
@@ -1062,11 +1063,11 @@ function InvoiceFormDialog({
               )}
               {filteredContracts.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Contrat source (auto-remplit titre & montant)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("contrat_source_auto_remplit_titre")}</Label>
                   <Select value={values.contractId || "none"} onValueChange={(v) => fillFromContract(v === "none" ? "" : v)}>
-                    <SelectTrigger><SelectValue placeholder="Aucun contrat" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("aucun_contrat")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun contrat</SelectItem>
+                      <SelectItem value="none">{t("aucun_contrat")}</SelectItem>
                       {filteredContracts.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>{c.contractNumber} — {c.title}{c.amountTtc ? ` (${formatCurrency(c.amountTtc)})` : ""}</SelectItem>
                       ))}
@@ -1075,21 +1076,21 @@ function InvoiceFormDialog({
                 </div>
               )}
               {filteredMandates.length === 0 && filteredQuotes.length === 0 && filteredContracts.length === 0 && (
-                <p className="text-[11px] text-muted-foreground">Aucun mandat / devis accepté / contrat signé pour ce client.</p>
+                <p className="text-[11px] text-muted-foreground">{t("aucun_mandat_devis_accepte_contrat")}</p>
               )}
             </FormSection>
           )}
 
           {/* Méthode de paiement (les deux modes) + Statut (edit only) */}
-          <FormSection title="Paiement" icon={<CreditCard className="h-3.5 w-3.5" />}>
+          <FormSection title={t("paiement")} icon={<CreditCard className="h-3.5 w-3.5" />}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Méthode prévue</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("methode_prevue")}</Label>
                 <Select value={values.paymentMethod || "none"} onValueChange={(v) => setters.setPaymentMethod(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="À définir" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("definir")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">À définir</SelectItem>
-                    {PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{m.label}</SelectItem>)}
+                    <SelectItem value="none">{t("definir")}</SelectItem>
+                    {PAYMENT_METHODS.map((m) => <SelectItem key={m.value} value={m.value}>{t(m.labelKey)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -1099,7 +1100,7 @@ function InvoiceFormDialog({
                   <Select value={values.status} onValueChange={setters.setStatus}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                      {STATUS_OPTIONS.map((s) => <SelectItem key={s.value} value={s.value}>{t(s.labelKey)}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
@@ -1115,7 +1116,7 @@ function InvoiceFormDialog({
             disabled={submitting || !values.title.trim() || !values.amount || (isCreate && !values.clientId)}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer la facture" : "Enregistrer")}
+            {submitting ? t("enregistrement") : (isCreate ? t("creer_facture") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

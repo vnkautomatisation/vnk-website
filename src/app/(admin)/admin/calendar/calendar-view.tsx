@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -53,12 +54,6 @@ type ClientOption = { id: number; fullName: string; companyName: string | null; 
 
 type ViewMode = "day" | "week" | "month";
 
-const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
-const MONTHS_FR = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-
 const MEETING_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   video: Video,
   phone: Phone,
@@ -66,6 +61,20 @@ const MEETING_ICONS: Record<string, React.ComponentType<{ className?: string }>>
 };
 
 // Sujets predefinis pour les RDV (alignes avec services VNK)
+// Le sujet est stocke en francais : seul l'affichage suit la locale.
+const SUBJECT_EN: Record<string, string> = {
+  "Consultation initiale": "Initial consultation",
+  "Audit PLC / Automate": "PLC / controller audit",
+  "Démo SCADA / HMI": "SCADA / HMI demo",
+  "Programmation PLC": "PLC programming",
+  "Modernisation système": "System modernisation",
+  "Formation": "Training",
+  "Suivi de mandat": "Mandate follow-up",
+  "Support technique": "Technical support",
+  "Présentation devis": "Quote presentation",
+  "Validation contrat": "Contract sign-off",
+};
+
 const SUBJECT_OPTIONS = [
   "Consultation initiale",
   "Audit PLC / Automate",
@@ -85,6 +94,8 @@ function SubjectPicker({ value, onChange, placeholder }: {
   onChange: (v: string) => void;
   placeholder?: string;
 }) {
+  const t = useTranslations("admin.calendar");
+  const isEn = useLocale().startsWith("en");
   const isCustom = value !== "" && !SUBJECT_OPTIONS.includes(value);
   const [showCustom, setShowCustom] = useState(isCustom);
 
@@ -98,15 +109,15 @@ function SubjectPicker({ value, onChange, placeholder }: {
           else { setShowCustom(false); onChange(v); }
         }}
       >
-        <SelectTrigger><SelectValue placeholder={placeholder ?? "Choisir un sujet"} /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder={placeholder ?? t("choisir_sujet")} /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="__none__">Aucun sujet</SelectItem>
-          {SUBJECT_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-          <SelectItem value="__custom__">+ Autre (personnalisé)</SelectItem>
+          <SelectItem value="__none__">{t("aucun_sujet")}</SelectItem>
+          {SUBJECT_OPTIONS.map((s) => <SelectItem key={s} value={s}>{isEn ? SUBJECT_EN[s] ?? s : s}</SelectItem>)}
+          <SelectItem value="__custom__">{t("autre_personnalise")}</SelectItem>
         </SelectContent>
       </Select>
       {showCustom && (
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Sujet personnalisé" autoFocus />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={t("sujet_personnalise")} autoFocus />
       )}
     </div>
   );
@@ -143,6 +154,9 @@ export function CalendarView({
   appointments: Appointment[];
   clients: ClientOption[];
 }) {
+  const DAYS_FR = useWeekdayNames();
+  const MONTHS_FR = useMonthNames();
+  const t = useTranslations("admin.calendar");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -242,8 +256,8 @@ export function CalendarView({
 
   const handleCreateSlot = async () => {
     if (submitting) return;
-    if (!slotDate) { toast.error("Date requise"); return; }
-    if (slotEnd <= slotStart) { toast.error("L'heure de fin doit être après l'heure de début"); return; }
+    if (!slotDate) { toast.error(t("date_requise")); return; }
+    if (slotEnd <= slotStart) { toast.error(t("heure_fin_doit_etre_apres")); return; }
     setSubmitting(true);
     try {
 
@@ -266,12 +280,12 @@ export function CalendarView({
         }),
       });
       if (res.ok) {
-        toast.success("Rendez-vous créé pour " + (client?.fullName ?? "le client"));
+        toast.success(t("rendez_vous_cree") + (client?.fullName ?? t("client")));
         setCreateSlotOpen(false);
         router.refresh();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
       }
       return;
     }
@@ -283,12 +297,12 @@ export function CalendarView({
       body: JSON.stringify({ slotDate, startTime: slotStart, endTime: slotEnd, status: slotStatus, notes: slotNotes.trim() || undefined }),
     });
     if (res.ok) {
-      toast.success("Créneau créé");
+      toast.success(t("creneau_cree"));
       setCreateSlotOpen(false);
       router.refresh();
     } else {
       const d = await res.json();
-      toast.error(d.error || "Erreur");
+      toast.error(d.error || t("erreur"));
     }
     } finally { setSubmitting(false); }
   };
@@ -316,8 +330,8 @@ export function CalendarView({
 
   const handleCreateAppt = async () => {
     if (submitting) return;
-    if (!apptClientId || !apptDate) { toast.error("Client et date requis"); return; }
-    if (apptEnd <= apptStart) { toast.error("L'heure de fin doit être après l'heure de début"); return; }
+    if (!apptClientId || !apptDate) { toast.error(t("client_date_requis")); return; }
+    if (apptEnd <= apptStart) { toast.error(t("heure_fin_doit_etre_apres")); return; }
     setSubmitting(true);
     try {
     const client = clients.find((c) => c.id === Number(apptClientId));
@@ -339,13 +353,13 @@ export function CalendarView({
       }),
     });
     if (res.ok) {
-      toast.success("Rendez-vous créé");
+      toast.success(t("rendez_vous_cree_2"));
       setCreateApptOpen(false);
       setPresetSlotId(null);
       router.refresh();
     } else {
       const d = await res.json();
-      toast.error(d.error || "Erreur");
+      toast.error(d.error || t("erreur"));
     }
     } finally { setSubmitting(false); }
   };
@@ -370,7 +384,7 @@ export function CalendarView({
   const handleBulkCreate = async () => {
     if (submitting) return;
     if (!bulkFrom || !bulkTo || bulkDays.size === 0) {
-      toast.error("Plage de dates et jours de la semaine requis"); return;
+      toast.error(t("plage_dates_jours_semaine_requis")); return;
     }
     setSubmitting(true);
     try {
@@ -394,7 +408,7 @@ export function CalendarView({
         router.refresh();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
       }
     } finally { setSubmitting(false); }
   };
@@ -402,15 +416,15 @@ export function CalendarView({
   // ── Slot actions ─────────────────────────────────────────
   const deleteSlot = async (slot: Slot) => {
     const ok = await confirm({
-      title: "Supprimer ce créneau ?",
-      description: "Le créneau sera supprimé. Si lié à un RDV confirmé, l'opération sera bloquée.",
-      confirmLabel: "Supprimer",
+      title: t("supprimer_creneau"),
+      description: t("creneau_sera_supprime_si_lie"),
+      confirmLabel: t("supprimer"),
       variant: "destructive",
     });
     if (!ok) return;
     const res = await fetch(`/api/calendar/slots/${slot.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Créneau supprimé"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("creneau_supprime")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const toggleSlotStatus = async (slot: Slot) => {
@@ -420,8 +434,8 @@ export function CalendarView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
-    if (res.ok) { toast.success(newStatus === "blocked" ? "Créneau bloqué" : "Créneau libéré"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(newStatus === "blocked" ? t("creneau_bloque") : t("creneau_libere")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   // ── Vue helpers ──────────────────────────────────────────
@@ -500,33 +514,30 @@ export function CalendarView({
               <CalendarIcon className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Calendrier</h1>
-              <p className="text-white/70 text-sm mt-0.5">Disponibilités et rendez-vous client</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("calendrier")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("disponibilites_rendez_vous_client")}</p>
             </div>
           </div>
           <div className="flex gap-2">
             <Button size="sm" className="bg-white/15 backdrop-blur hover:bg-white/25 text-white border border-white/20"
               onClick={openBulk}>
-              <Repeat className="h-3.5 w-3.5" />Récurrence
-            </Button>
+              <Repeat className="h-3.5 w-3.5" />{t("calendar_view_recurrence")}</Button>
             <Button size="sm" className="bg-white/15 backdrop-blur hover:bg-white/25 text-white border border-white/20"
               onClick={() => openCreateSlot()}>
-              <Plus className="h-3.5 w-3.5" />Disponibilité
-            </Button>
+              <Plus className="h-3.5 w-3.5" />{t("calendar_view_disponibilite")}</Button>
             <Button size="sm" className="bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
               onClick={() => openCreateAppt()}>
-              <Plus className="h-3.5 w-3.5" />Rendez-vous
-            </Button>
+              <Plus className="h-3.5 w-3.5" />{t("calendar_view_rendez_vous")}</Button>
           </div>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Disponibles" value={availableCount} icon={Clock} accent="bg-emerald-500" />
-        <StatCard label="Réservés" value={bookedCount} icon={CheckCircle2} accent="bg-blue-500" />
-        <StatCard label="À venir" value={upcomingAppts} icon={CalendarIcon} accent="bg-violet-500" />
-        <StatCard label="Annulés" value={cancelledCount} icon={X} accent="bg-red-500" />
+        <StatCard label={t("disponibles")} value={availableCount} icon={Clock} accent="bg-emerald-500" />
+        <StatCard label={t("reserves")} value={bookedCount} icon={CheckCircle2} accent="bg-blue-500" />
+        <StatCard label={t("venir")} value={upcomingAppts} icon={CalendarIcon} accent="bg-violet-500" />
+        <StatCard label={t("annules")} value={cancelledCount} icon={X} accent="bg-red-500" />
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
@@ -536,12 +547,12 @@ export function CalendarView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <CalendarIcon className="h-4 w-4" />
-              Calendrier
+              {t("calendrier")}
             </span>
-            <span className="text-muted-foreground">Disponibles <span className="font-semibold text-emerald-600">{availableCount}</span></span>
-            <span className="text-muted-foreground">Réservés <span className="font-semibold text-blue-600">{bookedCount}</span></span>
-            <span className="text-muted-foreground">À venir <span className="font-semibold text-violet-600">{upcomingAppts}</span></span>
-            {cancelledCount > 0 && <span className="text-muted-foreground">Annulés <span className="font-semibold text-red-600">{cancelledCount}</span></span>}
+            <span className="text-muted-foreground">{t("disponibles")} <span className="font-semibold text-emerald-600">{availableCount}</span></span>
+            <span className="text-muted-foreground">{t("reserves")} <span className="font-semibold text-blue-600">{bookedCount}</span></span>
+            <span className="text-muted-foreground">{t("venir")} <span className="font-semibold text-violet-600">{upcomingAppts}</span></span>
+            {cancelledCount > 0 && <span className="text-muted-foreground">{t("annules")} <span className="font-semibold text-red-600">{cancelledCount}</span></span>}
           </div>
         </div>
       )}
@@ -552,7 +563,7 @@ export function CalendarView({
           <Button variant="outline" size="sm" onClick={goPrev} aria-label={tc("previous")}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="sm" onClick={goToday}>Aujourd&apos;hui</Button>
+          <Button variant="outline" size="sm" onClick={goToday}>{t("aujourd_apos_hui")}</Button>
           <Button variant="outline" size="sm" onClick={goNext} aria-label={tc("next")}>
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -564,7 +575,7 @@ export function CalendarView({
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors flex items-center gap-1.5",
                 viewMode === mode ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
               {mode === "day" ? <CalendarDays className="h-3 w-3" /> : mode === "week" ? <CalendarRange className="h-3 w-3" /> : <CalendarIcon className="h-3 w-3" />}
-              {mode === "day" ? "Jour" : mode === "week" ? "Semaine" : "Mois"}
+              {mode === "day" ? t("jour") : mode === "week" ? t("semaine") : t("mois")}
             </button>
           ))}
         </div>
@@ -579,11 +590,11 @@ export function CalendarView({
             <p className="text-sm font-bold capitalize">{MONTHS_FR[selectedDate.getMonth()]} {selectedDate.getFullYear()}</p>
             <div className="flex gap-1">
               <button onClick={() => { const d = new Date(selectedDate); d.setMonth(d.getMonth() - 1); setSelectedDate(d); }}
-                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted" aria-label="Mois précédent">
+                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted" aria-label={t("mois_precedent")}>
                 <ChevronLeft className="h-3.5 w-3.5" />
               </button>
               <button onClick={() => { const d = new Date(selectedDate); d.setMonth(d.getMonth() + 1); setSelectedDate(d); }}
-                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted" aria-label="Mois suivant">
+                className="h-6 w-6 flex items-center justify-center rounded hover:bg-muted" aria-label={t("mois_suivant")}>
                 <ChevronRight className="h-3.5 w-3.5" />
               </button>
             </div>
@@ -616,9 +627,9 @@ export function CalendarView({
             })}
           </div>
           <div className="mt-3 pt-3 border-t space-y-1.5 text-[10px] text-muted-foreground">
-            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Disponible</div>
-            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />Réservé</div>
-            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-violet-500" />Bloqué</div>
+            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />{t("disponible")}</div>
+            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />{t("reserve")}</div>
+            <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-violet-500" />{t("bloque")}</div>
             <div className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-[#0F2D52]" />RDV</div>
           </div>
         </Card>
@@ -668,23 +679,23 @@ export function CalendarView({
               </div>
               <div>
                 <DialogTitle className="text-white">
-                  {slotClientId ? "Réservation directe" : "Nouvelle disponibilité"}
+                  {slotClientId ? t("reservation_directe") : t("nouvelle_disponibilite")}
                 </DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
-                  {slotClientId ? "Réserver ce créneau pour un client spécifique" : "Bloque un créneau ou assigne directement à un client"}
+                  {slotClientId ? t("reserver_creneau_client_specifique") : t("bloque_creneau_assigne_directement_client")}
                 </DialogDescription>
               </div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-            <FormSection title="Créneau" icon={<Clock className="h-3.5 w-3.5" />}>
+            <FormSection title={t("creneau")} icon={<Clock className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date")}</Label>
                 <Input type="date" value={slotDate} onChange={(e) => setSlotDate(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Début</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("debut")}</Label>
                   <Input type="time" value={slotStart} onChange={(e) => {
                     setSlotStart(e.target.value);
                     // Auto-ajuste fin a +30 min si l'utilisateur tape un debut precis
@@ -694,31 +705,31 @@ export function CalendarView({
                   }} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fin</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("fin")}</Label>
                   <Input type="time" value={slotEnd} onChange={(e) => setSlotEnd(e.target.value)} />
                 </div>
               </div>
               {!slotClientId && (
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type")}</Label>
                   <Select value={slotStatus} onValueChange={(v) => setSlotStatus(v as "available" | "blocked")}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="available">Disponible (réservable)</SelectItem>
-                      <SelectItem value="blocked">Bloqué (non disponible)</SelectItem>
+                      <SelectItem value="available">{t("disponible_reservable")}</SelectItem>
+                      <SelectItem value="blocked">{t("bloque_non_disponible")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
               )}
             </FormSection>
 
-            <FormSection title="Réserver pour un client (optionnel)" icon={<Sparkles className="h-3.5 w-3.5" />}>
+            <FormSection title={t("reserver_client_optionnel")} icon={<Sparkles className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client")}</Label>
                 <Select value={slotClientId || "__none__"} onValueChange={(v) => setSlotClientId(v === "__none__" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Aucun (créneau ouvert)" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("aucun_creneau_ouvert_2")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="__none__">Aucun — créneau ouvert</SelectItem>
+                    <SelectItem value="__none__">{t("aucun_creneau_ouvert")}</SelectItem>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
                         {c.fullName}{c.companyName ? ` — ${c.companyName}` : ""}
@@ -728,24 +739,24 @@ export function CalendarView({
                 </Select>
                 {!slotClientId && (
                   <p className="text-[10px] text-muted-foreground italic">
-                    Si tu sélectionnes un client, un rendez-vous sera créé directement à la place d&apos;une disponibilité ouverte.
+                    {t("si_tu_selectionnes_client_rendez")}
                   </p>
                 )}
               </div>
               {slotClientId && (
                 <>
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sujet du rendez-vous</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("sujet_rendez_vous")}</Label>
                     <SubjectPicker value={slotSubject} onChange={setSlotSubject} />
                   </div>
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de réunion</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_reunion")}</Label>
                     <Select value={slotMeetingType} onValueChange={setSlotMeetingType}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="video">Réunion vidéo</SelectItem>
-                        <SelectItem value="phone">Appel téléphonique</SelectItem>
-                        <SelectItem value="onsite">Présentiel</SelectItem>
+                        <SelectItem value="video">{t("reunion_video")}</SelectItem>
+                        <SelectItem value="phone">{t("appel_telephonique")}</SelectItem>
+                        <SelectItem value="onsite">{t("presentiel")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -753,20 +764,20 @@ export function CalendarView({
               )}
             </FormSection>
 
-            <FormSection title="Notes" icon={<Sparkles className="h-3.5 w-3.5" />}>
+            <FormSection title={t("notes")} icon={<Sparkles className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  {slotClientId ? "Notes admin (privées)" : "Notes (optionnel)"}
+                  {slotClientId ? t("notes_admin_privees") : t("notes_optionnel")}
                 </Label>
                 <Input value={slotNotes} onChange={(e) => setSlotNotes(e.target.value)}
-                  placeholder={slotClientId ? "Notes internes" : "Ex : matinée disponible"} />
+                  placeholder={slotClientId ? t("notes_internes") : t("ex_matinee_disponible")} />
               </div>
             </FormSection>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
             <Button variant="outline" onClick={() => setCreateSlotOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleCreateSlot} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
-              {submitting ? "Création…" : (slotClientId ? "Créer le rendez-vous" : "Créer le créneau")}
+              {submitting ? t("creation") : (slotClientId ? t("creer_rendez_vous") : t("creer_creneau"))}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -781,19 +792,19 @@ export function CalendarView({
                 <CalendarIcon className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-white">Nouveau rendez-vous</DialogTitle>
+                <DialogTitle className="text-white">{t("nouveau_rendez_vous")}</DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
-                  {presetSlotId ? "Réservation sur un créneau existant" : "Réservation manuelle"}
+                  {presetSlotId ? t("reservation_creneau_existant") : t("reservation_manuelle")}
                 </DialogDescription>
               </div>
             </div>
           </div>
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-            <FormSection title="Client & timing" icon={<CalendarIcon className="h-3.5 w-3.5" />}>
+            <FormSection title={t("client_timing")} icon={<CalendarIcon className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                 <Select value={apptClientId} onValueChange={setApptClientId}>
-                  <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                   <SelectContent>
                     {clients.map((c) => (
                       <SelectItem key={c.id} value={String(c.id)}>
@@ -804,50 +815,50 @@ export function CalendarView({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date")}</Label>
                 <Input type="date" value={apptDate} onChange={(e) => setApptDate(e.target.value)} />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Début</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("debut")}</Label>
                   <Input type="time" value={apptStart} onChange={(e) => setApptStart(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fin</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("fin")}</Label>
                   <Input type="time" value={apptEnd} onChange={(e) => setApptEnd(e.target.value)} />
                 </div>
               </div>
             </FormSection>
-            <FormSection title="Détails" icon={<Sparkles className="h-3.5 w-3.5" />}>
+            <FormSection title={t("details")} icon={<Sparkles className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sujet du rendez-vous</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("sujet_rendez_vous")}</Label>
                 <SubjectPicker value={apptSubject} onChange={setApptSubject} />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de réunion</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_reunion")}</Label>
                 <Select value={apptType} onValueChange={setApptType}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="video">Réunion vidéo</SelectItem>
-                    <SelectItem value="phone">Appel téléphonique</SelectItem>
-                    <SelectItem value="onsite">Présentiel</SelectItem>
+                    <SelectItem value="video">{t("reunion_video")}</SelectItem>
+                    <SelectItem value="phone">{t("appel_telephonique")}</SelectItem>
+                    <SelectItem value="onsite">{t("presentiel")}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Lien (optionnel)</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("lien_optionnel")}</Label>
                 <Input value={apptLink} onChange={(e) => setApptLink(e.target.value)} placeholder="https://meet.google.com/…" />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Notes admin (privées)</Label>
-                <Textarea value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} rows={2} placeholder="Notes internes" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("notes_admin_privees")}</Label>
+                <Textarea value={apptNotes} onChange={(e) => setApptNotes(e.target.value)} rows={2} placeholder={t("notes_internes")} />
               </div>
             </FormSection>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card shrink-0 sm:gap-2">
             <Button variant="outline" onClick={() => setCreateApptOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleCreateAppt} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
-              {submitting ? "Création…" : "Créer le rendez-vous"}
+              {submitting ? t("creation") : t("creer_rendez_vous")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -862,27 +873,27 @@ export function CalendarView({
                 <Repeat className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-white">Génération récurrente</DialogTitle>
-                <DialogDescription className="text-white/70 mt-0.5">Crée plusieurs disponibilités d&apos;un coup</DialogDescription>
+                <DialogTitle className="text-white">{t("generation_recurrente")}</DialogTitle>
+                <DialogDescription className="text-white/70 mt-0.5">{t("cree_plusieurs_disponibilites_apos_coup")}</DialogDescription>
               </div>
             </div>
           </div>
           <div className="px-6 py-5 space-y-4 bg-muted/30">
-            <FormSection title="Plage de dates" icon={<CalendarIcon className="h-3.5 w-3.5" />}>
+            <FormSection title={t("plage_dates")} icon={<CalendarIcon className="h-3.5 w-3.5" />}>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Du</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("du")}</Label>
                   <Input type="date" value={bulkFrom} onChange={(e) => setBulkFrom(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Au</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("au")}</Label>
                   <Input type="date" value={bulkTo} onChange={(e) => setBulkTo(e.target.value)} />
                 </div>
               </div>
             </FormSection>
-            <FormSection title="Jours et heures" icon={<Clock className="h-3.5 w-3.5" />}>
+            <FormSection title={t("jours_heures")} icon={<Clock className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Jours de la semaine</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("jours_semaine")}</Label>
                 <div className="flex flex-wrap gap-1">
                   {DAYS_FR.map((d, i) => {
                     const isOn = bulkDays.has(i);
@@ -903,23 +914,21 @@ export function CalendarView({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Début</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("debut")}</Label>
                   <Input type="time" value={bulkStart} onChange={(e) => setBulkStart(e.target.value)} />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Fin</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("fin")}</Label>
                   <Input type="time" value={bulkEnd} onChange={(e) => setBulkEnd(e.target.value)} />
                 </div>
               </div>
             </FormSection>
-            <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 text-xs text-muted-foreground">
-              Les créneaux seront créés comme <strong className="text-foreground">disponibles</strong>. Les doublons (même date/heure) sont ignorés.
-            </div>
+            <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 text-xs text-muted-foreground">{t("calendar_view_les_creneaux_seront_crees_comme")}<strong className="text-foreground">disponibles</strong>{t("calendar_view_les_doublons_meme_date_heure_sont_ignores")}</div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
             <Button variant="outline" onClick={() => setBulkOpen(false)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleBulkCreate} disabled={submitting} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md">
-              <Repeat className="h-4 w-4 mr-1.5" />{submitting ? "Génération…" : "Générer"}
+              <Repeat className="h-4 w-4 mr-1.5" />{submitting ? t("generation") : t("generer")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -961,6 +970,7 @@ function DayView({
   onApptClick: (a: Appointment) => void;
   onEmptyClick: (time: string) => void;
 }) {
+  const t = useTranslations("admin.calendar");
   const timeSlots = buildTimeSlots();
   return (
     <Card className="flex flex-col min-h-[600px] lg:h-full lg:min-h-0 overflow-hidden">
@@ -989,7 +999,7 @@ function DayView({
                 {empty ? (
                   <button onClick={() => onEmptyClick(time)}
                     className="w-full h-full min-h-[32px] rounded-md border border-dashed border-transparent hover:border-[#0F2D52]/30 hover:bg-[#0F2D52]/5 transition-colors flex items-center justify-center text-[10px] text-muted-foreground/40 hover:text-[#0F2D52]">
-                    + Ajouter
+                    {t("ajouter")}
                   </button>
                 ) : (
                   <>
@@ -1019,6 +1029,7 @@ function WeekView({
   onApptClick: (a: Appointment) => void;
   onEmptyClick: (date: Date, time?: string) => void;
 }) {
+  const DAYS_FR = useWeekdayNames();
   const timeSlots = buildTimeSlots();
   return (
     <Card className="flex flex-col min-h-[600px] lg:h-full lg:min-h-0 overflow-hidden">
@@ -1099,6 +1110,7 @@ function MonthView({
   today: Date;
   onDayClick: (d: Date) => void;
 }) {
+  const DAYS_FR = useWeekdayNames();
   return (
     <Card className="flex flex-col min-h-[600px] lg:h-full lg:min-h-0 overflow-hidden">
       <div className="grid grid-cols-7 border-b bg-muted/30 shrink-0 shadow-sm">
@@ -1153,6 +1165,7 @@ function MonthView({
 // ─── Chips ─────────────────────────────────────────────────
 
 function SlotChip({ slot, onAction, compact }: { slot: Slot; onAction: (s: Slot, action: "delete" | "toggle" | "book") => void; compact?: boolean }) {
+  const t = useTranslations("admin.calendar");
   const tc = useTranslations("common");
   return (
     <DropdownMenu>
@@ -1167,17 +1180,16 @@ function SlotChip({ slot, onAction, compact }: { slot: Slot; onAction: (s: Slot,
             {slot.status === "blocked" && <Lock className="h-2.5 w-2.5" />}
             {slot.startTime}{!compact && `-${slot.endTime}`}
           </div>
-          {!compact && <div className="capitalize">{slot.status === "available" ? "Disponible" : slot.status === "blocked" ? "Bloqué" : "Réservé"}</div>}
+          {!compact && <div className="capitalize">{slot.status === "available" ? t("disponible") : slot.status === "blocked" ? t("bloque") : t("reserve")}</div>}
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
         {slot.status === "available" && (
           <DropdownMenuItem onSelect={() => onAction(slot, "book")}>
-            <CalendarIcon className="h-3 w-3 mr-2" />Réserver pour client
-          </DropdownMenuItem>
+            <CalendarIcon className="h-3 w-3 mr-2" />{t("calendar_view_reserver_pour_client")}</DropdownMenuItem>
         )}
         <DropdownMenuItem onSelect={() => onAction(slot, "toggle")}>
-          <Lock className="h-3 w-3 mr-2" />{slot.status === "blocked" ? "Débloquer" : "Bloquer"}
+          <Lock className="h-3 w-3 mr-2" />{slot.status === "blocked" ? t("debloquer") : t("bloquer")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={() => onAction(slot, "delete")} className="text-destructive">

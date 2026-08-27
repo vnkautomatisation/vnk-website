@@ -1,6 +1,7 @@
 // PATCH /api/calendar/slots/[id] — modifier/bloquer un creneau (admin)
 // DELETE /api/calendar/slots/[id] — supprimer un creneau (admin)
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -16,12 +17,13 @@ const updateSchema = z.object({
   durationMin: z.number().int().positive().optional(),
   status: z.enum(["available", "blocked", "booked"]).optional(),
   notes: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -35,13 +37,13 @@ export async function PATCH(
 
   const existing = await prisma.availabilitySlot.findUnique({ where: { id: slotId } });
   if (!existing) {
-    return NextResponse.json({ error: "Créneau introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("creneau_introuvable") }, { status: 404 });
   }
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -69,6 +71,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -86,7 +89,7 @@ export async function DELETE(
   });
   if (linkedAppt) {
     return NextResponse.json(
-      { error: "Créneau lié à un rendez-vous confirmé — annule le rendez-vous d'abord" },
+      { error: t("creneau_lie_a_un_rendez_vous_confirme") },
       { status: 409 }
     );
   }

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -47,21 +48,21 @@ type Kpis = {
 
 type StatusFilter = "all" | "paid" | "pending" | "in_transit" | "failed" | "canceled";
 
-const STATUS_TABS: { key: StatusFilter; label: string; tooltip: string }[] = [
-  { key: "all", label: "Tous", tooltip: "Tous les versements" },
-  { key: "paid", label: "Versés", tooltip: "Fonds reçus en banque" },
-  { key: "in_transit", label: "En transit", tooltip: "Versement initié, en route vers la banque" },
-  { key: "pending", label: "En attente", tooltip: "Versement créé, pas encore initié" },
-  { key: "failed", label: "Échoués", tooltip: "Versement échoué — fonds retournés dans votre solde" },
-  { key: "canceled", label: "Annulés", tooltip: "Versement annulé avant exécution" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string; tooltipKey: string }[] = [
+  { key: "all", labelKey: "tous", tooltipKey: "versements" },
+  { key: "paid", labelKey: "verses", tooltipKey: "fonds_recus_banque" },
+  { key: "in_transit", labelKey: "transit", tooltipKey: "versement_initie_route_vers_banque" },
+  { key: "pending", labelKey: "attente", tooltipKey: "versement_cree_pas_encore_initie" },
+  { key: "failed", labelKey: "echoues", tooltipKey: "versement_echoue_fonds_retournes_votre" },
+  { key: "canceled", labelKey: "annules", tooltipKey: "versement_annule_avant_execution" },
 ];
 
-const STATUS_META: Record<string, { label: string; color: string; icon: typeof CheckCircle2; tooltip: string }> = {
-  paid: { label: "Versé", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, tooltip: "Fonds reçus en banque" },
-  in_transit: { label: "En transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine, tooltip: "En route vers la banque" },
-  pending: { label: "En attente", color: "bg-amber-100 text-amber-700", icon: Clock, tooltip: "Versement créé, pas encore initié" },
-  failed: { label: "Échoué", color: "bg-red-100 text-red-700", icon: XCircle, tooltip: "Versement échoué — vérifier les informations bancaires" },
-  canceled: { label: "Annulé", color: "bg-gray-100 text-gray-700", icon: XCircle, tooltip: "Versement annulé" },
+const STATUS_META: Record<string, { labelKey: string; color: string; icon: typeof CheckCircle2; tooltipKey: string }> = {
+  paid: { labelKey: "verse", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2, tooltipKey: "fonds_recus_banque" },
+  in_transit: { labelKey: "transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine, tooltipKey: "route_vers_banque" },
+  pending: { labelKey: "attente", color: "bg-amber-100 text-amber-700", icon: Clock, tooltipKey: "versement_cree_pas_encore_initie" },
+  failed: { labelKey: "echoue", color: "bg-red-100 text-red-700", icon: XCircle, tooltipKey: "versement_echoue_verifier_informations_bancaires" },
+  canceled: { labelKey: "annule", color: "bg-gray-100 text-gray-700", icon: XCircle, tooltipKey: "versement_annule" },
 };
 
 // Presets de periode
@@ -105,6 +106,7 @@ export function PayoutsView({
   kpis: Kpis;
   dateRange: { from: string; to: string };
 }) {
+  const t = useTranslations("admin.payouts");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -112,10 +114,10 @@ export function PayoutsView({
   const [from, setFrom] = useState(dateRange.from);
   const [to, setTo] = useState(dateRange.to);
 
-  // Modal détail
+
   const [detailPayoutId, setDetailPayoutId] = useState<number | null>(null);
 
-  // Sticky scroll
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -126,7 +128,7 @@ export function PayoutsView({
     return () => obs.disconnect();
   }, []);
 
-  // URL update pour dates
+
   const updateUrl = (overrides: Partial<{ from: string; to: string }>) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(overrides).forEach(([k, v]) => {
@@ -145,7 +147,7 @@ export function PayoutsView({
     updateUrl({ from: r.from, to: r.to });
   };
 
-  // Détection preset actif
+
   const activePreset = useMemo(() => {
     if (!dateRange.from && !dateRange.to) return "noFilter";
     for (const k of ["30d", "thisMonth", "lastMonth", "thisQuarter", "thisYear"]) {
@@ -174,29 +176,29 @@ export function PayoutsView({
   const columns: Column<Payout>[] = [
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (p) => {
         const m = STATUS_META[p.status] ?? { label: p.status, color: "bg-gray-100 text-gray-700", icon: Clock, tooltip: p.status };
         const Icon = m.icon;
         return (
           <span
             className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium", m.color)}
-            title={m.tooltip}
+            title={t(m.tooltipKey)}
           >
-            <Icon className="h-3 w-3" />{m.label}
+            <Icon className="h-3 w-3" />{t(m.labelKey)}
           </span>
         );
       },
     },
     {
       key: "arrival",
-      header: "Date arrivée",
+      header: t("date_arrivee"),
       accessor: (p) => p.arrivalDate ? <span className="text-sm">{formatDate(new Date(p.arrivalDate))}</span> : <span className="text-xs text-muted-foreground italic">—</span>,
       sortable: true, sortBy: (p) => p.arrivalDate ?? "",
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (p) => (
         <div>
           <div className="font-bold tabular-nums">{formatCurrency(p.amount)}</div>
@@ -207,7 +209,7 @@ export function PayoutsView({
     },
     {
       key: "items",
-      header: "Paiements",
+      header: t("paiements"),
       accessor: (p) => (
         <div>
           <div className="text-sm font-semibold">{p.paymentCount} liés</div>
@@ -218,7 +220,7 @@ export function PayoutsView({
     },
     {
       key: "destination",
-      header: "Destination",
+      header: t("destination"),
       accessor: (p) => p.destinationBank ? (
         <div>
           <div className="text-sm">{p.destinationBank}</div>
@@ -231,15 +233,15 @@ export function PayoutsView({
     },
     {
       key: "method",
-      header: "Méthode",
-      accessor: (p) => <span className="text-xs" title={p.method === "instant" ? "Versement instantané — frais supplémentaires" : p.method === "standard" ? "Versement standard — gratuit" : ""}>
-        {p.method === "instant" ? "Instantané" : p.method === "standard" ? "Standard" : p.method ?? "—"}
+      header: t("methode"),
+      accessor: (p) => <span className="text-xs" title={p.method === "instant" ? t("versement_instantane_frais") : p.method === "standard" ? t("versement_standard_gratuit") : ""}>
+        {p.method === "instant" ? t("instantane") : p.method === "standard" ? t("standard") : p.method ?? "—"}
       </span>,
       hiddenOnMobile: true,
     },
     {
       key: "fees",
-      header: "Frais",
+      header: t("frais"),
       accessor: (p) => p.feeTotal > 0
         ? <span className="text-xs tabular-nums text-muted-foreground">{formatCurrency(p.feeTotal)}</span>
         : <span className="text-xs text-muted-foreground italic">—</span>,
@@ -247,16 +249,16 @@ export function PayoutsView({
     },
     {
       key: "stripe",
-      header: "Référence",
+      header: t("reference"),
       accessor: (p) => (
-        <ActionTooltip label="Ouvrir le versement sur la plateforme de paiement">
+        <ActionTooltip label={t("ouvrir_versement_plateforme_paiement")}>
           <a
             href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
             target="_blank"
             rel="noreferrer"
             onClick={(e) => e.stopPropagation()}
             className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-            aria-label="Ouvrir le versement sur la plateforme"
+            aria-label={t("ouvrir_versement_plateforme")}
           >
             <span className="font-mono truncate max-w-[80px]">{p.stripePayoutId.slice(0, 14)}…</span>
             <ExternalLink className="h-3 w-3" />
@@ -269,11 +271,11 @@ export function PayoutsView({
       key: "actions",
       header: "",
       accessor: (p) => (
-        <ActionTooltip label="Voir détail du versement">
+        <ActionTooltip label={t("voir_detail_versement")}>
           <button
             onClick={(e) => { e.stopPropagation(); setDetailPayoutId(p.id); }}
             className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-            aria-label="Voir détail du versement"
+            aria-label={t("voir_detail_versement")}
           >
             <Eye className="h-3.5 w-3.5" />
           </button>
@@ -284,82 +286,81 @@ export function PayoutsView({
 
   return (
     <div className="space-y-5">
-      {/* Hero */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Banknote className="h-5 w-5" />
-              Versements
+              {t("versements")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
               Transferts vers votre compte bancaire · {kpis.count} versement{kpis.count > 1 ? "s" : ""}
               {dateRange.from && ` · ${dateRange.from} → ${dateRange.to}`}
             </p>
           </div>
-          <Link href="/admin/finance/settlements" className="text-xs text-white/80 hover:text-white inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur">
-            Rapport de règlement <ArrowUpRight className="h-3.5 w-3.5" />
+          <Link href="/admin/finance/settlements" className="text-xs text-white/80 hover:text-white inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-white/10 hover:bg-white/20 backdrop-blur">{t("payouts_view_rapport_de_reglement")}<ArrowUpRight className="h-3.5 w-3.5" />
           </Link>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Versés</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("verses")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatCurrency(kpis.totalPaid)}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.countPaid} versement{kpis.countPaid > 1 ? "s" : ""}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">En attente / transit</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("attente_transit")}</p>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(kpis.totalPending)}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.countPending} en cours</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Échoués</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("echoues")}</p>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(kpis.totalFailed)}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.countFailed} à investiguer</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("total")}</p>
           <p className="text-lg font-bold tabular-nums">{kpis.count}</p>
-          <p className="text-[10px] text-muted-foreground">versements suivis</p>
+          <p className="text-[10px] text-muted-foreground">{t("versements_suivis")}</p>
         </div>
       </div>
 
-      {/* Sentinel — détecte fin des KPI */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Banknote className="h-4 w-4" />
-              Versements
+              {t("versements")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Versés <span className="font-semibold text-emerald-600">{formatCurrency(kpis.totalPaid)}</span></span>
-            <span className="text-muted-foreground">En cours <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalPending)}</span></span>
+            <span className="text-muted-foreground">{t("verses")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.totalPaid)}</span></span>
+            <span className="text-muted-foreground">{t("cours")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalPending)}</span></span>
             {kpis.countFailed > 0 && (
-              <span className="text-muted-foreground">Échoués <span className="font-semibold text-red-600">{formatCurrency(kpis.totalFailed)}</span></span>
+              <span className="text-muted-foreground">{t("echoues")} <span className="font-semibold text-red-600">{formatCurrency(kpis.totalFailed)}</span></span>
             )}
           </div>
         </div>
       )}
 
-      {/* Filtres en flow normal */}
+
       <div>
-        {/* Première ligne : presets periode */}
+
         <div className="flex flex-wrap items-center gap-1 mb-2">
-          <span className="text-[10px] text-muted-foreground mr-1">Période :</span>
+          <span className="text-[10px] text-muted-foreground mr-1">{t("periode")}</span>
           {[
-            { k: "noFilter", l: "Tous" },
-            { k: "30d", l: "30 jours" },
-            { k: "thisMonth", l: "Ce mois" },
-            { k: "lastMonth", l: "Mois dernier" },
-            { k: "thisQuarter", l: "Ce trimestre" },
-            { k: "thisYear", l: "Cette année" },
+            { k: "noFilter", l: t("tous") },
+            { k: "30d", l: t("30_jours") },
+            { k: "thisMonth", l: t("mois") },
+            { k: "lastMonth", l: t("mois_dernier") },
+            { k: "thisQuarter", l: t("trimestre") },
+            { k: "thisYear", l: t("annee") },
           ].map((p) => (
             <button
               key={p.k}
@@ -376,40 +377,40 @@ export function PayoutsView({
           ))}
           {activePreset === "custom" && (
             <span className="px-2 py-1 rounded text-[10px] font-medium border bg-amber-50 text-amber-800 border-amber-200">
-              Personnalisé
+              {t("personnalise")}
             </span>
           )}
         </div>
 
-        {/* Deuxième ligne : recherche + dates + tabs statut */}
+
         <div className="flex flex-wrap items-end gap-2">
           <div>
-            <Label className="text-[10px]">Du</Label>
+            <Label className="text-[10px]">{t("du")}</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-36" />
           </div>
           <div>
-            <Label className="text-[10px]">Au</Label>
+            <Label className="text-[10px]">{t("au")}</Label>
             <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-36" />
           </div>
           <Button onClick={applyDates} size="sm" className="h-9">
             <Calendar className="h-3.5 w-3.5 mr-1.5" />
-            Appliquer
+            {t("appliquer")}
           </Button>
           {(dateRange.from || dateRange.to) && (
             <Button onClick={clearDates} size="sm" variant="ghost" className="h-9">
               <X className="h-3.5 w-3.5 mr-1" />
-              Effacer
+              {t("effacer")}
             </Button>
           )}
 
           <div className="relative flex-1 min-w-[180px] max-w-xs">
-            <Label className="text-[10px]">Recherche</Label>
+            <Label className="text-[10px]">{t("recherche")}</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Référence, banque, client…"
+                placeholder={t("reference_banque_client")}
                 className="h-9 pl-8 text-xs"
               />
             </div>
@@ -420,20 +421,20 @@ export function PayoutsView({
               <button
                 key={tab.key}
                 onClick={() => setStatusFilter(tab.key)}
-                title={tab.tooltip}
+                title={t(tab.tooltipKey)}
                 className={cn(
                   "px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                   statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Table */}
+
       <DataTable
         data={filtered}
         columns={columns}
@@ -444,23 +445,23 @@ export function PayoutsView({
         onRowClick={(p) => setDetailPayoutId(p.id)}
         emptyMessage={
           searchQuery || statusFilter !== "all" || dateRange.from || dateRange.to
-            ? "Aucun versement ne correspond aux filtres."
-            : "Aucun versement enregistré pour le moment. Les versements apparaîtront automatiquement dès que vos premiers fonds seront débloqués."
+            ? t("aucun_versement_ne_correspond_filtres")
+            : t("aucun_versement_enregistre_moment")
         }
       />
 
-      {/* Modal détail */}
+
       <PayoutDetailDialog
         payoutId={detailPayoutId}
         open={detailPayoutId !== null}
         onOpenChange={(o) => { if (!o) setDetailPayoutId(null); }}
       />
 
-      {/* Note pédagogique */}
+
       <div className="rounded-lg border bg-blue-50 p-3 text-xs text-blue-900 space-y-1">
-        <p className="font-semibold">Comprendre les versements</p>
-        <p>Un versement regroupe plusieurs paiements clients dans un seul transfert vers votre compte bancaire (ex : tous les paiements reçus lundi → un versement mercredi). Cliquez sur un versement pour voir la liste des paiements composant le montant.</p>
-        <p className="pt-1"><strong>Cycle</strong> : Paiement client → Règlement (fonds disponibles) → Versement (vers votre banque). Au Canada, le délai standard est de 2 à 5 jours ouvrés.</p>
+        <p className="font-semibold">{t("comprendre_versements")}</p>
+        <p>{t("versement_regroupe_plusieurs_paiements_clients")}</p>
+        <p className="pt-1"><strong>{t("cycle")}</strong>{t("cycle_detail")}</p>
       </div>
     </div>
   );

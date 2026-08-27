@@ -37,5 +37,13 @@
   "profile": "Mon profil",
   "statistics": "Statistiques",
   "audit_trail": "Audit trail",
-  "settings": "Paramètres"
+  "settings": "Paramètres",
+  "navigation": "Navigation",
+  "navigation_admin": "Navigation admin",
+  "menu": "Menu",
+  "navigation_principale": "Navigation principale",
+  "reduire": "Réduire",
+  "reduire_sidebar": "Réduire la sidebar",
+  "etendre": "Étendre",
+  "etendre_sidebar": "Étendre la sidebar"
 }

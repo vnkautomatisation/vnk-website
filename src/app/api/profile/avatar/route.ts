@@ -2,6 +2,7 @@
 // Stocke l'image en data URL base64 dans admin.avatarUrl.
 // Validation : image only, max 2 Mo, dimensions raisonnables.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logSecurityEvent } from "@/lib/security/security-events";
@@ -13,6 +14,7 @@ const MAX_AVATAR_BYTES = 2 * 1024 * 1024; // 2 Mo brut
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -24,11 +26,11 @@ export async function POST(request: NextRequest) {
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
       return NextResponse.json(
-        { error: "Format non supporté. Utilisez JPG, PNG, WebP ou GIF." },
+        { error: t("format_non_supporte_utilisez_jpg_png_webp") },
         { status: 415 }
       );
     }
@@ -73,7 +75,7 @@ export async function POST(request: NextRequest) {
     await logSecurityEvent({
       adminId,
       type: "profile_updated",
-      message: "Photo de profil téléversée",
+      message: t("photo_de_profil_televersee"),
       metadata: { fileType: file.type, fileSize: file.size, backend: uploaded.kind },
     });
 
@@ -85,6 +87,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -106,7 +109,7 @@ export async function DELETE() {
     await logSecurityEvent({
       adminId,
       type: "profile_updated",
-      message: "Photo de profil supprimée",
+      message: t("photo_de_profil_supprimee"),
     });
     return NextResponse.json({ ok: true });
   } catch {

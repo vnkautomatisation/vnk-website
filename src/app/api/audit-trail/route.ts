@@ -7,6 +7,7 @@
 //  - anomalies détectées (failed_login_burst, off_hours_admin, impossible_travel, bulk_export)
 //  - geoIp + deviceType (pour LoginEvent)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -154,7 +155,23 @@ function auditSeverity(action: string): { sev: Severity; result: "success" | "fa
   return { sev: "info", result: "neutral" };
 }
 
+// Les libelles composes du journal passent par des cles.
+const LOGIN_KEYS: Record<string, string> = {
+  success: "aud_connexion_reussie", failed: "aud_echec_connexion", logout: "aud_deconnexion",
+  locked: "aud_compte_verrouille", "2fa_success": "aud_2fa_reussie",
+  "2fa_failed": "aud_2fa_echouee", "2fa_challenge": "aud_defi_2fa",
+};
+const ORDER_KEYS: Record<string, string> = {
+  paid: "aud_paiement_reussi", failed: "aud_echec_paiement", refunded: "aud_remboursement",
+  dispute_opened: "aud_litige_ouvert", cancelled: "aud_annule",
+};
+const EMAIL_KEYS: Record<string, string> = {
+  sent: "aud_envoye", delivered: "aud_livre", opened: "aud_ouvert",
+  clicked: "aud_lien_clique", bounced: "aud_rebondi", complained: "aud_marque_spam",
+};
+
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -214,7 +231,7 @@ export async function GET(req: Request) {
       const { sev, result } = loginSeverity(l.type);
       events.push({
         id: `login-${l.id}`, source: "login", type: l.type,
-        label: `${l.type === "success" ? "Connexion réussie" : l.type === "failed" ? "Échec connexion" : l.type === "logout" ? "Déconnexion" : l.type === "locked" ? "Compte verrouillé" : l.type === "2fa_success" ? "2FA réussie" : l.type === "2fa_failed" ? "2FA échouée" : l.type === "2fa_challenge" ? "Défi 2FA" : l.type} — ${l.email}${l.reason ? ` (${l.reason})` : ""}`,
+        label: t("aud_login_ligne", { etat: t(LOGIN_KEYS[l.type] ?? "aud_evenement"), email: l.email, raison: l.reason ? t("aud_parenthese", { texte: l.reason }) : "" }),
         severity: sev, result, anomalies: [],
         clientId: l.clientId, clientName: l.clientId ? clientMap.get(l.clientId) ?? null : null,
         adminId: l.adminId, email: l.email,
@@ -235,7 +252,7 @@ export async function GET(req: Request) {
       const { sev, result } = orderSeverity(o.type);
       events.push({
         id: `order-${o.id}`, source: "order", type: o.type,
-        label: `${o.type === "paid" ? "Paiement réussi" : o.type === "failed" ? "Échec paiement" : o.type === "refunded" ? "Remboursement" : o.type === "dispute_opened" ? "Litige ouvert" : o.type === "cancelled" ? "Annulé" : o.type} ${o.amount ? `— ${Number(o.amount).toFixed(2)} ${o.currency ?? "CAD"}` : ""}${o.guestEmail ? ` (invité : ${o.guestEmail})` : ""}`,
+        label: t("aud_order_ligne", { etat: t(ORDER_KEYS[o.type] ?? "aud_evenement"), montant: o.amount ? `· ${Number(o.amount).toFixed(2)} ${o.currency ?? "CAD"}` : "", invite: o.guestEmail ? t("aud_invite", { email: o.guestEmail }) : "" }),
         severity: sev, result, anomalies: [],
         clientId: o.clientId, clientName: o.clientId ? clientMap.get(o.clientId) ?? null : null,
         email: o.guestEmail,
@@ -291,7 +308,7 @@ export async function GET(req: Request) {
       const { sev, result } = emailSeverity(e.type);
       events.push({
         id: `email-${e.id}`, source: "email", type: e.type,
-        label: `Email ${e.type === "sent" ? "envoyé" : e.type === "delivered" ? "livré" : e.type === "opened" ? "ouvert" : e.type === "clicked" ? "lien cliqué" : e.type === "bounced" ? "rebondi" : e.type === "complained" ? "marqué spam" : e.type === "failed" ? "échec" : e.type}${e.subject ? ` : ${e.subject}` : ""} → ${e.email}`,
+        label: t("aud_email_ligne", { etat: t(EMAIL_KEYS[e.type] ?? "aud_evenement"), sujet: e.subject ? t("aud_deux_points", { texte: e.subject }) : "", email: e.email }),
         severity: sev, result, anomalies: [],
         clientId: e.clientId, clientName: e.clientId ? clientMap.get(e.clientId) ?? null : null,
         email: e.email, ipAddress: e.ipAddress, userAgent: e.userAgent,

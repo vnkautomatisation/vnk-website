@@ -7,6 +7,7 @@
 //
 // Auth : admin uniquement (session NextAuth).
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,7 @@ const ALLOWED_TYPES = ["legal", "contract", "policy"] as const;
 type StarterType = (typeof ALLOWED_TYPES)[number];
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -113,7 +115,7 @@ export async function GET(req: NextRequest) {
   } catch (err) {
     console.error("[document-templates/starters]", err);
     return NextResponse.json(
-      { error: "Erreur lors de la lecture de la bibliotheque" },
+      { error: t("erreur_lors_de_la_lecture_de_la") },
       { status: 500 },
     );
   }

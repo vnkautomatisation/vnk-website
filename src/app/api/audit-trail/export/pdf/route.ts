@@ -2,6 +2,7 @@
 // Inclut filtres + manifeste d'integrite SHA-256 pour conformite Loi 25 / SOC 2.
 // Reutilise la logique d'agregation de /api/audit-trail.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { createHash } from "crypto";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -22,11 +23,12 @@ const SEVERITY_LABELS: Record<string, string> = {
   critical: "Critique",
   error: "Erreur",
   warning: "Avertissement",
-  success: "Succès",
+  success: "aud_succes",
   info: "Info",
 };
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -42,7 +44,7 @@ export async function GET(req: Request) {
   const cookie = req.headers.get("cookie") ?? "";
   const res = await fetch(internalUrl, { headers: { cookie } });
   if (!res.ok) {
-    return NextResponse.json({ error: "Erreur agrégation événements" }, { status: 500 });
+    return NextResponse.json({ error: t("erreur_agregation_evenements") }, { status: 500 });
   }
   const data = await res.json();
 

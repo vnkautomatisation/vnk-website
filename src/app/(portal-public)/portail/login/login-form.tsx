@@ -20,16 +20,16 @@ export function PortalLoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [pending, startTransition] = useTransition();
 
-  // 2FA state
+
   const [needs2FA, setNeeds2FA] = useState(false);
   const [twoFactorCode, setTwoFactorCode] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     startTransition(async () => {
-      // Si on n'a pas encore verifie la 2FA
+
       if (!needs2FA) {
-        // D'abord essayer le signIn sans code 2FA
+
         const result = await signIn("client-credentials", {
           email,
           password,
@@ -42,7 +42,7 @@ export function PortalLoginForm() {
           return;
         }
 
-        // Si echec, verifier si c'est parce que 2FA est requis
+
         try {
           const check = await fetch("/api/auth/check-2fa", {
             method: "POST",
@@ -56,11 +56,11 @@ export function PortalLoginForm() {
           }
         } catch {}
 
-        toast.error("Identifiants invalides");
+        toast.error(t("identifiants_invalides"));
         return;
       }
 
-      // Step 2 : signIn avec code 2FA
+
       const result = await signIn("client-credentials", {
         email,
         password,
@@ -73,7 +73,7 @@ export function PortalLoginForm() {
         return;
       }
 
-      toast.error("Code 2FA incorrect");
+      toast.error(t("code_2fa_incorrect"));
       setTwoFactorCode("");
     });
   };
@@ -86,11 +86,11 @@ export function PortalLoginForm() {
         </div>
         <div>
           <h1 className="text-xl font-semibold">
-            {needs2FA ? "Verification 2FA" : t("portal_login_title")}
+            {needs2FA ? t("verification_2fa") : t("portal_login_title")}
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
             {needs2FA
-              ? "Entrez le code de votre application d'authentification"
+              ? t("entrez_code_application_authentification")
               : t("portal_login_subtitle")}
           </p>
         </div>
@@ -106,7 +106,7 @@ export function PortalLoginForm() {
             </Button>
             <Button variant="outline" className="w-full" disabled>
               <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z" />
+                <path d={"M11.4 24H0V12.6h11.4V24zM24 24H12.6V12.6H24V24zM11.4 11.4H0V0h11.4v11.4zm12.6 0H12.6V0H24v11.4z"} />
               </svg>
               {t("sign_in_with_microsoft")}
             </Button>
@@ -130,7 +130,7 @@ export function PortalLoginForm() {
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     autoComplete="email"
-                    placeholder="votre@courriel.com"
+                    placeholder={t("placeholder_courriel")}
                     className="pl-10"
                   />
                 </div>
@@ -153,7 +153,7 @@ export function PortalLoginForm() {
                     type="button"
                     onClick={() => setShowPassword((v) => !v)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    aria-label={showPassword ? "Masquer" : "Afficher"}
+                    aria-label={showPassword ? t("masquer") : t("afficher")}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -162,12 +162,12 @@ export function PortalLoginForm() {
 
               <Button type="submit" className="w-full" disabled={pending}>
                 <LogIn className="h-4 w-4" />
-                {pending ? "Connexion..." : t("sign_in")}
+                {pending ? t("connexion") : t("sign_in")}
               </Button>
             </form>
           </>
         ) : (
-          /* ── 2FA Step ── */
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="flex justify-center">
               <div className="h-16 w-16 rounded-2xl bg-[#0F2D52]/10 flex items-center justify-center">
@@ -176,7 +176,7 @@ export function PortalLoginForm() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="2fa-code">Code a 6 chiffres</Label>
+              <Label htmlFor="2fa-code">{t("code_6_chiffres")}</Label>
               <Input
                 id="2fa-code"
                 type="text"
@@ -193,7 +193,7 @@ export function PortalLoginForm() {
 
             <Button type="submit" className="w-full" disabled={pending || twoFactorCode.length !== 6}>
               <Shield className="h-4 w-4" />
-              {pending ? "Verification..." : "Verifier et se connecter"}
+              {pending ? t("verification") : t("verifier_se_connecter")}
             </Button>
 
             <Button
@@ -203,7 +203,7 @@ export function PortalLoginForm() {
               onClick={() => { setNeeds2FA(false); setTwoFactorCode(""); }}
             >
               <ArrowLeft className="h-4 w-4" />
-              Retour
+              {t("retour")}
             </Button>
           </form>
         )}

@@ -1,5 +1,7 @@
+import { useTranslations } from "next-intl";
 // Loading global — spinner VNK affiche pendant le chargement des pages
 export default function Loading() {
+  const t = useTranslations("common");
   return (
     <div className="flex items-center justify-center min-h-[60vh]">
       <div className="flex flex-col items-center gap-4">
@@ -10,7 +12,7 @@ export default function Loading() {
             <span className="text-[10px] font-bold text-[#0F2D52]">VNK</span>
           </div>
         </div>
-        <p className="text-sm text-muted-foreground animate-pulse">Chargement...</p>
+        <p className="text-sm text-muted-foreground animate-pulse">{t("loading")}</p>
       </div>
     </div>
   );

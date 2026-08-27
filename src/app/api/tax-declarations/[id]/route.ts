@@ -2,6 +2,7 @@
 // PATCH /api/tax-declarations/[id] — mettre a jour (interdit apres soumission)
 // DELETE /api/tax-declarations/[id] — supprimer une declaration draft
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -13,12 +14,13 @@ const updateSchema = z.object({
   periodLabel: z.string().min(1).optional(),
   status: z.string().optional(),
   notes: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -29,7 +31,7 @@ export async function GET(
   const { id } = await params;
   const declaration = await prisma.taxDeclaration.findUnique({ where: { id: Number(id) } });
   if (!declaration) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
   return NextResponse.json({ declaration });
 }
@@ -38,6 +40,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -50,16 +53,16 @@ export async function PATCH(
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
   if (existing.status === "submitted" && existing.submittedAt) {
-    return NextResponse.json({ error: "Déclaration déjà soumise — non modifiable" }, { status: 409 });
+    return NextResponse.json({ error: t("declaration_deja_soumise_non_modifiable") }, { status: 409 });
   }
 
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -84,6 +87,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -96,11 +100,11 @@ export async function DELETE(
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
   if (existing.status === "submitted" || existing.submittedAt) {
     return NextResponse.json(
-      { error: "Déclaration soumise — impossible de supprimer" },
+      { error: t("declaration_soumise_impossible_de_supprimer") },
       { status: 409 }
     );
   }

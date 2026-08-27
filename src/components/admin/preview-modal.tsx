@@ -1,5 +1,6 @@
 "use client";
 import { type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -39,6 +40,7 @@ export function PreviewModal({
   actions?: ReactNode;
   className?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const [fullscreen, setFullscreen] = useState(false);
 
   return (
@@ -69,7 +71,7 @@ export function PreviewModal({
             <button
               onClick={() => setFullscreen(!fullscreen)}
               className="hidden sm:flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted transition-colors shrink-0"
-              aria-label={fullscreen ? "Reduire" : "Plein ecran"}
+              aria-label={fullscreen ? t("reduire") : t("plein_ecran")}
             >
               {fullscreen ? (
                 <Minimize2 className="h-4 w-4 text-muted-foreground" />

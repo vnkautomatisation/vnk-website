@@ -35,21 +35,22 @@ export function OnboardingWizard({
   hasPasskey: boolean;
   unsignedDocs: Array<{ id: number; title: string; version: string; key: string }>;
 }) {
+  const t = useTranslations("admin.onboarding");
   const router = useRouter();
   const [step, setStep] = useState<Step>("welcome");
 
   const steps: Array<{ key: Step; label: string; icon: typeof User; done: boolean }> = [
-    { key: "welcome", label: "Bienvenue", icon: PartyPopper, done: step !== "welcome" },
-    { key: "profile", label: "Profil", icon: User, done: ["2fa", "passkey", "docs", "done"].includes(step) },
+    { key: "welcome", label: t("bienvenue"), icon: PartyPopper, done: step !== "welcome" },
+    { key: "profile", label: t("profil_2"), icon: User, done: ["2fa", "passkey", "docs", "done"].includes(step) },
     { key: "2fa", label: "2FA", icon: Shield, done: admin.twoFactorEnabled || ["passkey", "docs", "done"].includes(step) },
-    { key: "passkey", label: "Passkey", icon: Fingerprint, done: hasPasskey || ["docs", "done"].includes(step) },
-    { key: "docs", label: "Documents", icon: FileText, done: unsignedDocs.length === 0 || step === "done" },
+    { key: "passkey", label: t("passkey"), icon: Fingerprint, done: hasPasskey || ["docs", "done"].includes(step) },
+    { key: "docs", label: t("documents"), icon: FileText, done: unsignedDocs.length === 0 || step === "done" },
   ];
 
   const finalize = async () => {
     const r = await completeOnboardingAction();
     if (r.success) {
-      toast.success("Bienvenue dans le portail VNK !");
+      toast.success(t("bienvenue_portail_vnk"));
       router.push("/admin");
     } else toast.error(r.error || "");
   };
@@ -63,12 +64,12 @@ export function OnboardingWizard({
               <span className="font-bold text-lg">VNK</span>
             </div>
             <div>
-              <h1 className="font-bold text-lg">Activation de votre compte</h1>
+              <h1 className="font-bold text-lg">{t("activation_compte")}</h1>
               <p className="text-xs text-white/80">Bonjour {admin.fullName || admin.email} · 5 étapes rapides</p>
             </div>
           </div>
 
-          {/* Stepper */}
+
           <div className="flex items-center gap-1 mt-4">
             {steps.map((s, idx) => {
               const Icon = s.icon;
@@ -132,16 +133,14 @@ export function OnboardingWizard({
 
 // ─────────────────────────────────────────────────────────
 function StepWelcome({ admin, onNext }: { admin: AdminSeed; onNext: () => void }) {
+  const t = useTranslations("admin.onboarding");
   return (
     <div className="space-y-4 text-center">
       <div className="flex justify-center text-[#0F2D52]"><Hand className="h-14 w-14" /></div>
-      <h2 className="text-xl font-bold">Bienvenue {admin.fullName || "à VNK Automatisation"} !</h2>
-      <p className="text-sm text-muted-foreground max-w-md mx-auto">
-        Avant d&apos;accéder au portail, prenez 2 minutes pour configurer votre compte en toute sécurité.
-        Vous pouvez sauter certaines étapes et les compléter plus tard.
-      </p>
+      <h2 className="text-xl font-bold">{t("bienvenue_nom", { name: admin.fullName || t("vnk_automatisation") })}</h2>
+      <p className="text-sm text-muted-foreground max-w-md mx-auto">{t("wizard_avant_d_acceder_au_portail_prenez_2")}</p>
       <Button onClick={onNext} size="lg" className="mt-4">
-        C&apos;est parti
+        {t("c_apos_parti")}
         <ArrowRight className="h-4 w-4 ml-1.5" />
       </Button>
     </div>
@@ -149,6 +148,7 @@ function StepWelcome({ admin, onNext }: { admin: AdminSeed; onNext: () => void }
 }
 
 function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () => void; onNext: () => void }) {
+  const t = useTranslations("admin.onboarding");
   const tc = useTranslations("common");
   const [fullName, setFullName] = useState(admin.fullName ?? "");
   const [phone, setPhone] = useState(admin.phone ?? "");
@@ -167,33 +167,33 @@ function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () =
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-bold text-base flex items-center gap-2"><User className="h-4 w-4 text-[#0F2D52]" />Votre profil</h2>
-        <p className="text-xs text-muted-foreground">Aide vos collègues à vous identifier facilement.</p>
+        <h2 className="font-bold text-base flex items-center gap-2"><User className="h-4 w-4 text-[#0F2D52]" />{t("profil")}</h2>
+        <p className="text-xs text-muted-foreground">{t("aide_collegues_vous_identifier_facilement")}</p>
       </div>
       <div className="space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Nom complet *</Label>
-          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Jean Tremblay" />
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("nom_complet")}</Label>
+          <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t("jean_tremblay")} />
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Téléphone</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("telephone")}</Label>
             <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="514-555-1234" />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Titre</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Comptable senior" />
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("titre")}</Label>
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("comptable_senior")} />
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Bio courte</Label>
-          <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} maxLength={280} placeholder="Parlez brièvement de votre rôle…" />
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("bio_courte")}</Label>
+          <Textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={2} maxLength={280} placeholder={t("parlez_brievement_role")} />
         </div>
       </div>
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={submit} disabled={pending || !fullName.trim()}>
-          {pending ? "..." : "Enregistrer et continuer"}
+          {pending ? "..." : t("enregistrer_continuer")}
           <ArrowRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
@@ -202,39 +202,40 @@ function StepProfile({ admin, onBack, onNext }: { admin: AdminSeed; onBack: () =
 }
 
 function StepTwoFactor({ done, onBack, onNext }: { done: boolean; onBack: () => void; onNext: () => void }) {
+  const t = useTranslations("admin.onboarding");
   const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-bold text-base flex items-center gap-2"><Shield className="h-4 w-4 text-[#0F2D52]" />Authentification à deux facteurs</h2>
-        <p className="text-xs text-muted-foreground">Une protection essentielle contre le piratage de votre compte.</p>
+        <h2 className="font-bold text-base flex items-center gap-2"><Shield className="h-4 w-4 text-[#0F2D52]" />{t("authentification_deux_facteurs")}</h2>
+        <p className="text-xs text-muted-foreground">{t("protection_essentielle_contre_piratage_compte")}</p>
       </div>
       {done ? (
         <Card className="p-4 bg-emerald-50 border-emerald-200 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           <div>
-            <p className="font-medium text-sm text-emerald-900">2FA activée</p>
-            <p className="text-xs text-emerald-700">Votre compte est protégé.</p>
+            <p className="font-medium text-sm text-emerald-900">{t("2fa_activee")}</p>
+            <p className="text-xs text-emerald-700">{t("compte_protege")}</p>
           </div>
         </Card>
       ) : (
         <Card className="p-4 bg-amber-50 border-amber-200 space-y-3">
           <div>
-            <p className="font-medium text-sm text-amber-900">Recommandé fortement</p>
-            <p className="text-xs text-amber-700">Utilisez Google Authenticator, Authy ou 1Password.</p>
+            <p className="font-medium text-sm text-amber-900">{t("recommande_fortement")}</p>
+            <p className="text-xs text-amber-700">{t("utilisez_google_authenticator_authy_1password")}</p>
           </div>
           <Button asChild size="sm">
             <Link href="/admin/settings/security" target="_blank">
-              Configurer 2FA dans Paramètres → Sécurité
+              {t("configurer_2fa_parametres_securite")}
             </Link>
           </Button>
-          <p className="text-[10px] text-amber-800 italic">Revenez ici quand c&apos;est fait pour continuer.</p>
+          <p className="text-[10px] text-amber-800 italic">{t("revenez_ici_quand_c_apos")}</p>
         </Card>
       )}
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant={done ? "default" : "outline"}>
-          {done ? "Continuer" : "Passer pour l'instant"}
+          {done ? t("continuer") : t("passer_instant")}
           <ArrowRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
@@ -243,30 +244,31 @@ function StepTwoFactor({ done, onBack, onNext }: { done: boolean; onBack: () => 
 }
 
 function StepPasskey({ done, onBack, onNext }: { done: boolean; onBack: () => void; onNext: () => void }) {
+  const t = useTranslations("admin.onboarding");
   const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-bold text-base flex items-center gap-2"><Fingerprint className="h-4 w-4 text-[#0F2D52]" />Passkey (sans mot de passe)</h2>
-        <p className="text-xs text-muted-foreground">Connectez-vous avec Touch ID, Face ID, ou une clé physique.</p>
+        <h2 className="font-bold text-base flex items-center gap-2"><Fingerprint className="h-4 w-4 text-[#0F2D52]" />{t("passkey_sans_mot_passe")}</h2>
+        <p className="text-xs text-muted-foreground">{t("connectez_vous_touch_id_face")}</p>
       </div>
       {done ? (
         <Card className="p-4 bg-emerald-50 border-emerald-200 flex items-center gap-3">
           <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           <div>
-            <p className="font-medium text-sm text-emerald-900">Passkey enregistrée</p>
-            <p className="text-xs text-emerald-700">Vous pouvez vous connecter sans mot de passe.</p>
+            <p className="font-medium text-sm text-emerald-900">{t("passkey_enregistree")}</p>
+            <p className="text-xs text-emerald-700">{t("vous_pouvez_vous_connecter_sans")}</p>
           </div>
         </Card>
       ) : (
         <Card className="p-4 bg-muted/40 space-y-3">
           <div>
-            <p className="font-medium text-sm">Optionnel mais recommandé</p>
-            <p className="text-xs text-muted-foreground">Plus rapide et plus sûr que les mots de passe.</p>
+            <p className="font-medium text-sm">{t("optionnel_mais_recommande")}</p>
+            <p className="text-xs text-muted-foreground">{t("plus_rapide_plus_mots_passe")}</p>
           </div>
           <Button asChild size="sm">
             <Link href="/admin/settings/security" target="_blank">
-              Ajouter une passkey dans Paramètres → Sécurité
+              {t("ajouter_passkey_parametres_securite")}
             </Link>
           </Button>
         </Card>
@@ -274,7 +276,7 @@ function StepPasskey({ done, onBack, onNext }: { done: boolean; onBack: () => vo
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant={done ? "default" : "outline"}>
-          {done ? "Continuer" : "Passer"}
+          {done ? t("continuer") : t("passer")}
           <ArrowRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
@@ -289,11 +291,12 @@ function StepDocs({
   onBack: () => void;
   onNext: () => void;
 }) {
+  const t = useTranslations("admin.onboarding");
   const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="font-bold text-base flex items-center gap-2"><FileText className="h-4 w-4 text-[#0F2D52]" />Documents à signer</h2>
+        <h2 className="font-bold text-base flex items-center gap-2"><FileText className="h-4 w-4 text-[#0F2D52]" />{t("documents_signer")}</h2>
         <p className="text-xs text-muted-foreground">
           {docs.length} document{docs.length > 1 ? "s" : ""} obligatoire{docs.length > 1 ? "s" : ""} à signer pour finaliser votre activation.
         </p>
@@ -306,25 +309,22 @@ function StepDocs({
               <p className="font-medium text-sm">{d.title}</p>
               <p className="text-[11px] text-muted-foreground">Version {d.version}</p>
             </div>
-            <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">À signer</Badge>
+            <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">{t("signer")}</Badge>
           </Card>
         ))}
       </div>
       <Card className="p-3 bg-[#0F2D52]/5 border-[#0F2D52]/20">
-        <p className="text-xs text-muted-foreground">
-          Cliquez ci-dessous pour ouvrir la page des documents légaux et les signer un par un.
-          Revenez sur cette page après pour terminer l&apos;activation.
-        </p>
+        <p className="text-xs text-muted-foreground">{t("wizard_cliquez_ci_dessous_pour_ouvrir_la_page")}</p>
         <Button asChild size="sm" className="mt-2">
           <Link href="/admin/employes/documents" target="_blank">
-            Signer les documents
+            {t("signer_documents")}
           </Link>
         </Button>
       </Card>
       <div className="flex justify-between pt-2">
         <Button variant="ghost" onClick={onBack}><ArrowLeft className="h-4 w-4 mr-1" />{tc("back")}</Button>
         <Button onClick={onNext} variant="outline">
-          Continuer (je signerai plus tard)
+          {t("continuer_je_signerai_plus_tard")}
           <ArrowRight className="h-4 w-4 ml-1.5" />
         </Button>
       </div>
@@ -333,16 +333,15 @@ function StepDocs({
 }
 
 function StepDone({ onFinalize }: { onFinalize: () => void }) {
+  const t = useTranslations("admin.onboarding");
   return (
     <div className="space-y-4 text-center py-4">
       <div className="flex justify-center text-amber-500"><PartyPopper className="h-14 w-14" /></div>
-      <h2 className="font-bold text-xl">Tout est prêt !</h2>
-      <p className="text-sm text-muted-foreground max-w-md mx-auto">
-        Votre compte est configuré. Vous accédez maintenant au portail VNK Automatisation.
-        Vous pouvez ajuster vos préférences à tout moment dans <strong>Paramètres</strong>.
+      <h2 className="font-bold text-xl">{t("tout_pret")}</h2>
+      <p className="text-sm text-muted-foreground max-w-md mx-auto">{t("wizard_votre_compte_est_configure_vous_accedez_maintenant")}<strong>{t("parametres")}</strong>.
       </p>
       <Button onClick={onFinalize} size="lg" className="mt-4">
-        Accéder au tableau de bord
+        {t("acceder_tableau_bord")}
         <ArrowRight className="h-4 w-4 ml-1.5" />
       </Button>
     </div>

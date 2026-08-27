@@ -71,18 +71,18 @@ type Req = {
 
 type TabKey = "pending" | "issued" | "rejected" | "all";
 
-const PURPOSE_LABEL: Record<string, string> = {
-  bank: "Banque",
-  rental: "Location",
-  embassy: "Ambassade / immigration",
-  hypothec: "Hypotheque",
-  other: "Autre",
+const PURPOSE_KEY: Record<string, string> = {
+  bank: "banque",
+  rental: "location",
+  embassy: "ambassade_immigration",
+  hypothec: "hypotheque",
+  other: "autre",
 };
 
-const STATUS_LABEL: Record<string, string> = {
-  pending: "En attente",
-  issued: "Emise",
-  rejected: "Refusee",
+const STATUS_KEY: Record<string, string> = {
+  pending: "attente_statut",
+  issued: "emise",
+  rejected: "refusee",
 };
 
 // ---------- Helpers ---------------------------------------------
@@ -112,6 +112,7 @@ function initials(name: string | null, email: string): string {
 //                       MAIN VIEW
 // ================================================================
 export function LettersView({ requests }: { requests: Req[] }) {
+  const t = useTranslations("admin.letters");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("pending");
   const [search, setSearch] = useState("");
@@ -124,7 +125,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
     filename?: string;
   } | null>(null);
 
-  // --- Sticky bar pattern STANDARD (ref my-documents-view.tsx) ----
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -138,19 +139,19 @@ export function LettersView({ requests }: { requests: Req[] }) {
     return () => obs.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
-  // --- KPIs ----------------------------------------------------
+
   const kpis = useMemo(() => {
     const pending = requests.filter((r) => r.status === "pending");
     const issued = requests.filter((r) => r.status === "issued");
     const rejected = requests.filter((r) => r.status === "rejected");
 
-    // Emises ce mois
+
     const now = new Date();
     const month0 = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
     const issuedThisMonth = issued.filter((r) => {
@@ -159,7 +160,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
       return Number.isFinite(t) && t >= month0;
     }).length;
 
-    // Delai moyen de traitement (heures) — entre createdAt et issuedAt pour les emises
+
     const treated = requests.filter((r) => r.status !== "pending" && r.issuedAt);
     let avgHours: number | null = null;
     if (treated.length > 0) {
@@ -171,7 +172,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
       avgHours = sum / treated.length;
     }
 
-    // Plus vieille demande en attente (jours)
+
     const oldestPendingDays = pending.reduce<number>((acc, r) => {
       const d = daysBetween(r.createdAt);
       return d !== null && d > acc ? d : acc;
@@ -188,7 +189,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
     };
   }, [requests]);
 
-  // --- Filtered list ------------------------------------------
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return requests
@@ -198,7 +199,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
         if (tab === "rejected" && r.status !== "rejected") return false;
         if (q) {
           const hay = `${r.admin.fullName ?? ""} ${r.admin.email} ${
-            PURPOSE_LABEL[r.purpose] ?? r.purpose
+            PURPOSE_KEY[r.purpose] ?? r.purpose
           } ${r.recipient ?? ""}`.toLowerCase();
           if (!hay.includes(q)) return false;
         }
@@ -210,31 +211,31 @@ export function LettersView({ requests }: { requests: Req[] }) {
   const TABS: TabItem<TabKey>[] = [
     {
       key: "pending",
-      label: "A traiter",
+      label: t("traiter"),
       icon: Inbox,
       count: kpis.pending,
       dot: kpis.pending > 0,
     },
-    { key: "issued", label: "Emises", icon: CheckCircle2, count: kpis.issued },
-    { key: "rejected", label: "Refusees", icon: XCircle, count: kpis.rejected },
-    { key: "all", label: "Toutes", icon: Layers, count: kpis.total },
+    { key: "issued", label: t("emises_2"), icon: CheckCircle2, count: kpis.issued },
+    { key: "rejected", label: t("refusees_2"), icon: XCircle, count: kpis.rejected },
+    { key: "all", label: t("toutes"), icon: Layers, count: kpis.total },
   ];
 
-  // --- Refuse action shared -----------------------------------
+
   const handleReject = async (r: Req) => {
     const reason = await promptDialog({
-      title: "Refuser la demande de lettre",
-      label: "Motif du refus",
-      placeholder: "Sera communique a l'employe",
+      title: t("refuser_demande_lettre"),
+      label: t("motif_refus"),
+      placeholder: t("sera_communique_employe"),
       multiline: true,
       required: true,
       variant: "destructive",
-      confirmLabel: "Refuser",
+      confirmLabel: t("refuser"),
     });
     if (!reason) return;
     const res = await rejectEmploymentLetterAction({ id: r.id, reason });
     if (res.success) {
-      toast.success("Demande refusee");
+      toast.success(t("demande_refusee"));
       router.refresh();
       setDetailDialog(null);
     } else {
@@ -244,7 +245,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+
       <div className="rounded-xl bg-gradient-to-r from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -256,11 +257,8 @@ export function LettersView({ requests }: { requests: Req[] }) {
               <Mail className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Lettres d&apos;emploi</h1>
-              <p className="text-xs text-white/80">
-                Demandes des employes (banque, location, ambassade, hypotheque) a traiter et a
-                emettre.
-              </p>
+              <h1 className="text-lg font-bold">{t("lettres_apos_emploi")}</h1>
+              <p className="text-xs text-white/80">{t("letters_view_demandes_des_employes_banque_location_ambassade_hypotheque")}</p>
             </div>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -277,22 +275,22 @@ export function LettersView({ requests }: { requests: Req[] }) {
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="En attente"
+          label={t("attente_2")}
           value={kpis.pending}
           icon={Inbox}
           accent={kpis.pending > 0 ? "warning" : "success"}
           hint={
             kpis.oldestPendingDays > 0
               ? `Plus ancienne : J-${kpis.oldestPendingDays}`
-              : "Aucune demande en attente"
+              : t("aucune_demande_attente")
           }
           onClick={() => setTab("pending")}
         />
         <DocumentStatsCard
-          label="Emises ce mois"
+          label={t("emises_mois")}
           value={kpis.issuedThisMonth}
           icon={CheckCircle2}
           accent="success"
@@ -300,14 +298,14 @@ export function LettersView({ requests }: { requests: Req[] }) {
           onClick={() => setTab("issued")}
         />
         <DocumentStatsCard
-          label="Delai moyen"
+          label={t("delai_moyen")}
           value={kpis.avgHours !== null ? formatHours(kpis.avgHours) : "-"}
           icon={Clock}
           accent={kpis.avgHours !== null && kpis.avgHours > 72 ? "warning" : "info"}
-          hint="Temps moyen de traitement"
+          hint={t("temps_moyen_traitement")}
         />
         <DocumentStatsCard
-          label="Total demandes"
+          label={t("total_demandes")}
           value={kpis.total}
           icon={Layers}
           accent="info"
@@ -316,17 +314,17 @@ export function LettersView({ requests }: { requests: Req[] }) {
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Att :</span>
-                  <span className="hidden min-[480px]:inline">En attente :</span>
+                  <span className="min-[480px]:hidden">{t("att")}</span>
+                  <span className="hidden min-[480px]:inline">{t("attente")}</span>
                 </span>
                 <span className={cn("font-semibold", kpis.pending > 0 ? "text-amber-600" : "text-emerald-600")}>
                   {kpis.pending}
@@ -335,8 +333,8 @@ export function LettersView({ requests }: { requests: Req[] }) {
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Émi :</span>
-                  <span className="hidden min-[480px]:inline">Emises :</span>
+                  <span className="min-[480px]:hidden">{t("emi")}</span>
+                  <span className="hidden min-[480px]:inline">{t("emises")}</span>
                 </span>
                 <span className="font-semibold text-emerald-700">{kpis.issued}</span>
               </span>
@@ -345,8 +343,8 @@ export function LettersView({ requests }: { requests: Req[] }) {
                   <span className="text-muted-foreground">·</span>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">Ref :</span>
-                      <span className="hidden min-[480px]:inline">Refusees :</span>
+                      <span className="min-[480px]:hidden">{t("ref")}</span>
+                      <span className="hidden min-[480px]:inline">{t("refusees")}</span>
                     </span>
                     <span className="font-semibold text-red-600">{kpis.rejected}</span>
                   </span>
@@ -357,7 +355,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -371,49 +369,49 @@ export function LettersView({ requests }: { requests: Req[] }) {
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <Mail className="h-4 w-4" />
-            Lettres d&apos;emploi
+            {t("lettres_apos_emploi")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">En attente :</span>
+            <span className="text-muted-foreground">{t("attente")}</span>
             <span className={cn("font-semibold", kpis.pending > 0 ? "text-amber-600" : "text-emerald-600")}>
               {kpis.pending}
             </span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Emises :</span>
+            <span className="text-muted-foreground">{t("emises")}</span>
             <span className="font-semibold text-emerald-700">{kpis.issued}</span>
           </span>
           {kpis.rejected > 0 && (
             <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-muted-foreground">Refusees :</span>
+              <span className="text-muted-foreground">{t("refusees")}</span>
               <span className="font-semibold text-red-600">{kpis.rejected}</span>
             </span>
           )}
         </div>
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Filtre lettres" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("filtre_lettres")} />
         </div>
       </div>
 
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
-        placeholder="Rechercher (employe, type, destinataire)..."
+        placeholder={t("rechercher_employe_type_destinataire")}
         className="h-9 text-sm"
       />
 
-      {/* ====== Cards grid ====== */}
+
       {filtered.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <Mail className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
             {tab === "pending"
-              ? "Aucune demande en attente."
+              ? t("aucune_demande_attente_2")
               : tab === "issued"
-                ? "Aucune lettre emise."
+                ? t("aucune_lettre_emise")
                 : tab === "rejected"
-                  ? "Aucune demande refusee."
-                  : "Aucune demande pour le moment."}
+                  ? t("aucune_demande_refusee")
+                  : t("aucune_demande_moment")}
           </p>
         </Card>
       ) : (
@@ -425,7 +423,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
               onPreview={() =>
                 setPdfPreview({
                   url: `/api/admin/employment-letters/${r.id}/pdf`,
-                  title: `Lettre d'emploi - ${PURPOSE_LABEL[r.purpose] ?? r.purpose}`,
+                  title: `Lettre d'emploi - ${PURPOSE_KEY[r.purpose] ?? r.purpose}`,
                   description: r.admin.fullName || r.admin.email,
                   filename: `lettre-emploi-${r.id}.pdf`,
                 })
@@ -438,7 +436,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
         </div>
       )}
 
-      {/* ============== Modals ============== */}
+
       <IssueLetterDialog
         req={issueDialog}
         onClose={() => setIssueDialog(null)}
@@ -459,7 +457,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
         onPreview={(r) =>
           setPdfPreview({
             url: `/api/admin/employment-letters/${r.id}/pdf`,
-            title: `Lettre d'emploi - ${PURPOSE_LABEL[r.purpose] ?? r.purpose}`,
+            title: `Lettre d'emploi - ${PURPOSE_KEY[r.purpose] ?? r.purpose}`,
             description: r.admin.fullName || r.admin.email,
             filename: `lettre-emploi-${r.id}.pdf`,
           })
@@ -494,6 +492,7 @@ function LetterRequestCard({
   onReject: () => void;
   onDetails: () => void;
 }) {
+  const t = useTranslations("admin.letters");
   const pending = req.status === "pending";
   const issued = req.status === "issued";
   const rejected = req.status === "rejected";
@@ -511,7 +510,7 @@ function LetterRequestCard({
   return (
     <Card className="vnk-card-hover overflow-hidden">
       <div className="p-4 space-y-3">
-        {/* Header : avatar + employe + status */}
+
         <div className="flex items-start gap-3">
           <Avatar className="h-10 w-10 ring-1 ring-[#0F2D52]/15">
             {req.admin.avatarUrl && (
@@ -549,26 +548,26 @@ function LetterRequestCard({
                 statusTone === "neutral" && "bg-muted text-muted-foreground"
               )}
             >
-              {STATUS_LABEL[req.status] ?? req.status}
+              {STATUS_KEY[req.status] ?? req.status}
             </Badge>
           </div>
         </div>
 
-        {/* Meta : purpose + recipient + salary */}
+
         <div className="rounded-md border bg-muted/20 px-3 py-2 space-y-1 text-xs">
           <div className="flex items-center gap-2">
             <FileText className="h-3.5 w-3.5 text-[#0F2D52] shrink-0" />
-            <span className="font-semibold">{PURPOSE_LABEL[req.purpose] ?? req.purpose}</span>
+            <span className="font-semibold">{PURPOSE_KEY[req.purpose] ?? req.purpose}</span>
             {req.includeSalary ? (
               <Badge
                 variant="outline"
                 className="text-[10px] bg-sky-50 text-sky-700 border-sky-200"
               >
-                Avec salaire
+                {t("salaire")}
               </Badge>
             ) : (
               <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                Sans salaire
+                {t("sans_salaire")}
               </Badge>
             )}
           </div>
@@ -603,7 +602,7 @@ function LetterRequestCard({
           </div>
         </div>
 
-        {/* Notes / motif refus */}
+
         {req.notes && (
           <p
             className={cn(
@@ -613,20 +612,20 @@ function LetterRequestCard({
                 : "bg-muted/40 text-muted-foreground"
             )}
           >
-            {rejected ? "Motif refus : " : ""}
+            {rejected ? t("motif_refus_prefixe") : ""}
             {req.notes}
           </p>
         )}
 
-        {/* Actions */}
+
         <div className="flex items-center justify-end gap-1 pt-1 border-t">
-          <ActionTooltip label="Voir le detail">
+          <ActionTooltip label={t("voir_detail")}>
             <Button
               variant="ghost"
               size="icon"
               className="h-8 w-8"
               onClick={onDetails}
-              aria-label="Detail"
+              aria-label={t("detail")}
             >
               <FileText className="h-4 w-4" />
             </Button>
@@ -639,7 +638,7 @@ function LetterRequestCard({
               onClick={onPreview}
             >
               <FileText className="h-3.5 w-3.5 mr-1" />
-              Apercu PDF
+              {t("apercu_pdf")}
             </Button>
           )}
           {pending && (
@@ -651,7 +650,7 @@ function LetterRequestCard({
                 onClick={onReject}
               >
                 <XCircle className="h-3.5 w-3.5 mr-1" />
-                Refuser
+                {t("refuser")}
               </Button>
               <Button
                 size="sm"
@@ -659,7 +658,7 @@ function LetterRequestCard({
                 onClick={onIssue}
               >
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                Emettre
+                {t("emettre")}
               </Button>
             </>
           )}
@@ -685,6 +684,7 @@ function RequestDetailDialog({
   onReject: (r: Req) => void;
   onPreview: (r: Req) => void;
 }) {
+  const t = useTranslations("admin.letters");
   const tc = useTranslations("common");
   if (!req) return null;
   const issued = req.status === "issued";
@@ -698,17 +698,17 @@ function RequestDetailDialog({
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Mail className="h-4 w-4 shrink-0" />
-              Demande de lettre d&apos;emploi
+              {t("demande_lettre_apos_emploi")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              {PURPOSE_LABEL[req.purpose] ?? req.purpose} -{" "}
+              {PURPOSE_KEY[req.purpose] ?? req.purpose} -{" "}
               {req.admin.fullName ?? req.admin.email}
             </DialogDescription>
           </DialogHeader>
         </div>
 
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <FormSection icon={Sparkles} title="Demandeur">
+          <FormSection icon={Sparkles} title={t("demandeur")}>
             <div className="flex items-center gap-3">
               <Avatar className="h-12 w-12 ring-1 ring-[#0F2D52]/15">
                 {req.admin.avatarUrl && (
@@ -730,40 +730,40 @@ function RequestDetailDialog({
             </div>
           </FormSection>
 
-          <FormSection icon={FileText} title="Details">
+          <FormSection icon={FileText} title={t("details")}>
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Type
+                  {t("type")}
                 </p>
                 <p className="font-medium mt-0.5">
-                  {PURPOSE_LABEL[req.purpose] ?? req.purpose}
+                  {PURPOSE_KEY[req.purpose] ?? req.purpose}
                 </p>
               </div>
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Salaire inclus
+                  {t("salaire_inclus")}
                 </p>
-                <p className="font-medium mt-0.5">{req.includeSalary ? "Oui" : "Non"}</p>
+                <p className="font-medium mt-0.5">{req.includeSalary ? t("oui") : t("non")}</p>
               </div>
               {req.recipient && (
                 <div className="col-span-2">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Destinataire
+                    {t("destinataire")}
                   </p>
                   <p className="font-medium mt-0.5">{req.recipient}</p>
                 </div>
               )}
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Demande
+                  {t("demande")}
                 </p>
                 <p className="font-medium mt-0.5">{formatDate(req.createdAt)}</p>
               </div>
               {req.issuedAt && (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    {rejected ? "Refusee" : "Emise"}
+                    {rejected ? t("refusee") : t("emise")}
                   </p>
                   <p className="font-medium mt-0.5">{formatDate(req.issuedAt)}</p>
                 </div>
@@ -773,7 +773,7 @@ function RequestDetailDialog({
             {req.notes && (
               <div>
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">
-                  {rejected ? "Motif du refus" : "Note de l'employe"}
+                  {rejected ? t("motif_refus") : t("note_employe")}
                 </p>
                 <p
                   className={cn(
@@ -800,7 +800,7 @@ function RequestDetailDialog({
               onClick={() => onPreview(req)}
             >
               <FileText className="h-3.5 w-3.5 mr-1.5" />
-              Apercu PDF
+              {t("apercu_pdf")}
             </Button>
           )}
           {pending && (
@@ -811,14 +811,14 @@ function RequestDetailDialog({
                 onClick={() => onReject(req)}
               >
                 <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                Refuser
+                {t("refuser")}
               </Button>
               <Button
                 onClick={() => onIssue(req)}
                 className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
               >
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                Emettre
+                {t("emettre")}
               </Button>
             </>
           )}
@@ -840,6 +840,7 @@ function IssueLetterDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.letters");
   const tc = useTranslations("common");
   const [letterUrl, setLetterUrl] = useState("");
   const [pending, setPending] = useState(false);
@@ -856,14 +857,14 @@ function IssueLetterDialog({
     if (!req) return;
     const final = urlToUse ?? letterUrl;
     if (!final) {
-      toast.error("Lettre PDF requise");
+      toast.error(t("lettre_pdf_requise"));
       return;
     }
     setPending(true);
     const r = await issueEmploymentLetterAction({ id: req.id, letterUrl: final });
     setPending(false);
     if (r.success) {
-      toast.success("Lettre emise");
+      toast.success(t("lettre_emise"));
       onSaved();
       onClose();
     } else {
@@ -879,22 +880,18 @@ function IssueLetterDialog({
             <DialogHeader>
               <DialogTitle className="text-base text-white flex items-center gap-2">
                 <Send className="h-4 w-4" />
-                Emettre lettre d&apos;emploi
+                {t("emettre_lettre_apos_emploi")}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
                 Pour {req?.admin.fullName || req?.admin.email}
-                {req?.purpose && ` - ${PURPOSE_LABEL[req.purpose] ?? req.purpose}`}
+                {req?.purpose && ` - ${PURPOSE_KEY[req.purpose] ?? req.purpose}`}
               </DialogDescription>
             </DialogHeader>
           </div>
 
           <div className="p-5 space-y-4 overflow-y-auto flex-1">
-            <FormSection icon={Sparkles} title="Generation automatique">
-              <p className="text-xs text-muted-foreground">
-                Le portail peut generer une lettre standard a partir des informations RH (nom,
-                poste, date d&apos;embauche, salaire si demande). Verifiez l&apos;apercu avant
-                emission.
-              </p>
+            <FormSection icon={Sparkles} title={t("generation_automatique")}>
+              <p className="text-xs text-muted-foreground">{t("letters_view_le_portail_peut_generer_une_lettre_standard")}</p>
               <Button
                 type="button"
                 variant="outline"
@@ -903,7 +900,7 @@ function IssueLetterDialog({
                 disabled={pending}
               >
                 <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                Generer la lettre automatique et emettre
+                {t("generer_lettre_automatique_emettre")}
               </Button>
             </FormSection>
 
@@ -918,8 +915,8 @@ function IssueLetterDialog({
               </div>
             </div>
 
-            <FormSection icon={UploadCloud} title="Lettre PDF personnalisee">
-              <Field label="Fichier PDF" required hint="Maximum 5 Mo">
+            <FormSection icon={UploadCloud} title={t("lettre_pdf_personnalisee")}>
+              <Field label={t("fichier_pdf")} required hint={t("maximum_5_mo")}>
                 <FileUploadInput
                   value={letterUrl}
                   onChange={setLetterUrl}
@@ -954,9 +951,9 @@ function IssueLetterDialog({
       <ConfirmDialog
         open={confirmGenerate}
         onOpenChange={(o) => !o && setConfirmGenerate(false)}
-        title="Generer et emettre la lettre ?"
-        description="La lettre sera generee automatiquement a partir du dossier RH puis envoyee a l'employe. L'URL utilisee correspond a l'endpoint PDF dynamique."
-        confirmLabel="Generer et emettre"
+        title={t("generer_emettre_lettre")}
+        description={t("lettre_generee_automatiquement_dossier_rh")}
+        confirmLabel={t("generer_emettre")}
         variant="default"
         loading={pending}
         onConfirm={async () => {

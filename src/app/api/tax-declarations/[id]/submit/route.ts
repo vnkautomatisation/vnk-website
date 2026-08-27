@@ -2,6 +2,7 @@
 // Marque une declaration comme soumise (status = submitted, submittedAt = now).
 // Action irreversible : apres soumission, la declaration ne peut plus etre modifiee ni supprimee.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -12,6 +13,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -24,10 +26,10 @@ export async function POST(
 
   const existing = await prisma.taxDeclaration.findUnique({ where: { id: declId } });
   if (!existing) {
-    return NextResponse.json({ error: "Déclaration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("declaration_introuvable") }, { status: 404 });
   }
   if (existing.status === "submitted" || existing.submittedAt) {
-    return NextResponse.json({ error: "Déclaration déjà soumise" }, { status: 409 });
+    return NextResponse.json({ error: t("declaration_deja_soumise") }, { status: 409 });
   }
 
   const updated = await prisma.taxDeclaration.update({

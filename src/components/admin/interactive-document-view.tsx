@@ -18,6 +18,7 @@
 // sur ce marqueur pour intercaler de vrais <input type="checkbox">.
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState, Fragment } from "react";
+import { useTranslations } from "next-intl";
 import { marked } from "marked";
 // Types deplaces dans interactive-document-view-types.ts pour permettre
 // a Fast Refresh de hot-reload ce composant (les fichiers React ne
@@ -96,7 +97,7 @@ function preprocessMarkdown(md: string): {
   const initialChecks: Record<number, boolean> = {};
   const signatures: SignatureAnchor[] = [];
 
-  // Étape 0 : extrait + retire les ancres signatures.
+
   let out = md.replace(SIGNATURE_ANCHOR_RE, (_match, role: string) => {
     const cleaned = String(role).trim();
     signatures.push({
@@ -105,10 +106,10 @@ function preprocessMarkdown(md: string): {
     });
     return ""; // retiré du flux texte
   });
-  // Retire aussi le titre "Signatures" si seul sur sa ligne.
+
   out = out.replace(SIGNATURES_SECTION_RE, "");
 
-  // Étape 1 : checkboxes en liste (priorité, car contiennent un marqueur de liste)
+
   out = out.replace(LIST_CHECKBOX_RE, (_match, bullet: string, mark: string) => {
     const checked = mark === "x" || mark === "X";
     initialChecks[idx] = checked;
@@ -117,7 +118,7 @@ function preprocessMarkdown(md: string): {
     return `${bullet} ${marker} `;
   });
 
-  // Étape 2 : checkboxes inline restantes (rares mais possibles : "Je confirme [ ] ...")
+
   out = out.replace(INLINE_CHECKBOX_RE, (_match, mark: string) => {
     const checked = mark === "x" || mark === "X";
     initialChecks[idx] = checked;
@@ -126,8 +127,8 @@ function preprocessMarkdown(md: string): {
     return marker;
   });
 
-  // Étape 3 : nettoyage des lignes vides en surplus en fin de doc (créées
-  // par la suppression des ancres signatures).
+
+
   out = out.replace(/\n{3,}/g, "\n\n").replace(/\s+$/g, "");
 
   return { processed: out, initialChecks, signatures };
@@ -168,21 +169,22 @@ export function InteractiveDocumentView({
   signatureScope = "both",
   chapterMode,
 }: InteractiveDocumentViewProps) {
+  const t = useTranslations("admin.ui");
   const sourceMd = resolvedMarkdown ?? bodyMarkdown ?? "";
 
-  // Pré-traitement : remplace les `- [ ]` par des marqueurs et capture les états init.
+
   const { segments, totalCount, defaultStates, signatures } = useMemo(() => {
     const { processed, initialChecks, signatures: sigs } =
       preprocessMarkdown(sourceMd);
     const rawHtml = renderToHtml(processed);
-    // Split sur les marqueurs : on garde l'ordre exact
-    // `@@CHECKBOX:N@@` -> remplacé par un placeholder structurel.
+
+
     const parts = rawHtml.split(/(@@CHECKBOX:\d+@@)/g);
-    // Total = nombre de marqueurs distincts
+
     const total = Object.keys(initialChecks).length;
 
-    // Filtre les ancres signature selon le scope demande. Les blocs visuels
-    // doivent rester synchronises avec ce que le PDF final va rendre.
+
+
     const filteredSigs = sigs.filter((s) => {
       if (signatureScope === "none") return false;
       const role = s.role;
@@ -190,7 +192,7 @@ export function InteractiveDocumentView({
       const isEmployer = /(employer|employeur)/i.test(role);
       if (signatureScope === "employee_only") return isEmployee;
       if (signatureScope === "employer_only") return isEmployer;
-      // "both" : on garde toutes les ancres detectees.
+
       return true;
     });
 
@@ -202,13 +204,13 @@ export function InteractiveDocumentView({
     };
   }, [sourceMd, signatureScope]);
 
-  // État interne : prend en priorité initialStates, sinon defaultStates issus du markdown
+
   const [states, setStates] = useState<CheckboxStates>(() => ({
     ...defaultStates,
     ...(initialStates ?? {}),
   }));
 
-  // Si le markdown change (rechargement du resolvedMarkdown), on réinitialise.
+
   const lastSrcRef = useRef<string>(sourceMd);
   useEffect(() => {
     if (lastSrcRef.current !== sourceMd) {
@@ -217,13 +219,13 @@ export function InteractiveDocumentView({
     }
   }, [sourceMd, defaultStates, initialStates]);
 
-  // Notifie le parent à chaque changement
+
   useEffect(() => {
     if (!onCheckboxChange) return;
     const checkedCount = Object.values(states).filter(Boolean).length;
     const allChecked = totalCount === 0 ? true : checkedCount === totalCount;
     onCheckboxChange(states, { allChecked, totalCount, checkedCount });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [states, totalCount]);
 
   const toggle = (idx: number) => {
@@ -231,21 +233,21 @@ export function InteractiveDocumentView({
     setStates((prev) => ({ ...prev, [idx]: !prev[idx] }));
   };
 
-  // ─── Rendu ────────────────────────────────────────────
-  // Wrapper feuille A4 (max-w-[820px], ~96dpi) sur fond gris doux
-  // pour l'effet "papier sur table". Header navy gradient optionnel
-  // en tête du papier (cohérent avec le vrai PDF final).
+
+
+
+
   return (
     <div
       className={`interactive-doc-paper mx-auto max-w-[820px] bg-white text-slate-900 rounded-md shadow-[0_4px_24px_rgba(15,45,82,0.12)] border border-slate-200 overflow-hidden ${className}`}
       style={{
         fontFamily:
-          'Inter, "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif',
+          'Inter, Segoe UI, system-ui, -apple-system, Helvetica Neue, Arial, sans-serif',
         lineHeight: 1.65,
         fontSize: "14px",
       }}
     >
-      {/* Header VNK navy (en haut du papier, comme le vrai PDF) */}
+
       {title && (
         <div
           className="text-white relative overflow-hidden"
@@ -274,10 +276,10 @@ export function InteractiveDocumentView({
                 {title}
               </h1>
               <p className="mt-1.5 text-white/90 text-[13px] font-semibold tracking-wide">
-                VNK Automatisation Inc.
+                {t("vnk_automatisation_inc")}
               </p>
               <p className="text-white/60 text-[10px] uppercase tracking-[0.18em] mt-0.5">
-                Value · Network · Knowledge
+                {t("value_network_knowledge")}
               </p>
             </div>
             {version && (
@@ -305,7 +307,7 @@ export function InteractiveDocumentView({
                   disabled ? "cursor-default" : "cursor-pointer"
                 }`}
                 onClick={(e) => {
-                  // Empêche les clics sur les liens internes au document de bubbler
+
                   e.stopPropagation();
                 }}
               >
@@ -324,8 +326,8 @@ export function InteractiveDocumentView({
           return (
             <Fragment key={`html-${i}`}>
               <span
-                // Inject HTML markdown brut. Sécurité : `marked` produit déjà du HTML
-                // safe pour un markdown contrôlé (RH crée le template via Tiptap).
+
+
                 dangerouslySetInnerHTML={{ __html: seg }}
               />
             </Fragment>
@@ -348,7 +350,7 @@ export function InteractiveDocumentView({
                 borderBottom: "1px solid #cbd5e1",
               }}
             >
-              Signatures
+              {t("signatures")}
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {signatures.map((sig, i) => (
@@ -360,7 +362,7 @@ export function InteractiveDocumentView({
                     {sig.label}
                   </p>
                   <div className="h-16 border-b border-slate-400 border-dashed flex items-end justify-center pb-1 text-[11px] text-slate-400 italic">
-                    En attente de signature
+                    {t("attente_signature")}
                   </div>
                   <p className="text-[10px] text-slate-500 mt-1">
                     Date :{" "}
@@ -372,7 +374,7 @@ export function InteractiveDocumentView({
           </div>
         )}
 
-        {/* Mission 4 : bloc "J'ai lu" + initiales en pied de chapitre (mode handbook) */}
+
         {chapterMode && (
           <ChapterAckBlock
             chapterIndex={chapterMode.chapterIndex}
@@ -383,13 +385,13 @@ export function InteractiveDocumentView({
           />
         )}
 
-        {/* Footer papier (cohérent avec le PDF final) */}
+
         <div className="mt-12 pt-3 border-t border-slate-200 text-center text-[10px] text-slate-500 tracking-wide">
-          VNK Automatisation Inc. · Document confidentiel
+          {t("vnk_automatisation_inc_document_confidentiel")}
         </div>
       </div>
 
-      {/* Styles internes "PDF-like" appliqués via classe parent */}
+
       <style jsx>{`
         .interactive-doc-paper :global(h1) {
           color: #0f2d52;
@@ -505,6 +507,7 @@ function ChapterAckBlock({
   onChange?: (state: { read: boolean; initials: string }) => void;
   disabled?: boolean;
 }) {
+  const t = useTranslations("admin.ui");
   const read = state?.read ?? false;
   const initials = state?.initials ?? "";
   const update = (next: { read: boolean; initials: string }) => {
@@ -529,11 +532,11 @@ function ChapterAckBlock({
           aria-label={`Confirmer la lecture du chapitre ${chapterIndex}`}
         />
         <span className="text-sm text-slate-800">
-          J&apos;ai lu et compris ce chapitre.
+          {t("j_apos_ai_lu_compris")}
         </span>
       </label>
       <div className="mt-3 flex items-center gap-3">
-        <span className="text-[11px] text-slate-600 font-medium">Initiales :</span>
+        <span className="text-[11px] text-slate-600 font-medium">{t("initiales")}</span>
         <input
           type="text"
           value={initials}
@@ -542,11 +545,11 @@ function ChapterAckBlock({
           onChange={(e) =>
             update({ read, initials: e.target.value.toUpperCase().slice(0, 6) })
           }
-          placeholder="Ex. YV"
+          placeholder={t("ex_yv")}
           className="text-sm font-bold text-[#0F2D52] uppercase tracking-widest border-b-2 border-slate-400 bg-transparent px-2 py-0.5 w-24 focus:outline-none focus:border-[#0F2D52] disabled:opacity-50"
         />
         <span className="text-[10px] text-slate-400 italic">
-          Min. 2 caracteres
+          {t("min_2_caracteres")}
         </span>
       </div>
     </div>

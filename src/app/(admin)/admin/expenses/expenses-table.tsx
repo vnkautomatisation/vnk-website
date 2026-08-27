@@ -27,11 +27,11 @@ export function ExpensesTable({
   const t = useTranslations("admin.expenses");
 
   const columns: Column<E>[] = [
-    { key: "date", header: "Date", accessor: (r) => formatDate(r.expenseDate), sortable: true, sortBy: (r) => r.expenseDate.getTime() },
-    { key: "title", header: "Titre", accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title },
-    { key: "category", header: "Catégorie", accessor: (r) => r.category, hiddenOnMobile: true },
-    { key: "vendor", header: "Fournisseur", accessor: (r) => r.vendor ?? "—", hiddenOnMobile: true },
-    { key: "amount", header: "Montant HT", accessor: (r) => formatCurrency(Number(r.amount)), sortable: true, sortBy: (r) => Number(r.amount) },
+    { key: "date", header: t("date"), accessor: (r) => formatDate(r.expenseDate), sortable: true, sortBy: (r) => r.expenseDate.getTime() },
+    { key: "title", header: t("titre"), accessor: (r) => r.title, sortable: true, sortBy: (r) => r.title },
+    { key: "category", header: t("categorie"), accessor: (r) => r.category, hiddenOnMobile: true },
+    { key: "vendor", header: t("fournisseur"), accessor: (r) => r.vendor ?? "—", hiddenOnMobile: true },
+    { key: "amount", header: t("montant_ht"), accessor: (r) => formatCurrency(Number(r.amount)), sortable: true, sortBy: (r) => Number(r.amount) },
     { key: "tps", header: "TPS", accessor: (r) => formatCurrency(Number(r.tpsPaid)), hiddenOnMobile: true },
     { key: "tvq", header: "TVQ", accessor: (r) => formatCurrency(Number(r.tvqPaid)), hiddenOnMobile: true },
   ];
@@ -61,7 +61,7 @@ export function ExpensesTable({
         </Card>
       </div>
 
-      <DataTable data={expenses} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher une dépense…" exportFilename="depenses" />
+      <DataTable data={expenses} columns={columns} getRowId={(r) => r.id} searchPlaceholder={t("rechercher_depense")} exportFilename="depenses" />
     </div>
   );
 }

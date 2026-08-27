@@ -5,6 +5,7 @@
 // Le code expire dans 10 min, usage unique.
 // ─────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendEmail } from "@/lib/services/email";
@@ -13,6 +14,7 @@ import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(_req: Request, { params }: { params: Promise<{ provider: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -33,21 +35,15 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
   const html = `
     <div style="font-family:system-ui,-apple-system,sans-serif;max-width:520px;margin:0 auto;padding:24px;">
       <div style="background:linear-gradient(135deg,#0F2D52,#1A5FB4);color:#fff;padding:24px;border-radius:12px;text-align:center;">
-        <h1 style="margin:0;font-size:20px;">Code de vérification VNK</h1>
+        <h1 style="margin:0;font-size:20px;">${t("code_verification_vnk")}</h1>
         <p style="margin:8px 0 0;opacity:.8;font-size:14px;">Révéler les identifiants ${provider}</p>
       </div>
       <p style="margin:24px 0 8px;font-size:14px;color:#333;">Bonjour ${admin.fullName ?? "Yan"},</p>
-      <p style="margin:0 0 24px;font-size:14px;color:#555;">
-        Vous avez demandé à révéler les identifiants chiffrés de l'intégration <strong>${provider}</strong>.
-        Entrez ce code dans le portail pour confirmer&nbsp;:
-      </p>
+      <p style="margin:0 0 24px;font-size:14px;color:#555;">{t("route_vous_avez_demande_a_reveler_les_identifiants")}<strong>${provider}</strong>{t("route_entrez_ce_code_dans_le_portail_pour")}</p>
       <div style="background:#f5f5f7;border:2px solid #0F2D52;border-radius:8px;padding:20px;text-align:center;font-family:monospace;font-size:32px;letter-spacing:8px;font-weight:bold;color:#0F2D52;">
         ${challenge.code}
       </div>
-      <p style="margin:16px 0 0;font-size:12px;color:#666;text-align:center;">
-        Ce code expire dans <strong>10 minutes</strong>.<br>
-        Si vous n'êtes pas à l'origine de cette demande, modifiez immédiatement votre mot de passe et révoquez vos sessions.
-      </p>
+      <p style="margin:16px 0 0;font-size:12px;color:#666;text-align:center;">{t("route_ce_code_expire_dans")}<strong>10 minutes</strong>.<br>{t("route_si_vous_n_etes_pas_a_l")}</p>
     </div>
   `;
   const res = await sendEmail({
@@ -58,7 +54,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
   });
 
   if (!res.ok) {
-    return NextResponse.json({ error: "Impossible d'envoyer le courriel. Vérifiez la config SMTP." }, { status: 500 });
+    return NextResponse.json({ error: t("impossible_d_envoyer_le_courriel_verifiez_la") }, { status: 500 });
   }
 
   await logSecurityEvent({

@@ -2,6 +2,7 @@
 // One day for every admin in scope: the punches, plus those with none.
 // Both lists are capped; the CSV export is the exhaustive tool.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,7 @@ const MAX_ENTRIES = 2000;
 const MAX_WITHOUT_ENTRIES = 50;
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -23,7 +25,7 @@ export async function GET(req: NextRequest) {
   const url = new URL(req.url);
   const dateParam = url.searchParams.get("date");
   if (!dateParam || !/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
-    return NextResponse.json({ error: "Paramètre 'date' (YYYY-MM-DD) manquant ou invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("parametre_date_yyyy_mm_dd_manquant_ou") }, { status: 400 });
   }
 
   const day = new Date(dateParam + "T00:00:00");

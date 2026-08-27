@@ -52,17 +52,17 @@ type Tab =
   | "expense_category" | "workflow_status" | "currency"
   | "payment_method" | "contact_method";
 
-const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
-  { key: "services", label: "Services offerts", icon: Briefcase, color: "#0F2D52" },
-  { key: "promos", label: "Codes promo", icon: Ticket, color: "#E5A50A" },
-  { key: "client_tag", label: "Étiquettes clients", icon: Tag, color: "#26A269" },
-  { key: "client_source", label: "Sources clients", icon: Globe, color: "#1A5FB4" },
-  { key: "industry", label: "Industries", icon: Factory, color: "#613583" },
-  { key: "expense_category", label: "Catégories dépenses", icon: Receipt, color: "#C01C28" },
-  { key: "workflow_status", label: "Statuts workflow", icon: Workflow, color: "#0F2D52" },
-  { key: "currency", label: "Devises", icon: Coins, color: "#26A269" },
-  { key: "payment_method", label: "Modes de paiement", icon: CreditCard, color: "#635bff" },
-  { key: "contact_method", label: "Modes de contact", icon: Phone, color: "#1A5FB4" },
+const TABS: { key: Tab; labelKey: string; icon: React.ComponentType<{ className?: string }>; color: string }[] = [
+  { key: "services", labelKey: "services_offerts", icon: Briefcase, color: "#0F2D52" },
+  { key: "promos", labelKey: "codes_promo", icon: Ticket, color: "#E5A50A" },
+  { key: "client_tag", labelKey: "etiquettes_clients", icon: Tag, color: "#26A269" },
+  { key: "client_source", labelKey: "sources_clients", icon: Globe, color: "#1A5FB4" },
+  { key: "industry", labelKey: "industries", icon: Factory, color: "#613583" },
+  { key: "expense_category", labelKey: "categories_depenses", icon: Receipt, color: "#C01C28" },
+  { key: "workflow_status", labelKey: "statuts_workflow", icon: Workflow, color: "#0F2D52" },
+  { key: "currency", labelKey: "devises", icon: Coins, color: "#26A269" },
+  { key: "payment_method", labelKey: "modes_paiement", icon: CreditCard, color: "#635bff" },
+  { key: "contact_method", labelKey: "modes_contact", icon: Phone, color: "#1A5FB4" },
 ];
 
 export function CatalogsView({
@@ -72,11 +72,12 @@ export function CatalogsView({
   promos: PromoRow[];
   catalogItems: CatalogItemRow[];
 }) {
+  const t = useTranslations("admin.catalogs");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("services");
 
-  // Dialogs
+
   const [serviceDialog, setServiceDialog] = useState<{ open: boolean; service: ServiceRow | null }>({ open: false, service: null });
   const [promoDialog, setPromoDialog] = useState<{ open: boolean; promo: PromoRow | null }>({ open: false, promo: null });
   const [catalogDialog, setCatalogDialog] = useState<{ open: boolean; item: CatalogItemRow | null; type: string }>({ open: false, item: null, type: "" });
@@ -93,15 +94,15 @@ export function CatalogsView({
       toast.success(`${label} supprimé`);
       router.refresh();
     } else {
-      toast.error(result.error || "Erreur");
+      toast.error(result.error || t("erreur"));
     }
     setConfirmDelete(null);
   };
 
   const toggleServiceActive = async (s: ServiceRow) => {
     const result = await updateServiceAction({ id: s.id, isActive: !s.isActive });
-    if (result.success) { toast.success(s.isActive ? "Service désactivé" : "Service activé"); router.refresh(); }
-    else toast.error(result.error || "Erreur");
+    if (result.success) { toast.success(s.isActive ? t("service_desactive") : t("service_active")); router.refresh(); }
+    else toast.error(result.error || t("erreur"));
   };
   const togglePromoActive = async (p: PromoRow) => {
     const result = await updatePromoAction({
@@ -111,16 +112,16 @@ export function CatalogsView({
       maxUses: p.maxUses, validFrom: p.validFrom, validUntil: p.validUntil,
       isActive: !p.isActive,
     });
-    if (result.success) { toast.success(p.isActive ? "Code désactivé" : "Code activé"); router.refresh(); }
-    else toast.error(result.error || "Erreur");
+    if (result.success) { toast.success(p.isActive ? t("code_desactive") : t("code_active")); router.refresh(); }
+    else toast.error(result.error || t("erreur"));
   };
   const toggleCatalogActive = async (item: CatalogItemRow) => {
     const result = await updateCatalogItemAction({ id: item.id, isActive: !item.isActive });
-    if (result.success) { toast.success(item.isActive ? "Désactivé" : "Activé"); router.refresh(); }
-    else toast.error(result.error || "Erreur");
+    if (result.success) { toast.success(item.isActive ? t("desactive") : t("active")); router.refresh(); }
+    else toast.error(result.error || t("erreur"));
   };
 
-  // Permute deux items adjacents dans la liste du type courant
+
   const moveItem = async (item: CatalogItemRow, direction: "up" | "down") => {
     const sameType = catalogItems.filter((i) => i.type === item.type).sort((a, b) => a.sortOrder - b.sortOrder);
     const idx = sameType.findIndex((i) => i.id === item.id);
@@ -136,7 +137,7 @@ export function CatalogsView({
       orderedIds: newOrder.map((i) => i.id),
     });
     if (result.success) router.refresh();
-    else toast.error(result.error || "Erreur");
+    else toast.error(result.error || t("erreur"));
   };
 
   const currentMeta = TABS.find((t) => t.key === tab)!;
@@ -146,7 +147,7 @@ export function CatalogsView({
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+
       <div className="flex items-start gap-4">
         <Link href="/admin/settings" className="mt-1 text-muted-foreground hover:text-foreground" aria-label={tc("back")}>
           <ChevronLeft className="h-5 w-5" />
@@ -155,35 +156,35 @@ export function CatalogsView({
           <LayoutGrid className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Catalogues</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("catalogues")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Services offerts, codes promo et listes de référence utilisées dans tout le portail
+            {t("services_offerts_codes_promo_listes")}
           </p>
         </div>
       </div>
 
-      {/* Sous-tabs scrollable */}
+
       <div className="border-b">
         <div className="flex gap-1 overflow-x-auto">
-          {TABS.map((t) => {
-            const Icon = t.icon;
-            const active = tab === t.key;
-            const count = t.key === "services"
+          {TABS.map((meta) => {
+            const Icon = meta.icon;
+            const active = tab === meta.key;
+            const count = meta.key === "services"
               ? services.length
-              : t.key === "promos"
+              : meta.key === "promos"
               ? promos.length
-              : catalogItems.filter((i) => i.type === t.key).length;
+              : catalogItems.filter((i) => i.type === meta.key).length;
             return (
               <button
-                key={t.key}
-                onClick={() => setTab(t.key)}
+                key={meta.key}
+                onClick={() => setTab(meta.key)}
                 className={cn(
                   "px-3 py-2.5 text-sm font-medium border-b-2 -mb-px flex items-center gap-2 transition-colors whitespace-nowrap",
                   active ? "border-[#0F2D52] text-[#0F2D52]" : "border-transparent text-muted-foreground hover:text-foreground hover:border-border"
                 )}
               >
                 <Icon className="h-4 w-4" />
-                {t.label}
+                {t(meta.labelKey)}
                 <Badge variant="secondary" className="text-[10px] ml-1">{count}</Badge>
               </button>
             );
@@ -191,13 +192,13 @@ export function CatalogsView({
         </div>
       </div>
 
-      {/* SERVICES */}
+
       {tab === "services" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
             <p className="text-sm text-muted-foreground">{services.filter((s) => s.isActive).length} actif{services.filter((s) => s.isActive).length > 1 ? "s" : ""} sur {services.length}</p>
             <Button onClick={() => setServiceDialog({ open: true, service: null })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Nouveau service
+              <Plus className="h-4 w-4 mr-1.5" />{t("nouveau_service_btn")}
             </Button>
           </div>
           <Card>
@@ -217,26 +218,26 @@ export function CatalogsView({
                   </div>
                   <div className="hidden md:block text-right shrink-0">
                     <p className="font-semibold text-sm">{Number(s.basePrice).toLocaleString("fr-CA", { style: "currency", currency: s.currency })}</p>
-                    <p className="text-[10px] text-muted-foreground">par {s.priceUnit === "hour" ? "heure" : s.priceUnit === "day" ? "jour" : s.priceUnit === "fixed" ? "forfait" : s.priceUnit === "month" ? "mois" : "année"}</p>
+                    <p className="text-[10px] text-muted-foreground">{t("par_unite", { unit: s.priceUnit === "hour" ? t("heure") : s.priceUnit === "day" ? t("jour") : s.priceUnit === "fixed" ? t("forfait") : s.priceUnit === "month" ? t("mois") : t("annee") })}</p>
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => setServiceDialog({ open: true, service: s })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => toggleServiceActive(s)}><Power className="h-4 w-4 mr-2" />{s.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => toggleServiceActive(s)}><Power className="h-4 w-4 mr-2" />{s.isActive ? t("desactiver") : t("activer")}</DropdownMenuItem>
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "service", id: s.id, label: s.name })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
               ))}
-              {services.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucun service. Cliquez sur « Nouveau service ».</p>}
+              {services.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucun_service_cliquez_nouveau_service")}</p>}
             </div>
           </Card>
         </div>
       )}
 
-      {/* CODES PROMO */}
+
       {tab === "promos" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -258,7 +259,7 @@ export function CatalogsView({
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-mono font-bold text-sm">{p.code}</p>
                         {!p.isActive && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">{tc("disabled")}</Badge>}
-                        {expired && <Badge className="text-[10px] bg-red-500 hover:bg-red-500">Expiré</Badge>}
+                        {expired && <Badge className="text-[10px] bg-red-500 hover:bg-red-500">{t("expire")}</Badge>}
                       </div>
                       {p.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{p.description}</p>}
                     </div>
@@ -274,7 +275,7 @@ export function CatalogsView({
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setPromoDialog({ open: true, promo: p })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => togglePromoActive(p)}><Power className="h-4 w-4 mr-2" />{p.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => togglePromoActive(p)}><Power className="h-4 w-4 mr-2" />{p.isActive ? t("desactiver") : t("activer")}</DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem onClick={() => setConfirmDelete({ kind: "promo", id: p.id, label: p.code })} className="text-red-600 focus:text-red-600"><Trash2 className="h-4 w-4 mr-2" />{tc("delete")}</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -282,13 +283,13 @@ export function CatalogsView({
                   </div>
                 );
               })}
-              {promos.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">Aucun code promo.</p>}
+              {promos.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">{t("aucun_code_promo")}</p>}
             </div>
           </Card>
         </div>
       )}
 
-      {/* CATALOGUES GÉNÉRIQUES */}
+
       {tab !== "services" && tab !== "promos" && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -296,7 +297,7 @@ export function CatalogsView({
               {itemsForCurrentType.filter((i) => i.isActive).length} actif{itemsForCurrentType.filter((i) => i.isActive).length > 1 ? "s" : ""} sur {itemsForCurrentType.length}
             </p>
             <Button onClick={() => setCatalogDialog({ open: true, item: null, type: tab })} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-              <Plus className="h-4 w-4 mr-1.5" />Nouveau {currentMeta.label.toLowerCase().slice(0, -1)}
+              <Plus className="h-4 w-4 mr-1.5" />{t("nouveau_type", { type: t(currentMeta.labelKey).toLowerCase().slice(0, -1) })}
             </Button>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -310,8 +311,8 @@ export function CatalogsView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         <p className="font-semibold text-sm truncate">{item.name}</p>
-                        {item.isSystem && <Badge variant="secondary" className="text-[9px]">Système</Badge>}
-                        {!item.isActive && <Badge className="text-[9px] bg-gray-500 hover:bg-gray-500">Off</Badge>}
+                        {item.isSystem && <Badge variant="secondary" className="text-[9px]">{t("systeme")}</Badge>}
+                        {!item.isActive && <Badge className="text-[9px] bg-gray-500 hover:bg-gray-500">{t("off")}</Badge>}
                       </div>
                       <p className="text-[10px] text-muted-foreground font-mono truncate">{item.key}</p>
                     </div>
@@ -319,9 +320,9 @@ export function CatalogsView({
                       <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-7 w-7 shrink-0"><MoreHorizontal className="h-4 w-4" /></Button></DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem onClick={() => setCatalogDialog({ open: true, item, type: item.type })}><Edit className="h-4 w-4 mr-2" />{tc("edit")}</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => moveItem(item, "up")}><ArrowUp className="h-4 w-4 mr-2" />Monter</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => moveItem(item, "down")}><ArrowDown className="h-4 w-4 mr-2" />Descendre</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => toggleCatalogActive(item)}><Power className="h-4 w-4 mr-2" />{item.isActive ? "Désactiver" : "Activer"}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => moveItem(item, "up")}><ArrowUp className="h-4 w-4 mr-2" />{t("monter")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => moveItem(item, "down")}><ArrowDown className="h-4 w-4 mr-2" />{t("descendre")}</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => toggleCatalogActive(item)}><Power className="h-4 w-4 mr-2" />{item.isActive ? t("desactiver") : t("activer")}</DropdownMenuItem>
                         {!item.isSystem && (
                           <>
                             <DropdownMenuSeparator />
@@ -336,13 +337,13 @@ export function CatalogsView({
               </Card>
             ))}
             {itemsForCurrentType.length === 0 && (
-              <p className="col-span-full p-8 text-center text-sm text-muted-foreground">Aucun élément dans ce catalogue.</p>
+              <p className="col-span-full p-8 text-center text-sm text-muted-foreground">{t("aucun_element_catalogue")}</p>
             )}
           </div>
         </div>
       )}
 
-      {/* Dialogs */}
+
       <ServiceDialog
         open={serviceDialog.open}
         onOpenChange={(open) => setServiceDialog({ open, service: open ? serviceDialog.service : null })}
@@ -360,7 +361,7 @@ export function CatalogsView({
         onOpenChange={(open) => setCatalogDialog({ open, item: open ? catalogDialog.item : null, type: catalogDialog.type })}
         item={catalogDialog.item}
         type={catalogDialog.type}
-        typeLabel={TABS.find((t) => t.key === catalogDialog.type)?.label ?? ""}
+        typeLabel={(() => { const m = TABS.find((x) => x.key === catalogDialog.type); return m ? t(m.labelKey) : ""; })()}
         onSaved={() => router.refresh()}
       />
 
@@ -368,7 +369,7 @@ export function CatalogsView({
         open={!!confirmDelete}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}

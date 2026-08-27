@@ -4,6 +4,7 @@
 // Une demande se complète automatiquement quand l'employé signe (cf
 // signLegalDocAction dans hr-legal-docs.ts).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -65,20 +66,21 @@ const createSchema = z.object({
 export async function createSignatureRequestAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ createdCount: number; skipped: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const tpl = await prisma.legalDocumentTemplate.findUnique({
     where: { id: parsed.data.templateId },
     select: { id: true, title: true, version: true, isActive: true },
   });
-  if (!tpl || !tpl.isActive) return { success: false, error: "Template introuvable ou inactif" };
+  if (!tpl || !tpl.isActive) return { success: false, error: t("template_introuvable_ou_inactif") };
 
   const dueDate = parseDateOnly(parsed.data.dueDate ?? null);
   if (dueDate && dueDate.getTime() < Date.now() - 24 * 3600 * 1000) {
-    return { success: false, error: "L'échéance ne peut pas être dans le passé" };
+    return { success: false, error: t("l_echeance_ne_peut_pas_etre_dans") };
   }
 
   // Normalise les valeurs des champs libres : trim. Les valeurs VIDES ("")
@@ -144,7 +146,7 @@ export async function createSignatureRequestAction(
       where: { id: teamId },
       select: { id: true, name: true, members: { where: { isActive: true }, select: { id: true } } },
     });
-    if (!team) return { success: false, error: "Équipe introuvable" };
+    if (!team) return { success: false, error: t("equipe_introuvable") };
 
     const exists = await prisma.documentSignatureRequest.findFirst({
       where: { templateId: tpl.id, targetTeamId: teamId, status: "pending" },
@@ -241,7 +243,7 @@ export async function createSignatureRequestAction(
           recipientType: "admin",
           recipientId: rid,
           type: "warning",
-          title: "Signature demandée",
+          title: t("signature_demandee"),
           body: tpl.title + (parsed.data.reason ? ` — ${parsed.data.reason}` : ""),
           link: "/admin/mon-espace/documents",
           icon: "file-signature",
@@ -258,6 +260,7 @@ export async function createSignatureRequestAction(
 
 // ─── cancelSignatureRequestAction ───────────────────────────────
 export async function cancelSignatureRequestAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
 
@@ -266,7 +269,7 @@ export async function cancelSignatureRequestAction(input: { id: number }): Promi
     select: { id: true, status: true, templateId: true, targetAdminId: true },
   });
   if (!req) return { success: false, error: "Demande introuvable" };
-  if (req.status !== "pending") return { success: false, error: "Demande déjà clôturée" };
+  if (req.status !== "pending") return { success: false, error: t("demande_deja_cloturee") };
 
   await prisma.documentSignatureRequest.update({
     where: { id: input.id },
@@ -291,6 +294,7 @@ export async function cancelSignatureRequestAction(input: { id: number }): Promi
 export async function remindSignatureRequestAction(input: { id: number }): Promise<
   Result<{ notified: number }>
 > {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
 
@@ -299,7 +303,7 @@ export async function remindSignatureRequestAction(input: { id: number }): Promi
     include: { template: { select: { id: true, title: true, version: true } } },
   });
   if (!req) return { success: false, error: "Demande introuvable" };
-  if (req.status !== "pending") return { success: false, error: "Demande déjà clôturée" };
+  if (req.status !== "pending") return { success: false, error: t("demande_deja_cloturee") };
 
   let targetIds: number[] = [];
 
@@ -347,7 +351,7 @@ export async function remindSignatureRequestAction(input: { id: number }): Promi
         recipientType: "admin",
         recipientId: rid,
         type: "warning",
-        title: "Rappel : signature demandée",
+        title: t("rappel_signature_demandee"),
         body: req.template.title,
         link: "/admin/mon-espace/documents",
         icon: "bell",

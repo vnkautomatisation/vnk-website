@@ -5,6 +5,7 @@
 // Audit log de chaque appel.
 // ─────────────────────────────────────────────────────────
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { verifySync } from "otplib";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -23,6 +24,7 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
   const body = await req.json().catch(() => null);
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("requete_invalide") }, { status: 400 });
   }
 
   // ── Vérification du challenge ────────────────────────
@@ -46,20 +48,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
       select: { twoFactorSecret: true, twoFactorEnabled: true },
     });
     if (!admin?.twoFactorEnabled || !admin.twoFactorSecret) {
-      return NextResponse.json({ error: "2FA non activée. Utilisez un code par courriel." }, { status: 400 });
+      return NextResponse.json({ error: t("2fa_non_activee_utilisez_un_code_par") }, { status: 400 });
     }
     const res = verifySync({ token: parsed.data.code, secret: admin.twoFactorSecret });
     valid = typeof res === "boolean" ? res : (res as { delta?: number } | null) !== null;
     methodLabel = "TOTP";
   } else if (parsed.data.method === "email") {
     if (!parsed.data.challengeId) {
-      return NextResponse.json({ error: "Identifiant de défi manquant" }, { status: 400 });
+      return NextResponse.json({ error: t("identifiant_de_defi_manquant") }, { status: 400 });
     }
     valid = verifyEmailChallenge(parsed.data.challengeId, parsed.data.code, adminId, `reveal:${provider}`);
     methodLabel = "Code courriel";
   } else if (parsed.data.method === "backup") {
     valid = await consumeBackupCode(adminId, parsed.data.code);
-    methodLabel = "Code de récupération";
+    methodLabel = t("code_de_recuperation");
   }
 
   if (!valid) {
@@ -70,13 +72,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
       message: `Tentative de révélation des secrets ${provider} — échec ${methodLabel}`,
       metadata: { provider, method: parsed.data.method },
     });
-    return NextResponse.json({ error: "Code invalide ou expiré" }, { status: 401 });
+    return NextResponse.json({ error: t("code_invalide_ou_expire") }, { status: 401 });
   }
 
   // ── Récupération + déchiffrement ─────────────────────
   const integ = await prisma.integration.findUnique({ where: { provider } });
   if (!integ) {
-    return NextResponse.json({ error: "Intégration introuvable" }, { status: 404 });
+    return NextResponse.json({ error: t("integration_introuvable") }, { status: 404 });
   }
 
   const decrypted = decryptCredentials((integ.credentials as Record<string, string>) ?? {});

@@ -2,6 +2,7 @@
 // PATCH /api/mandates/[id] — mettre a jour (statut, progression, notes, etc.)
 // DELETE /api/mandates/[id] — supprimer si aucun enfant lie
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -12,12 +13,12 @@ import { revalidateAdminViews } from "@/lib/revalidate";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 // Map statut -> workflow event + label francais pour mandate_log
-const STATUS_TO_EVENT: Record<string, { eventType: WorkflowEventType; logAction: string; label: string }> = {
-  in_progress: { eventType: "mandate_started", logAction: "STARTED", label: "Démarré" },
-  active: { eventType: "mandate_started", logAction: "STARTED", label: "Activé" },
-  paused: { eventType: "mandate_paused", logAction: "PAUSED", label: "Mis en pause" },
-  completed: { eventType: "mandate_completed", logAction: "COMPLETED", label: "Complété" },
-  cancelled: { eventType: "mandate_cancelled", logAction: "CANCELLED", label: "Annulé" },
+const STATUS_TO_EVENT: Record<string, { eventType: WorkflowEventType; logAction: string; labelKey: string }> = {
+  in_progress: { eventType: "mandate_started", logAction: "STARTED", labelKey: "demarre" },
+  active: { eventType: "mandate_started", logAction: "STARTED", labelKey: "active" },
+  paused: { eventType: "mandate_paused", logAction: "PAUSED", labelKey: "mis_en_pause" },
+  completed: { eventType: "mandate_completed", logAction: "COMPLETED", labelKey: "complete_2" },
+  cancelled: { eventType: "mandate_cancelled", logAction: "CANCELLED", labelKey: "annule_2" },
 };
 
 const updateSchema = z.object({
@@ -32,7 +33,7 @@ const updateSchema = z.object({
   estimatedHours: z.number().nullable().optional(),
   actualHours: z.number().nullable().optional(),
   hourlyRate: z.number().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: NextRequest,
@@ -70,6 +71,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -82,7 +84,7 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const mandateId = Number(id);
@@ -112,7 +114,7 @@ export async function PATCH(
         clientId: updated.clientId,
         mandateId: updated.id,
         eventType: meta.eventType,
-        eventLabel: `Mandat ${updated.title} — ${meta.label.toLowerCase()}`,
+        eventLabel: t("mandat_titre_statut", { titre: updated.title, statut: t(meta.labelKey).toLowerCase() }),
         triggeredBy: "admin",
       });
       await prisma.mandateLog.create({
@@ -182,6 +184,7 @@ export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -206,7 +209,7 @@ export async function DELETE(
     counts._count.invoices + counts._count.contracts + counts._count.quotes + counts._count.documents;
   if (total > 0) {
     return NextResponse.json(
-      { error: "Mandat lie a des factures/contrats/devis/documents — impossible de supprimer" },
+      { error: t("mandat_lie_a_des_factures_contrats_devis") },
       { status: 409 }
     );
   }

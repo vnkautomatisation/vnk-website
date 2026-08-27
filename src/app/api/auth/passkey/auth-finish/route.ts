@@ -1,6 +1,7 @@
 // Finalise une authentification WebAuthn et renvoie un token one-shot
 // que login-form échangera avec NextAuth signIn("admin-passkey").
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { verifyAssertion, getRpId, getOrigin } from "@/lib/security/webauthn";
@@ -9,6 +10,7 @@ import { logSecurityEvent } from "@/lib/security/security-events";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const body = await req.json().catch(() => null);
   if (!body) return NextResponse.json({ error: "Corps invalide" }, { status: 400 });
 
@@ -22,7 +24,7 @@ export async function POST(req: Request) {
     };
   };
   if (!id || !response?.authenticatorData || !response?.clientDataJSON || !response?.signature) {
-    return NextResponse.json({ error: "Données WebAuthn manquantes" }, { status: 400 });
+    return NextResponse.json({ error: t("donnees_webauthn_manquantes") }, { status: 400 });
   }
 
   const passkey = await prisma.adminPasskey.findUnique({
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
     include: { admin: { select: { id: true, email: true, isActive: true } } },
   });
   if (!passkey || !passkey.admin.isActive) {
-    return NextResponse.json({ error: "Passkey introuvable ou compte inactif" }, { status: 401 });
+    return NextResponse.json({ error: t("passkey_introuvable_ou_compte_inactif") }, { status: 401 });
   }
 
   // Récupérer challenge
@@ -42,7 +44,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Challenge introuvable" }, { status: 400 });
   }
   if (challenge.expiresAt < new Date()) {
-    return NextResponse.json({ error: "Challenge expiré" }, { status: 400 });
+    return NextResponse.json({ error: t("challenge_expire") }, { status: 400 });
   }
 
   try {
@@ -65,10 +67,10 @@ export async function POST(req: Request) {
       adminId: passkey.admin.id,
       type: "login_failed",
       severity: "critical",
-      message: "Tentative passkey rejetée (signature/counter invalide)",
+      message: t("tentative_passkey_rejetee_signature_counter_invalide"),
       metadata: { reason: err instanceof Error ? err.message : "?" },
     });
-    return NextResponse.json({ error: "Vérification échouée" }, { status: 401 });
+    return NextResponse.json({ error: t("verification_echouee") }, { status: 401 });
   }
 
   // Émettre un token one-shot signé que login-form passera à NextAuth

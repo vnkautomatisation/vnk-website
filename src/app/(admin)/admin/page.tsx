@@ -1,13 +1,14 @@
 // Admin dashboard — server component fetches data, client component renders
-import { getLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { DashboardView } from "@/components/admin/dashboard/dashboard-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Tableau de bord administrateur",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("tableau_bord_administrateur") };
+}
 
 export default async function AdminDashboard() {
   const locale = await getLocale();

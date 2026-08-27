@@ -1,14 +1,16 @@
 // CRON · Purge des invitations admin expirées (> 30 jours sans acceptation)
 // + auto-révocation des invitations encore "valides" mais expirées par TTL.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "CRON_SECRET non configuré" }, { status: 500 });
+  if (!secret) return NextResponse.json({ error: t("cron_secret_non_configure") }, { status: 500 });
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) return unauthorizedJson();
 

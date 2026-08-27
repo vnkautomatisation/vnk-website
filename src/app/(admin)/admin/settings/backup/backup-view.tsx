@@ -21,6 +21,7 @@ type ImportStats = {
 };
 
 export function BackupView() {
+  const t = useTranslations("admin.backup");
   const tc = useTranslations("common");
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -31,9 +32,9 @@ export function BackupView() {
   const [lastResult, setLastResult] = useState<ImportStats | null>(null);
 
   const handleExport = () => {
-    // Le browser télécharge directement depuis l'endpoint
+
     window.location.href = "/api/admin/config/export";
-    toast.success("Export en cours...");
+    toast.success(t("export_cours"));
   };
 
   const handleFileSelected = async (file: File) => {
@@ -41,13 +42,13 @@ export function BackupView() {
       const text = await file.text();
       const json = JSON.parse(text);
       if (json.version !== 1) {
-        toast.error("Version de configuration non supportée");
+        toast.error(t("version_configuration_non_supportee"));
         return;
       }
       setImportPayload(json);
       setConfirmImport(true);
     } catch {
-      toast.error("Fichier JSON invalide");
+      toast.error(t("fichier_json_invalide"));
     }
   };
 
@@ -62,15 +63,15 @@ export function BackupView() {
         });
         const json = await res.json();
         if (res.ok) {
-          toast.success("Configuration importée");
+          toast.success(t("configuration_importee"));
           setLastResult(json.stats);
           setImportPayload(null);
           router.refresh();
         } else {
-          toast.error(json.error || "Erreur d'import");
+          toast.error(json.error || t("erreur_import"));
         }
       } catch {
-        toast.error("Erreur réseau");
+        toast.error(t("erreur_reseau"));
       } finally {
         setConfirmImport(false);
       }
@@ -85,14 +86,14 @@ export function BackupView() {
           <Database className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Sauvegarde & Restauration</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("sauvegarde_restauration")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Exporter ou importer la configuration complète du portail au format JSON
+            {t("exporter_importer_configuration_complete_portail")}
           </p>
         </div>
       </div>
 
-      {/* EXPORT */}
+
       <Card>
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
@@ -100,30 +101,28 @@ export function BackupView() {
               <Download className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <h2 className="text-base font-semibold">Exporter la configuration</h2>
-              <p className="text-sm text-muted-foreground mt-1">
-                Télécharge un fichier JSON contenant tous les paramètres, rôles custom, postes, catalogues, modèles emails/PDF, services et codes promo. <strong>N&apos;inclut pas</strong> les utilisateurs, clients ou données métier (factures, devis...).
-              </p>
+              <h2 className="text-base font-semibold">{t("exporter_configuration")}</h2>
+              <p className="text-sm text-muted-foreground mt-1">{t("backup_view_telecharge_un_fichier_json_contenant_tous_les")}<strong>{t("n_apos_inclut_pas")}</strong>{t("backup_view_les_utilisateurs_clients_ou_donnees_metier_factures")}</p>
               <div className="flex gap-2 mt-3 flex-wrap">
-                <Badge variant="outline" className="text-[10px]">Paramètres</Badge>
-                <Badge variant="outline" className="text-[10px]">Rôles custom</Badge>
-                <Badge variant="outline" className="text-[10px]">Postes custom</Badge>
-                <Badge variant="outline" className="text-[10px]">Catalogues</Badge>
-                <Badge variant="outline" className="text-[10px]">Modèles emails</Badge>
-                <Badge variant="outline" className="text-[10px]">Modèles PDF</Badge>
-                <Badge variant="outline" className="text-[10px]">Services</Badge>
-                <Badge variant="outline" className="text-[10px]">Codes promo</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("parametres")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("roles_custom")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("postes_custom")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("catalogues")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("modeles_emails")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("modeles_pdf")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("services")}</Badge>
+                <Badge variant="outline" className="text-[10px]">{t("codes_promo")}</Badge>
               </div>
               <Button onClick={handleExport} className="mt-4 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                 <Download className="h-4 w-4 mr-1.5" />
-                Télécharger l&apos;export JSON
+                {t("telecharger_export_json")}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* IMPORT */}
+
       <Card>
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
@@ -131,9 +130,9 @@ export function BackupView() {
               <Upload className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <h2 className="text-base font-semibold">Importer une configuration</h2>
+              <h2 className="text-base font-semibold">{t("importer_configuration")}</h2>
               <p className="text-sm text-muted-foreground mt-1">
-                Charge un fichier JSON exporté précédemment. Choisissez le mode avant de téléverser le fichier.
+                {t("charge_fichier_json_exporte_precedemment")}
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -143,10 +142,10 @@ export function BackupView() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                    <p className="font-semibold text-sm">Mode fusion (recommandé)</p>
+                    <p className="font-semibold text-sm">{t("mode_fusion_recommande")}</p>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Met à jour ou ajoute les éléments du fichier. Les éléments existants non listés sont conservés.
+                    {t("met_jour_ajoute_elements_fichier")}
                   </p>
                 </button>
                 <button
@@ -155,10 +154,9 @@ export function BackupView() {
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <ShieldAlert className="h-4 w-4 text-red-600" />
-                    <p className="font-semibold text-sm">Mode remplacement</p>
+                    <p className="font-semibold text-sm">{t("mode_remplacement")}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">
-                    Supprime tous les rôles, postes et catalogues custom existants avant l&apos;import. <strong>Super-admin uniquement.</strong>
+                  <p className="text-xs text-muted-foreground">{t("backup_view_supprime_tous_les_roles_postes_et_catalogues")}<strong>{t("super_admin_uniquement")}</strong>
                   </p>
                 </button>
               </div>
@@ -181,22 +179,22 @@ export function BackupView() {
                 className={importMode === "merge" ? "mt-4 bg-[#0F2D52] hover:bg-[#0F2D52]/90" : "mt-4"}
               >
                 <FileJson className="h-4 w-4 mr-1.5" />
-                Choisir un fichier JSON
+                {t("choisir_fichier_json")}
               </Button>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* RÉSULTAT */}
+
       {lastResult && (
         <Card className="border-emerald-200 bg-emerald-50">
           <CardContent className="p-5">
             <div className="flex items-start gap-3">
               <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0 mt-0.5" />
               <div className="flex-1">
-                <h3 className="font-semibold text-sm text-emerald-900">Import réussi</h3>
-                <p className="text-xs text-emerald-800 mt-1 mb-3">Éléments traités :</p>
+                <h3 className="font-semibold text-sm text-emerald-900">{t("import_reussi")}</h3>
+                <p className="text-xs text-emerald-800 mt-1 mb-3">{t("elements_traites")}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   {Object.entries(lastResult).map(([key, count]) => (
                     <div key={key} className="bg-white rounded-md border border-emerald-200 px-2.5 py-1.5">
@@ -211,17 +209,17 @@ export function BackupView() {
         </Card>
       )}
 
-      {/* INFO BOX */}
+
       <Card>
         <CardContent className="p-5 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
           <div className="text-sm">
-            <p className="font-medium text-foreground mb-1">Conseils d&apos;utilisation</p>
+            <p className="font-medium text-foreground mb-1">{t("conseils_apos_utilisation")}</p>
             <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
-              <li>Exportez régulièrement votre configuration avant des changements majeurs</li>
-              <li>Conservez les exports dans un emplacement sécurisé (les paramètres incluent des clés API marquées comme secrètes)</li>
-              <li>Le mode fusion est sans risque, idéal pour synchroniser plusieurs environnements</li>
-              <li>Le mode remplacement supprime les éléments custom : utilisez-le uniquement pour des resets propres</li>
+              <li>{t("exportez_regulierement_configuration_avant_changements")}</li>
+              <li>{t("conservez_exports_emplacement_securise_parametres")}</li>
+              <li>{t("mode_fusion_sans_risque_ideal")}</li>
+              <li>{t("mode_remplacement_supprime_elements_custom")}</li>
             </ul>
           </div>
         </CardContent>
@@ -230,13 +228,13 @@ export function BackupView() {
       <ConfirmDialog
         open={confirmImport}
         onOpenChange={setConfirmImport}
-        title={importMode === "replace" ? "Confirmer le remplacement ?" : "Confirmer l'import ?"}
+        title={importMode === "replace" ? t("confirmer_remplacement") : t("confirmer_import")}
         description={
           importMode === "replace"
-            ? "Cette opération supprimera TOUS les rôles, postes et catalogues custom existants avant d'importer ceux du fichier. Les éléments système restent intacts. Cette action est irréversible."
-            : "L'import va ajouter ou mettre à jour les éléments présents dans le fichier. Les éléments existants non listés restent inchangés."
+            ? t("operation_supprimera_tous_roles_postes")
+            : t("import_ajouter_mettre_jour_elements")
         }
-        confirmLabel={importMode === "replace" ? "Remplacer (irréversible)" : "Importer"}
+        confirmLabel={importMode === "replace" ? t("remplacer_irreversible") : t("importer")}
         variant={importMode === "replace" ? "destructive" : "default"}
         loading={pending}
         onConfirm={handleConfirmImport}

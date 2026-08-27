@@ -16,16 +16,16 @@ import { createApiTokenAction, revokeApiTokenAction } from "@/app/actions/profil
 import type { ApiTokenRow } from "../profile-view";
 
 const SCOPES = [
-  { value: "read:clients", label: "Lire les clients" },
-  { value: "write:clients", label: "Modifier les clients" },
-  { value: "read:invoices", label: "Lire les factures" },
-  { value: "write:invoices", label: "Modifier les factures" },
-  { value: "read:quotes", label: "Lire les devis" },
-  { value: "write:quotes", label: "Modifier les devis" },
-  { value: "read:requests", label: "Lire les demandes" },
-  { value: "write:requests", label: "Modifier les demandes" },
-  { value: "read:reports", label: "Lire les rapports" },
-  { value: "admin:full", label: "Accès admin complet (DANGER)" },
+  { value: "read:clients", labelKey: "lire_clients" },
+  { value: "write:clients", labelKey: "modifier_clients" },
+  { value: "read:invoices", labelKey: "lire_factures" },
+  { value: "write:invoices", labelKey: "modifier_factures" },
+  { value: "read:quotes", labelKey: "lire_devis" },
+  { value: "write:quotes", labelKey: "modifier_devis" },
+  { value: "read:requests", labelKey: "lire_demandes" },
+  { value: "write:requests", labelKey: "modifier_demandes" },
+  { value: "read:reports", labelKey: "lire_rapports" },
+  { value: "admin:full", labelKey: "acces_admin_complet_danger" },
 ];
 
 export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
@@ -40,8 +40,8 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
   const [copied, setCopied] = useState(false);
 
   const handleCreate = () => {
-    if (!name.trim()) { toast.error("Nommez le token"); return; }
-    if (scopes.length === 0) { toast.error("Sélectionnez au moins une permission"); return; }
+    if (!name.trim()) { toast.error(t("nommez_token")); return; }
+    if (scopes.length === 0) { toast.error(t("selectionnez_moins_permission")); return; }
     startTransition(async () => {
       const r = await createApiTokenAction({
         name: name.trim(),
@@ -50,7 +50,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
       });
       if (r.success && "data" in r) {
         setNewToken(r.data.token);
-        toast.success("Token créé");
+        toast.success(t("token_cree"));
         setName(""); setScopes([]); setExpiresInDays("30");
       } else if (!r.success) {
         toast.error(r.error);
@@ -61,7 +61,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
   const handleRevoke = (id: number) => {
     startTransition(async () => {
       const r = await revokeApiTokenAction(id);
-      if (r.success) toast.success("Token révoqué");
+      if (r.success) toast.success(t("token_revoque"));
       else toast.error(r.error);
     });
   };
@@ -142,7 +142,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
         </CardContent>
       </Card>
 
-      {/* Dialog Create */}
+
       <Dialog open={createOpen && !newToken} onOpenChange={(o) => !o && setCreateOpen(false)}>
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -153,7 +153,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
           </div>
           <div className="p-5 space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="token-name" className="text-xs">Nom</Label>
+              <Label htmlFor="token-name" className="text-xs">{t("nom_plain")}</Label>
               <Input id="token-name" value={name} onChange={(e) => setName(e.target.value)} className="h-9" />
             </div>
             <div className="space-y-1.5">
@@ -171,7 +171,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-mono text-[11px] truncate">{s.value}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{s.label}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{t(s.labelKey)}</p>
                     </div>
                   </button>
                 ))}
@@ -200,7 +200,7 @@ export function TabApiTokens({ tokens }: { tokens: ApiTokenRow[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Show new token */}
+
       <Dialog open={!!newToken} onOpenChange={(o) => !o && closeNewToken()}>
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
           <div className="bg-emerald-600 text-white p-5">

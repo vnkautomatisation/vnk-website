@@ -127,12 +127,13 @@ export function PayrollView({
   allStubs: Stub[];
   isPayrollAdmin: boolean;
 }) {
+  const t = useTranslations("admin.payroll");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>(isPayrollAdmin ? "overview" : "my");
   const [createOpen, setCreateOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
-  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -146,14 +147,14 @@ export function PayrollView({
     return () => io.disconnect();
   }, []);
 
-  // KPI portal target inside the mobile module nav.
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
   const openStubPdf = useCallback((s: Stub) => {
-    const employeeName = s.admin?.fullName || s.admin?.email || "Employe";
+    const employeeName = s.admin?.fullName || s.admin?.email || t("employe");
     const periodLabel = `${formatDateOnly(s.period.startDate)} - ${formatDateOnly(s.period.endDate)}`;
     setPdfPreview({
       url: `/api/admin/pay-stubs/${s.id}/pdf`,
@@ -163,7 +164,7 @@ export function PayrollView({
     });
   }, []);
 
-  // --- KPIs admin ---------------------------------------------
+
   const kpis = useMemo(() => {
     const currentPeriod = periods.find((p) => p.status === "open")
       || periods.find((p) => p.status === "locked")
@@ -177,7 +178,7 @@ export function PayrollView({
     return { currentPeriod, stubsThisMonth, stubsPending, totalYtd };
   }, [periods, allStubs]);
 
-  // --- Employee KPIs (my stubs mode) --------------------------
+
   const myKpis = useMemo(() => {
     const released = myStubs.filter((s) => s.releasedAt);
     const ytd = released
@@ -190,21 +191,21 @@ export function PayrollView({
     return { count: released.length, ytd, grossYtd, last };
   }, [myStubs]);
 
-  // --- Tabs ----------------------------------------------------
+
   const TABS: TabItem<TabKey>[] = isPayrollAdmin
     ? [
-        { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
-        { key: "periods", label: "Periodes", icon: Calendar, count: periods.length },
-        { key: "stubs", label: "Bulletins", icon: Receipt, count: allStubs.length },
-        { key: "my", label: "Mes bulletins", icon: Wallet, count: myStubs.length },
+        { key: "overview", label: t("vue_ensemble"), icon: Sparkles },
+        { key: "periods", label: t("periodes"), icon: Calendar, count: periods.length },
+        { key: "stubs", label: t("bulletins_2"), icon: Receipt, count: allStubs.length },
+        { key: "my", label: t("mes_bulletins"), icon: Wallet, count: myStubs.length },
       ]
     : [
-        { key: "my", label: "Mes bulletins", icon: Wallet, count: myStubs.length },
+        { key: "my", label: t("mes_bulletins"), icon: Wallet, count: myStubs.length },
       ];
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -217,12 +218,12 @@ export function PayrollView({
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold">
-                {isPayrollAdmin ? "Paie & bulletins" : "Mes bulletins de paie"}
+                {isPayrollAdmin ? t("paie_bulletins") : t("mes_bulletins_paie")}
               </h1>
               <p className="text-xs text-white/80">
                 {isPayrollAdmin
-                  ? "Gerez les cycles de paie, generez les bulletins et suivez les versements."
-                  : "Consultez et telechargez vos bulletins de paie publies."}
+                  ? t("gerez_cycles_paie_generez_bulletins")
+                  : t("consultez_telechargez_bulletins_paie_publies")}
               </p>
             </div>
           </div>
@@ -234,84 +235,84 @@ export function PayrollView({
                 className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Nouvelle periode
+                {t("nouvelle_periode")}
               </Button>
             </div>
           )}
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       {isPayrollAdmin ? (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <DocumentStatsCard
-            label="Periode en cours"
+            label={t("periode_cours")}
             value={kpis.currentPeriod
               ? STATUS_META[kpis.currentPeriod.status]?.label ?? kpis.currentPeriod.status
-              : "Aucune"}
+              : t("aucune")}
             icon={Calendar}
             accent={kpis.currentPeriod?.status === "paid" ? "success" : kpis.currentPeriod ? "info" : "navy"}
             hint={kpis.currentPeriod
               ? `${formatDateOnly(kpis.currentPeriod.startDate)} - ${formatDateOnly(kpis.currentPeriod.endDate)}`
-              : "Creez une nouvelle periode"}
+              : t("creez_nouvelle_periode")}
             onClick={() => setTab("periods")}
           />
           <DocumentStatsCard
-            label="Bulletins ce mois"
+            label={t("bulletins_mois")}
             value={kpis.stubsThisMonth}
             icon={Receipt}
             accent="info"
-            hint="Bulletins publies ce mois-ci"
+            hint={t("bulletins_publies_mois_ci")}
             onClick={() => setTab("stubs")}
           />
           <DocumentStatsCard
-            label="En attente"
+            label={t("attente_2")}
             value={kpis.stubsPending}
             icon={Layers}
             accent={kpis.stubsPending > 0 ? "warning" : "success"}
-            hint="Bulletins generes non publies"
+            hint={t("bulletins_generes_non_publies")}
             onClick={() => setTab("stubs")}
           />
           <DocumentStatsCard
-            label="Total verse YTD"
+            label={t("total_verse_ytd")}
             value={formatMoney(kpis.totalYtd)}
             icon={TrendingUp}
             accent="navy"
-            hint="Net cumule depuis le 1er janvier"
+            hint={t("net_cumule_depuis_1er_janvier")}
           />
         </div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
           <DocumentStatsCard
-            label="Bulletins disponibles"
+            label={t("bulletins_disponibles")}
             value={myKpis.count}
             icon={Receipt}
             accent="info"
             hint={myKpis.last
               ? `Dernier : ${formatDateOnly(myKpis.last.period.startDate)}`
-              : "Aucun bulletin pour le moment"}
+              : t("aucun_bulletin_moment")}
           />
           <DocumentStatsCard
-            label="Net cumule YTD"
+            label={t("net_cumule_ytd")}
             value={formatMoney(myKpis.ytd)}
             icon={Wallet}
             accent="success"
             hint={`Annee ${new Date().getFullYear()}`}
           />
           <DocumentStatsCard
-            label="Brut cumule YTD"
+            label={t("brut_cumule_ytd")}
             value={formatMoney(myKpis.grossYtd)}
             icon={DollarSign}
             accent="navy"
-            hint="Avant deductions a la source"
+            hint={t("avant_deductions_source")}
           />
         </div>
       )}
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
@@ -319,16 +320,16 @@ export function PayrollView({
                 <>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">Mois :</span>
-                      <span className="hidden min-[480px]:inline">Ce mois :</span>
+                      <span className="min-[480px]:hidden">{t("mois")}</span>
+                      <span className="hidden min-[480px]:inline">{t("mois_2")}</span>
                     </span>
                     <span className="font-semibold text-[#0F2D52]">{kpis.stubsThisMonth}</span>
                   </span>
                   <span className="text-muted-foreground">·</span>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">Att :</span>
-                      <span className="hidden min-[480px]:inline">En attente :</span>
+                      <span className="min-[480px]:hidden">{t("att")}</span>
+                      <span className="hidden min-[480px]:inline">{t("attente")}</span>
                     </span>
                     <span className={kpis.stubsPending > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
                       {kpis.stubsPending}
@@ -339,16 +340,16 @@ export function PayrollView({
                 <>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">Bul :</span>
-                      <span className="hidden min-[480px]:inline">Bulletins :</span>
+                      <span className="min-[480px]:hidden">{t("bul")}</span>
+                      <span className="hidden min-[480px]:inline">{t("bulletins")}</span>
                     </span>
                     <span className="font-semibold text-[#0F2D52]">{myKpis.count}</span>
                   </span>
                   <span className="text-muted-foreground">·</span>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">YTD :</span>
-                      <span className="hidden min-[480px]:inline">Net YTD :</span>
+                      <span className="min-[480px]:hidden">{t("ytd")}</span>
+                      <span className="hidden min-[480px]:inline">{t("net_ytd")}</span>
                     </span>
                     <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd)}</span>
                   </span>
@@ -359,7 +360,7 @@ export function PayrollView({
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -373,22 +374,22 @@ export function PayrollView({
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <Calculator className="h-4 w-4" />
-            {isPayrollAdmin ? "Paie" : "Mes bulletins"}
+            {isPayrollAdmin ? t("paie") : t("mes_bulletins")}
           </span>
           {isPayrollAdmin ? (
             <>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="text-muted-foreground">Ce mois :</span>
+                <span className="text-muted-foreground">{t("mois_2")}</span>
                 <span className="font-semibold text-[#0F2D52]">{kpis.stubsThisMonth}</span>
               </span>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="text-muted-foreground">En attente :</span>
+                <span className="text-muted-foreground">{t("attente")}</span>
                 <span className={kpis.stubsPending > 0 ? "font-semibold text-amber-600" : "font-semibold text-emerald-600"}>
                   {kpis.stubsPending}
                 </span>
               </span>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="text-muted-foreground">YTD :</span>
+                <span className="text-muted-foreground">{t("ytd")}</span>
                 <span className="font-semibold text-[#0F2D52]">{formatMoney(kpis.totalYtd)}</span>
               </span>
               <Button
@@ -397,28 +398,28 @@ export function PayrollView({
                 className="h-7 text-xs ml-auto bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
               >
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Nouvelle periode
+                {t("nouvelle_periode")}
               </Button>
             </>
           ) : (
             <>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="text-muted-foreground">Bulletins :</span>
+                <span className="text-muted-foreground">{t("bulletins")}</span>
                 <span className="font-semibold text-[#0F2D52]">{myKpis.count}</span>
               </span>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-                <span className="text-muted-foreground">Net YTD :</span>
+                <span className="text-muted-foreground">{t("net_ytd")}</span>
                 <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd)}</span>
               </span>
             </>
           )}
         </div>
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation paie" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_paie")} />
         </div>
       </div>
 
-      {/* ====== Tab content ====== */}
+
       {tab === "overview" && isPayrollAdmin && (
         <OverviewTab
           periods={periods}
@@ -442,7 +443,7 @@ export function PayrollView({
         <MyStubsTab stubs={myStubs} onOpenPdf={openStubPdf} />
       )}
 
-      {/* ============== Modals ============== */}
+
       <CreatePeriodDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}
@@ -479,20 +480,21 @@ function OverviewTab({
   onGoStubs: () => void;
   onNewPeriod: () => void;
 }) {
+  const t = useTranslations("admin.payroll");
   const recentPeriods = periods.slice(0, 5);
   const recentStubs = stubs.slice(0, 6);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-      {/* Periode courante */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Calendar className="h-4 w-4 text-[#0F2D52]" />
-            Periode en cours
+            {t("periode_cours")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoPeriods}>
-            Voir tout
+            {t("voir_tout")}
           </Button>
         </div>
         {kpis.currentPeriod ? (
@@ -506,16 +508,16 @@ function OverviewTab({
               </Badge>
             </div>
             <div className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">Date de paie</span>
+              <span className="text-muted-foreground">{t("date_paie")}</span>
               <span className="font-medium">{formatDateOnly(kpis.currentPeriod.payDate)}</span>
             </div>
             <div className="flex items-baseline justify-between text-xs">
-              <span className="text-muted-foreground">Bulletins generes</span>
+              <span className="text-muted-foreground">{t("bulletins_generes")}</span>
               <span className="font-semibold text-[#0F2D52]">{kpis.currentPeriod._count.stubs}</span>
             </div>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucune periode active.</p>
+          <p className="text-xs text-muted-foreground">{t("aucune_periode_active")}</p>
         )}
         <Button
           size="sm"
@@ -523,19 +525,19 @@ function OverviewTab({
           onClick={onNewPeriod}
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Nouvelle periode
+          {t("nouvelle_periode")}
         </Button>
       </Card>
 
-      {/* Past periods */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Layers className="h-4 w-4 text-[#0F2D52]" />
-            Periodes recentes
+            {t("periodes_recentes")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoPeriods}>
-            Voir tout
+            {t("voir_tout")}
           </Button>
         </div>
         {recentPeriods.length > 0 ? (
@@ -552,19 +554,19 @@ function OverviewTab({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucune periode.</p>
+          <p className="text-xs text-muted-foreground">{t("aucune_periode")}</p>
         )}
       </Card>
 
-      {/* Bulletins recents */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Receipt className="h-4 w-4 text-[#0F2D52]" />
-            Bulletins recents
+            {t("bulletins_recents")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoStubs}>
-            Voir tout
+            {t("voir_tout")}
           </Button>
         </div>
         {recentStubs.length > 0 ? (
@@ -581,7 +583,7 @@ function OverviewTab({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucun bulletin.</p>
+          <p className="text-xs text-muted-foreground">{t("aucun_bulletin")}</p>
         )}
       </Card>
     </div>
@@ -598,18 +600,19 @@ function PeriodsTab({
   onChanged: () => void;
   onCreate: () => void;
 }) {
+  const t = useTranslations("admin.payroll");
   if (periods.length === 0) {
     return (
       <Card className="p-10 text-center space-y-3">
         <Calendar className="h-10 w-10 mx-auto text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Aucune periode de paie creee.</p>
+        <p className="text-sm text-muted-foreground">{t("aucune_periode_paie_creee")}</p>
         <Button
           size="sm"
           onClick={onCreate}
           className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Creer une periode
+          {t("creer_periode")}
         </Button>
       </Card>
     );
@@ -624,6 +627,7 @@ function PeriodsTab({
 }
 
 function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => void }) {
+  const t = useTranslations("admin.payroll");
   const s = STATUS_META[period.status] ?? { label: period.status, color: "bg-gray-100 text-gray-700" };
   const [busy, setBusy] = useState<"gen" | "lock" | "pay" | null>(null);
 
@@ -658,7 +662,7 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
                     toast.success(`${r.data.stubsCreated} bulletin(s) genere(s)`);
                     if (r.data.provisionalRates) {
                       toast.warning(
-                        "Taux fiscaux provisoires pour cette annee : validez les bulletins avec les tables officielles ARC / Revenu Quebec avant le versement.",
+                        t("taux_fiscaux_provisoires_annee_validez"),
                         { duration: 12000 },
                       );
                     }
@@ -668,7 +672,7 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
                 }}
               >
                 <Calculator className="h-3 w-3 mr-1" />
-                {busy === "gen" ? "..." : "Generer"}
+                {busy === "gen" ? "..." : t("generer")}
               </Button>
               <Button
                 size="sm" variant="outline" className="h-7 text-xs"
@@ -677,12 +681,12 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
                   setBusy("lock");
                   const r = await lockPayPeriodAction({ id: period.id });
                   setBusy(null);
-                  if (r.success) { toast.success("Periode verrouillee"); onChanged(); }
+                  if (r.success) { toast.success(t("periode_verrouillee")); onChanged(); }
                   else toast.error(r.error || "");
                 }}
               >
                 <Lock className="h-3 w-3 mr-1" />
-                {busy === "lock" ? "..." : "Verrouiller"}
+                {busy === "lock" ? "..." : t("verrouiller")}
               </Button>
             </>
           )}
@@ -692,20 +696,20 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
               disabled={busy !== null}
               onClick={async () => {
                 const ok = await confirmDialog({
-                  title: "Marquer la periode comme payee ?",
-                  description: "Les bulletins deviendront visibles aux employes. Cette action est irreversible.",
-                  confirmLabel: "Marquer payee",
+                  title: t("marquer_periode_comme_payee"),
+                  description: t("bulletins_deviendront_visibles_employes_action"),
+                  confirmLabel: t("marquer_payee"),
                 });
                 if (!ok) return;
                 setBusy("pay");
                 const r = await markPayPeriodPaidAction({ id: period.id });
                 setBusy(null);
-                if (r.success) { toast.success("Periode marquee payee"); onChanged(); }
+                if (r.success) { toast.success(t("periode_marquee_payee")); onChanged(); }
                 else toast.error(r.error || "");
               }}
             >
               <CheckCircle2 className="h-3 w-3 mr-1" />
-              {busy === "pay" ? "..." : "Marquer payee"}
+              {busy === "pay" ? "..." : t("marquer_payee")}
             </Button>
           )}
         </div>
@@ -718,6 +722,7 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
 // TAB : STUBS (admin)
 // =============================================================
 function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Period[]; onOpenPdf: (s: Stub) => void }) {
+  const t = useTranslations("admin.payroll");
   const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
@@ -747,7 +752,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
     return (
       <Card className="p-10 text-center space-y-3">
         <Receipt className="h-10 w-10 mx-auto text-muted-foreground/40" />
-        <p className="text-sm text-muted-foreground">Aucun bulletin de paie pour le moment.</p>
+        <p className="text-sm text-muted-foreground">{t("aucun_bulletin_paie_moment")}</p>
       </Card>
     );
   }
@@ -761,14 +766,14 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher un employe..."
+              placeholder={t("rechercher_employe")}
               className="h-9 text-sm pl-7"
             />
           </div>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Periode" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("periode")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les periodes</SelectItem>
+              <SelectItem value="all">{t("toutes_periodes")}</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)}>
                   {formatDateOnly(p.startDate)} - {formatDateOnly(p.endDate)}
@@ -779,9 +784,9 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("status")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Tous statuts</SelectItem>
-              <SelectItem value="released">Publies</SelectItem>
-              <SelectItem value="draft">Brouillons</SelectItem>
+              <SelectItem value="all">{t("tous_statuts")}</SelectItem>
+              <SelectItem value="released">{t("publies")}</SelectItem>
+              <SelectItem value="draft">{t("brouillons")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -791,7 +796,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
         <div className="divide-y">
           {filtered.length === 0 ? (
             <div className="p-8 text-center text-sm text-muted-foreground">
-              Aucun resultat avec ces filtres.
+              {t("aucun_resultat_filtres")}
             </div>
           ) : pageItems.map((s) => (
             <div key={s.id} className="p-3 flex items-center gap-3 hover:bg-[#0F2D52]/5 transition">
@@ -810,17 +815,17 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
               </div>
               {s.releasedAt ? (
                 <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50 text-[10px]">
-                  Publie
+                  {t("publie")}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-amber-700 border-amber-300 bg-amber-50 text-[10px]">
-                  Brouillon
+                  {t("brouillon")}
                 </Badge>
               )}
-              <ActionTooltip label="Apercu PDF">
+              <ActionTooltip label={t("apercu_pdf")}>
                 <Button
                   size="icon" variant="ghost" className="h-8 w-8"
-                  aria-label="Apercu PDF"
+                  aria-label={t("apercu_pdf")}
                   onClick={() => onOpenPdf(s)}
                 >
                   <Eye className="h-4 w-4" />
@@ -839,7 +844,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
                 variant="outline" size="icon" className="h-7 w-7"
                 onClick={() => setPage((p) => Math.max(0, p - 1))}
                 disabled={page === 0}
-                aria-label="Page precedente"
+                aria-label={t("page_precedente")}
               >
                 <ChevronLeft className="h-3.5 w-3.5" />
               </Button>
@@ -847,7 +852,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
                 variant="outline" size="icon" className="h-7 w-7"
                 onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                 disabled={page >= totalPages - 1}
-                aria-label="Page suivante"
+                aria-label={t("page_suivante")}
               >
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
@@ -863,15 +868,16 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
 // TAB: MY STUBS (employee)
 // =============================================================
 function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) => void }) {
+  const t = useTranslations("admin.payroll");
   if (stubs.length === 0) {
     return (
       <Card className="p-10 text-center space-y-3">
         <Wallet className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
-          Aucun bulletin de paie disponible pour le moment.
+          {t("aucun_bulletin_paie_disponible_moment")}
         </p>
         <p className="text-[11px] text-muted-foreground/80">
-          Vos bulletins apparaitront ici une fois la periode de paie marquee payee.
+          {t("bulletins_apparaitront_ici_fois_periode")}
         </p>
       </Card>
     );
@@ -886,6 +892,7 @@ function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) 
 }
 
 function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
+  const t = useTranslations("admin.payroll");
   const totalDeductions =
     Number(stub.deductionFederal) + Number(stub.deductionProvincial) +
     Number(stub.deductionRrq) + Number(stub.deductionAe) +
@@ -899,7 +906,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             <Receipt className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <p className="text-[10px] uppercase tracking-wider opacity-80">Periode</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-80">{t("periode")}</p>
             <h3 className="font-bold text-sm truncate">
               {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
             </h3>
@@ -907,7 +914,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <p className="text-[10px] uppercase tracking-wider opacity-80">Net a payer</p>
+            <p className="text-[10px] uppercase tracking-wider opacity-80">{t("net_payer")}</p>
             <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay)}</p>
           </div>
           <Button
@@ -917,14 +924,14 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             onClick={onOpenPdf}
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Apercu PDF
+            {t("apercu_pdf")}
           </Button>
         </div>
       </div>
       <div className="p-4 grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
         <div>
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-            Heures regulieres
+            {t("heures_regulieres")}
           </p>
           <p className="font-mono">
             {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate)}
@@ -933,7 +940,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursOvertime) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Heures supplementaires
+              {t("heures_supplementaires")}
             </p>
             <p className="font-mono">{Number(stub.hoursOvertime).toFixed(2)} h x 1.5</p>
           </div>
@@ -941,7 +948,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursHoliday) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Jour ferie travaille
+              {t("jour_ferie_travaille")}
             </p>
             <p className="font-mono">{Number(stub.hoursHoliday).toFixed(2)} h x 2</p>
           </div>
@@ -949,7 +956,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.holidayIndemnity) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Indemnite ferie
+              {t("indemnite_ferie")}
             </p>
             <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
           </div>
@@ -957,38 +964,38 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         {Number(stub.hoursVacation) > 0 && (
           <div>
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Vacances
+              {t("vacances")}
             </p>
             <p className="font-mono">{Number(stub.hoursVacation).toFixed(2)} h</p>
           </div>
         )}
         <div className="col-span-full border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div>
-            <span className="text-muted-foreground">Brut : </span>
+            <span className="text-muted-foreground">{t("brut")} </span>
             <strong className="tabular-nums">{formatMoney(stub.grossPay)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">Federal : </span>
+            <span className="text-muted-foreground">{t("federal")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionFederal)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">Provincial : </span>
+            <span className="text-muted-foreground">{t("provincial")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">RRQ : </span>
+            <span className="text-muted-foreground">{t("rrq")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionRrq)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">AE : </span>
+            <span className="text-muted-foreground">{t("ae")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionAe)}</strong>
           </div>
           <div>
-            <span className="text-muted-foreground">RQAP : </span>
+            <span className="text-muted-foreground">{t("rqap")} </span>
             <strong className="tabular-nums">-{formatMoney(stub.deductionRqap)}</strong>
           </div>
           <div className="md:col-span-2">
-            <span className="text-muted-foreground">Total deductions : </span>
+            <span className="text-muted-foreground">{t("total_deductions")} </span>
             <strong className="tabular-nums">-{formatMoney(totalDeductions)}</strong>
           </div>
         </div>
@@ -1007,6 +1014,7 @@ function CreatePeriodDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.payroll");
   const tc = useTranslations("common");
   const today = new Date();
   const twoWeeksAgo = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000);
@@ -1030,7 +1038,7 @@ function CreatePeriodDialog({
     setPending(true);
     const r = await createPayPeriodAction({ startDate: start, endDate: end, payDate: pay });
     setPending(false);
-    if (r.success) { toast.success("Periode creee"); onSaved(); onClose(); }
+    if (r.success) { toast.success(t("periode_creee")); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -1041,24 +1049,24 @@ function CreatePeriodDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              Nouvelle periode de paie
+              {t("nouvelle_periode_paie")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Definissez les bornes de la periode et la date de versement.
+              {t("definissez_bornes_periode_date_versement")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4">
-          <FormSection icon={Calendar} title="Periode">
+          <FormSection icon={Calendar} title={t("periode")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Debut" required>
+              <Field label={t("debut")} required>
                 <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} className="h-9" />
               </Field>
-              <Field label="Fin" required>
+              <Field label={t("fin")} required>
                 <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} className="h-9" />
               </Field>
             </div>
-            <Field label="Date de paie" required hint="Jour de versement aux employes">
+            <Field label={t("date_paie")} required hint={t("jour_versement_employes")}>
               <Input type="date" value={pay} onChange={(e) => setPay(e.target.value)} className="h-9" />
             </Field>
           </FormSection>
@@ -1070,7 +1078,7 @@ function CreatePeriodDialog({
             disabled={pending}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? "..." : "Creer la periode"}
+            {pending ? "..." : t("creer_periode")}
           </Button>
         </DialogFooter>
       </DialogContent>

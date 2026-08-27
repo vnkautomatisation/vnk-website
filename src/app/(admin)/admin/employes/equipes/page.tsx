@@ -1,12 +1,16 @@
 // Page Équipes — CRUD des sous-équipes avec hiérarchie + assignation membres.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { TeamsView } from "./teams-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Équipes" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_equipes") };
+}
 
 export default async function EmployesTeamsPage() {
   const session = await auth();

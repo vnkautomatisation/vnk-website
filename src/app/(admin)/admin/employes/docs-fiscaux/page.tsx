@@ -1,12 +1,16 @@
 // HR · Emission T4 / Releve 1 par employe.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { TaxDocsView } from "./tax-docs-view";
 
-export const metadata: Metadata = { title: "Employes — Documents fiscaux" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_documents_fiscaux") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function TaxDocsAdminPage() {

@@ -42,12 +42,12 @@ import { deletePositionAction, reorderPositionsAction } from "@/app/actions/posi
 // ── Tri utilisateurs ──────────────────────────────────────
 type UserSortKey = "name" | "department" | "role" | "lastLogin" | "createdAt";
 type SortDir = "asc" | "desc";
-const USER_SORT_OPTIONS: { key: UserSortKey; label: string }[] = [
-  { key: "name", label: "Nom" },
-  { key: "department", label: "Département" },
-  { key: "role", label: "Rôle" },
-  { key: "lastLogin", label: "Dernière connexion" },
-  { key: "createdAt", label: "Date de création" },
+const USER_SORT_OPTIONS: { key: UserSortKey; labelKey: string }[] = [
+  { key: "name", labelKey: "nom" },
+  { key: "department", labelKey: "col_departement" },
+  { key: "role", labelKey: "role" },
+  { key: "lastLogin", labelKey: "derniere_connexion" },
+  { key: "createdAt", labelKey: "date_creation" },
 ];
 
 // ── Compte dormant : actif mais pas connecté depuis >30j ──
@@ -60,18 +60,18 @@ function isDormant(u: { isActive: boolean; lastLogin: string | null; createdAt: 
 // ── Présence dérivée du lastLogin + presenceStatus ───────
 function getPresence(u: { lastLogin: string | null; presenceStatus: string | null }): {
   color: string;
-  label: string;
+  labelKey: string;
 } {
-  if (u.presenceStatus === "vacation") return { color: "bg-amber-500", label: "En vacances" };
-  if (u.presenceStatus === "offline") return { color: "bg-gray-400", label: "Hors ligne" };
-  if (u.presenceStatus === "meeting") return { color: "bg-purple-500", label: "En réunion" };
-  if (u.presenceStatus === "focus") return { color: "bg-blue-500", label: "Concentré" };
-  if (!u.lastLogin) return { color: "bg-gray-300", label: "Jamais connecté" };
+  if (u.presenceStatus === "vacation") return { color: "bg-amber-500", labelKey: "presence_vacation" };
+  if (u.presenceStatus === "offline") return { color: "bg-gray-400", labelKey: "presence_offline" };
+  if (u.presenceStatus === "meeting") return { color: "bg-purple-500", labelKey: "presence_meeting" };
+  if (u.presenceStatus === "focus") return { color: "bg-blue-500", labelKey: "presence_focus" };
+  if (!u.lastLogin) return { color: "bg-gray-300", labelKey: "jamais_connecte" };
   const min = Math.floor((Date.now() - new Date(u.lastLogin).getTime()) / 60_000);
-  if (min < 15) return { color: "bg-emerald-500", label: "En ligne" };
-  if (min < 60) return { color: "bg-amber-400", label: "Récemment actif" };
-  if (min < 60 * 24) return { color: "bg-gray-400", label: "Inactif aujourd'hui" };
-  return { color: "bg-gray-300", label: "Hors ligne" };
+  if (min < 15) return { color: "bg-emerald-500", labelKey: "presence_online" };
+  if (min < 60) return { color: "bg-amber-400", labelKey: "recemment_actif" };
+  if (min < 60 * 24) return { color: "bg-gray-400", labelKey: "presence_idle_today" };
+  return { color: "bg-gray-300", labelKey: "presence_offline" };
 }
 
 export type UserRow = {
@@ -95,7 +95,7 @@ export type UserRow = {
   bio: string | null;
   internalNotes: string | null;
   // Genre + civilité pour accord grammatical FR-CA dans documents PDF
-  civility: string | null;          // "M." | "Mme" | "Mx" | null
+  civility: string | null;          // "M." | t("mme") | t("mx") | null
   gender: string | null;            // "male" | "female" | "non_binary" | "prefer_not_to_say" | null
   preferredPronouns: string | null; // ex "il/lui", "elle/elle", "iel/iel" (override custom)
   createdAt: string;
@@ -159,6 +159,7 @@ export function TeamView({
   defaultTab?: Tab;
   hideTabs?: boolean;
 }) {
+  const t = useTranslations("admin.team");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(defaultTab);
@@ -214,7 +215,7 @@ export function TeamView({
     }
     bulkUpdateUsersAction({ userIds: ids, action, reassignToAdminId: reassignToAdminId ?? null, expectedUpdatedAts }).then((r) => {
       if (r.success && "data" in r) {
-        const parts: string[] = [`${r.data.updated} utilisateur(s) ${action === "activate" ? "activé(s)" : action === "deactivate" ? "désactivé(s)" : "supprimé(s)"}`];
+        const parts: string[] = [t("bulk_result", { count: r.data.updated, action })];
         if (r.data.reassigned) {
           if (r.data.reassigned.timeEntries > 0) parts.push(`${r.data.reassigned.timeEntries} saisie(s) de temps transférée(s)`);
           if (r.data.reassigned.notifications > 0) parts.push(`${r.data.reassigned.notifications} notification(s) transférée(s)`);
@@ -243,7 +244,7 @@ export function TeamView({
       expectedUpdatedAts,
     }).then((r) => {
       if (r.success && "data" in r) {
-        const roleName = newRoleId ? roles.find((x) => x.id === newRoleId)?.name : "aucun";
+        const roleName = newRoleId ? roles.find((x) => x.id === newRoleId)?.name : t("aucun");
         toast.success(`${r.data.updated} utilisateur(s) → rôle « ${roleName} »`);
         setSelectedIds(new Set());
         router.refresh();
@@ -257,7 +258,7 @@ export function TeamView({
     const ids = Array.from(selectedIds);
     if (ids.length === 0) return;
     const selected = users.filter((u) => ids.includes(u.id));
-    const headers = ["ID", "Email", "Nom complet", "Téléphone", "Département", "Titre", "Poste", "Rôle", "Statut", "2FA", "Dernière connexion", "Créé le"];
+    const headers = ["ID", t("email"), t("nom_complet"), t("telephone"), t("col_departement"), t("titre"), t("poste"), t("role"), t("statut"), "2FA", t("derniere_connexion"), t("cree")];
     const rows = selected.map((u) => [
       u.id,
       u.email,
@@ -267,8 +268,8 @@ export function TeamView({
       u.title ?? "",
       u.position?.name ?? "",
       u.customRole?.name ?? "",
-      u.isActive ? "Actif" : "Désactivé",
-      u.twoFactorEnabled ? "Oui" : "Non",
+      u.isActive ? t("actif") : t("desactive"),
+      u.twoFactorEnabled ? tc("yes") : tc("no"),
       u.lastLogin ? new Date(u.lastLogin).toISOString() : "",
       new Date(u.createdAt).toISOString(),
     ]);
@@ -295,24 +296,24 @@ export function TeamView({
       if (r.data.emailSent) {
         toast.success(`Email renvoyé à ${email}`, {
           action: {
-            label: "Copier lien",
+            label: t("copier_lien"),
             onClick: () => {
               navigator.clipboard.writeText(r.data.inviteUrl);
-              toast.success("Lien copié");
+              toast.success(t("lien_copie"));
             },
           },
         });
       } else {
         // Email échoué — proposer copie immédiate
         navigator.clipboard.writeText(r.data.inviteUrl);
-        toast.warning("Email non envoyé — lien copié dans le presse-papiers", {
-          description: r.data.emailError ?? "Transmettez-le manuellement.",
+        toast.warning(t("email_non_envoye_lien_copie"), {
+          description: r.data.emailError ?? t("transmettez_manuellement"),
           duration: 10000,
         });
       }
       router.refresh();
     } else if (!r.success) {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
   const handleCopyInviteLink = async (id: number) => {
@@ -320,18 +321,18 @@ export function TeamView({
     const r = await resendInvitationAction({ id });
     if (r.success && "data" in r) {
       navigator.clipboard.writeText(r.data.inviteUrl);
-      toast.success("Nouveau lien copié", {
-        description: "L'ancien lien est invalidé. Validité : 7 jours.",
+      toast.success(t("nouveau_lien_copie"), {
+        description: t("ancien_lien_invalide_validite_7"),
       });
       router.refresh();
     } else if (!r.success) {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
   const handleRevokeInvite = async (id: number) => {
     const r = await revokeInvitationAction({ id });
-    if (r.success) { toast.success("Invitation révoquée"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("invitation_revoquee")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   // Dupliquer un rôle
@@ -346,7 +347,7 @@ export function TeamView({
       toast.success(`Rôle dupliqué : ${newName}`);
       router.refresh();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -361,7 +362,7 @@ export function TeamView({
     [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
     const r = await reorderRolesAction({ orderedIds: newOrder.map((x) => x.id) });
     if (r.success) router.refresh();
-    else toast.error(r.error || "Erreur");
+    else toast.error(r.error || t("erreur"));
   };
   const movePosition = async (id: number, direction: "up" | "down") => {
     const sorted = [...positions].sort((a, b) => a.sortOrder - b.sortOrder);
@@ -373,7 +374,7 @@ export function TeamView({
     [newOrder[idx], newOrder[target]] = [newOrder[target], newOrder[idx]];
     const r = await reorderPositionsAction({ orderedIds: newOrder.map((x) => x.id) });
     if (r.success) router.refresh();
-    else toast.error(r.error || "Erreur");
+    else toast.error(r.error || t("erreur"));
   };
   const [confirmDelete, setConfirmDelete] = useState<
     | { type: "user"; id: number; label: string }
@@ -403,8 +404,8 @@ export function TeamView({
       .split(/[\s,;]+/)
       .map((e) => e.trim())
       .filter((e) => e.length > 0 && e.includes("@"));
-    if (emails.length === 0) { toast.error("Aucune adresse email détectée"); return; }
-    if (emails.length > 50) { toast.error("Maximum 50 emails"); return; }
+    if (emails.length === 0) { toast.error(t("aucune_adresse_email_detectee")); return; }
+    if (emails.length > 50) { toast.error(t("maximum_50_emails")); return; }
     const guess = (email: string) =>
       email.split("@")[0].split(/[.\-_]/).filter(Boolean).map((p) => p[0].toUpperCase() + p.slice(1)).join(" ");
     const dedup = Array.from(new Set(emails.map((e) => e.toLowerCase())));
@@ -420,7 +421,7 @@ export function TeamView({
 
       if (bulkInviteMode === "edit") {
         const valid = bulkInviteEntries.filter((e) => e.email.includes("@"));
-        if (valid.length === 0) { toast.error("Aucune ligne valide"); setBulkInvitePending(false); return; }
+        if (valid.length === 0) { toast.error(t("aucune_ligne_valide")); setBulkInvitePending(false); return; }
         payload = {
           entries: valid,
           roleId: bulkInviteRoleId !== "none" ? Number(bulkInviteRoleId) : null,
@@ -431,8 +432,8 @@ export function TeamView({
           .split(/[\s,;]+/)
           .map((e) => e.trim())
           .filter((e) => e.length > 0 && e.includes("@"));
-        if (emails.length === 0) { toast.error("Aucune adresse"); setBulkInvitePending(false); return; }
-        if (emails.length > 50) { toast.error("Max 50"); setBulkInvitePending(false); return; }
+        if (emails.length === 0) { toast.error(t("aucune_adresse")); setBulkInvitePending(false); return; }
+        if (emails.length > 50) { toast.error(t("max_50")); setBulkInvitePending(false); return; }
         payload = {
           emails,
           roleId: bulkInviteRoleId !== "none" ? Number(bulkInviteRoleId) : null,
@@ -444,14 +445,14 @@ export function TeamView({
       if (r.success) {
         setBulkInviteResult(r.data);
         if (r.data.invited > 0) {
-          toast.success(`${r.data.invited} invitation${r.data.invited > 1 ? "s" : ""} envoyée${r.data.invited > 1 ? "s" : ""}`);
+          toast.success(t("invitations_sent", { count: r.data.invited }));
           router.refresh();
         }
         if (r.data.skipped.length > 0 && r.data.invited === 0) {
           toast.error(`Aucune invitation envoyée — voir détails`);
         }
       } else {
-        toast.error(r.error || "Erreur");
+        toast.error(r.error || t("erreur"));
       }
     } finally {
       setBulkInvitePending(false);
@@ -633,11 +634,11 @@ export function TeamView({
             : `${label} désactivé`
         );
       } else {
-        toast.success(`${label} ${type === "user" ? "désactivé" : "supprimé"}`);
+        toast.success(t("item_removed", { label, kind: type }));
       }
       router.refresh();
     } else {
-      toast.error(result.error || "Erreur lors de la suppression");
+      toast.error(result.error || t("erreur_lors_suppression"));
     }
     setConfirmDelete(null);
     setOffboardingReassign("none");
@@ -653,17 +654,17 @@ export function TeamView({
   const handleToggleActive = async (user: UserRow) => {
     const result = await updateUserAction({ id: user.id, isActive: !user.isActive });
     if (result.success) {
-      toast.success(user.isActive ? "Utilisateur désactivé" : "Utilisateur réactivé");
+      toast.success(user.isActive ? t("utilisateur_desactive") : t("utilisateur_reactive"));
       router.refresh();
     } else {
-      toast.error(result.error || "Erreur");
+      toast.error(result.error || t("erreur"));
     }
   };
 
   const TABS: TabItem<Tab>[] = [
-    { key: "users", label: "Utilisateurs", icon: Users, count: users.length },
-    { key: "roles", label: "Rôles", icon: Shield, count: roles.length },
-    { key: "positions", label: "Postes", icon: Briefcase, count: positions.length },
+    { key: "users", label: t("utilisateurs"), icon: Users, count: users.length },
+    { key: "roles", label: t("roles"), icon: Shield, count: roles.length },
+    { key: "positions", label: t("postes"), icon: Briefcase, count: positions.length },
   ];
 
   const activeCount = users.filter((u) => u.isActive).length;
@@ -710,33 +711,33 @@ export function TeamView({
       <div className="flex items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="hidden md:inline-flex" title="Télécharger l'annuaire interne au format PDF">
+            <Button variant="outline" size="sm" className="hidden md:inline-flex" title={t("telecharger_annuaire_interne_format_pdf")}>
               <FileDown className="h-3.5 w-3.5 mr-1.5" />
-              Annuaire PDF
+              {t("annuaire_pdf")}
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuItem onClick={() => setPdfPreview({
               url: "/api/admin/team/directory-pdf",
-              title: "Annuaire interne · Actifs",
-              description: "Tous les employés actifs",
+              title: t("annuaire_interne_actifs"),
+              description: t("tous_employes_actifs"),
               filename: "annuaire-actifs.pdf",
             })}>
               <FileText className="h-3.5 w-3.5 mr-2" />
-              Tous les actifs
+              {t("tous_actifs")}
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setPdfPreview({
               url: "/api/admin/team/directory-pdf?includeInactive=1",
-              title: "Annuaire interne · Actifs + Inactifs",
-              description: "Inclut les employés inactifs",
+              title: t("annuaire_interne_actifs_inactifs"),
+              description: t("inclut_employes_inactifs"),
               filename: "annuaire-complet.pdf",
             })}>
               <FileText className="h-3.5 w-3.5 mr-2" />
-              Inclure les inactifs
+              {t("inclure_inactifs")}
             </DropdownMenuItem>
             {filterRoleId !== "all" && (
               <DropdownMenuItem onClick={() => {
-                const roleName = roles.find((r) => String(r.id) === filterRoleId)?.name || "Rôle";
+                const roleName = roles.find((r) => String(r.id) === filterRoleId)?.name || t("role");
                 setPdfPreview({
                   url: `/api/admin/team/directory-pdf?roleId=${filterRoleId}`,
                   title: `Annuaire interne · ${roleName}`,
@@ -750,7 +751,7 @@ export function TeamView({
             )}
             {filterPositionId !== "all" && (
               <DropdownMenuItem onClick={() => {
-                const posName = positions.find((p) => String(p.id) === filterPositionId)?.name || "Poste";
+                const posName = positions.find((p) => String(p.id) === filterPositionId)?.name || t("poste");
                 setPdfPreview({
                   url: `/api/admin/team/directory-pdf?positionId=${filterPositionId}`,
                   title: `Annuaire interne · ${posName}`,
@@ -765,7 +766,7 @@ export function TeamView({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => {
-                const dep = prompt("Filtrer par département (laisser vide pour annuler) :");
+                const dep = prompt(t("filtrer_departement_laisser_vide"));
                 const trimmed = dep?.trim();
                 if (trimmed) {
                   setPdfPreview({
@@ -778,7 +779,7 @@ export function TeamView({
               }}
             >
               <Building2 className="h-3.5 w-3.5 mr-2" />
-              Par département…
+              {t("departement")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -786,27 +787,27 @@ export function TeamView({
           variant="outline"
           size="sm"
           onClick={() => setBulkInviteOpen(true)}
-          title="Inviter plusieurs personnes à la fois"
+          title={t("inviter_plusieurs_personnes_fois")}
           className="hidden sm:inline-flex"
         >
           <Send className="h-3.5 w-3.5 mr-1.5" />
-          Invitation en masse
+          {t("invitation_masse")}
         </Button>
-        <Button onClick={() => setUserDialog({ open: true, user: null })} title="Raccourci : N">
+        <Button onClick={() => setUserDialog({ open: true, user: null })} title={t("raccourci_n")}>
           <Plus className="h-4 w-4 mr-1.5" />
-          Nouvel utilisateur
+          {t("nouvel_utilisateur")}
           <kbd className="ml-2 hidden md:inline-flex items-center justify-center h-4 px-1 text-[10px] font-mono rounded bg-white/15 border border-white/20">N</kbd>
         </Button>
       </div>
     ) : tab === "roles" ? (
       <Button onClick={() => setRoleDialog({ open: true, role: null })}>
         <Plus className="h-4 w-4 mr-1.5" />
-        Nouveau rôle
+        {t("nouveau_role")}
       </Button>
     ) : (
       <Button onClick={() => setPositionDialog({ open: true, position: null })}>
         <Plus className="h-4 w-4 mr-1.5" />
-        Nouveau poste
+        {t("nouveau_poste")}
       </Button>
     );
 
@@ -814,8 +815,8 @@ export function TeamView({
     <SettingsPageShell
       icon={Users}
       iconColor="bg-rose-500"
-      title="Équipe"
-      subtitle="Comptes employés, rôles d'accès et postes templates"
+      title={t("equipe")}
+      subtitle={t("comptes_employes_roles_acces_postes")}
       stickyBadges={stickyBadges}
       actions={headerAction}
     >
@@ -826,35 +827,35 @@ export function TeamView({
         <div className="space-y-4">
           {/* Stats équipe — overview en haut */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            <StatCard label="Actifs" value={stats.active} hint={`sur ${stats.total}`} accent="emerald" />
+            <StatCard label={t("actifs")} value={stats.active} hint={`sur ${stats.total}`} accent="emerald" />
             <StatCard
-              label="2FA activée"
+              label={t("2fa_activee")}
               value={`${stats.twoFactorPct}%`}
-              hint={stats.twoFactorPct < 80 ? "Sécurité à renforcer" : "Bon niveau"}
+              hint={stats.twoFactorPct < 80 ? t("securite_renforcer") : t("bon_niveau")}
               accent={stats.twoFactorPct >= 80 ? "emerald" : stats.twoFactorPct >= 50 ? "amber" : "red"}
             />
             <StatCard
-              label="Sans rôle"
+              label={t("sans_role")}
               value={stats.noRole}
-              hint={stats.noRole > 0 ? "À assigner" : "Tous assignés"}
+              hint={stats.noRole > 0 ? t("assigner") : t("tous_assignes")}
               accent={stats.noRole > 0 ? "amber" : "muted"}
             />
             <StatCard
-              label="Dormants"
+              label={t("dormants")}
               value={stats.dormant}
-              hint="> 30 jours"
+              hint={t("30_jours")}
               accent={stats.dormant > 0 ? "amber" : "muted"}
             />
             <StatCard
-              label="Jamais connecté"
+              label={t("jamais_connecte")}
               value={stats.neverLogin}
-              hint={stats.neverLogin > 0 ? "Vérifier" : "—"}
+              hint={stats.neverLogin > 0 ? t("verifier") : "—"}
               accent={stats.neverLogin > 0 ? "amber" : "muted"}
             />
             <StatCard
-              label="Invitations"
+              label={t("invitations")}
               value={stats.invitationsPending}
-              hint={stats.invitationsPending > 0 ? "En attente" : "Aucune"}
+              hint={stats.invitationsPending > 0 ? t("attente") : t("aucune")}
               accent={stats.invitationsPending > 0 ? "blue" : "muted"}
             />
           </div>
@@ -862,7 +863,7 @@ export function TeamView({
           {/* Quick filter chips */}
           <div className="flex flex-wrap items-center gap-1.5">
             <span className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mr-1">
-              Filtres rapides :
+              {t("filtres_rapides")}
             </span>
             <QuickChip
               label={tc("all")}
@@ -870,28 +871,28 @@ export function TeamView({
               onClick={() => setQuickFilter("none")}
             />
             <QuickChip
-              label="Sans 2FA"
+              label={t("sans_2fa")}
               count={users.filter((u) => u.isActive && !u.twoFactorEnabled).length}
               active={quickFilter === "no2fa"}
               accent="amber"
               onClick={() => setQuickFilter(quickFilter === "no2fa" ? "none" : "no2fa")}
             />
             <QuickChip
-              label="Dormants"
+              label={t("dormants")}
               count={stats.dormant}
               active={quickFilter === "dormant"}
               accent="amber"
               onClick={() => setQuickFilter(quickFilter === "dormant" ? "none" : "dormant")}
             />
             <QuickChip
-              label="Jamais connecté"
+              label={t("jamais_connecte")}
               count={stats.neverLogin}
               active={quickFilter === "never"}
               accent="amber"
               onClick={() => setQuickFilter(quickFilter === "never" ? "none" : "never")}
             />
             <QuickChip
-              label="Sans rôle"
+              label={t("sans_role")}
               count={stats.noRole}
               active={quickFilter === "norole"}
               accent="red"
@@ -907,7 +908,7 @@ export function TeamView({
                 ref={searchInputRef}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher nom, email, téléphone, département... (/)"
+                placeholder={t("rechercher_nom_email_telephone_departement")}
                 className="pl-9 h-9"
               />
               {search && (
@@ -915,7 +916,7 @@ export function TeamView({
                   type="button"
                   onClick={() => setSearch("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
-                  aria-label="Effacer la recherche"
+                  aria-label={t("effacer_recherche")}
                 >
                   <X className="h-3 w-3 text-muted-foreground" />
                 </button>
@@ -925,16 +926,16 @@ export function TeamView({
             <Select value={filterStatus} onValueChange={(v) => setFilterStatus(v as typeof filterStatus)}>
               <SelectTrigger className="h-9 w-auto min-w-[120px]"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les statuts</SelectItem>
-                <SelectItem value="active">Actifs</SelectItem>
-                <SelectItem value="inactive">Désactivés</SelectItem>
+                <SelectItem value="all">{t("tous_statuts")}</SelectItem>
+                <SelectItem value="active">{t("actifs")}</SelectItem>
+                <SelectItem value="inactive">{t("desactives")}</SelectItem>
               </SelectContent>
             </Select>
 
             <Select value={filterRoleId} onValueChange={setFilterRoleId}>
-              <SelectTrigger className="h-9 w-auto min-w-[140px]"><SelectValue placeholder="Rôle" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-auto min-w-[140px]"><SelectValue placeholder={t("role")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les rôles</SelectItem>
+                <SelectItem value="all">{t("tous_roles")}</SelectItem>
                 {roles.map((r) => (
                   <SelectItem key={r.id} value={r.id.toString()}>
                     <span className="inline-flex items-center gap-2">
@@ -947,9 +948,9 @@ export function TeamView({
             </Select>
 
             <Select value={filterPositionId} onValueChange={setFilterPositionId}>
-              <SelectTrigger className="h-9 w-auto min-w-[140px]"><SelectValue placeholder="Poste" /></SelectTrigger>
+              <SelectTrigger className="h-9 w-auto min-w-[140px]"><SelectValue placeholder={t("poste")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Tous les postes</SelectItem>
+                <SelectItem value="all">{t("tous_postes")}</SelectItem>
                 {positions.map((p) => (
                   <SelectItem key={p.id} value={p.id.toString()}>{p.name}</SelectItem>
                 ))}
@@ -957,13 +958,13 @@ export function TeamView({
             </Select>
 
             <Select value={sortKey} onValueChange={(v) => setSortKey(v as UserSortKey)}>
-              <SelectTrigger className="h-9 w-auto min-w-[160px]" title="Cliquez sur une option en maintenant Shift pour ajouter un critère secondaire">
+              <SelectTrigger className="h-9 w-auto min-w-[160px]" title={t("cliquez_option_maintenant_shift_ajouter")}>
                 <ArrowUpDown className="h-3.5 w-3.5 mr-1.5 shrink-0" />
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {USER_SORT_OPTIONS.map((o) => (
-                  <SelectItem key={o.key} value={o.key}>Trier par : {o.label}</SelectItem>
+                  <SelectItem key={o.key} value={o.key}>{t("trier_par")} {t(o.labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -973,7 +974,7 @@ export function TeamView({
               size="icon"
               className="h-9 w-9"
               onClick={() => setSortDir(sortDir === "asc" ? "desc" : "asc")}
-              title={sortDir === "asc" ? "Tri croissant" : "Tri décroissant"}
+              title={sortDir === "asc" ? t("sort_asc") : t("sort_desc")}
             >
               {sortDir === "asc" ? <ArrowUp className="h-3.5 w-3.5" /> : <ArrowDown className="h-3.5 w-3.5" />}
             </Button>
@@ -985,7 +986,7 @@ export function TeamView({
                   variant="outline"
                   size="sm"
                   className="h-9 gap-1"
-                  title="Ajouter un critère de tri secondaire"
+                  title={t("ajouter_critere_tri_secondaire")}
                 >
                   <Plus className="h-3 w-3" />
                   Tri{secondarySorts.length > 0 && ` (+${secondarySorts.length})`}
@@ -998,7 +999,7 @@ export function TeamView({
                     onClick={() => setSecondarySorts((s) => [...s, { key: o.key, dir: "asc" }])}
                     className="text-xs"
                   >
-                    Ajouter : {o.label}
+                    {t("ajouter_prefix")} {t(o.labelKey)}
                   </DropdownMenuItem>
                 ))}
                 {secondarySorts.length > 0 && (
@@ -1006,7 +1007,7 @@ export function TeamView({
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setSecondarySorts([])} className="text-xs text-muted-foreground">
                       <X className="h-3 w-3 mr-1" />
-                      Effacer les critères secondaires
+                      {t("effacer_criteres_secondaires")}
                     </DropdownMenuItem>
                   </>
                 )}
@@ -1023,10 +1024,10 @@ export function TeamView({
                     setSecondarySorts((prev) => prev.map((p, i) => i === idx ? { ...p, dir: p.dir === "asc" ? "desc" : "asc" } : p));
                   }}
                   className="inline-flex items-center gap-1 h-9 px-2 text-[11px] rounded-md border bg-muted/40 hover:bg-muted/60 transition"
-                  title="Cliquer pour inverser · Bouton × pour retirer"
+                  title={t("cliquer_inverser_bouton_retirer")}
                 >
                   <span className="text-muted-foreground font-mono">{idx + 2}.</span>
-                  {opt?.label}
+                  {opt ? t(opt.labelKey) : null}
                   {s.dir === "asc" ? <ArrowUp className="h-2.5 w-2.5" /> : <ArrowDown className="h-2.5 w-2.5" />}
                   <span
                     role="button"
@@ -1051,8 +1052,7 @@ export function TeamView({
 
             {hasActiveFilter && (
               <Button variant="ghost" size="sm" onClick={resetFilters} className="h-9 text-muted-foreground">
-                <X className="h-3.5 w-3.5 mr-1" />Réinitialiser
-              </Button>
+                <X className="h-3.5 w-3.5 mr-1" />{t("team_view_reinitialiser")}</Button>
             )}
           </div>
 
@@ -1093,7 +1093,7 @@ export function TeamView({
               <div className="px-4 py-2.5 border-b border-amber-200 bg-amber-50 flex items-center gap-2">
                 <Hourglass className="h-4 w-4 text-amber-600" />
                 <h3 className="text-xs font-bold uppercase tracking-wider text-amber-900">
-                  Invitations en attente
+                  {t("invitations_attente")}
                 </h3>
                 <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">{invitations.length}</Badge>
               </div>
@@ -1110,11 +1110,11 @@ export function TeamView({
                         <div className="flex items-center gap-2 flex-wrap">
                           <p className="font-medium text-sm">{inv.fullName || inv.email}</p>
                           <Badge variant="outline" className="text-[9px] px-1.5 py-0 border-amber-300 text-amber-700">
-                            En attente
+                            {t("attente")}
                           </Badge>
                           {expiringSoon && (
                             <Badge className="text-[9px] px-1.5 py-0 bg-red-500 hover:bg-red-500">
-                              Expire bientôt
+                              {t("expire_bientot")}
                             </Badge>
                           )}
                         </div>
@@ -1133,7 +1133,7 @@ export function TeamView({
                           variant="outline"
                           onClick={() => handleCopyInviteLink(inv.id)}
                           className="h-8 text-xs"
-                          title="Générer un nouveau lien et le copier"
+                          title={t("generer_nouveau_lien_copier")}
                         >
                           <Copy className="h-3.5 w-3.5 mr-1" />Copier lien
                         </Button>
@@ -1142,7 +1142,7 @@ export function TeamView({
                           variant="outline"
                           onClick={() => handleResendInvite(inv.id, inv.email)}
                           className="h-8 text-xs"
-                          title="Renvoyer un nouveau lien par email"
+                          title={t("renvoyer_nouveau_lien_email")}
                         >
                           <Send className="h-3.5 w-3.5 mr-1" />Renvoyer
                         </Button>
@@ -1151,10 +1151,9 @@ export function TeamView({
                           variant="ghost"
                           onClick={() => handleRevokeInvite(inv.id)}
                           className="h-8 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
-                          title="Annuler cette invitation"
+                          title={t("annuler_invitation")}
                         >
-                          <Ban className="h-3.5 w-3.5 mr-1" />Révoquer
-                        </Button>
+                          <Ban className="h-3.5 w-3.5 mr-1" />{t("team_view_revoquer")}</Button>
                       </div>
                     </div>
                   );
@@ -1172,16 +1171,15 @@ export function TeamView({
                     <div className="h-16 w-16 rounded-2xl bg-rose-50 mx-auto flex items-center justify-center mb-4">
                       <Users className="h-8 w-8 text-rose-500" />
                     </div>
-                    <p className="text-base font-semibold">Aucun utilisateur</p>
+                    <p className="text-base font-semibold">{t("aucun_utilisateur")}</p>
                     <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                      Créez votre premier compte employé pour commencer à déléguer la gestion du portail.
+                      {t("creez_premier_compte_employe_commencer")}
                     </p>
                     <Button
                       onClick={() => setUserDialog({ open: true, user: null })}
                       className="mt-4 bg-[#0F2D52] hover:bg-[#0F2D52]/90"
                     >
-                      <Plus className="h-4 w-4 mr-1.5" />Créer le premier utilisateur
-                    </Button>
+                      <Plus className="h-4 w-4 mr-1.5" />{t("team_view_creer_le_premier_utilisateur")}</Button>
                   </div>
                 ) : (
                   // Filtres appliqués mais aucun résultat
@@ -1189,12 +1187,11 @@ export function TeamView({
                     <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                     <p className="text-sm font-medium">{tc("no_results")}</p>
                     <p className="text-xs text-muted-foreground mt-1">
-                      Ajustez vos filtres ou la recherche.
+                      {t("ajustez_filtres_recherche")}
                     </p>
                     {hasActiveFilter && (
                       <Button variant="outline" size="sm" onClick={resetFilters} className="mt-3">
-                        <X className="h-3.5 w-3.5 mr-1.5" />Réinitialiser les filtres
-                      </Button>
+                        <X className="h-3.5 w-3.5 mr-1.5" />{t("team_view_reinitialiser_les_filtres")}</Button>
                     )}
                   </div>
                 )
@@ -1245,7 +1242,7 @@ export function TeamView({
                               "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-background",
                               presence.color
                             )}
-                            title={presence.label}
+                            title={t(presence.labelKey)}
                           />
                         </div>
                       );
@@ -1255,7 +1252,7 @@ export function TeamView({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-sm leading-tight">{u.fullName || u.email}</p>
-                        {isMe && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Vous</Badge>}
+                        {isMe && <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{t("vous")}</Badge>}
                         {!u.isActive && <Badge className="text-[9px] px-1.5 py-0 bg-gray-500 hover:bg-gray-500">{tc("disabled")}</Badge>}
                         {u.twoFactorEnabled && (
                           <Badge className="text-[9px] px-1.5 py-0 bg-emerald-600 hover:bg-emerald-600">2FA</Badge>
@@ -1263,7 +1260,7 @@ export function TeamView({
                         {isDormant(u) && (
                           <Badge
                             className="text-[9px] px-1.5 py-0 bg-amber-100 hover:bg-amber-100 text-amber-800 border border-amber-300"
-                            title="Compte actif sans connexion depuis plus de 30 jours"
+                            title={t("compte_actif_sans_connexion_depuis")}
                           >
                             <Clock className="h-2.5 w-2.5 mr-0.5" />Dormant
                           </Badge>
@@ -1286,10 +1283,10 @@ export function TeamView({
                           onChange={async (newDep) => {
                             const r = await updateUserAction({ id: u.id, department: newDep });
                             if (r.success) {
-                              toast.success(newDep ? "Département mis à jour" : "Département retiré");
+                              toast.success(newDep ? t("departement_mis_jour") : t("departement_retire"));
                               router.refresh();
                             } else {
-                              toast.error(r.error || "Erreur");
+                              toast.error(r.error || t("erreur"));
                             }
                           }}
                         />
@@ -1298,34 +1295,34 @@ export function TeamView({
                       <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
                         <InlinePicker
                           icon={Briefcase}
-                          label="Poste"
+                          label={t("poste")}
                           current={u.position ? { id: u.position.id, name: u.position.name, color: u.position.color } : null}
                           options={positions.map((p) => ({ id: p.id, name: p.name, color: p.color }))}
-                          emptyLabel="Sans poste"
+                          emptyLabel={t("sans_poste")}
                           onChange={async (newId) => {
                             const r = await updateUserAction({ id: u.id, positionId: newId });
                             if (r.success) {
-                              toast.success("Poste mis à jour");
+                              toast.success(t("poste_mis_jour"));
                               router.refresh();
                             } else {
-                              toast.error(r.error || "Erreur");
+                              toast.error(r.error || t("erreur"));
                             }
                           }}
                         />
                         <InlinePicker
                           icon={Shield}
-                          label="Rôle"
+                          label={t("role")}
                           current={u.customRole ? { id: u.customRole.id, name: u.customRole.name, color: u.customRole.color } : null}
                           options={roles.map((r) => ({ id: r.id, name: r.name, color: r.color }))}
-                          emptyLabel="Sans rôle"
+                          emptyLabel={t("sans_role")}
                           emptyTone="warning"
                           onChange={async (newId) => {
                             const r = await updateUserAction({ id: u.id, roleId: newId });
                             if (r.success) {
-                              toast.success("Rôle mis à jour");
+                              toast.success(t("role_mis_jour"));
                               router.refresh();
                             } else {
-                              toast.error(r.error || "Erreur");
+                              toast.error(r.error || t("erreur"));
                             }
                           }}
                         />
@@ -1336,7 +1333,7 @@ export function TeamView({
                     <div className="hidden md:block text-xs text-muted-foreground shrink-0 w-28 text-right">
                       {u.lastLogin
                         ? `Vu ${new Date(u.lastLogin).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}`
-                        : <span className="italic">Jamais connecté</span>}
+                        : <span className="italic">{t("jamais_connecte")}</span>}
                     </div>
 
                     {/* Actions */}
@@ -1353,22 +1350,20 @@ export function TeamView({
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                         <DropdownMenuItem onClick={() => router.push(`/admin/employes/${u.id}/dossier`)}>
-                          <FolderOpen className="h-4 w-4 mr-2" />Voir le dossier
-                        </DropdownMenuItem>
+                          <FolderOpen className="h-4 w-4 mr-2" />{t("team_view_voir_le_dossier")}</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUserDialog({ open: true, user: u })}>
                           <Edit className="h-4 w-4 mr-2" />{tc("edit")}
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUserDialog({ open: true, user: u, initialTab: "password" })}>
-                          <Key className="h-4 w-4 mr-2" />Réinitialiser le mot de passe
-                        </DropdownMenuItem>
+                          <Key className="h-4 w-4 mr-2" />{t("team_view_reinitialiser_le_mot_de_passe")}</DropdownMenuItem>
                         {!isMe && (
                           <>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={() => handleToggleActive(u)}>
                               {u.isActive ? (
-                                <><UserX className="h-4 w-4 mr-2" />Désactiver</>
+                                <><UserX className="h-4 w-4 mr-2" />{t("desactiver")}</>
                               ) : (
-                                <><UserCheck className="h-4 w-4 mr-2" />Réactiver</>
+                                <><UserCheck className="h-4 w-4 mr-2" />{t("reactiver")}</>
                               )}
                             </DropdownMenuItem>
                             <DropdownMenuItem
@@ -1391,9 +1386,11 @@ export function TeamView({
           {showPagination && (
             <div className="flex items-center justify-between flex-wrap gap-2 text-xs">
               <p className="text-muted-foreground">
-                Affichage <span className="font-semibold text-foreground">{(currentPage - 1) * pageSize + 1}</span> à{" "}
-                <span className="font-semibold text-foreground">{Math.min(currentPage * pageSize, filteredUsers.length)}</span> sur{" "}
-                <span className="font-semibold text-foreground">{filteredUsers.length}</span>
+                {t("showing_range", {
+                  from: (currentPage - 1) * pageSize + 1,
+                  to: Math.min(currentPage * pageSize, filteredUsers.length),
+                  total: filteredUsers.length,
+                })}
               </p>
               <div className="flex items-center gap-1">
                 <Button
@@ -1412,7 +1409,7 @@ export function TeamView({
                   disabled={currentPage === 1}
                   className="h-8 text-xs"
                 >
-                  ‹ Précédent
+                  {t("precedent")}
                 </Button>
                 <span className="px-3 text-xs font-medium tabular-nums">
                   {currentPage} / {totalPages}
@@ -1424,7 +1421,7 @@ export function TeamView({
                   disabled={currentPage === totalPages}
                   className="h-8 text-xs"
                 >
-                  Suivant ›
+                  {t("suivant")}
                 </Button>
                 <Button
                   size="sm"
@@ -1451,7 +1448,7 @@ export function TeamView({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un rôle..."
+                placeholder={t("rechercher_role")}
                 className="pl-9 h-9"
               />
               {search && (
@@ -1459,7 +1456,7 @@ export function TeamView({
                   type="button"
                   onClick={() => setSearch("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
-                  aria-label="Effacer la recherche"
+                  aria-label={t("effacer_recherche")}
                 >
                   <X className="h-3 w-3 text-muted-foreground" />
                 </button>
@@ -1468,9 +1465,9 @@ export function TeamView({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{systemRoles}</span> système · <span className="font-medium text-[#0F2D52]">{customRoles}</span> personnalisé{customRoles > 1 ? "s" : ""}
+            <span className="font-medium text-foreground">{systemRoles}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{customRoles}</span> personnalisé{customRoles > 1 ? "s" : ""}
             {search && filteredRoles.length !== roles.length && (
-              <span className="ml-2">· <span className="font-medium">{filteredRoles.length}</span> trouvé{filteredRoles.length > 1 ? "s" : ""}</span>
+              <span className="ml-2">· {t("found_count", { count: filteredRoles.length })}</span>
             )}
           </p>
 
@@ -1480,9 +1477,9 @@ export function TeamView({
                 <div className="h-16 w-16 rounded-2xl bg-[#0F2D52]/8 mx-auto flex items-center justify-center mb-4">
                   <Shield className="h-8 w-8 text-[#0F2D52]" />
                 </div>
-                <p className="text-base font-semibold">Aucun rôle système</p>
+                <p className="text-base font-semibold">{t("aucun_role_systeme")}</p>
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Les 7 rôles par défaut ne sont pas seedés. Lancez le script : <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">npx tsx prisma/seed-rbac.ts</code>
+                  {t("roles_non_seedes")} <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">npx tsx prisma/seed-rbac.ts</code>
                 </p>
               </div>
             ) : (
@@ -1490,12 +1487,11 @@ export function TeamView({
                 <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm font-medium">{tc("no_results")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Essayez un autre terme de recherche.
+                  {t("essayez_autre_terme_recherche")}
                 </p>
                 {search && (
                   <Button variant="outline" size="sm" onClick={() => setSearch("")} className="mt-3">
-                    <X className="h-3.5 w-3.5 mr-1.5" />Effacer la recherche
-                  </Button>
+                    <X className="h-3.5 w-3.5 mr-1.5" />{t("team_view_effacer_la_recherche")}</Button>
                 )}
               </div>
             )
@@ -1542,7 +1538,7 @@ export function TeamView({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
                           <DropdownMenuItem onClick={() => setRoleDialog({ open: true, role: r })}>
-                            <Edit className="h-4 w-4" />{r.isSystem ? "Voir / Éditer" : "Modifier"}
+                            <Edit className="h-4 w-4" />{r.isSystem ? t("view_edit") : tc("edit")}
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => handleDuplicateRole(r)}>
                             <Copy className="h-4 w-4" />Dupliquer
@@ -1577,7 +1573,7 @@ export function TeamView({
                     {users.length > 0 && r._count.admins > 0 && (
                       <div className="mt-3 space-y-1">
                         <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-muted-foreground">Utilisation</span>
+                          <span className="text-muted-foreground">{t("utilisation")}</span>
                           <span className="font-semibold tabular-nums" style={{ color: r.color ?? "#0F2D52" }}>
                             {usagePct}% de l&apos;équipe
                           </span>
@@ -1596,7 +1592,7 @@ export function TeamView({
 
                     <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                       {r.isSystem && (
-                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Système</Badge>
+                        <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{t("systeme_2")}</Badge>
                       )}
                       {r._count.admins > 0 ? (
                         <button
@@ -1616,7 +1612,7 @@ export function TeamView({
                         </button>
                       ) : (
                         <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">
-                          0 utilisateur
+                          {t("0_utilisateur")}
                         </Badge>
                       )}
                       {r._count.positions > 0 && (
@@ -1653,7 +1649,7 @@ export function TeamView({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher un poste..."
+                placeholder={t("rechercher_poste")}
                 className="pl-9 h-9"
               />
               {search && (
@@ -1661,7 +1657,7 @@ export function TeamView({
                   type="button"
                   onClick={() => setSearch("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 rounded-full hover:bg-muted flex items-center justify-center"
-                  aria-label="Effacer la recherche"
+                  aria-label={t("effacer_recherche")}
                 >
                   <X className="h-3 w-3 text-muted-foreground" />
                 </button>
@@ -1670,7 +1666,7 @@ export function TeamView({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{positions.filter((p) => p.isSystem).length}</span> système · <span className="font-medium text-[#0F2D52]">{positions.filter((p) => !p.isSystem).length}</span> personnalisé{positions.filter((p) => !p.isSystem).length > 1 ? "s" : ""}
+            <span className="font-medium text-foreground">{positions.filter((p) => p.isSystem).length}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{positions.filter((p) => !p.isSystem).length}</span> personnalisé{positions.filter((p) => !p.isSystem).length > 1 ? "s" : ""}
             {search && filteredPositions.length !== positions.length && (
               <span className="ml-2">· <span className="font-medium">{filteredPositions.length}</span> trouvé{filteredPositions.length > 1 ? "s" : ""}</span>
             )}
@@ -1682,9 +1678,9 @@ export function TeamView({
                 <div className="h-16 w-16 rounded-2xl bg-[#0F2D52]/8 mx-auto flex items-center justify-center mb-4">
                   <Briefcase className="h-8 w-8 text-[#0F2D52]" />
                 </div>
-                <p className="text-base font-semibold">Aucun poste système</p>
+                <p className="text-base font-semibold">{t("aucun_poste_systeme")}</p>
                 <p className="text-sm text-muted-foreground mt-1 max-w-sm mx-auto">
-                  Lancez le seed : <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">npx tsx prisma/seed-rbac.ts</code>
+                  {t("lancez_seed")} <code className="bg-muted px-1.5 py-0.5 rounded text-[11px]">npx tsx prisma/seed-rbac.ts</code>
                 </p>
               </div>
             ) : (
@@ -1692,12 +1688,11 @@ export function TeamView({
                 <Search className="h-10 w-10 text-muted-foreground/30 mx-auto mb-3" />
                 <p className="text-sm font-medium">{tc("no_results")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Essayez un autre terme de recherche.
+                  {t("essayez_autre_terme_recherche")}
                 </p>
                 {search && (
                   <Button variant="outline" size="sm" onClick={() => setSearch("")} className="mt-3">
-                    <X className="h-3.5 w-3.5 mr-1.5" />Effacer la recherche
-                  </Button>
+                    <X className="h-3.5 w-3.5 mr-1.5" />{t("team_view_effacer_la_recherche")}</Button>
                 )}
               </div>
             )
@@ -1723,7 +1718,7 @@ export function TeamView({
                           {p.name}
                         </p>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {p.defaultDepartment ?? "Sans département"}
+                          {p.defaultDepartment ?? t("sans_departement")}
                         </p>
                       </div>
                     </div>
@@ -1774,7 +1769,7 @@ export function TeamView({
                     return (
                       <div className="mt-3 space-y-1">
                         <div className="flex items-center justify-between text-[10px]">
-                          <span className="text-muted-foreground">Utilisation</span>
+                          <span className="text-muted-foreground">{t("utilisation")}</span>
                           <span className="font-semibold tabular-nums" style={{ color: p.color ?? "#0F2D52" }}>
                             {pct}% de l&apos;équipe
                           </span>
@@ -1788,7 +1783,7 @@ export function TeamView({
 
                   <div className="flex items-center gap-1.5 mt-3 flex-wrap">
                     {p.isSystem && (
-                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">Système</Badge>
+                      <Badge variant="secondary" className="text-[9px] px-1.5 py-0">{t("systeme_2")}</Badge>
                     )}
                     {p.defaultRole && (
                       <button
@@ -1827,7 +1822,7 @@ export function TeamView({
                       </button>
                     ) : (
                       <Badge variant="outline" className="text-[9px] px-1.5 py-0 text-muted-foreground">
-                        0 utilisateur
+                        {t("0_utilisateur")}
                       </Badge>
                     )}
                   </div>
@@ -1905,7 +1900,7 @@ export function TeamView({
                 Désactiver {confirmDelete?.label}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
-                Toutes les sessions seront fermées immédiatement. Le compte peut être réactivé plus tard.
+                {t("toutes_sessions_seront_fermees_immediatement")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1914,14 +1909,14 @@ export function TeamView({
             {/* Successeur */}
             <div className="space-y-2">
               <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Transférer le portefeuille vers
+                {t("transferer_portefeuille_vers")}
               </Label>
               <Select value={offboardingReassign} onValueChange={setOffboardingReassign}>
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Choisir un successeur (optionnel)" />
+                  <SelectValue placeholder={t("choisir_successeur_optionnel")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— Aucun transfert —</SelectItem>
+                  <SelectItem value="none">{t("aucun_transfert")}</SelectItem>
                   {eligibleSuccessors.map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.fullName} {u.customRole ? `· ${u.customRole.name}` : ""}
@@ -1930,22 +1925,22 @@ export function TeamView({
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Si un successeur est choisi : les saisies de temps non clôturées et les notifications non lues seront réassignées.
+                {t("si_successeur_choisi_saisies_temps")}
               </p>
             </div>
 
             {/* Checklist offboarding */}
             <div className="space-y-2">
               <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Checklist offboarding
+                {t("checklist_offboarding")}
               </Label>
               <div className="rounded-lg border bg-muted/20 p-3 space-y-2">
                 {[
-                  { key: "credentials", label: "Récupérer cartes, badges et matériel (laptop, téléphone, clés)" },
-                  { key: "sso", label: "Révoquer accès SSO externes (Google, Microsoft, GitHub…)" },
-                  { key: "shared", label: "Reprendre comptes partagés (Stripe, Dropbox, Sentry…)" },
-                  { key: "handover", label: "Documenter dossiers en cours et passer relais au successeur" },
-                  { key: "hr", label: "Notifier RH/comptable de la fin de contrat" },
+                  { key: "credentials", label: t("recuperer_cartes_badges_materiel_laptop") },
+                  { key: "sso", label: t("revoquer_acces_sso_externes_google") },
+                  { key: "shared", label: t("reprendre_comptes_partages_stripe_dropbox") },
+                  { key: "handover", label: t("documenter_dossiers_cours_passer_relais") },
+                  { key: "hr", label: t("notifier_rh_comptable_fin_contrat") },
                 ].map((item) => (
                   <label key={item.key} className="flex items-start gap-2 text-xs cursor-pointer">
                     <input
@@ -1963,7 +1958,7 @@ export function TeamView({
                 ))}
               </div>
               <p className="text-[10px] text-muted-foreground italic">
-                Cette checklist est un aide-mémoire — non bloquante.
+                {t("checklist_aide_memoire_non_bloquante")}
               </p>
             </div>
 
@@ -1971,13 +1966,13 @@ export function TeamView({
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2 text-xs">
               <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
               <div className="text-amber-900 space-y-0.5">
-                <p className="font-semibold">Ce qui va se passer :</p>
+                <p className="font-semibold">{t("va_se_passer")}</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>Le compte sera marqué inactif (réversible)</li>
-                  <li>Toutes les sessions actives seront fermées</li>
-                  <li>L&apos;utilisateur ne pourra plus se connecter</li>
+                  <li>{t("compte_sera_marque_inactif_reversible")}</li>
+                  <li>{t("toutes_sessions_actives_seront_fermees")}</li>
+                  <li>{t("apos_utilisateur_ne_pourra_plus")}</li>
                   {offboardingReassign !== "none" && (
-                    <li className="font-medium">Saisies de temps + notifications transférées au successeur</li>
+                    <li className="font-medium">{t("saisies_temps_notifications_transferees_successeur")}</li>
                   )}
                 </ul>
               </div>
@@ -1997,7 +1992,7 @@ export function TeamView({
             </Button>
             <Button variant="destructive" onClick={handleConfirmDelete}>
               <UserX className="h-4 w-4 mr-1.5" />
-              Désactiver
+              {t("desactiver")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2008,7 +2003,7 @@ export function TeamView({
         open={!!confirmDelete && confirmDelete.type !== "user"}
         onOpenChange={(open) => !open && setConfirmDelete(null)}
         title={`Supprimer ${confirmDelete?.label} ?`}
-        description="Cette action est irréversible."
+        description={t("action_irreversible")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={handleConfirmDelete}
@@ -2034,12 +2029,12 @@ export function TeamView({
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-base text-white flex items-center gap-2">
                 <Send className="h-4 w-4" />
-                Inviter plusieurs personnes
+                {t("inviter_plusieurs_personnes")}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
                 {bulkInviteMode === "paste"
-                  ? "Étape 1/2 : collez les emails, puis ajustez les noms."
-                  : "Étape 2/2 : vérifiez ou modifiez chaque ligne avant l'envoi."}
+                  ? t("etape_1_2_collez_emails")
+                  : t("etape_2_2_verifiez_modifiez")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -2048,7 +2043,7 @@ export function TeamView({
             {bulkInviteMode === "paste" ? (
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                  Adresses email (séparées par virgule, espace ou retour à la ligne · max 50)
+                  {t("adresses_email_separees_virgule_espace")}
                 </Label>
                 <textarea
                   value={bulkInviteEmails}
@@ -2065,7 +2060,7 @@ export function TeamView({
                     .filter((e) => e.length > 0 && e.includes("@"));
                   return (
                     <p className="text-[11px] text-muted-foreground">
-                      {detected.length === 0 ? "Aucune adresse détectée" : `${detected.length} adresse${detected.length > 1 ? "s" : ""} détectée${detected.length > 1 ? "s" : ""}`}
+                      {detected.length === 0 ? t("aucune_adresse_detectee") : t("adresses_detectees", { count: detected.length })}
                     </p>
                   );
                 })()}
@@ -2082,7 +2077,7 @@ export function TeamView({
                         <Input
                           value={e.fullName}
                           onChange={(ev) => setBulkInviteEntries((arr) => arr.map((x, i) => i === idx ? { ...x, fullName: ev.target.value } : x))}
-                          placeholder="Nom complet"
+                          placeholder={t("nom_complet")}
                           className="h-8 text-xs"
                           disabled={bulkInvitePending}
                         />
@@ -2114,8 +2109,7 @@ export function TeamView({
                       onClick={() => setBulkInviteEntries((arr) => [...arr, { email: "", fullName: "" }])}
                       disabled={bulkInvitePending || bulkInviteEntries.length >= 50}
                     >
-                      <Plus className="h-3 w-3 mr-1" />Ajouter une ligne
-                    </Button>
+                      <Plus className="h-3 w-3 mr-1" />{t("team_view_ajouter_une_ligne")}</Button>
                   </div>
                 </div>
                 <button
@@ -2124,7 +2118,7 @@ export function TeamView({
                   onClick={() => { setBulkInviteMode("paste"); setBulkInviteEntries([]); }}
                   disabled={bulkInvitePending}
                 >
-                  ← Repartir d&apos;un copier-coller
+                  {t("repartir_apos_copier_coller")}
                 </button>
               </div>
             )}
@@ -2132,12 +2126,12 @@ export function TeamView({
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                  Rôle (optionnel)
+                  {t("role_optionnel")}
                 </Label>
                 <Select value={bulkInviteRoleId} onValueChange={setBulkInviteRoleId} disabled={bulkInvitePending}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun rôle" /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("aucun_role_2")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— Aucun rôle —</SelectItem>
+                    <SelectItem value="none">{t("aucun_role")}</SelectItem>
                     {roles.map((r) => (
                       <SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>
                     ))}
@@ -2146,12 +2140,12 @@ export function TeamView({
               </div>
               <div className="space-y-2">
                 <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                  Poste (optionnel)
+                  {t("poste_optionnel")}
                 </Label>
                 <Select value={bulkInvitePositionId} onValueChange={setBulkInvitePositionId} disabled={bulkInvitePending}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucun poste" /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("aucun_poste_2")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">— Aucun poste —</SelectItem>
+                    <SelectItem value="none">{t("aucun_poste")}</SelectItem>
                     {positions.map((p) => (
                       <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
                     ))}
@@ -2166,7 +2160,7 @@ export function TeamView({
                   <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-900">
                     <p className="font-semibold flex items-center gap-1.5">
                       <UserCheck className="h-3.5 w-3.5" />
-                      {bulkInviteResult.invited} invitation{bulkInviteResult.invited > 1 ? "s" : ""} envoyée{bulkInviteResult.invited > 1 ? "s" : ""}
+                      {t("invitations_envoyees", { count: bulkInviteResult.invited })}
                     </p>
                   </div>
                 )}
@@ -2174,7 +2168,7 @@ export function TeamView({
                   <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
                     <p className="font-semibold mb-1 flex items-center gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5" />
-                      {bulkInviteResult.skipped.length} email{bulkInviteResult.skipped.length > 1 ? "s" : ""} ignoré{bulkInviteResult.skipped.length > 1 ? "s" : ""}
+                      {t("emails_ignores", { count: bulkInviteResult.skipped.length })}
                     </p>
                     <ul className="space-y-0.5 ml-1 max-h-32 overflow-y-auto">
                       {bulkInviteResult.skipped.map((s) => (
@@ -2191,16 +2185,16 @@ export function TeamView({
 
           <DialogFooter className="px-5 py-3 border-t bg-muted/30 gap-2">
             <Button variant="outline" onClick={() => setBulkInviteOpen(false)} disabled={bulkInvitePending}>
-              {bulkInviteResult ? "Fermer" : "Annuler"}
+              {bulkInviteResult ? tc("close") : tc("cancel")}
             </Button>
             {bulkInviteMode === "paste" && !bulkInviteResult ? (
               <Button onClick={goToEditMode} disabled={bulkInvitePending || !bulkInviteEmails.trim()}>
-                Suivant : ajuster les noms
+                {t("suivant_ajuster_noms")}
               </Button>
             ) : (
               <Button onClick={handleBulkInvite} disabled={bulkInvitePending || (bulkInviteMode === "edit" && bulkInviteEntries.length === 0)}>
                 <Send className="h-4 w-4 mr-1.5" />
-                {bulkInvitePending ? "Envoi en cours…" : `Envoyer (${bulkInviteEntries.length || bulkInviteEmails.split(/[\s,;]+/).filter((e) => e.includes("@")).length})`}
+                {bulkInvitePending ? t("envoi_cours") : `Envoyer (${bulkInviteEntries.length || bulkInviteEmails.split(/[\s,;]+/).filter((e) => e.includes("@")).length})`}
               </Button>
             )}
           </DialogFooter>
@@ -2215,7 +2209,7 @@ export function TeamView({
               checked
               onCheckedChange={() => setSelectedIds(new Set())}
               className="border-white/40 data-[state=checked]:bg-white data-[state=checked]:text-[#0F2D52]"
-              aria-label="Désélectionner tout"
+              aria-label={t("deselectionner_tout")}
             />
             {selectedIds.size} sélectionné{selectedIds.size > 1 ? "s" : ""}
           </span>
@@ -2224,18 +2218,15 @@ export function TeamView({
             <UserCheck className="h-3.5 w-3.5 mr-1.5" />Activer
           </Button>
           <Button size="sm" variant="ghost" onClick={() => handleBulkAction("deactivate")} className="text-white hover:bg-white/10 h-8 shrink-0">
-            <UserX className="h-3.5 w-3.5 mr-1.5" />Désactiver
-          </Button>
+            <UserX className="h-3.5 w-3.5 mr-1.5" />{t("team_view_desactiver")}</Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button size="sm" variant="ghost" className="text-white hover:bg-white/10 h-8 shrink-0">
-                <Shield className="h-3.5 w-3.5 mr-1.5" />Assigner rôle
-              </Button>
+                <Shield className="h-3.5 w-3.5 mr-1.5" />{t("team_view_assigner_role")}</Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="max-h-[300px] overflow-y-auto">
               <DropdownMenuItem onClick={() => handleBulkAssignRole(null)}>
-                <X className="h-4 w-4" />Aucun rôle
-              </DropdownMenuItem>
+                <X className="h-4 w-4" />{t("team_view_aucun_role")}</DropdownMenuItem>
               <DropdownMenuSeparator />
               {roles.map((r) => (
                 <DropdownMenuItem key={r.id} onClick={() => handleBulkAssignRole(r.id)}>
@@ -2268,21 +2259,21 @@ export function TeamView({
                 Désactiver {selectedIds.size} utilisateur{selectedIds.size > 1 ? "s" : ""}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
-                Les comptes seront désactivés et toutes leurs sessions fermées. Réversible en réactivant.
+                {t("comptes_seront_desactives_toutes_leurs")}
               </DialogDescription>
             </DialogHeader>
           </div>
           <div className="p-5 space-y-4">
             <div className="space-y-2">
               <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-                Transférer le portefeuille de tous vers
+                {t("transferer_portefeuille_tous_vers")}
               </Label>
               <Select value={bulkReassignToId} onValueChange={setBulkReassignToId}>
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Choisir un successeur (optionnel)" />
+                  <SelectValue placeholder={t("choisir_successeur_optionnel")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— Aucun transfert —</SelectItem>
+                  <SelectItem value="none">{t("aucun_transfert")}</SelectItem>
                   {users.filter((u) => u.isActive && !selectedIds.has(u.id)).map((u) => (
                     <SelectItem key={u.id} value={String(u.id)}>
                       {u.fullName || u.email} {u.customRole ? `· ${u.customRole.name}` : ""}
@@ -2291,17 +2282,17 @@ export function TeamView({
                 </SelectContent>
               </Select>
               <p className="text-[11px] text-muted-foreground">
-                Si choisi, toutes les saisies de temps non clôturées et notifications non lues des comptes désactivés sont réassignées en bloc.
+                {t("si_choisi_toutes_saisies_temps")}
               </p>
             </div>
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 flex gap-2 text-xs">
               <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 flex-shrink-0" />
               <div className="text-amber-900 space-y-0.5">
-                <p className="font-semibold">Impact</p>
+                <p className="font-semibold">{t("impact")}</p>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>{selectedIds.size} compte{selectedIds.size > 1 ? "s" : ""} mis en inactif</li>
-                  <li>Toutes les sessions actives fermées</li>
-                  <li>Les utilisateurs ne pourront plus se connecter</li>
+                  <li>{t("toutes_sessions_actives_fermees")}</li>
+                  <li>{t("utilisateurs_ne_pourront_plus_se")}</li>
                 </ul>
               </div>
             </div>
@@ -2313,7 +2304,7 @@ export function TeamView({
               setBulkConfirmDelete(false);
             }}>
               <UserX className="h-4 w-4 mr-1.5" />
-              Désactiver
+              {t("desactiver")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -2375,6 +2366,7 @@ function InlineDepartment({
   knownDepartments: string[];
   onChange: (newDep: string | null) => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.team");
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
 
@@ -2395,13 +2387,13 @@ function InlineDepartment({
           type="button"
           onClick={(e) => e.stopPropagation()}
           className="group/dep inline-flex items-center gap-1 text-xs hover:bg-muted/40 rounded px-1.5 py-0.5 transition"
-          title="Cliquer pour changer le département"
+          title={t("cliquer_changer_departement")}
         >
           <Building2 className="h-3 w-3 text-muted-foreground" />
           {current ? (
             <span className="text-foreground">{current}</span>
           ) : (
-            <span className="italic text-muted-foreground/60">Sans département</span>
+            <span className="italic text-muted-foreground/60">{t("sans_departement")}</span>
           )}
         </button>
       </PopoverTrigger>
@@ -2411,13 +2403,13 @@ function InlineDepartment({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-1 pb-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-          Département
+          {t("departement_2")}
         </div>
         <Input
           autoFocus
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Tapez ou choisissez…"
+          placeholder={t("tapez_choisissez")}
           className="h-8 text-sm mb-2"
           onKeyDown={(e) => {
             if (e.key === "Enter" && input.trim()) {
@@ -2432,7 +2424,7 @@ function InlineDepartment({
               onClick={() => submit(null)}
               className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-destructive/10 text-destructive/80 transition"
             >
-              Retirer le département
+              {t("retirer_departement")}
             </button>
           )}
           {filtered.map((d) => (

@@ -5,7 +5,7 @@
 // — FormSection (section de formulaire VNK navy)
 // — SectorPicker (dropdown de secteurs predefinis + custom)
 import { useState, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -58,12 +58,38 @@ export const SECTOR_OPTIONS = [
   "Autre",
 ];
 
+// Le secteur et la categorie restent stockes en francais : seul l'affichage suit la locale.
+const SECTOR_EN: Record<string, string> = {
+  "Manufacturier": "Manufacturing",
+  "Agroalimentaire": "Food and beverage",
+  "Pharmaceutique": "Pharmaceutical",
+  "Énergie / Services publics": "Energy / Utilities",
+  "Métallurgie": "Metals",
+  "Automobile": "Automotive",
+  "Bois et papier": "Wood and paper",
+  "Plastique / Caoutchouc": "Plastics / Rubber",
+  "Mines": "Mining",
+  "Eau / Traitement": "Water / Treatment",
+  "Logistique / Entreposage": "Logistics / Warehousing",
+  "Autre": "Other",
+};
+
+const TECH_CATEGORY_EN: Record<string, string> = {
+  "PLC / Automates": "PLC / Controllers",
+  "HMI / SCADA": "HMI / SCADA",
+  "Robotique": "Robotics",
+  "Réseaux & Protocoles": "Networks & protocols",
+  "Accès distant": "Remote access",
+};
+
 export function TechPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useTranslations("admin.clients");
   const tc = useTranslations("common");
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [customInput, setCustomInput] = useState("");
 
+  const isEn = useLocale().startsWith("en");
   const selected = value.split(",").map((s) => s.trim()).filter(Boolean);
   const allCatalog = new Set(TECH_CATALOG.flatMap((c) => c.items));
   const customItems = selected.filter((s) => !allCatalog.has(s));
@@ -94,7 +120,7 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
     <div className="space-y-2">
       <div className="flex flex-wrap gap-1.5 min-h-[34px] items-center p-2 rounded-md border bg-background">
         {selected.length === 0 && (
-          <span className="text-xs text-muted-foreground italic">Aucune technologie sélectionnée</span>
+          <span className="text-xs text-muted-foreground italic">{t("aucune_technologie_selectionnee")}</span>
         )}
         {selected.map((item) => {
           const isCustom = !allCatalog.has(item);
@@ -140,18 +166,18 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher..."
+                placeholder={t("rechercher")}
                 className="h-8 text-xs"
                 autoFocus
               />
             </div>
             <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 space-y-2">
               {filteredCatalog.length === 0 && search && (
-                <p className="text-xs text-muted-foreground text-center py-4">Aucun résultat pour &quot;{search}&quot;</p>
+                <p className="text-xs text-muted-foreground text-center py-4">{t("aucun_resultat_pour", { query: search })}</p>
               )}
               {filteredCatalog.map((cat) => (
                 <div key={cat.category} className="space-y-1">
-                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">{cat.category}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold px-1">{isEn ? TECH_CATEGORY_EN[cat.category] ?? cat.category : cat.category}</p>
                   <div className="flex flex-wrap gap-1">
                     {cat.items.map((item) => {
                       const isOn = selected.includes(item);
@@ -178,13 +204,13 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
               ))}
             </div>
             <div className="p-2 border-t bg-muted/30 shrink-0">
-              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">Custom</p>
+              <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-bold mb-1.5">{t("custom")}</p>
               <div className="flex gap-1.5">
                 <Input
                   value={customInput}
                   onChange={(e) => setCustomInput(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCustom(); } }}
-                  placeholder="Techno spécifique..."
+                  placeholder={t("techno_specifique")}
                   className="h-8 text-xs flex-1"
                 />
                 <Button type="button" variant="outline" size="sm" onClick={addCustom} disabled={!customInput.trim()} className="h-8 px-2 text-xs">
@@ -204,6 +230,8 @@ export function TechPicker({ value, onChange }: { value: string; onChange: (v: s
 
 // ── SectorPicker ─────────────────────────────────────────────────
 export function SectorPicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const t = useTranslations("admin.clients");
+  const isEn = useLocale().startsWith("en");
   const isCustom = value && !SECTOR_OPTIONS.includes(value);
   const [showCustom, setShowCustom] = useState(isCustom);
 
@@ -221,16 +249,16 @@ export function SectorPicker({ value, onChange }: { value: string; onChange: (v:
           }
         }}
       >
-        <SelectTrigger><SelectValue placeholder="Choisir un secteur" /></SelectTrigger>
+        <SelectTrigger><SelectValue placeholder={t("choisir_secteur")} /></SelectTrigger>
         <SelectContent>
           {SECTOR_OPTIONS.map((s) => (
-            <SelectItem key={s} value={s}>{s}</SelectItem>
+            <SelectItem key={s} value={s}>{isEn ? SECTOR_EN[s] ?? s : s}</SelectItem>
           ))}
-          <SelectItem value="__custom__">Personnalisé…</SelectItem>
+          <SelectItem value="__custom__">{t("personnalise")}</SelectItem>
         </SelectContent>
       </Select>
       {showCustom && (
-        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Secteur personnalisé" />
+        <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder={t("secteur_personnalise")} />
       )}
     </div>
   );
@@ -241,7 +269,10 @@ type CountryFormat = {
   name: string;
   hasRegion: boolean;
   regionLabel?: string;
-  regionOptions?: { code: string; name: string }[];
+  nameEn?: string;
+  regionLabelEn?: string;
+  postalLabelEn?: string;
+  regionOptions?: { code: string; name: string; en?: string }[];
   postalLabel: string;
   postalPlaceholder: string;
   cityLabel?: string;
@@ -249,10 +280,10 @@ type CountryFormat = {
 };
 
 const CA_PROVINCES = [
-  { code: "QC", name: "Québec" }, { code: "ON", name: "Ontario" }, { code: "BC", name: "Colombie-Britannique" },
+  { code: "QC", name: "Québec", en: "Quebec" }, { code: "ON", name: "Ontario" }, { code: "BC", name: "Colombie-Britannique", en: "British Columbia" },
   { code: "AB", name: "Alberta" }, { code: "MB", name: "Manitoba" }, { code: "SK", name: "Saskatchewan" },
-  { code: "NS", name: "Nouvelle-Écosse" }, { code: "NB", name: "Nouveau-Brunswick" }, { code: "NL", name: "Terre-Neuve-et-Labrador" },
-  { code: "PE", name: "Île-du-Prince-Édouard" }, { code: "YT", name: "Yukon" }, { code: "NT", name: "Territoires du Nord-Ouest" }, { code: "NU", name: "Nunavut" },
+  { code: "NS", name: "Nouvelle-Écosse", en: "Nova Scotia" }, { code: "NB", name: "Nouveau-Brunswick", en: "New Brunswick" }, { code: "NL", name: "Terre-Neuve-et-Labrador", en: "Newfoundland and Labrador" },
+  { code: "PE", name: "Île-du-Prince-Édouard", en: "Prince Edward Island" }, { code: "YT", name: "Yukon" }, { code: "NT", name: "Territoires du Nord-Ouest", en: "Northwest Territories" }, { code: "NU", name: "Nunavut" },
 ];
 
 const US_STATES = [
@@ -273,9 +304,9 @@ const US_STATES = [
 
 const MX_ESTADOS = [
   { code: "AGU", name: "Aguascalientes" }, { code: "BCN", name: "Baja California" }, { code: "BCS", name: "Baja California Sur" },
-  { code: "CAM", name: "Campeche" }, { code: "CHP", name: "Chiapas" }, { code: "CHH", name: "Chihuahua" }, { code: "CMX", name: "Ciudad de México" },
+  { code: "CAM", name: "Campeche" }, { code: "CHP", name: "Chiapas" }, { code: "CHH", name: "Chihuahua" }, { code: "CMX", name: "Ciudad de México", en: "Mexico City" },
   { code: "COA", name: "Coahuila" }, { code: "COL", name: "Colima" }, { code: "DUR", name: "Durango" }, { code: "GUA", name: "Guanajuato" },
-  { code: "GRO", name: "Guerrero" }, { code: "HID", name: "Hidalgo" }, { code: "JAL", name: "Jalisco" }, { code: "MEX", name: "Estado de México" },
+  { code: "GRO", name: "Guerrero" }, { code: "HID", name: "Hidalgo" }, { code: "JAL", name: "Jalisco" }, { code: "MEX", name: "Estado de México", en: "State of Mexico" },
   { code: "MIC", name: "Michoacán" }, { code: "MOR", name: "Morelos" }, { code: "NAY", name: "Nayarit" }, { code: "NLE", name: "Nuevo León" },
   { code: "OAX", name: "Oaxaca" }, { code: "PUE", name: "Puebla" }, { code: "QUE", name: "Querétaro" }, { code: "ROO", name: "Quintana Roo" },
   { code: "SLP", name: "San Luis Potosí" }, { code: "SIN", name: "Sinaloa" }, { code: "SON", name: "Sonora" }, { code: "TAB", name: "Tabasco" },
@@ -293,45 +324,45 @@ const BR_ESTADOS = [
 ];
 
 const CH_CANTONS = [
-  { code: "ZH", name: "Zurich" }, { code: "BE", name: "Berne" }, { code: "LU", name: "Lucerne" }, { code: "UR", name: "Uri" },
-  { code: "SZ", name: "Schwytz" }, { code: "OW", name: "Obwald" }, { code: "NW", name: "Nidwald" }, { code: "GL", name: "Glaris" },
-  { code: "ZG", name: "Zoug" }, { code: "FR", name: "Fribourg" }, { code: "SO", name: "Soleure" }, { code: "BS", name: "Bâle-Ville" },
-  { code: "BL", name: "Bâle-Campagne" }, { code: "SH", name: "Schaffhouse" }, { code: "AR", name: "Appenzell Rhodes-Extérieures" },
-  { code: "AI", name: "Appenzell Rhodes-Intérieures" }, { code: "SG", name: "Saint-Gall" }, { code: "GR", name: "Grisons" },
-  { code: "AG", name: "Argovie" }, { code: "TG", name: "Thurgovie" }, { code: "TI", name: "Tessin" }, { code: "VD", name: "Vaud" },
-  { code: "VS", name: "Valais" }, { code: "NE", name: "Neuchâtel" }, { code: "GE", name: "Genève" }, { code: "JU", name: "Jura" },
+  { code: "ZH", name: "Zurich" }, { code: "BE", name: "Berne", en: "Bern" }, { code: "LU", name: "Lucerne" }, { code: "UR", name: "Uri" },
+  { code: "SZ", name: "Schwytz", en: "Schwyz" }, { code: "OW", name: "Obwald", en: "Obwalden" }, { code: "NW", name: "Nidwald", en: "Nidwalden" }, { code: "GL", name: "Glaris", en: "Glarus" },
+  { code: "ZG", name: "Zoug", en: "Zug" }, { code: "FR", name: "Fribourg" }, { code: "SO", name: "Soleure", en: "Solothurn" }, { code: "BS", name: "Bâle-Ville", en: "Basel-City" },
+  { code: "BL", name: "Bâle-Campagne", en: "Basel-Country" }, { code: "SH", name: "Schaffhouse", en: "Schaffhausen" }, { code: "AR", name: "Appenzell Rhodes-Extérieures", en: "Appenzell Outer Rhodes" },
+  { code: "AI", name: "Appenzell Rhodes-Intérieures", en: "Appenzell Inner Rhodes" }, { code: "SG", name: "Saint-Gall", en: "St. Gallen" }, { code: "GR", name: "Grisons" },
+  { code: "AG", name: "Argovie", en: "Aargau" }, { code: "TG", name: "Thurgovie", en: "Thurgau" }, { code: "TI", name: "Tessin", en: "Ticino" }, { code: "VD", name: "Vaud" },
+  { code: "VS", name: "Valais" }, { code: "NE", name: "Neuchâtel", en: "Neuchatel" }, { code: "GE", name: "Genève", en: "Geneva" }, { code: "JU", name: "Jura" },
 ];
 
 const IT_REGIONI = [
-  { code: "ABR", name: "Abruzzes" }, { code: "BAS", name: "Basilicate" }, { code: "CAL", name: "Calabre" }, { code: "CAM", name: "Campanie" },
-  { code: "EMR", name: "Émilie-Romagne" }, { code: "FVG", name: "Frioul-Vénétie julienne" }, { code: "LAZ", name: "Latium" }, { code: "LIG", name: "Ligurie" },
-  { code: "LOM", name: "Lombardie" }, { code: "MAR", name: "Marches" }, { code: "MOL", name: "Molise" }, { code: "PIE", name: "Piémont" },
-  { code: "PUG", name: "Pouilles" }, { code: "SAR", name: "Sardaigne" }, { code: "SIC", name: "Sicile" }, { code: "TOS", name: "Toscane" },
-  { code: "TAA", name: "Trentin-Haut-Adige" }, { code: "UMB", name: "Ombrie" }, { code: "VDA", name: "Vallée d'Aoste" }, { code: "VEN", name: "Vénétie" },
+  { code: "ABR", name: "Abruzzes", en: "Abruzzo" }, { code: "BAS", name: "Basilicate", en: "Basilicata" }, { code: "CAL", name: "Calabre", en: "Calabria" }, { code: "CAM", name: "Campanie", en: "Campania" },
+  { code: "EMR", name: "Émilie-Romagne", en: "Emilia-Romagna" }, { code: "FVG", name: "Frioul-Vénétie julienne", en: "Friuli-Venezia Giulia" }, { code: "LAZ", name: "Latium", en: "Lazio" }, { code: "LIG", name: "Ligurie", en: "Liguria" },
+  { code: "LOM", name: "Lombardie", en: "Lombardy" }, { code: "MAR", name: "Marches", en: "Marche" }, { code: "MOL", name: "Molise" }, { code: "PIE", name: "Piémont", en: "Piedmont" },
+  { code: "PUG", name: "Pouilles", en: "Apulia" }, { code: "SAR", name: "Sardaigne", en: "Sardinia" }, { code: "SIC", name: "Sicile", en: "Sicily" }, { code: "TOS", name: "Toscane", en: "Tuscany" },
+  { code: "TAA", name: "Trentin-Haut-Adige", en: "Trentino-South Tyrol" }, { code: "UMB", name: "Ombrie", en: "Umbria" }, { code: "VDA", name: "Vallée d'Aoste", en: "Aosta Valley" }, { code: "VEN", name: "Vénétie", en: "Veneto" },
 ];
 
 const ES_COMUNIDADES = [
-  { code: "AN", name: "Andalousie" }, { code: "AR", name: "Aragon" }, { code: "AS", name: "Asturies" }, { code: "IB", name: "Îles Baléares" },
-  { code: "PV", name: "Pays basque" }, { code: "CN", name: "Îles Canaries" }, { code: "CB", name: "Cantabrie" }, { code: "CL", name: "Castille-et-León" },
-  { code: "CM", name: "Castille-La Manche" }, { code: "CT", name: "Catalogne" }, { code: "EX", name: "Estrémadure" }, { code: "GA", name: "Galice" },
-  { code: "RI", name: "La Rioja" }, { code: "MD", name: "Madrid" }, { code: "MC", name: "Murcie" }, { code: "NC", name: "Navarre" }, { code: "VC", name: "Valence" },
+  { code: "AN", name: "Andalousie", en: "Andalusia" }, { code: "AR", name: "Aragon" }, { code: "AS", name: "Asturies", en: "Asturias" }, { code: "IB", name: "Îles Baléares", en: "Balearic Islands" },
+  { code: "PV", name: "Pays basque", en: "Basque Country" }, { code: "CN", name: "Îles Canaries", en: "Canary Islands" }, { code: "CB", name: "Cantabrie", en: "Cantabria" }, { code: "CL", name: "Castille-et-León", en: "Castile and Leon" },
+  { code: "CM", name: "Castille-La Manche", en: "Castile-La Mancha" }, { code: "CT", name: "Catalogne", en: "Catalonia" }, { code: "EX", name: "Estrémadure", en: "Extremadura" }, { code: "GA", name: "Galice", en: "Galicia" },
+  { code: "RI", name: "La Rioja" }, { code: "MD", name: "Madrid" }, { code: "MC", name: "Murcie", en: "Murcia" }, { code: "NC", name: "Navarre" }, { code: "VC", name: "Valence", en: "Valencia" },
   { code: "CE", name: "Ceuta" }, { code: "ML", name: "Melilla" },
 ];
 
 export const COUNTRY_FORMATS: Record<string, CountryFormat> = {
-  CA: { name: "Canada", hasRegion: true, regionLabel: "Province", regionOptions: CA_PROVINCES, postalLabel: "Code postal", postalPlaceholder: "G6V 3P8", layout: "city-region-postal" },
-  US: { name: "États-Unis", hasRegion: true, regionLabel: "État", regionOptions: US_STATES, postalLabel: "ZIP code", postalPlaceholder: "12345", layout: "city-region-postal" },
-  FR: { name: "France", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "75001", layout: "postal-city" },
-  BE: { name: "Belgique", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "1000", layout: "postal-city" },
-  CH: { name: "Suisse", hasRegion: true, regionLabel: "Canton (optionnel)", regionOptions: CH_CANTONS, postalLabel: "NPA", postalPlaceholder: "1200", layout: "postal-city" },
-  LU: { name: "Luxembourg", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "L-1234", layout: "postal-city" },
-  GB: { name: "Royaume-Uni", hasRegion: true, regionLabel: "County (optionnel)", postalLabel: "Postcode", postalPlaceholder: "SW1A 1AA", layout: "city-postal" },
-  DE: { name: "Allemagne", hasRegion: false, postalLabel: "PLZ", postalPlaceholder: "10115", layout: "postal-city" },
-  ES: { name: "Espagne", hasRegion: true, regionLabel: "Communauté autonome (optionnel)", regionOptions: ES_COMUNIDADES, postalLabel: "Código postal", postalPlaceholder: "28001", layout: "postal-city" },
-  IT: { name: "Italie", hasRegion: true, regionLabel: "Regione", regionOptions: IT_REGIONI, postalLabel: "CAP", postalPlaceholder: "00100", layout: "postal-city" },
-  MX: { name: "Mexique", hasRegion: true, regionLabel: "Estado", regionOptions: MX_ESTADOS, postalLabel: "Código postal", postalPlaceholder: "01000", layout: "city-region-postal" },
-  BR: { name: "Brésil", hasRegion: true, regionLabel: "Estado", regionOptions: BR_ESTADOS, postalLabel: "CEP", postalPlaceholder: "01310-100", layout: "city-region-postal" },
-  OTHER: { name: "Autre", hasRegion: true, regionLabel: "Région (optionnel)", postalLabel: "Code postal", postalPlaceholder: "", layout: "city-region-postal" },
+  CA: { name: "Canada", hasRegion: true, regionLabel: "Province", regionOptions: CA_PROVINCES, postalLabel: "Code postal", postalPlaceholder: "G6V 3P8", nameEn: "Canada", regionLabelEn: "Province", postalLabelEn: "Postal code", layout: "city-region-postal" },
+  US: { name: "États-Unis", hasRegion: true, regionLabel: "État", regionOptions: US_STATES, postalLabel: "ZIP code", postalPlaceholder: "12345", nameEn: "United States", regionLabelEn: "State", postalLabelEn: "ZIP code", layout: "city-region-postal" },
+  FR: { name: "France", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "75001", nameEn: "France", postalLabelEn: "Postal code", layout: "postal-city" },
+  BE: { name: "Belgique", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "1000", nameEn: "Belgium", postalLabelEn: "Postal code", layout: "postal-city" },
+  CH: { name: "Suisse", hasRegion: true, regionLabel: "Canton (optionnel)", regionOptions: CH_CANTONS, postalLabel: "NPA", postalPlaceholder: "1200", nameEn: "Switzerland", regionLabelEn: "Canton (optional)", postalLabelEn: "Postal code", layout: "postal-city" },
+  LU: { name: "Luxembourg", hasRegion: false, postalLabel: "Code postal", postalPlaceholder: "L-1234", nameEn: "Luxembourg", postalLabelEn: "Postal code", layout: "postal-city" },
+  GB: { name: "Royaume-Uni", hasRegion: true, regionLabel: "County (optionnel)", postalLabel: "Postcode", postalPlaceholder: "SW1A 1AA", nameEn: "United Kingdom", regionLabelEn: "County (optional)", postalLabelEn: "Postcode", layout: "city-postal" },
+  DE: { name: "Allemagne", hasRegion: false, postalLabel: "PLZ", postalPlaceholder: "10115", nameEn: "Germany", postalLabelEn: "Postal code", layout: "postal-city" },
+  ES: { name: "Espagne", hasRegion: true, regionLabel: "Communauté autonome (optionnel)", regionOptions: ES_COMUNIDADES, postalLabel: "Código postal", postalPlaceholder: "28001", nameEn: "Spain", regionLabelEn: "Autonomous community (optional)", postalLabelEn: "Postal code", layout: "postal-city" },
+  IT: { name: "Italie", hasRegion: true, regionLabel: "Regione", regionOptions: IT_REGIONI, postalLabel: "CAP", postalPlaceholder: "00100", nameEn: "Italy", regionLabelEn: "Region", postalLabelEn: "Postal code", layout: "postal-city" },
+  MX: { name: "Mexique", hasRegion: true, regionLabel: "Estado", regionOptions: MX_ESTADOS, postalLabel: "Código postal", postalPlaceholder: "01000", nameEn: "Mexico", regionLabelEn: "State", postalLabelEn: "Postal code", layout: "city-region-postal" },
+  BR: { name: "Brésil", hasRegion: true, regionLabel: "Estado", regionOptions: BR_ESTADOS, postalLabel: "CEP", postalPlaceholder: "01310-100", nameEn: "Brazil", regionLabelEn: "State", postalLabelEn: "Postal code", layout: "city-region-postal" },
+  OTHER: { name: "Autre", hasRegion: true, regionLabel: "Région (optionnel)", postalLabel: "Code postal", postalPlaceholder: "", nameEn: "Other", regionLabelEn: "Region (optional)", postalLabelEn: "Postal code", layout: "city-region-postal" },
 };
 
 export function AddressFields({
@@ -347,7 +378,9 @@ export function AddressFields({
   province: string; onProvinceChange: (v: string) => void;
   postal: string; onPostalChange: (v: string) => void;
 }) {
+  const t = useTranslations("admin.clients");
   const meta = COUNTRY_FORMATS[country] ?? COUNTRY_FORMATS.OTHER;
+  const isEn = useLocale().startsWith("en");
   const places = useGooglePlaces();
   const addressInputRef = useRef<HTMLInputElement>(null);
 
@@ -370,7 +403,7 @@ export function AddressFields({
       }
     });
     return () => { listener.remove(); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [places.loaded]);
 
   const cityField = (
@@ -381,19 +414,19 @@ export function AddressFields({
   );
   const postalField = (
     <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{meta.postalLabel}</Label>
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{isEn ? meta.postalLabelEn ?? meta.postalLabel : meta.postalLabel}</Label>
       <Input value={postal} onChange={(e) => onPostalChange(e.target.value)} placeholder={meta.postalPlaceholder} />
     </div>
   );
   const regionField = meta.hasRegion ? (
     <div className="space-y-2">
-      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{meta.regionLabel}</Label>
+      <Label className="text-xs uppercase tracking-wider text-muted-foreground">{isEn ? meta.regionLabelEn ?? meta.regionLabel : meta.regionLabel}</Label>
       {meta.regionOptions && meta.regionOptions.length > 0 ? (
         <Select value={province} onValueChange={onProvinceChange}>
-          <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+          <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
           <SelectContent>
             {meta.regionOptions.map((p) => (
-              <SelectItem key={p.code} value={p.code}>{p.code} — {p.name}</SelectItem>
+              <SelectItem key={p.code} value={p.code}>{p.code} — {isEn ? p.en ?? p.name : p.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -406,12 +439,12 @@ export function AddressFields({
   return (
     <>
       <div className="space-y-2">
-        <Label className="text-xs uppercase tracking-wider text-muted-foreground">Pays</Label>
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("pays")}</Label>
         <Select value={country} onValueChange={onCountryChange}>
           <SelectTrigger><SelectValue /></SelectTrigger>
           <SelectContent>
             {Object.entries(COUNTRY_FORMATS).map(([code, c]) => (
-              <SelectItem key={code} value={code}>{c.name}</SelectItem>
+              <SelectItem key={code} value={code}>{isEn ? c.nameEn ?? c.name : c.name}</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -422,7 +455,7 @@ export function AddressFields({
           {places.loaded && (
             <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] bg-blue-100 text-blue-700 font-semibold normal-case tracking-normal">
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-              Suggestions Google
+              {t("suggestions_google")}
             </span>
           )}
         </Label>
@@ -430,7 +463,7 @@ export function AddressFields({
           ref={addressInputRef}
           value={address}
           onChange={(e) => onAddressChange(e.target.value)}
-          placeholder={places.loaded ? "Commence à taper, suggestions auto..." : "123 rue Industrielle"}
+          placeholder={places.loaded ? t("commence_taper_suggestions_auto") : t("123_rue_industrielle")}
           autoComplete="off"
         />
       </div>

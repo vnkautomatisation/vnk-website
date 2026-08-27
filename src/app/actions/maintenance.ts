@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion des fenêtres de maintenance et incidents.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,10 +35,11 @@ const maintenanceSchema = z.object({
 });
 
 export async function createMaintenanceAction(input: z.infer<typeof maintenanceSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = maintenanceSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const created = await prisma.maintenanceWindow.create({
     data: {
@@ -100,10 +102,11 @@ const incidentSchema = z.object({
 });
 
 export async function createIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = incidentSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const created = await prisma.incidentReport.create({
     data: {
@@ -161,10 +164,11 @@ const bannerSchema = z.object({
 });
 
 export async function updateAnnouncementBannerAction(input: z.infer<typeof bannerSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = bannerSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const updates = [
     { key: "banner_enabled", value: parsed.data.enabled ? "true" : "false" },

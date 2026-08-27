@@ -26,6 +26,7 @@ import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import {
   renderTemplate,
   findVariable,
+  variableLabelFr,
   type TemplateContext,
 } from "@/lib/document-templates";
 import { applyPlaceholderValues } from "@/lib/document-templates/placeholder-detector";
@@ -61,6 +62,44 @@ export interface EmbeddedSignature {
   date?: Date | string;
 }
 
+// Libelles generes par le renderer (le contenu du document reste dans sa langue d'origine).
+type DocLang = "fr" | "en";
+const PDF_LABELS: Record<DocLang, Record<string, string>> = {
+  fr: {
+    preamble_parties: "Entre les parties soussignées :",
+    empty_content: "Aucun contenu à afficher.",
+    ack_stamp: "LU ET ACCEPTÉ",
+    ack_title: "Accusé de réception et acceptation",
+    ack_subtitle: "Confirmation de lecture et de prise de connaissance",
+    hb_prepare_pour: "Préparé pour",
+    hb_toc: "Table des matières",
+    hb_toc_hint: "Astuce : utilisez le panneau « Signets » de votre lecteur PDF pour naviguer en détail à travers les sections de chaque chapitre. Une seule case « J'ai lu et compris » se trouve à la fin du manuel pour confirmer",
+    hb_lu_accepte_label: "Lu et accepté :",
+    hb_acceptation_finale: "Acceptation finale du Manuel",
+    hb_signature_engagement: "Signature et engagement de l'employé",
+    hb_lu_accepte: "Lu et accepté",
+    hb_confirmation_lecture: "J'ai lu et compris l'ensemble du présent Manuel de l'employé.",
+    hb_acceptation_finale_court: "Acceptation finale",
+  },
+  en: {
+    preamble_parties: "Between the undersigned parties:",
+    empty_content: "No content to display.",
+    ack_stamp: "READ AND ACCEPTED",
+    ack_title: "Acknowledgement of receipt and acceptance",
+    ack_subtitle: "Confirmation that the document has been read and understood",
+    hb_prepare_pour: "Prepared for",
+    hb_toc: "Table of contents",
+    hb_toc_hint: "Tip: use the “Bookmarks” panel of your PDF reader to move through the sections of each chapter in detail. A single “I have read and understood” box sits at the end of the handbook to confirm",
+    hb_lu_accepte_label: "Read and accepted:",
+    hb_acceptation_finale: "Final acceptance of the Handbook",
+    hb_signature_engagement: "Employee signature and undertaking",
+    hb_lu_accepte: "Read and accepted",
+    hb_confirmation_lecture: "I have read and understood the whole of this employee Handbook.",
+    hb_acceptation_finale_court: "Final acceptance",
+  },
+};
+const lbl = (lang: DocLang | undefined, key: string) => PDF_LABELS[lang ?? "fr"][key];
+
 export interface HtmlPdfOptions {
   /** Markdown brut (peut contenir {{variables}} et blocs Mustache). */
   bodyMarkdown: string;
@@ -70,6 +109,8 @@ export interface HtmlPdfOptions {
   title: string;
   /** Type de document (badge + note de pied + couleurs). */
   documentType: TemplateDocumentType;
+  /** Langue des libelles generes (defaut fr). */
+  lang?: DocLang;
   /** Metadonnees optionnelles. */
   metadata?: {
     version?: string;
@@ -208,7 +249,7 @@ const RESERVED_VAR_KEYWORDS = new Set<string>([
  *
  * Si le pattern n'est pas trouve, le markdown reste inchange.
  */
-function preprocessPreamble(md: string): string {
+function preprocessPreamble(md: string, lang?: DocLang): string {
   if (!md) return md;
   // Pattern : "**Entre les parties...**" suivi (apres blank line) d'un ou
   // plusieurs paragraphes, optionnellement termine par "**Les parties
@@ -235,7 +276,7 @@ function preprocessPreamble(md: string): string {
     // Renvoie un bloc HTML qui sera laisse intact par marked.
     // On utilise une div container : marked parse les paragraphes a
     // l'interieur grace au support inline (HTML pass-through marked v14).
-    const headerLine = `<p><strong>Entre les parties soussignées :</strong></p>`;
+    const headerLine = `<p><strong>${lbl(lang, "preamble_parties")}</strong></p>`;
     const bodyHtml = paragraphs
       .map((p) => `<p>${p.replace(/\n/g, " ")}</p>`)
       .join("\n");
@@ -390,7 +431,7 @@ function preprocessPlaceholders(md: string): string {
     if (RESERVED_VAR_KEYWORDS.has(key)) return match;
     const def = findVariable(key);
     if (def) {
-      return `<span class="ph-known">[A completer : ${escapeHtml(def.label)}]</span>`;
+      return `<span class="ph-known">[A completer : ${escapeHtml(variableLabelFr(key))}]</span>`;
     }
     return `<span class="ph-unknown">[VARIABLE INCONNUE : ${escapeHtml(key)}]</span>`;
   });
@@ -627,6 +668,7 @@ function processMarkdownToHtml(
   checkboxStates?: Record<string, boolean>,
   signatureScope: SignatureScope = "both",
   fillFieldValues?: Record<string, string>,
+  lang?: DocLang,
 ): { html: string; renderError: string | null; unresolvedCount: number } {
   let renderError: string | null = null;
   let s: string;
@@ -703,7 +745,7 @@ function processMarkdownToHtml(
   // ETAPE 3b : preambule "Entre les parties soussignees" -> bloc encadre.
   // Le bloc HTML resultant est immunise contre les transformations
   // ulterieures (marked v14 preserve les balises HTML inline + block).
-  s = preprocessPreamble(s);
+  s = preprocessPreamble(s, lang);
 
   // ETAPE 4 : signatures detectees avant le wrap des variables.
   // Si `signatures` fourni, les ancres `[Signature ...]` sont remplacees
@@ -728,7 +770,7 @@ function processMarkdownToHtml(
   configureMarked();
   if (!s.trim()) {
     return {
-      html: '<p class="empty">Aucun contenu a afficher.</p>',
+      html: `<p class="empty">${lbl(lang, "empty_content")}</p>`,
       renderError,
       unresolvedCount: 0,
     };
@@ -1972,6 +2014,7 @@ export function renderTemplateAsHtml(opts: HtmlPdfOptions): string {
       opts.checkboxStates,
       effectiveScope,
       opts.fillFieldValues,
+      opts.lang,
     );
 
   // Bandeau d'avertissement
@@ -1984,7 +2027,7 @@ export function renderTemplateAsHtml(opts: HtmlPdfOptions): string {
 
   // Bloc Accuse de reception final (pattern handbook)
   const ackHtml = opts.acknowledgmentBlock
-    ? renderAcknowledgmentBlock(opts.acknowledgmentBlock, opts.signatures?.employee)
+    ? renderAcknowledgmentBlock(opts.acknowledgmentBlock, opts.signatures?.employee, opts.lang)
     : "";
 
   // ─── Layout final : Accuse de reception EN HAUT, Signatures (employer /
@@ -2036,6 +2079,7 @@ export function renderTemplateAsHtml(opts: HtmlPdfOptions): string {
 function renderAcknowledgmentBlock(
   block: NonNullable<HtmlPdfOptions["acknowledgmentBlock"]>,
   _employeeSig?: EmbeddedSignature,
+  lang?: DocLang,
 ): string {
   const isAcknowledged = block.acknowledged === true;
   const checkedClass = isAcknowledged ? "checked" : "";
@@ -2045,15 +2089,15 @@ function renderAcknowledgmentBlock(
 
   // Stamp LU ET ACCEPTE : visible seulement quand la case est cochee
   const stampHtml = isAcknowledged
-    ? `<div class="ack-stamp">LU ET ACCEPTÉ</div>`
+    ? `<div class="ack-stamp">${lbl(lang, "ack_stamp")}</div>`
     : "";
 
   return `
-<div class="ack-block" lang="fr">
+<div class="ack-block" lang="${lang ?? "fr"}">
   ${stampHtml}
   <div class="ack-banner">
-    <div class="ack-banner-title">Accusé de réception et acceptation</div>
-    <div class="ack-banner-subtitle">Confirmation de lecture et de prise de connaissance</div>
+    <div class="ack-banner-title">${lbl(lang, "ack_title")}</div>
+    <div class="ack-banner-subtitle">${lbl(lang, "ack_subtitle")}</div>
   </div>
   <div class="ack-body">
     <div class="ack-row">
@@ -2069,6 +2113,8 @@ function renderAcknowledgmentBlock(
 // ─────────────────────────────────────────────────────────
 
 export interface HandbookHtmlPdfOptions {
+  /** Langue des libelles generes (defaut fr). */
+  lang?: DocLang;
   handbook: {
     title: string;
     subtitle?: string;
@@ -2334,6 +2380,7 @@ export function buildHandbookCoverHtml(args: {
   version: string;
   date: string;
   employeeName?: string;
+  lang?: DocLang;
 }): string {
   // Cover pro : bande navy gradient en haut avec logo + brand,
   // titre enorme au centre, sous-titre et version, recipient encadre
@@ -2365,7 +2412,7 @@ export function buildHandbookCoverHtml(args: {
   <div class="hb-cover-footer">
     ${args.employeeName ? `
     <div class="hb-cover-recipient-card">
-      <div class="hb-cover-recipient-label">Prepare pour</div>
+      <div class="hb-cover-recipient-label">${lbl(args.lang, "hb_prepare_pour")}</div>
       <div class="hb-cover-recipient-name">${escapeHtmlSafe(args.employeeName)}</div>
     </div>
     ` : ""}
@@ -2383,6 +2430,7 @@ export function buildHandbookTocHtml(
     sections?: Array<{ index: number; title: string; label: string }>;
   }>,
   _handbookTitle: string,
+  lang?: DocLang,
 ): string {
   // REFONTE 4 : TOC editoriale "magazine / annual report".
   // - Numero chapitre en encadre 28x28 bg navy 7%, navy bold 9pt (format 01, 02)
@@ -2403,13 +2451,11 @@ export function buildHandbookTocHtml(
       </li>`;
     })
     .join("\n");
-  return `<section class="hb-toc" lang="fr">
-  <h2 class="hb-toc-heading">Table des matieres</h2>
+  return `<section class="hb-toc" lang="${lang ?? "fr"}">
+  <h2 class="hb-toc-heading">${lbl(lang, "hb_toc")}</h2>
   <div class="hb-toc-rule" aria-hidden="true"></div>
   <p class="hb-toc-hint">
-    Astuce : utilisez le panneau « Signets » de votre lecteur PDF pour naviguer
-    en detail a travers les sections de chaque chapitre. Une seule case
-    « J'ai lu et compris » se trouve a la fin du manuel pour confirmer
+    ${lbl(lang, "hb_toc_hint")}
     l'acceptation globale.
   </p>
   <ol class="hb-toc-list">${rows}</ol>
@@ -2472,13 +2518,14 @@ function buildHandbookHtml(
     const value = liveInitials || "________";
     const cls = liveInitials ? "hb-page-initials-value filled" : "hb-page-initials-value empty";
     return `<div class="hb-page-initials">
-      <span class="hb-page-initials-label">Lu et accepte :</span>
+      <span class="hb-page-initials-label">${lbl(opts.lang, "hb_lu_accepte_label")}</span>
       <span class="${cls}">${escapeHtmlSafe(value)}</span>
     </div>`;
   };
 
   // ── Page 1 : Page de garde (reliure navy) ─────────────
   const coverHtml = buildHandbookCoverHtml({
+    lang: opts.lang,
     title: opts.handbook.title,
     subtitle: opts.handbook.subtitle,
     version: opts.handbook.version,
@@ -2496,6 +2543,8 @@ function buildHandbookHtml(
       undefined,
       opts.checkboxStates,
       "none",
+      undefined,
+      opts.lang,
     );
     // D2 : numerotation H2 = "1." (decimal pur) + ancres pour TOC.
     const sectionAnchors: Array<{ index: number; title: string; label: string }> = [];
@@ -2516,10 +2565,11 @@ function buildHandbookHtml(
   const tocBodyHtml = buildHandbookTocHtml(
     chapterRenders.map((c) => ({ title: c.title, sections: c.sections })),
     opts.handbook.title,
+    opts.lang,
   );
-  const tocHtml = `<section class="hb-section hb-toc-section" lang="fr">
+  const tocHtml = `<section class="hb-section hb-toc-section" lang="${opts.lang ?? "fr"}">
   ${buildVnkSectionHeader({
-    title: "Table des matieres",
+    title: lbl(opts.lang, "hb_toc"),
     subtitle: handbookSubtitle,
     date: today,
   })}
@@ -2536,6 +2586,8 @@ function buildHandbookHtml(
       undefined,
       undefined,
       "none",
+      undefined,
+      opts.lang,
     );
     // Le markdown du coverIntro commence souvent par "# Introduction", ce qui
     // duplique le titre affiche par le wrapper hb-chapter-title. On retire ce
@@ -2543,7 +2595,7 @@ function buildHandbookHtml(
     const cleanedHtml = html.replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>\s*/i, "");
     // REFONTE : header navy inline au debut de la section Introduction.
     // Apparait UNE SEULE FOIS (pas sur les continuations).
-    return `<section class="hb-section hb-preambule" lang="fr">
+    return `<section class="hb-section hb-preambule" lang="${opts.lang ?? "fr"}">
   ${buildVnkSectionHeader({
     title: "Introduction",
     subtitle: handbookSubtitle,
@@ -2573,7 +2625,7 @@ function buildHandbookHtml(
     return {
       idx: cr.idx,
       title: cr.title,
-      html: `<section class="hb-section hb-chapter" id="chapter-${cr.idx}" data-chapter="${cr.idx + 1}" lang="fr">
+      html: `<section class="hb-section hb-chapter" id="chapter-${cr.idx}" data-chapter="${cr.idx + 1}" lang="${opts.lang ?? "fr"}">
   ${buildVnkSectionHeader({
     title: cr.title,
     subtitle: handbookSubtitle,
@@ -2625,15 +2677,15 @@ function buildHandbookHtml(
             : "__________";
         })()
       : "__________";
-    return `<section class="hb-section hb-signature-page" lang="fr">
+    return `<section class="hb-section hb-signature-page" lang="${opts.lang ?? "fr"}">
   ${buildVnkSectionHeader({
-    title: "Acceptation finale",
+    title: lbl(opts.lang, "hb_acceptation_finale_court"),
     subtitle: handbookSubtitle,
     date: today,
   })}
   <div class="hb-signature-banner">
-    <h1 class="hb-signature-title">Acceptation finale du Manuel</h1>
-    <p class="hb-signature-subtitle">Signature et engagement de l'employe</p>
+    <h1 class="hb-signature-title">${lbl(opts.lang, "hb_acceptation_finale")}</h1>
+    <p class="hb-signature-subtitle">${lbl(opts.lang, "hb_signature_engagement")}</p>
   </div>
   <p class="hb-signature-legal-text">
     Par sa signature ci-dessous, l'employe atteste avoir lu et compris l'ensemble
@@ -2643,11 +2695,11 @@ function buildHandbookHtml(
     aux engagements contractuels existants.
   </p>
   <div class="hb-final-ack">
-    <div class="hb-final-ack-stamp">Lu et accepte</div>
+    <div class="hb-final-ack-stamp">${lbl(opts.lang, "hb_lu_accepte")}</div>
     <div class="hb-final-ack-row hb-final-ack-checkbox-row">
       ${finalReadBox}
       <span class="hb-final-ack-checkbox-text">
-        J'ai lu et compris l'ensemble du present Manuel de l'employe.
+        ${lbl(opts.lang, "hb_confirmation_lecture")}
       </span>
     </div>
     <div class="hb-final-ack-meta">

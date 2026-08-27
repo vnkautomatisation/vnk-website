@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -10,7 +11,7 @@ import { invalidateIntegrationCache } from "@/lib/integrations/credentials";
 import { encryptCredentials, decryptCredentials } from "@/lib/security/crypto";
 import { unauthorized, forbidden } from "@/lib/refusals";
 
-type ActionResult = { success: true } | { success: false; error: string };
+type ActionResult = { success: true } | { success: false; error: string; errorField?: string };
 
 async function requireAdmin() {
   const session = await auth();
@@ -31,11 +32,12 @@ const upsertSchema = z.object({
 });
 
 export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema>): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
   const parsed = upsertSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const provider = getProvider(parsed.data.provider);
   if (!provider) return { success: false, error: "Fournisseur inconnu" };
@@ -60,7 +62,7 @@ export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema
   // Validation des champs requis (sur les valeurs fusionnées)
   for (const field of provider.fields) {
     if (field.required && !merged[field.key]) {
-      return { success: false, error: `Champ obligatoire manquant : ${field.label}` };
+      return { success: false, error: "champ_obligatoire_manquant", errorField: field.labelKey };
     }
   }
 
@@ -69,7 +71,7 @@ export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema
   try {
     encryptedCreds = encryptCredentials(merged);
   } catch (err) {
-    const msg = err instanceof Error ? err.message : "Clé de chiffrement non configurée";
+    const msg = err instanceof Error ? err.message : t("cle_chiffrement_non_configuree");
     return { success: false, error: msg };
   }
 
@@ -118,7 +120,7 @@ export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema
     return { success: true };
   } catch (err) {
     console.error("[integration upsert]", err);
-    return { success: false, error: "Erreur lors de l'enregistrement" };
+    return { success: false, error: t("erreur_lors_de_l_enregistrement") };
   }
 }
 

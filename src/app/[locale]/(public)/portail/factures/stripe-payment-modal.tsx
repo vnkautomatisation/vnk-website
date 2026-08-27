@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, AddressElement, useStripe, useElements } from "@stripe/react-stripe-js";
@@ -21,9 +22,9 @@ type Invoice = {
 };
 
 const STEPS = [
-  { label: "Adresse", icon: MapPin },
-  { label: "Paiement", icon: CreditCard },
-  { label: "Confirmer", icon: CheckCircle },
+  { labelKey: "etape_adresse", icon: MapPin },
+  { labelKey: "etape_paiement", icon: CreditCard },
+  { labelKey: "etape_confirmer", icon: CheckCircle },
 ];
 
 function PaymentForm({
@@ -37,6 +38,7 @@ function PaymentForm({
   onSuccess: () => void;
   onCancel: () => void;
 }) {
+  const t = useTranslations("portal");
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -48,7 +50,7 @@ function PaymentForm({
   const handleNext = async () => {
     if (step === 0) {
       if (!addressComplete) {
-        toast.error("Veuillez completer l'adresse de facturation");
+        toast.error(t("veuillez_completer_adresse_facturation"));
         return;
       }
       setStep(1);
@@ -59,7 +61,7 @@ function PaymentForm({
     const { error } = await elements.submit();
     setValidating(false);
     if (error) {
-      toast.error(error.message ?? "Veuillez completer le mode de paiement");
+      toast.error(error.message ?? t("veuillez_completer_mode_paiement"));
       return;
     }
     setStep(2);
@@ -78,7 +80,7 @@ function PaymentForm({
     });
 
     if (error) {
-      toast.error(error.message ?? "Erreur de paiement");
+      toast.error(error.message ?? t("erreur_paiement"));
       setPaying(false);
     } else {
       try {
@@ -94,9 +96,9 @@ function PaymentForm({
 
   return (
     <div className="flex flex-col lg:flex-row">
-      {/* LEFT — Stepper + contenu etape */}
+
       <div className="flex-1 border-r-0 lg:border-r">
-        {/* Stepper dots */}
+
         <div className="px-6 pt-5 pb-3">
           <div className="flex items-center justify-center gap-0">
             {STEPS.map((s, i) => {
@@ -116,7 +118,7 @@ function PaymentForm({
                     )}
                   >
                     {done ? <CheckCircle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
-                    <span className="hidden sm:inline">{s.label}</span>
+                    <span className="hidden sm:inline">{t(s.labelKey)}</span>
                     <span className="sm:hidden">{i + 1}</span>
                   </button>
                   {i < STEPS.length - 1 && (
@@ -128,9 +130,9 @@ function PaymentForm({
           </div>
         </div>
 
-        {/* Contenu etape */}
+
         <div className="px-6 pb-5 min-h-[300px]">
-          {/* Etape 1 — Adresse */}
+
           <div className={step === 0 ? "block" : "hidden"}>
             <AddressElement
               options={{
@@ -152,40 +154,40 @@ function PaymentForm({
             />
           </div>
 
-          {/* Etape 2 — Mode de paiement */}
+
           <div className={step === 1 ? "block" : "hidden"}>
             <PaymentElement options={{ layout: "tabs" }} />
           </div>
 
-          {/* Etape 3 — Verification */}
+
           {step === 2 && (
             <div className="space-y-4">
               <div className="rounded-lg border p-4 space-y-2 text-sm">
-                <p className="font-semibold text-[#0F2D52]">Verification avant paiement</p>
+                <p className="font-semibold text-[#0F2D52]">{t("verification_avant_paiement")}</p>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Facture</span>
+                  <span className="text-muted-foreground">{t("facture")}</span>
                   <span className="font-medium">{invoice.invoiceNumber}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Description</span>
+                  <span className="text-muted-foreground">{t("description")}</span>
                   <span className="font-medium">{invoice.title}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2">
-                  <span className="font-bold">Montant</span>
+                  <span className="font-bold">{t("montant")}</span>
                   <span className="font-bold text-[#0F2D52]">{formatCurrency(invoice.amountTtc)}</span>
                 </div>
               </div>
               <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-3 flex items-start gap-2">
                 <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
                 <p className="text-xs text-emerald-700">
-                  Vos informations sont pretes. Cliquez sur "Payer" pour finaliser le paiement.
+                  {t("infos_pretes_cliquez_payer")}
                 </p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Navigation etapes */}
+
         <div className="px-6 py-4 border-t flex justify-between">
           <Button
             type="button"
@@ -194,7 +196,7 @@ function PaymentForm({
             onClick={() => step === 0 ? onCancel() : setStep(step - 1)}
           >
             <ChevronLeft className="h-4 w-4 mr-1" />
-            {step === 0 ? "Annuler" : "Precedent"}
+            {step === 0 ? t("annuler") : t("precedent")}
           </Button>
           {step < 2 ? (
             <Button
@@ -204,20 +206,20 @@ function PaymentForm({
               onClick={handleNext}
               disabled={validating}
             >
-              {validating ? "Verification..." : "Suivant"}
+              {validating ? t("verification") : t("suivant")}
               {!validating && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           ) : null}
         </div>
       </div>
 
-      {/* RIGHT — Resume fixe */}
+
       <div className="w-full lg:w-[280px] shrink-0 p-6 flex flex-col justify-between bg-muted/20">
         <div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">Resume</p>
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-4">{t("resume")}</p>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between">
-              <span className="text-muted-foreground">Sous-total HT</span>
+              <span className="text-muted-foreground">{t("sous_total_ht")}</span>
               <span>{formatCurrency(invoice.amountHt)}</span>
             </div>
             <div className="flex justify-between">
@@ -229,7 +231,7 @@ function PaymentForm({
               <span>{formatCurrency(invoice.tvqAmount)}</span>
             </div>
             <div className="border-t pt-3 mt-3 flex justify-between">
-              <span className="font-bold">Total</span>
+              <span className="font-bold">{t("total")}</span>
               <span className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(invoice.amountTtc)}</span>
             </div>
           </div>
@@ -237,7 +239,7 @@ function PaymentForm({
           <div className="mt-5 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 flex items-start gap-2">
             <ShieldCheck className="h-4 w-4 text-[#0F2D52] shrink-0 mt-0.5" />
             <p className="text-[11px] text-muted-foreground leading-relaxed">
-              Securise via Stripe. Vos donnees bancaires ne transitent jamais par nos serveurs.
+              {t("securise_via_stripe_donnees_bancaires")}
             </p>
           </div>
         </div>
@@ -250,7 +252,7 @@ function PaymentForm({
             onClick={handleSubmit}
           >
             <Lock className="h-4 w-4 mr-2" />
-            {paying ? "Traitement..." : `Payer ${formatCurrency(invoice.amountTtc)}`}
+            {paying ? t("traitement") : `Payer ${formatCurrency(invoice.amountTtc)}`}
           </Button>
         </div>
       </div>
@@ -270,6 +272,7 @@ export function StripePaymentModal({
   onClose: () => void;
   onPaid: () => void;
 }) {
+  const t = useTranslations("portal");
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [clientInfo, setClientInfo] = useState<any>(null);
   const [stripeInstance, setStripeInstance] = useState<ReturnType<typeof loadStripe> | null>(null);
@@ -295,7 +298,7 @@ export function StripePaymentModal({
           setError(data.error ?? "Stripe non configure");
         }
       })
-      .catch(() => setError("Erreur de connexion"))
+      .catch(() => setError(t("erreur_connexion")))
       .finally(() => setLoading(false));
   }, [open, invoice]);
 
@@ -305,7 +308,7 @@ export function StripePaymentModal({
     <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[10000] flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative z-10 w-full max-w-4xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden" style={{ maxHeight: "92vh", overflowY: "auto" }}>
-        {/* Header */}
+
         <div className="bg-[#0F2D52] px-6 py-4 text-white relative flex items-center gap-4">
           <button onClick={onClose} className="absolute top-3 right-3 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center">
             <X className="h-4 w-4 text-white/70" />
@@ -314,7 +317,7 @@ export function StripePaymentModal({
             <CreditCard className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h2 className="font-bold">Payer la facture</h2>
+            <h2 className="font-bold">{t("payer_facture")}</h2>
             <p className="text-white/60 text-sm">{invoice.invoiceNumber} — {invoice.title}</p>
           </div>
         </div>
@@ -322,12 +325,12 @@ export function StripePaymentModal({
         {loading ? (
           <div className="p-12 text-center">
             <div className="h-8 w-8 border-2 border-[#0F2D52] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-            <p className="text-sm text-muted-foreground">Preparation du paiement...</p>
+            <p className="text-sm text-muted-foreground">{t("preparation_paiement")}</p>
           </div>
         ) : error ? (
           <div className="p-12 text-center">
             <p className="text-sm text-destructive">{error}</p>
-            <Button variant="outline" size="sm" onClick={onClose} className="mt-3">Fermer</Button>
+            <Button variant="outline" size="sm" onClick={onClose} className="mt-3">{t("fermer")}</Button>
           </div>
         ) : clientSecret && stripeInstance ? (
           <Elements

@@ -6,6 +6,8 @@
 // Format de valeur : "YYYY-MM-DD".
 // Props min/max : bornes inclusives (meme format YYYY-MM-DD).
 import { useMemo, useState, useEffect } from "react";
+import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
@@ -29,30 +31,25 @@ function startOfMonth(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
 
-const MONTHS_FR = [
-  "Janvier", "Février", "Mars", "Avril", "Mai", "Juin",
-  "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre",
-];
-const MONTHS_FR_SHORT = [
-  "Janv", "Févr", "Mars", "Avril", "Mai", "Juin",
-  "Juil", "Août", "Sept", "Oct", "Nov", "Déc",
-];
-const DAYS_FR_SHORT = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first (convention projet)
 
 type ViewMode = "days" | "months" | "years";
 
 export function DatePopover({
-  value, onChange, min, max, disabled = false, placeholder = "Choisir",
+  value, onChange, min, max, disabled = false, placeholder,
   className = "",
 }: {
-  value: string;            // "YYYY-MM-DD" ou ""
+  value: string;            // YYYY-MM-DD ou ""
   onChange: (v: string) => void;
-  min?: string;             // "YYYY-MM-DD"
+  min?: string;             // YYYY-MM-DD
   max?: string;
   disabled?: boolean;
   placeholder?: string;
   className?: string;
 }) {
+  const MONTHS_FR = useMonthNames();
+  const DAYS_FR_SHORT = useWeekdayNames("narrow");
+  const MONTHS_FR_SHORT = useMonthNames("short");
+  const t = useTranslations("admin.ui");
   const selected = value ? parseISO(value) : null;
   const minDate = min ? parseISO(min) : null;
   const maxDate = max ? parseISO(max) : null;
@@ -61,17 +58,17 @@ export function DatePopover({
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<ViewMode>("days");
 
-  // Reset au mode jours quand on rouvre
+
   useEffect(() => {
     if (open) setMode("days");
   }, [open]);
 
-  // Re-center quand value change de l'extérieur
+
   useEffect(() => {
     if (value) setVisibleMonth(parseISO(value));
   }, [value]);
 
-  // Construit la grille 6 semaines (dimanche-first)
+
   const grid = useMemo(() => {
     const first = startOfMonth(visibleMonth);
     const firstDayIdx = first.getDay(); // 0 = dimanche
@@ -108,12 +105,12 @@ export function DatePopover({
 
   const today = new Date();
 
-  // Label trigger compact : "30 avr 2026" au lieu de "jeu. 30 avril 2026".
-  // Mois en minuscule (convention francaise) — la casse titre reste pour
-  // l'en-tete du calendrier.
+
+
+
   const label = selected
     ? `${selected.getDate()} ${MONTHS_FR_SHORT[selected.getMonth()].toLowerCase()} ${selected.getFullYear()}`
-    : placeholder;
+    : placeholder ?? t("choisir");
 
   const goPrev = () => setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
   const goNext = () => setVisibleMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
@@ -127,7 +124,7 @@ export function DatePopover({
     setOpen(false);
   };
 
-  // Grille années : 12 années visibles centrées sur la décade courante
+
   const yearGrid = useMemo(() => {
     const baseYear = Math.floor(visibleMonth.getFullYear() / 12) * 12;
     return Array.from({ length: 12 }, (_, i) => baseYear + i);
@@ -149,17 +146,17 @@ export function DatePopover({
         <span className="tabular-nums truncate">{label}</span>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 overflow-hidden" align="start">
-        {/* Header navy VNK — chevrons adaptés au mode */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-2 py-2 flex items-center justify-between gap-1">
           <button
             type="button"
             onClick={mode === "days" ? goPrev : mode === "months" ? goPrevYear : goPrevDecade}
             className="h-7 w-7 rounded-md hover:bg-white/15 flex items-center justify-center transition"
-            aria-label={mode === "days" ? "Mois précédent" : mode === "months" ? "Année précédente" : "Décennie précédente"}
+            aria-label={mode === "days" ? t("mois_precedent") : mode === "months" ? t("annee_precedente") : t("decennie_precedente")}
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
-          {/* Titre cliquable : ouvre mode supérieur */}
+
           <button
             type="button"
             onClick={() => {
@@ -168,7 +165,7 @@ export function DatePopover({
               else setMode("days"); // reset
             }}
             className="flex-1 text-sm font-semibold tabular-nums hover:bg-white/10 rounded-md px-2 py-1 transition"
-            aria-label="Changer de vue (jours / mois / années)"
+            aria-label={t("changer_vue_jours_mois_annees")}
           >
             {mode === "days" && `${MONTHS_FR[visibleMonth.getMonth()]} ${visibleMonth.getFullYear()}`}
             {mode === "months" && `${visibleMonth.getFullYear()}`}
@@ -178,13 +175,13 @@ export function DatePopover({
             type="button"
             onClick={mode === "days" ? goNext : mode === "months" ? goNextYear : goNextDecade}
             className="h-7 w-7 rounded-md hover:bg-white/15 flex items-center justify-center transition"
-            aria-label={mode === "days" ? "Mois suivant" : mode === "months" ? "Année suivante" : "Décennie suivante"}
+            aria-label={mode === "days" ? t("mois_suivant") : mode === "months" ? t("annee_suivante") : t("decennie_suivante")}
           >
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
 
-        {/* Mode JOURS (défaut) */}
+
         {mode === "days" && (
           <div className="p-2">
             <div className="grid grid-cols-7 gap-0.5 mb-1">
@@ -231,7 +228,7 @@ export function DatePopover({
           </div>
         )}
 
-        {/* Mode MOIS : grille 3×4 des 12 mois */}
+
         {mode === "months" && (
           <div className="p-3">
             <div className="grid grid-cols-3 gap-1.5">
@@ -268,7 +265,7 @@ export function DatePopover({
           </div>
         )}
 
-        {/* Mode ANNÉES : grille 3×4 des 12 années */}
+
         {mode === "years" && (
           <div className="p-3">
             <div className="grid grid-cols-3 gap-1.5">
@@ -305,21 +302,21 @@ export function DatePopover({
           </div>
         )}
 
-        {/* Footer */}
+
         <div className="flex items-center justify-between px-2 py-1.5 border-t bg-muted/20">
           <button
             type="button"
             onClick={() => { onChange(""); setOpen(false); }}
             className="text-[11px] uppercase tracking-wider text-muted-foreground hover:text-foreground px-2 py-1"
           >
-            Effacer
+            {t("effacer")}
           </button>
           <button
             type="button"
             onClick={goToday}
             className="text-[11px] uppercase tracking-wider font-semibold text-[#0F2D52] hover:underline px-2 py-1"
           >
-            Aujourd&apos;hui
+            {t("aujourd_apos_hui")}
           </button>
         </div>
       </PopoverContent>

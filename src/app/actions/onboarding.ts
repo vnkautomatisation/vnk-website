@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — wizard d'onboarding (premier login après invitation).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -17,11 +18,12 @@ const profileSchema = z.object({
 });
 
 export async function updateOnboardingProfileAction(input: z.infer<typeof profileSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = profileSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   await prisma.admin.update({
     where: { id: adminId },

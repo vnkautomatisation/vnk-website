@@ -2,6 +2,7 @@
 // Time pickers. Values are "YYYY-MM-DDTHH:MM" (datetime-local compatible).
 // Dates default to the current project week; pass minDate/maxDate to widen.
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -54,6 +55,7 @@ export function TimePicker({
   maxDate?: string;
   disabled?: boolean;
 }) {
+  const t = useTranslations("admin.ui");
   const { date, h, m } = useMemo(() => parseLocal(value), [value]);
   const min = minDate ?? startOfWeekISO();
   const max = maxDate ?? todayISO();
@@ -97,7 +99,7 @@ export function TimePicker({
         disabled={disabled}
         className="text-[10px] uppercase tracking-wider text-muted-foreground hover:text-[#0F2D52] underline-offset-2 hover:underline px-1"
       >
-        Maintenant
+        {t("maintenant")}
       </button>
     </div>
   );
@@ -107,7 +109,7 @@ export function TimePicker({
 export function HourMinutePicker({
   value, onChange, disabled = false,
 }: {
-  value: string;            // "HH:MM"
+  value: string;            // HH:MM
   onChange: (v: string) => void;
   disabled?: boolean;
 }) {
@@ -146,7 +148,7 @@ export function HourMinutePicker({
 export function DurationPicker({
   date, durationMin, onChange, minDate, maxDate, disabled = false,
 }: {
-  date: string;             // "YYYY-MM-DD"
+  date: string;             // YYYY-MM-DD
   durationMin: number;      // minutes totales
   onChange: (v: { date: string; durationMin: number }) => void;
   minDate?: string;
@@ -158,7 +160,7 @@ export function DurationPicker({
   const h = Math.floor(Math.max(0, durationMin) / 60);
   const m = Math.max(0, durationMin) % 60;
   const hourOptions = Array.from({ length: 25 }, (_, i) => i); // 0..24h
-  // Exact minutes: snapping would rewrite a 27-minute entry to 25 on open.
+
   const minuteChoices = Array.from(new Set([...Array.from({ length: 12 }, (_, i) => i * 5), m])).sort((a, b) => a - b);
 
   const setH = (newH: number) => onChange({ date, durationMin: newH * 60 + m });

@@ -1,5 +1,6 @@
 // PATCH /api/clients/[id]/chat-meta — meta conversation (pin, archive, snooze, labels)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -12,9 +13,10 @@ const schema = z.object({
   chatArchive: z.boolean().optional(),
   chatSnoozedUntil: z.string().datetime().nullable().optional(),
   chatLabels: z.array(z.string().max(40)).max(10).nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee" });
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -25,7 +27,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const body = await req.json();
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
 
   const data: Record<string, unknown> = {};
   if (parsed.data.chatPinned !== undefined) data.chatPinned = parsed.data.chatPinned;

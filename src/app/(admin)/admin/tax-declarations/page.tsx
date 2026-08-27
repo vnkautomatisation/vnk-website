@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { TaxView } from "./tax-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Déclarations fiscales" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("declarations_fiscales") };
+}
 
 export default async function TaxDeclarationsPage() {
   const now = new Date();

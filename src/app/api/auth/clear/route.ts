@@ -4,6 +4,7 @@
 //
 // Acces : http://localhost:3000/api/auth/clear
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +28,7 @@ const AUTH_COOKIE_NAMES = [
 ];
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const url = new URL(req.url);
   const target = url.searchParams.get("redirect") ?? "/admin/login";
 
@@ -47,9 +49,9 @@ export async function GET(req: Request) {
 </head>
 <body>
 <div class="card">
-  <h1>Nettoyage de la session…</h1>
+  <h1>${t("nettoyage_session")}</h1>
   <ul id="log"></ul>
-  <p>Redirection vers <a href="${target}">${target}</a> dans <span id="cnt">3</span>s.</p>
+  <p>Redirection vers <a href="${target}">${target}</a>{t("route_dans")}<span id="cnt">3</span>s.</p>
 </div>
 <script>
 (async () => {

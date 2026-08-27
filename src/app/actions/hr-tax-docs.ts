@@ -1,6 +1,7 @@
 "use server";
 // Documents fiscaux (T4, Relevé 1) + lettres d'emploi.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,10 +35,11 @@ const issueDocSchema = z.object({
 });
 
 export async function issueTaxDocumentAction(input: z.infer<typeof issueDocSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const issuedBy = await requireHrWrite();
   if (!issuedBy) return unauthorized();
   const parsed = issueDocSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const row = await prisma.taxDocument.create({
     data: {
@@ -83,10 +85,11 @@ const annualSchema = z.object({
 export async function generateAnnualTaxDocAction(
   input: z.infer<typeof annualSchema>,
 ): Promise<Result<{ id: number; fileUrl: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const issuedBy = await requireHrWrite();
   if (!issuedBy) return unauthorized();
   const parsed = annualSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     const { adminId, year, type } = parsed.data;
@@ -97,7 +100,7 @@ export async function generateAnnualTaxDocAction(
       where: { id: adminId },
       select: { fullName: true, email: true },
     });
-    if (!admin) return { success: false, error: "Employé introuvable" };
+    if (!admin) return { success: false, error: t("employe_introuvable") };
 
     const stubs = await prisma.payStub.findMany({
       where: {
@@ -193,10 +196,11 @@ const bulkSchema = z.object({
 export async function generateAnnualTaxDocsBulkAction(
   input: z.infer<typeof bulkSchema>,
 ): Promise<Result<{ generated: number; skipped: number; errors: string[] }>> {
+  const t = await getTranslations("admin.action_errors");
   const issuedBy = await requireHrWrite();
   if (!issuedBy) return unauthorized();
   const parsed = bulkSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
   const { year, type } = parsed.data;
 
   const yearStart = new Date(year, 0, 1);
@@ -234,11 +238,12 @@ const requestLetterSchema = z.object({
 });
 
 export async function requestEmploymentLetterAction(input: z.infer<typeof requestLetterSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestLetterSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const row = await prisma.employmentLetterRequest.create({
     data: {
@@ -261,7 +266,7 @@ export async function requestEmploymentLetterAction(input: z.infer<typeof reques
     await prisma.notification.create({
       data: {
         recipientType: "admin", recipientId: hr.id,
-        type: "info", title: "Demande de lettre d'emploi",
+        type: "info", title: t("demande_de_lettre_d_emploi"),
         body: `Nouvelle demande à traiter (${parsed.data.purpose})`,
         link: "/admin/employes/lettres",
         icon: "mail",
@@ -276,6 +281,7 @@ export async function requestEmploymentLetterAction(input: z.infer<typeof reques
 }
 
 export async function issueEmploymentLetterAction(input: { id: number; letterUrl: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const issuedBy = await requireHrWrite();
   if (!issuedBy) return unauthorized();
 
@@ -291,8 +297,8 @@ export async function issueEmploymentLetterAction(input: { id: number; letterUrl
   await prisma.notification.create({
     data: {
       recipientType: "admin", recipientId: r.adminId,
-      type: "success", title: "Lettre d'emploi disponible",
-      body: "Votre lettre est prête, téléchargez-la depuis Mon espace > Documents",
+      type: "success", title: t("lettre_d_emploi_disponible"),
+      body: t("votre_lettre_est_prete_telechargez_la_depuis"),
       link: "/admin/mon-espace/documents",
       icon: "check",
     },
@@ -305,6 +311,7 @@ export async function issueEmploymentLetterAction(input: { id: number; letterUrl
 }
 
 export async function rejectEmploymentLetterAction(input: { id: number; reason: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const issuedBy = await requireHrWrite();
   if (!issuedBy) return unauthorized();
   const r = await prisma.employmentLetterRequest.findUnique({ where: { id: input.id } });
@@ -317,7 +324,7 @@ export async function rejectEmploymentLetterAction(input: { id: number; reason: 
   await prisma.notification.create({
     data: {
       recipientType: "admin", recipientId: r.adminId,
-      type: "warning", title: "Demande de lettre refusée",
+      type: "warning", title: t("demande_de_lettre_refusee"),
       body: input.reason,
       link: "/admin/mon-espace/documents",
     },

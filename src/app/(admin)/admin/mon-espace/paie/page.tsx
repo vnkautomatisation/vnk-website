@@ -1,10 +1,14 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { MyPayrollView } from "./my-payroll-view";
 
-export const metadata: Metadata = { title: "Mon espace — Ma paie" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mon_espace_ma_paie") };
+}
 export const dynamic = "force-dynamic";
 
 export default async function MyPaiePage() {

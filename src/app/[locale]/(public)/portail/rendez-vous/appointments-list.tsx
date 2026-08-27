@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useWeekdayNames } from "@/lib/i18n-format";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   Calendar,
@@ -47,8 +49,8 @@ type Appointment = {
 };
 
 const TYPE_ICON = { video: Video, phone: Phone, onsite: MapPin } as Record<string, typeof Video>;
-const TYPE_LABEL: Record<string, string> = { video: "Video", phone: "Telephone", onsite: "Sur place" };
-const DAY_NAMES = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+const TYPE_KEY: Record<string, string> = { video: "type_video", phone: "type_telephone", onsite: "type_sur_place" };
+
 
 // ── Helpers dates ──
 function toDateKey(iso: string): string {
@@ -105,9 +107,11 @@ function timelineColor(status: string): string {
 
 // ── Composant principal ──
 export function AppointmentsList({ appointments }: { appointments: Appointment[] }) {
+  const t = useTranslations("portal");
+  const DAY_NAMES = useWeekdayNames();
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(() => {
-    // Centrer le mois sur le prochain RDV a venir
+
     const upcoming = appointments
       .filter((a) => a.isUpcoming && a.status !== "cancelled")
       .sort((a, b) => new Date(a.appointmentDate).getTime() - new Date(b.appointmentDate).getTime());
@@ -132,7 +136,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
   const [cancelId, setCancelId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
 
-  // Grouper par date
+
   const byDate = useMemo(() => {
     const map = new Map<string, Appointment[]>();
     for (const a of appointments) {
@@ -144,7 +148,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
     return map;
   }, [appointments]);
 
-  // KPIs
+
   const kpis = useMemo(() => ({
     total: appointments.length,
     upcoming: appointments.filter((a) => a.isUpcoming && a.status !== "cancelled").length,
@@ -152,13 +156,13 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
     withLink: appointments.filter((a) => !!a.meetingLink).length,
   }), [appointments]);
 
-  // Semaines du mois
+
   const weeks = useMemo(
     () => getMonthWeeks(currentMonth.getFullYear(), currentMonth.getMonth()),
     [currentMonth]
   );
 
-  // useEffect removed — auto-select done in useState initializer
+
 
   const prevMonth = () => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() - 1, 1));
   const nextMonth = () => setCurrentMonth((d) => new Date(d.getFullYear(), d.getMonth() + 1, 1));
@@ -182,21 +186,21 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
 
   return (
     <div className="space-y-4">
-      {/* ── Header + KPIs ── */}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
           <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg shrink-0">
             <Calendar className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="portal-title">Rendez-vous</h1>
-            <p className="text-sm text-muted-foreground">Planifiez et gerez vos rendez-vous</p>
+            <h1 className="portal-title">{t("rendez_vous")}</h1>
+            <p className="text-sm text-muted-foreground">{t("planifiez_gerez_rendez_vous")}</p>
           </div>
         </div>
         <Button asChild size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm">
           <Link href="/portail/reserver">
             <CalendarCheck className="h-4 w-4 sm:mr-1.5" />
-            Reserver
+            {t("reserver")}
           </Link>
         </Button>
       </div>
@@ -204,27 +208,27 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid">
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
           <p className="portal-kpi-number">{kpis.total}</p>
-          <p className="portal-kpi-label text-muted-foreground">Total</p>
+          <p className="portal-kpi-label text-muted-foreground">{t("total")}</p>
         </div>
         <div className="rounded-xl border bg-emerald-50/60 p-3">
           <p className="portal-kpi-number">{kpis.upcoming}</p>
-          <p className="portal-kpi-label text-emerald-600">A venir</p>
+          <p className="portal-kpi-label text-emerald-600">{t("venir")}</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
           <p className="portal-kpi-number">{kpis.past}</p>
-          <p className="portal-kpi-label text-muted-foreground">Passes</p>
+          <p className="portal-kpi-label text-muted-foreground">{t("passes")}</p>
         </div>
         <div className="rounded-xl border bg-[#0F2D52]/5 p-3">
           <p className="portal-kpi-number">{kpis.withLink}</p>
-          <p className="portal-kpi-label text-muted-foreground">Avec lien</p>
+          <p className="portal-kpi-label text-muted-foreground">{t("lien")}</p>
         </div>
       </div>
 
-      {/* ── Calendrier + Agenda ── */}
+
       <div className="grid md:grid-cols-[300px_1fr] lg:grid-cols-[340px_1fr] gap-4 items-start">
-        {/* Calendrier mensuel */}
+
         <Card className="p-4">
-          {/* Nav mois */}
+
           <div className="flex items-center justify-between mb-4">
             <button onClick={prevMonth} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
               <ChevronLeft className="h-4 w-4" />
@@ -232,7 +236,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold capitalize">{formatMonthYear(currentMonth)}</span>
               <button onClick={goToday} className="text-[10px] font-medium text-[#0F2D52] hover:underline">
-                Aujourd&apos;hui
+                {t("aujourd_apos_hui")}
               </button>
             </div>
             <button onClick={nextMonth} className="h-8 w-8 rounded-lg hover:bg-muted flex items-center justify-center">
@@ -240,7 +244,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
             </button>
           </div>
 
-          {/* Jours de la semaine */}
+
           <div className="grid grid-cols-7 mb-1">
             {DAY_NAMES.map((d) => (
               <div key={d} className="text-center text-[10px] font-semibold text-muted-foreground uppercase tracking-wider py-1">
@@ -249,7 +253,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
             ))}
           </div>
 
-          {/* Grille jours */}
+
           {weeks.map((week, wi) => (
             <div key={wi} className="grid grid-cols-7">
               {week.map((day) => {
@@ -259,7 +263,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 const isSelected = key === selectedDate;
                 const dayAppts = byDate.get(key);
                 const hasAppts = !!dayAppts && dayAppts.length > 0;
-                // Meilleur statut pour le point
+
                 const bestStatus = dayAppts
                   ? dayAppts.find((a) => a.status === "confirmed")?.status
                     ?? dayAppts.find((a) => a.status === "pending")?.status
@@ -284,7 +288,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                     )}
                   >
                     <span>{day.getDate()}</span>
-                    {/* Point indicateur */}
+
                     {hasAppts && (
                       <span
                         className={cn(
@@ -300,11 +304,11 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
           ))}
         </Card>
 
-        {/* Agenda du jour */}
+
         <Card className="p-0 overflow-hidden min-h-[300px]">
           {selectedDate ? (
             <>
-              {/* Header jour */}
+
               <div className="px-5 py-3 border-b bg-muted/30">
                 <p className="text-sm font-semibold capitalize">{formatDayFull(selectedDate)}</p>
                 <p className="text-xs text-muted-foreground">
@@ -315,7 +319,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
               {selectedAppts.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Calendar className="h-10 w-10 text-muted-foreground/30 mb-3" />
-                  <p className="text-sm font-medium text-muted-foreground">Aucun rendez-vous ce jour</p>
+                  <p className="text-sm font-medium text-muted-foreground">{t("aucun_rendez_vous_jour")}</p>
                 </div>
               ) : (
                 <div className="divide-y">
@@ -334,14 +338,14 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                           isCancelled && "opacity-50"
                         )}
                       >
-                        {/* Timeline gauche */}
+
                         <div className="flex flex-col items-center shrink-0 w-[52px]">
                           <span className="text-xs font-bold text-[#0F2D52]">{formatTime(a.startTime)}</span>
                           <div className={cn("w-0.5 flex-1 my-1 rounded-full", timelineColor(a.status))} />
                           <span className="text-[10px] text-muted-foreground">{formatTime(a.endTime)}</span>
                         </div>
 
-                        {/* Contenu */}
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start gap-3">
                             <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
@@ -349,39 +353,39 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-2">
-                                <p className="font-medium text-sm truncate">{a.subject ?? "Rendez-vous"}</p>
+                                <p className="font-medium text-sm truncate">{a.subject ?? t("rendez_vous")}</p>
                                 <StatusBadge status={a.status} />
                               </div>
                               <p className="text-xs text-muted-foreground mt-0.5">
-                                {TYPE_LABEL[a.meetingType] ?? a.meetingType}
+                                {TYPE_KEY[a.meetingType] ?? a.meetingType}
                                 {a.durationMin ? ` · ${a.durationMin} min` : ""}
                               </p>
-                              {/* Indicateurs */}
+
                               <div className="flex items-center gap-2 mt-1.5">
                                 {a.meetingLink && !isCancelled && (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5">
                                     <Link2 className="h-3 w-3" />
-                                    Lien disponible
+                                    {t("lien_disponible")}
                                   </span>
                                 )}
                                 {!a.meetingLink && a.isUpcoming && !isCancelled && (
                                   <span className="inline-flex items-center gap-1 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">
                                     <Clock className="h-3 w-3" />
-                                    En attente du lien
+                                    {t("attente_lien")}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </div>
 
-                          {/* Actions rapides */}
+
                           {a.isUpcoming && !isCancelled && (
                             <div className="flex gap-2 mt-2 ml-12" onClick={(e) => e.stopPropagation()}>
                               {a.meetingLink && (
                                 <Button size="sm" className="h-7 text-xs bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
                                   <a href={a.meetingLink} target="_blank" rel="noreferrer">
                                     <ExternalLink className="h-3 w-3 mr-1" />
-                                    Rejoindre
+                                    {t("rejoindre")}
                                   </a>
                                 </Button>
                               )}
@@ -392,7 +396,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                                 onClick={() => setCancelId(a.id)}
                               >
                                 <XCircle className="h-3 w-3 mr-1" />
-                                Annuler
+                                {t("annuler")}
                               </Button>
                             </div>
                           )}
@@ -406,17 +410,17 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <CalendarCheck className="h-10 w-10 text-muted-foreground/30 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">Selectionnez un jour pour voir vos rendez-vous</p>
+              <p className="text-sm font-medium text-muted-foreground">{t("selectionnez_jour_voir_rendez_vous")}</p>
             </div>
           )}
         </Card>
       </div>
 
-      {/* ── Detail modal ── */}
+
       {detail && (
         <Dialog open={!!detail} onOpenChange={(o) => { if (!o) setDetail(null); }}>
           <DialogContent className="sm:max-w-lg p-0 overflow-hidden">
-            <DialogTitle className="sr-only">{detail.subject ?? "Rendez-vous"}</DialogTitle>
+            <DialogTitle className="sr-only">{detail.subject ?? t("rendez_vous")}</DialogTitle>
             <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
               <button onClick={() => setDetail(null)} className="absolute top-4 right-4 h-8 w-8 rounded-lg hover:bg-white/10 flex items-center justify-center">
                 <X className="h-4 w-4 text-white/70" />
@@ -426,8 +430,8 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                   {(() => { const I = TYPE_ICON[detail.meetingType] ?? Video; return <I className="h-6 w-6 text-white" />; })()}
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">{detail.subject ?? "Rendez-vous"}</h2>
-                  <p className="text-white/60 text-sm">{TYPE_LABEL[detail.meetingType] ?? detail.meetingType}</p>
+                  <h2 className="text-lg font-bold">{detail.subject ?? t("rendez_vous")}</h2>
+                  <p className="text-white/60 text-sm">{TYPE_KEY[detail.meetingType] ?? detail.meetingType}</p>
                 </div>
               </div>
             </div>
@@ -437,14 +441,14 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <div className="flex items-center gap-2">
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Date</p>
+                    <p className="text-xs text-muted-foreground">{t("date")}</p>
                     <p className="text-sm font-medium">{formatDate(detail.appointmentDate)}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
                   <div>
-                    <p className="text-xs text-muted-foreground">Heure</p>
+                    <p className="text-xs text-muted-foreground">{t("heure")}</p>
                     <p className="text-sm font-medium">{formatTime(detail.startTime)} - {formatTime(detail.endTime)}</p>
                   </div>
                 </div>
@@ -452,22 +456,22 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
 
               <div className="rounded-lg border p-3 space-y-2">
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Statut</span>
+                  <span className="text-muted-foreground">{t("statut")}</span>
                   <StatusBadge status={detail.status} />
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Type</span>
-                  <span className="font-medium">{TYPE_LABEL[detail.meetingType] ?? detail.meetingType}</span>
+                  <span className="text-muted-foreground">{t("type")}</span>
+                  <span className="font-medium">{TYPE_KEY[detail.meetingType] ?? detail.meetingType}</span>
                 </div>
                 {detail.durationMin && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Duree</span>
+                    <span className="text-muted-foreground">{t("duree")}</span>
                     <span className="font-medium">{detail.durationMin} min</span>
                   </div>
                 )}
                 {detail.subject && (
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Sujet / Service</span>
+                    <span className="text-muted-foreground">{t("sujet_service")}</span>
                     <span className="font-medium text-right max-w-[200px]">{detail.subject}</span>
                   </div>
                 )}
@@ -477,7 +481,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50/50 p-4 space-y-3">
                   <div className="flex items-center gap-2">
                     <Link2 className="h-4 w-4 text-emerald-600" />
-                    <span className="text-sm font-semibold text-emerald-700">Reunion programmee</span>
+                    <span className="text-sm font-semibold text-emerald-700">{t("reunion_programmee")}</span>
                   </div>
                   {(detail.meetingId || detail.meetingPassword) && (
                     <div className="space-y-1 text-sm">
@@ -489,7 +493,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                       )}
                       {detail.meetingPassword && (
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Code</span>
+                          <span className="text-muted-foreground">{t("code")}</span>
                           <span className="font-mono font-medium">{detail.meetingPassword}</span>
                         </div>
                       )}
@@ -498,7 +502,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                   <Button className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" asChild>
                     <a href={detail.meetingLink} target="_blank" rel="noreferrer">
                       <ExternalLink className="h-4 w-4 mr-2" />
-                      Rejoindre la reunion
+                      {t("rejoindre_reunion")}
                     </a>
                   </Button>
                 </div>
@@ -506,7 +510,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-4">
                   <div className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-amber-600" />
-                    <span className="text-sm font-medium text-amber-700">En attente — le lien de reunion sera disponible prochainement</span>
+                    <span className="text-sm font-medium text-amber-700">{t("attente_lien_reunion_sera_disponible")}</span>
                   </div>
                 </div>
               ) : null}
@@ -515,7 +519,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <div className="rounded-lg border p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-3.5 w-3.5 text-[#0F2D52]" />
-                    <span className="text-xs font-semibold text-[#0F2D52] uppercase tracking-wider">Notes VNK</span>
+                    <span className="text-xs font-semibold text-[#0F2D52] uppercase tracking-wider">{t("notes_vnk")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">{detail.notesAdmin}</p>
                 </div>
@@ -525,7 +529,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
                 <div className="rounded-lg border p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <FileText className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Vos notes</span>
+                    <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("notes")}</span>
                   </div>
                   <p className="text-sm text-muted-foreground leading-relaxed">{detail.notesClient}</p>
                 </div>
@@ -536,10 +540,10 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
               {detail.isUpcoming && detail.status !== "cancelled" && (
                 <Button size="sm" variant="outline" className="text-destructive" onClick={() => { setDetail(null); setCancelId(detail.id); }}>
                   <XCircle className="h-3.5 w-3.5 mr-1" />
-                  Annuler
+                  {t("annuler")}
                 </Button>
               )}
-              <Button size="sm" variant="outline" onClick={() => setDetail(null)}>Fermer</Button>
+              <Button size="sm" variant="outline" onClick={() => setDetail(null)}>{t("fermer")}</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -548,10 +552,10 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
       <ConfirmDialog
         open={cancelId !== null}
         onOpenChange={(open) => { if (!open) setCancelId(null); }}
-        title="Annuler le rendez-vous"
-        description="Etes-vous sur de vouloir annuler ce rendez-vous ?"
-        confirmLabel="Oui, annuler"
-        cancelLabel="Non, garder"
+        title={t("annuler_rendez_vous")}
+        description={t("etes_vous_vouloir_annuler_rendez")}
+        confirmLabel={t("oui_annuler")}
+        cancelLabel={t("non_garder")}
         variant="destructive"
         loading={loading}
         onConfirm={handleCancel}

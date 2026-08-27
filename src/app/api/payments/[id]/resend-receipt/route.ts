@@ -1,5 +1,6 @@
 // POST /api/payments/[id]/resend-receipt — renvoie le PDF du recu au client par courriel
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -11,6 +12,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -34,10 +36,10 @@ export async function POST(
     return NextResponse.json({ error: "Paiement introuvable" }, { status: 404 });
   }
   if (payment.status !== "succeeded" && payment.status !== "paid") {
-    return NextResponse.json({ error: "Le paiement n'est pas complété — pas de reçu à envoyer" }, { status: 400 });
+    return NextResponse.json({ error: t("le_paiement_n_est_pas_complete_pas") }, { status: 400 });
   }
   if (!payment.client?.email) {
-    return NextResponse.json({ error: "Aucun courriel client associé" }, { status: 400 });
+    return NextResponse.json({ error: t("aucun_courriel_client_associe") }, { status: 400 });
   }
 
   try {

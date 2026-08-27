@@ -1,10 +1,12 @@
 // API · Verification HIBP en temps reel (debounce cote client)
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { checkPasswordBreached, passwordStrength } from "@/lib/security/hibp";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -13,7 +15,7 @@ export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
     if (typeof password !== "string" || password.length < 1) {
-      return NextResponse.json({ error: "Mot de passe requis" }, { status: 400 });
+      return NextResponse.json({ error: t("mot_de_passe_requis") }, { status: 400 });
     }
 
     const [breach, strength] = await Promise.all([

@@ -3,6 +3,7 @@
 // Le mode démo crée des clients/factures/devis exemples ET active un flag dans
 // les settings qui bloque les opérations destructives sur les data métier.
 import crypto from "crypto";
+import { getTranslations } from "next-intl/server";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -27,8 +28,9 @@ const DEMO_TAG = "[DEMO]";
 
 // ── ACTIVER LE MODE DÉMO ───────────────────────────────────
 export async function enableDemoModeAction(): Promise<Result<{ created: { clients: number; quotes: number; invoices: number } }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
 
   // Flag dans Setting
   await prisma.setting.upsert({
@@ -134,8 +136,9 @@ export async function enableDemoModeAction(): Promise<Result<{ created: { client
 
 // ── DÉSACTIVER LE MODE DÉMO ───────────────────────────────
 export async function disableDemoModeAction(): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
 
   await prisma.setting.upsert({
     where: { category_key: { category: "system", key: "demo_mode" } },
@@ -153,8 +156,9 @@ export async function disableDemoModeAction(): Promise<Result> {
 
 // ── PURGER LES DONNÉES DÉMO ───────────────────────────────
 export async function purgeDemoDataAction(): Promise<Result<{ deleted: { clients: number; quotes: number; invoices: number } }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
 
   const [quotes, invoices, clients] = await prisma.$transaction([
     prisma.quote.deleteMany({ where: { quoteNumber: { startsWith: "DEV-DEMO-" } } }),

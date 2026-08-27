@@ -1,5 +1,6 @@
 // POST /api/auth/two-factor/verify — verifie le code TOTP et active la 2FA (client OU admin)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { verifySync } from "otplib";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -11,6 +12,7 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 const schema = z.object({ code: z.string().length(6) });
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -31,7 +33,7 @@ export async function POST(req: Request) {
       select: { twoFactorSecret: true, twoFactorEnabled: true },
     });
     if (!admin?.twoFactorSecret) {
-      return NextResponse.json({ error: "Configurez d'abord la 2FA" }, { status: 400 });
+      return NextResponse.json({ error: t("configurez_d_abord_la_2fa") }, { status: 400 });
     }
     secret = admin.twoFactorSecret;
   } else if (role === "client" && session.user.clientId) {
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       select: { twoFactorSecret: true, twoFactorEnabled: true },
     });
     if (!client?.twoFactorSecret) {
-      return NextResponse.json({ error: "Configurez d'abord la 2FA" }, { status: 400 });
+      return NextResponse.json({ error: t("configurez_d_abord_la_2fa") }, { status: 400 });
     }
     secret = client.twoFactorSecret;
   } else {

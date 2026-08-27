@@ -27,6 +27,7 @@ type AdminInfo = {
 };
 
 export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require2FA: boolean }) {
+  const t = useTranslations("admin.welcome");
   const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -36,10 +37,10 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
     startTransition(async () => {
       const r = await completeOnboardingAction();
       if (r.success) {
-        toast.success("Bienvenue dans VNK !");
+        toast.success(t("bienvenue_vnk"));
         router.push("/admin");
       } else {
-        toast.error(r.error || "Erreur");
+        toast.error(r.error || t("erreur"));
       }
     });
   };
@@ -47,11 +48,11 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
   return (
     <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-slate-50 to-slate-100">
       <div className="w-full max-w-2xl space-y-4">
-        {/* Header avec progression */}
+
         <div className="text-center">
           <div className="inline-flex items-center gap-1.5 text-xs uppercase tracking-wider font-semibold text-[#0F2D52] mb-2">
             <Sparkles className="h-4 w-4" />
-            Activation de votre compte
+            {t("activation_compte")}
           </div>
           <div className="flex items-center justify-center gap-2">
             {[1, 2, 3].map((s) => (
@@ -65,7 +66,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
           </div>
         </div>
 
-        {/* Étape 1 : Bienvenue */}
+
         {step === 1 && (
           <Card>
             <CardContent className="p-8 text-center space-y-4">
@@ -74,7 +75,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                 style={{ backgroundColor: admin.position?.color ?? admin.customRole?.color ?? "#0F2D52" }}
               >
                 {admin.avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img src={admin.avatarUrl} alt="" className="h-full w-full rounded-full object-cover" />
                 ) : (
                   (admin.fullName || admin.email).charAt(0).toUpperCase()
@@ -83,7 +84,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
               <div>
                 <h1 className="text-2xl font-bold">Bienvenue {admin.fullName?.split(" ")[0] ?? ""} !</h1>
                 <p className="text-sm text-muted-foreground mt-1.5">
-                  Votre compte est activé. Configurons ensemble votre accès en quelques étapes.
+                  {t("compte_active_configurons_ensemble_acces")}
                 </p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
@@ -106,7 +107,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
           </Card>
         )}
 
-        {/* Étape 2 : 2FA */}
+
         {step === 2 && (
           <Card>
             <CardContent className="p-8 space-y-4">
@@ -117,12 +118,12 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                   <ShieldCheck className="h-8 w-8" />
                 </div>
                 <h2 className="text-xl font-bold mt-4">
-                  {admin.twoFactorEnabled ? "Excellent !" : "Sécurisez votre compte"}
+                  {admin.twoFactorEnabled ? t("excellent") : t("securisez_compte")}
                 </h2>
                 <p className="text-sm text-muted-foreground mt-1">
                   {admin.twoFactorEnabled
-                    ? "Votre 2FA est déjà active."
-                    : "Activez la double authentification pour protéger votre compte."}
+                    ? t("2fa_deja_active")
+                    : t("activez_double_authentification_proteger_compte")}
                 </p>
               </div>
 
@@ -130,13 +131,13 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                 <div className={`rounded-md border p-3 text-xs ${require2FA ? "border-amber-300 bg-amber-50 text-amber-900" : "border-blue-300 bg-blue-50 text-blue-900"}`}>
                   {require2FA ? (
                     <>
-                      <p className="font-semibold mb-1">⚠ 2FA requise par la politique de sécurité</p>
-                      <p>Vous devez activer la 2FA avant de continuer.</p>
+                      <p className="font-semibold mb-1">{t("2fa_requise_politique_securite")}</p>
+                      <p>{t("vous_devez_activer_2fa_avant")}</p>
                     </>
                   ) : (
                     <>
-                      <p className="font-semibold mb-1">Optionnel mais fortement recommandé</p>
-                      <p>La 2FA empêche l&apos;accès même si votre mot de passe est compromis.</p>
+                      <p className="font-semibold mb-1">{t("optionnel_mais_fortement_recommande")}</p>
+                      <p>{t("2fa_empeche_apos_acces_meme")}</p>
                     </>
                   )}
                 </div>
@@ -145,15 +146,15 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
               <ul className="text-xs text-muted-foreground space-y-1.5">
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  Compatible avec Google Authenticator, Authy, 1Password...
+                  {t("compatible_google_authenticator_authy_1password")}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  Codes de secours fournis en cas de perte du téléphone
+                  {t("codes_secours_fournis_cas_perte")}
                 </li>
                 <li className="flex items-start gap-2">
                   <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0 mt-0.5" />
-                  Modifiable à tout moment depuis votre profil
+                  {t("modifiable_tout_moment_depuis_profil")}
                 </li>
               </ul>
 
@@ -164,8 +165,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                 {!admin.twoFactorEnabled ? (
                   <Button asChild className="flex-1 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                     <Link href="/admin/profile?tab=security&from=welcome">
-                      <Shield className="h-4 w-4 mr-1.5" />Activer la 2FA
-                    </Link>
+                      <Shield className="h-4 w-4 mr-1.5" />{t("welcome_wizard_activer_la_2fa")}</Link>
                   </Button>
                 ) : (
                   <Button onClick={() => setStep(3)} className="flex-1 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
@@ -180,14 +180,14 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                   onClick={() => setStep(3)}
                   className="text-[11px] text-muted-foreground hover:text-foreground underline mx-auto block"
                 >
-                  Plus tard (non recommandé)
+                  {t("plus_tard_non_recommande")}
                 </button>
               )}
             </CardContent>
           </Card>
         )}
 
-        {/* Étape 3 : Tour rapide */}
+
         {step === 3 && (
           <Card>
             <CardContent className="p-8 space-y-4">
@@ -195,22 +195,22 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                 <div className="h-16 w-16 rounded-2xl mx-auto flex items-center justify-center bg-[#0F2D52]/8 text-[#0F2D52]">
                   <LayoutDashboard className="h-8 w-8" />
                 </div>
-                <h2 className="text-xl font-bold mt-4">Vous êtes prêt</h2>
+                <h2 className="text-xl font-bold mt-4">{t("vous_etes_pret")}</h2>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Voici les modules principaux du portail VNK Automatisation
+                  {t("voici_modules_principaux_portail_vnk")}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-2">
-                <ModuleCard icon={Users} label="Clients" desc="Fiches et historique" />
-                <ModuleCard icon={Briefcase} label="Mandats" desc="Projets en cours" />
-                <ModuleCard icon={FileText} label="Devis & Factures" desc="Facturation" />
-                <ModuleCard icon={LayoutDashboard} label="Tableau de bord" desc="Vue d'ensemble" />
+                <ModuleCard icon={Users} label={t("clients")} desc={t("fiches_historique")} />
+                <ModuleCard icon={Briefcase} label={t("mandats")} desc={t("projets_cours")} />
+                <ModuleCard icon={FileText} label={t("devis_factures")} desc={t("facturation")} />
+                <ModuleCard icon={LayoutDashboard} label={t("tableau_bord")} desc={t("vue_ensemble")} />
               </div>
 
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900">
-                <p className="font-semibold mb-1">Astuce</p>
-                <p>Appuyez sur <kbd className="bg-white px-1.5 py-0.5 rounded font-mono text-[10px]">Ctrl/Cmd + K</kbd> n&apos;importe où dans l&apos;app pour ouvrir la recherche universelle.</p>
+                <p className="font-semibold mb-1">{t("astuce")}</p>
+                <p>{t("appuyez")} <kbd className="bg-white px-1.5 py-0.5 rounded font-mono text-[10px]">{t("ctrl_cmd_k")}</kbd> {t("n_apos_importe_apos_app")}</p>
               </div>
 
               <div className="flex gap-2 pt-2">
@@ -219,7 +219,7 @@ export function WelcomeWizard({ admin, require2FA }: { admin: AdminInfo; require
                 </Button>
                 <Button onClick={finish} disabled={pending} className="flex-1 bg-[#0F2D52] hover:bg-[#0F2D52]/90">
                   {pending ? "..." : (
-                    <>Accéder au portail<ArrowRight className="h-4 w-4 ml-1.5" /></>
+                    <>{t("acceder_portail")}<ArrowRight className="h-4 w-4 ml-1.5" /></>
                   )}
                 </Button>
               </div>

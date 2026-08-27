@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -43,14 +44,14 @@ const CARD_BRAND_LABELS: Record<string, string> = {
   discover: "Discover", diners: "Diners", jcb: "JCB", unionpay: "UnionPay",
 };
 
-const METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte de crédit",
-  interac: "Interac",
-  cheque: "Chèque",
-  virement: "Virement bancaire",
-  comptant: "Comptant",
-  manual: "Manuel",
-  autre: "Autre",
+const METHOD_KEYS: Record<string, string> = {
+  stripe: "carte_credit",
+  interac: "interac",
+  cheque: "cheque",
+  virement: "virement_bancaire",
+  comptant: "comptant",
+  manual: "manuel",
+  autre: "autre",
 };
 
 // Presets de periode
@@ -96,6 +97,7 @@ export function ReceiptsView({
   dateRange: { from: string; to: string };
   methodFilter: "all" | "card" | "manual";
 }) {
+  const t = useTranslations("admin.receipts");
   const router = useRouter();
   const searchParams = useSearchParams();
   const { open: openEntity } = useEntityPanels();
@@ -104,10 +106,10 @@ export function ReceiptsView({
   const [from, setFrom] = useState(dateRange.from);
   const [to, setTo] = useState(dateRange.to);
 
-  // PDF preview modal — le PDF du reçu est l'objet principal de cette page
+
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; downloadName?: string } | null>(null);
 
-  // Ouvre le PDF du recu d'un Receipt row
+
   const openReceiptPdf = (r: ReceiptRow) => {
     setPdfPreview({
       url: r.internalReceiptUrl,
@@ -116,7 +118,7 @@ export function ReceiptsView({
     });
   };
 
-  // Sticky scroll
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -127,7 +129,7 @@ export function ReceiptsView({
     return () => obs.disconnect();
   }, []);
 
-  // URL update
+
   const updateUrl = (overrides: Partial<{ from: string; to: string; method: string }>) => {
     const p = new URLSearchParams(searchParams.toString());
     Object.entries(overrides).forEach(([k, v]) => {
@@ -147,7 +149,7 @@ export function ReceiptsView({
   };
   const changeMethod = (v: string) => updateUrl({ method: v });
 
-  // Detection preset actif
+
   const activePreset = useMemo(() => {
     if (!dateRange.from && !dateRange.to) return "noFilter";
     for (const k of ["30d", "thisMonth", "lastMonth", "thisQuarter", "thisYear"]) {
@@ -178,10 +180,10 @@ export function ReceiptsView({
         toast.success(`Reçu renvoyé à ${data.email ?? "client"}`);
       } else {
         const d = await res.json().catch(() => ({}));
-        toast.error(d.error ?? "Échec de l'envoi");
+        toast.error(d.error ?? t("echec_envoi"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setResending(null);
     }
@@ -190,7 +192,7 @@ export function ReceiptsView({
   const columns: Column<ReceiptRow>[] = [
     {
       key: "number",
-      header: "N° reçu",
+      header: t("n_recu"),
       accessor: (r) => r.receiptNumber
         ? <span className="font-mono text-xs">{r.receiptNumber}</span>
         : r.invoiceNumber
@@ -199,7 +201,7 @@ export function ReceiptsView({
     },
     {
       key: "client",
-      header: "Client",
+      header: t("client"),
       accessor: (r) => (
         <button
           onClick={(e) => { e.stopPropagation(); r.clientId && openEntity("client", r.clientId); }}
@@ -213,7 +215,7 @@ export function ReceiptsView({
     },
     {
       key: "method",
-      header: "Méthode",
+      header: t("methode"),
       accessor: (r) => r.cardBrand ? (
         <div className="inline-flex items-center gap-1.5">
           <CreditCard className="h-3 w-3 text-indigo-600" />
@@ -223,14 +225,14 @@ export function ReceiptsView({
       ) : (
         <div className="inline-flex items-center gap-1.5">
           <Banknote className="h-3 w-3 text-slate-600" />
-          <span className="text-xs">{r.paymentMethod ? METHOD_LABELS[r.paymentMethod] ?? r.paymentMethod : "—"}</span>
+          <span className="text-xs">{r.paymentMethod ? (METHOD_KEYS[r.paymentMethod] ? t(METHOD_KEYS[r.paymentMethod]) : r.paymentMethod) : "—"}</span>
         </div>
       ),
       hiddenOnMobile: true,
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (r) => (
         <div>
           <div className="font-bold tabular-nums">{r.amount.toFixed(2)} {r.currency}</div>
@@ -243,54 +245,54 @@ export function ReceiptsView({
     },
     {
       key: "email",
-      header: "Envoyé à",
+      header: t("envoye"),
       accessor: (r) => r.receiptEmail
         ? <span className="text-xs inline-flex items-center gap-1"><CheckCircle2 className="h-3 w-3 text-emerald-500" />{r.receiptEmail}</span>
         : r.clientEmail
           ? <span className="text-xs text-muted-foreground inline-flex items-center gap-1"><Mail className="h-3 w-3" />{r.clientEmail}</span>
-          : <span className="text-xs text-muted-foreground italic">aucun courriel</span>,
+          : <span className="text-xs text-muted-foreground italic">{t("aucun_courriel")}</span>,
       hiddenOnMobile: true,
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => r.paidAt ? <span className="text-xs">{formatDate(new Date(r.paidAt))}</span> : "—",
       sortable: true, sortBy: (r) => r.paidAt ?? "",
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("actions"),
       accessor: (r) => (
         <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
-          <ActionTooltip label="Prévisualiser le reçu VNK (PDF)">
+          <ActionTooltip label={t("previsualiser_recu_vnk_pdf")}>
             <button
               onClick={() => openReceiptPdf(r)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              aria-label="Prévisualiser le reçu VNK"
+              aria-label={t("previsualiser_recu_vnk")}
             >
               <Eye className="h-3.5 w-3.5" />
             </button>
           </ActionTooltip>
           {r.receiptUrl && (
-            <ActionTooltip label="Reçu officiel de la plateforme de paiement">
+            <ActionTooltip label={t("recu_officiel_plateforme_paiement")}>
               <a
                 href={r.receiptUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                aria-label="Reçu officiel de la plateforme"
+                aria-label={t("recu_officiel_plateforme")}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </ActionTooltip>
           )}
           {r.clientEmail && (
-            <ActionTooltip label="Renvoyer le reçu par courriel">
+            <ActionTooltip label={t("renvoyer_recu_courriel")}>
               <button
                 onClick={() => handleResend(r)}
                 disabled={resending === r.id}
                 className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground disabled:opacity-50"
-                aria-label="Renvoyer le reçu par courriel"
+                aria-label={t("renvoyer_recu_courriel")}
               >
                 <Send className={cn("h-3.5 w-3.5", resending === r.id && "animate-pulse")} />
               </button>
@@ -303,13 +305,13 @@ export function ReceiptsView({
 
   return (
     <div className="space-y-5">
-      {/* Hero */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Receipt className="h-5 w-5" />
-              Reçus
+              {t("recus")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
               Reçus émis aux clients · PDF VNK officiel pour tous + reçu de la plateforme (cartes uniquement)
@@ -319,59 +321,59 @@ export function ReceiptsView({
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total reçus</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("total_recus")}</p>
           <p className="text-lg font-bold tabular-nums">{kpis.total}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.cardCount} carte · {kpis.manualCount} manuel</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Envoyés par courriel</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("envoyes_courriel")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{kpis.sentByEmail}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.total > 0 ? Math.round((kpis.sentByEmail / kpis.total) * 100) : 0}% confirmés</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Avec reçu plateforme</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("recu_plateforme")}</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{kpis.withStripeUrl}</p>
-          <p className="text-[10px] text-muted-foreground">reçu officiel disponible</p>
+          <p className="text-[10px] text-muted-foreground">{t("recu_officiel_disponible")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Montant total</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("montant_total")}</p>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{formatCurrency(kpis.totalAmount)}</p>
         </div>
       </div>
 
-      {/* Sentinel — détecte fin des KPI */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Receipt className="h-4 w-4" />
-              Reçus
+              {t("recus")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
             <span className="text-muted-foreground">{kpis.sentByEmail}/{kpis.total} envoyés</span>
-            <span className="text-muted-foreground">Total <span className="font-semibold">{formatCurrency(kpis.totalAmount)}</span></span>
+            <span className="text-muted-foreground">{t("total")} <span className="font-semibold">{formatCurrency(kpis.totalAmount)}</span></span>
           </div>
         </div>
       )}
 
-      {/* Filtres en flow normal */}
+
       <div>
-        {/* Première ligne : presets periode */}
+
         <div className="flex flex-wrap items-center gap-1 mb-2">
-          <span className="text-[10px] text-muted-foreground mr-1">Période :</span>
+          <span className="text-[10px] text-muted-foreground mr-1">{t("periode")}</span>
           {[
-            { k: "noFilter", l: "Tous" },
-            { k: "30d", l: "30 jours" },
-            { k: "thisMonth", l: "Ce mois" },
-            { k: "lastMonth", l: "Mois dernier" },
-            { k: "thisQuarter", l: "Ce trimestre" },
-            { k: "thisYear", l: "Cette année" },
+            { k: "noFilter", l: t("tous") },
+            { k: "30d", l: t("30_jours") },
+            { k: "thisMonth", l: t("mois") },
+            { k: "lastMonth", l: t("mois_dernier") },
+            { k: "thisQuarter", l: t("trimestre") },
+            { k: "thisYear", l: t("annee") },
           ].map((p) => (
             <button
               key={p.k}
@@ -388,55 +390,55 @@ export function ReceiptsView({
           ))}
           {activePreset === "custom" && (
             <span className="px-2 py-1 rounded text-[10px] font-medium border bg-amber-50 text-amber-800 border-amber-200">
-              Personnalisé
+              {t("personnalise")}
             </span>
           )}
         </div>
 
-        {/* Recherche (mobile + desktop) + Dates (desktop only) + filtre methode */}
+
         <div className="flex flex-wrap items-end gap-2">
-          {/* Recherche — visible mobile + desktop */}
+
           <div className="relative flex-1 min-w-[180px] max-w-md">
-            <Label className="text-[10px]">Recherche</Label>
+            <Label className="text-[10px]">{t("recherche")}</Label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Client, n° reçu, n° facture, courriel…"
+                placeholder={t("client_n_recu_n_facture")}
                 className="pl-9 h-9 text-xs"
               />
             </div>
           </div>
 
-          {/* Dates filtres */}
+
           <div className="flex flex-wrap items-end gap-2">
             <div>
-              <Label className="text-[10px]">Du</Label>
+              <Label className="text-[10px]">{t("du")}</Label>
               <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="h-9 w-36" />
             </div>
             <div>
-              <Label className="text-[10px]">Au</Label>
+              <Label className="text-[10px]">{t("au")}</Label>
               <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-9 w-36" />
             </div>
             <Button onClick={applyDates} size="sm" className="h-9">
               <Calendar className="h-3.5 w-3.5 mr-1.5" />
-              Appliquer
+              {t("appliquer")}
             </Button>
             {(dateRange.from || dateRange.to) && (
               <Button onClick={clearDates} size="sm" variant="ghost" className="h-9">
                 <X className="h-3.5 w-3.5 mr-1" />
-                Effacer
+                {t("effacer")}
               </Button>
             )}
           </div>
 
-          {/* Filtre methode */}
+
           <div className="flex bg-muted rounded-lg p-0.5 ml-auto">
             {[
-              { key: "all", label: "Tous", icon: Receipt },
-              { key: "card", label: "Carte", icon: CreditCard },
-              { key: "manual", label: "Manuel", icon: Banknote },
+              { key: "all", label: t("tous"), icon: Receipt },
+              { key: "card", label: t("carte"), icon: CreditCard },
+              { key: "manual", label: t("manuel"), icon: Banknote },
             ].map((tab) => {
               const Icon = tab.icon;
               return (
@@ -457,7 +459,7 @@ export function ReceiptsView({
         </div>
       </div>
 
-      {/* Table */}
+
       <DataTable
         data={filtered}
         columns={columns}
@@ -468,12 +470,12 @@ export function ReceiptsView({
         onRowClick={(r) => openReceiptPdf(r)}
         emptyMessage={
           searchQuery || methodFilter !== "all" || dateRange.from || dateRange.to
-            ? "Aucun reçu ne correspond aux filtres."
-            : "Aucun reçu pour le moment. Les reçus sont générés automatiquement à chaque paiement complété."
+            ? t("aucun_recu_ne_correspond_filtres")
+            : t("aucun_recu_moment_recus_generes")
         }
       />
 
-      {/* PDF preview du reçu (modal principal de la page) */}
+
       {pdfPreview && (
         <PdfViewerModal
           open={!!pdfPreview}

@@ -1,12 +1,16 @@
 // Settings · Notifications Push — abonnements navigateur.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { PushView } from "./push-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Notifications push — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("notifications_push_vnk") };
+}
 
 export default async function PushPage() {
   const session = await auth();

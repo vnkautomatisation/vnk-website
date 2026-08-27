@@ -4,6 +4,7 @@
 // Sécurité : token single-use validé par hash SHA-256, expiration 7 jours.
 // Anti brute-force : rate-limit par IP (20 essais/15 min).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { headers } from "next/headers";
@@ -17,18 +18,19 @@ const schema = z.object({
   token: z.string().min(1),
   password: z
     .string()
-    .min(12, "Le mot de passe doit faire au moins 12 caractères")
-    .regex(/[A-Z]/, "Au moins une majuscule")
-    .regex(/[a-z]/, "Au moins une minuscule")
-    .regex(/\d/, "Au moins un chiffre"),
+    .min(12, "le_mot_de_passe_doit_faire_au")
+    .regex(/[A-Z]/, "au_moins_une_majuscule")
+    .regex(/[a-z]/, "au_moins_une_minuscule")
+    .regex(/\d/, "au_moins_un_chiffre"),
   consentAccepted: z.boolean().refine((v) => v === true, {
-    message: "Vous devez accepter les politiques pour continuer",
+    message: "vous_devez_accepter_les_politiques_pour_continuer",
   }),
 });
 
 export async function acceptInvitationAction(input: z.infer<typeof schema>): Promise<Result<{ adminId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = schema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // ── Rate-limit anti brute-force sur le token ────────────────
   const h = await headers().catch(() => null);
@@ -48,14 +50,14 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
   const tokenHash = crypto.createHash("sha256").update(parsed.data.token).digest("hex");
 
   const invitation = await prisma.adminInvitation.findUnique({ where: { tokenHash } });
-  if (!invitation) return { success: false, error: "Lien d'invitation invalide" };
-  if (invitation.revokedAt) return { success: false, error: "Cette invitation a été annulée" };
-  if (invitation.acceptedAt) return { success: false, error: "Cette invitation a déjà été utilisée" };
-  if (invitation.expiresAt < new Date()) return { success: false, error: "Cette invitation a expiré" };
+  if (!invitation) return { success: false, error: t("lien_d_invitation_invalide") };
+  if (invitation.revokedAt) return { success: false, error: t("cette_invitation_a_ete_annulee") };
+  if (invitation.acceptedAt) return { success: false, error: t("cette_invitation_a_deja_ete_utilisee") };
+  if (invitation.expiresAt < new Date()) return { success: false, error: t("cette_invitation_a_expire") };
 
   // Double-check : email pas pris depuis
   const existing = await prisma.admin.findUnique({ where: { email: invitation.email } });
-  if (existing) return { success: false, error: "Un compte avec cet email existe déjà. Connectez-vous." };
+  if (existing) return { success: false, error: t("un_compte_avec_cet_email_existe_deja") };
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
 
@@ -99,7 +101,7 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
   });
 
   if (!result) {
-    return { success: false, error: "Cette invitation a déjà été utilisée" };
+    return { success: false, error: t("cette_invitation_a_deja_ete_utilisee") };
   }
 
   await logSecurityEvent({
@@ -115,7 +117,7 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
     adminId: result.id,
     type: "consent_granted",
     severity: "info",
-    message: "Politique d'utilisation et politique de confidentialité acceptées",
+    message: "politique_d_utilisation_et_politique_de_confidentialite",
     metadata: { ip, source: "invitation_accept", at: new Date().toISOString() },
   });
 

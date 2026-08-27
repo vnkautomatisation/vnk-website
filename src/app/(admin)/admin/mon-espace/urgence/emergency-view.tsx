@@ -19,6 +19,7 @@ type Contact = {
 };
 
 export function EmergencyContactsView({ adminId, contacts }: { adminId: number; contacts: Contact[] }) {
+  const t = useTranslations("admin.emergency");
   const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Contact | null }>({ open: false, existing: null });
@@ -29,10 +30,9 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
       <div className="flex items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Heart className="h-5 w-5 text-red-500" />Contacts d&apos;urgence
-          </h1>
+            <Heart className="h-5 w-5 text-red-500" />{t("emergency_view_contacts_d_urgence")}</h1>
           <p className="text-sm text-muted-foreground">
-            Personnes à contacter en cas d&apos;accident. Au moins un contact principal recommandé.
+            {t("personnes_contacter_cas_apos_accident")}
           </p>
         </div>
         <Button onClick={() => setDialog({ open: true, existing: null })}>
@@ -43,9 +43,9 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
       {contacts.length === 0 ? (
         <Card className="p-10 text-center">
           <Heart className="h-10 w-10 text-red-300 mx-auto mb-3" />
-          <p className="text-sm font-medium">Aucun contact d&apos;urgence</p>
+          <p className="text-sm font-medium">{t("aucun_contact_apos_urgence")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Indispensable pour la sécurité — surtout en chantier client.
+            {t("indispensable_securite_surtout_chantier_client")}
           </p>
         </Card>
       ) : (
@@ -109,13 +109,13 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
-        description="Ce contact d'urgence sera retiré."
+        description={t("contact_urgence_sera_retire")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDel) return;
           const r = await deleteEmergencyContactAction({ id: confirmDel.id, adminId });
-          if (r.success) { toast.success("Contact supprimé"); router.refresh(); }
+          if (r.success) { toast.success(t("contact_supprime")); router.refresh(); }
           else toast.error(r.error || "");
           setConfirmDel(null);
         }}
@@ -127,6 +127,7 @@ export function EmergencyContactsView({ adminId, contacts }: { adminId: number; 
 function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
   open: boolean; existing: Contact | null; adminId: number; onClose: () => void; onSaved: () => void;
 }) {
+  const t = useTranslations("admin.emergency");
   const tc = useTranslations("common");
   const [name, setName] = useState(existing?.name ?? "");
   const [relationship, setRelationship] = useState(existing?.relationship ?? "");
@@ -139,7 +140,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
 
   const submit = async () => {
     if (!name.trim() || !relationship.trim() || !phone.trim()) {
-      toast.error("Nom, relation et téléphone requis"); return;
+      toast.error(t("nom_relation_telephone_requis")); return;
     }
     setPending(true);
     const r = await upsertEmergencyContactAction({
@@ -154,7 +155,7 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
       notes: notes.trim() || null,
     });
     setPending(false);
-    if (r.success) { toast.success("Enregistré"); onSaved(); onClose(); }
+    if (r.success) { toast.success(t("enregistre")); onSaved(); onClose(); }
     else toast.error(r.error || "");
   };
 
@@ -164,51 +165,51 @@ function ContactDialog({ open, existing, adminId, onClose, onSaved }: {
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Heart className="h-4 w-4" />{existing ? "Modifier" : "Nouveau"} contact d&apos;urgence
+              <Heart className="h-4 w-4" />{existing ? t("modifier") : t("nouveau")} contact d&apos;urgence
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Visible uniquement par les RH/super-admins en cas d&apos;urgence.
+              {t("visible_uniquement_rh_super_admins")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Nom complet *</Label>
-              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Marie Tremblay" />
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("nom_complet")}</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("marie_tremblay")} />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Relation *</Label>
-              <Input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder="Conjointe, Parent…" />
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("relation")}</Label>
+              <Input value={relationship} onChange={(e) => setRelationship(e.target.value)} placeholder={t("conjointe_parent")} />
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Téléphone *</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("telephone")}</Label>
               <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="514-555-1234" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Téléphone alt</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("telephone_alt")}</Label>
               <Input value={phoneAlt} onChange={(e) => setPhoneAlt(e.target.value)} />
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Courriel</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("courriel")}</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <label className="flex items-center gap-2 text-sm cursor-pointer">
             <input type="checkbox" checked={isPrimary} onChange={(e) => setIsPrimary(e.target.checked)} className="h-4 w-4 rounded border-input" />
             <Star className={`h-3.5 w-3.5 ${isPrimary ? "fill-amber-500 text-amber-500" : "text-muted-foreground"}`} />
-            Contact principal
+            {t("contact_principal")}
           </label>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Notes</Label>
-            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder="Ex : parle seulement français" />
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("notes")}</Label>
+            <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y" placeholder={t("ex_parle_seulement_francais")} />
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? "Enregistrer" : "Ajouter"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : existing ? t("enregistrer") : t("ajouter")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

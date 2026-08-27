@@ -3,6 +3,7 @@
 // Query : ?period=YYYY (annee de debut, defaut: annee courante).
 // Auth : assertCanReviewLeave OU l'employe lui-meme.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,6 +16,7 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 export const dynamic = "force-dynamic";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     getLeaveBalance(employeeId, "vacation").catch(() => null),
   ]);
 
-  if (!admin) return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+  if (!admin) return NextResponse.json({ error: t("employe_introuvable") }, { status: 404 });
 
   const pdf = await generateLeaveAnnualReportPdf({
     admin: {

@@ -1,6 +1,7 @@
 "use client";
 // Toggle desktop notifications + sound preferences (localStorage)
 import { useEffect, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Bell, BellOff, Volume2, VolumeX } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -17,6 +18,7 @@ export function getNotifPrefs() {
 }
 
 export function NotificationToggle() {
+  const t = useTranslations("admin.messages");
   const [desktop, setDesktop] = useState(false);
   const [sound, setSound] = useState(true);
   const [permission, setPermission] = useState<NotificationPermission>("default");
@@ -29,23 +31,23 @@ export function NotificationToggle() {
   }, []);
 
   const toggleDesktop = async () => {
-    if (!("Notification" in window)) { toast.error("Notifications non supportées"); return; }
+    if (!("Notification" in window)) { toast.error(t("notifications_non_supportees")); return; }
     if (!desktop) {
       if (Notification.permission === "default") {
         const result = await Notification.requestPermission();
         setPermission(result);
-        if (result !== "granted") { toast.error("Permission refusée"); return; }
+        if (result !== "granted") { toast.error(t("permission_refusee")); return; }
       } else if (Notification.permission === "denied") {
-        toast.error("Permission refusée — autorise dans les paramètres du navigateur");
+        toast.error(t("permission_refusee_autorise_parametres_navigateur"));
         return;
       }
       localStorage.setItem(KEY_DESKTOP, "1");
       setDesktop(true);
-      toast.success("Notifications desktop activées");
+      toast.success(t("notifications_desktop_activees"));
     } else {
       localStorage.setItem(KEY_DESKTOP, "0");
       setDesktop(false);
-      toast.success("Notifications desktop désactivées");
+      toast.success(t("notifications_desktop_desactivees"));
     }
   };
 
@@ -65,7 +67,7 @@ export function NotificationToggle() {
           "h-8 w-8 flex items-center justify-center rounded-md transition-colors",
           desktop ? "bg-[#0F2D52] text-white" : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
-        title={desktop ? "Notifications desktop activées" : "Activer notifications desktop"}
+        title={desktop ? t("notifications_desktop_activees") : t("activer_notifications_desktop")}
       >
         {desktop ? <Bell className="h-3.5 w-3.5" /> : <BellOff className="h-3.5 w-3.5" />}
       </button>
@@ -76,12 +78,12 @@ export function NotificationToggle() {
           "h-8 w-8 flex items-center justify-center rounded-md transition-colors",
           sound ? "bg-[#0F2D52] text-white" : "text-muted-foreground hover:bg-muted hover:text-foreground"
         )}
-        title={sound ? "Son activé" : "Son désactivé"}
+        title={sound ? t("active") : t("desactive")}
       >
         {sound ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
       </button>
       {permission === "denied" && (
-        <span className="text-[9px] text-destructive">Bloqué navigateur</span>
+        <span className="text-[9px] text-destructive">{t("bloque_navigateur")}</span>
       )}
     </div>
   );

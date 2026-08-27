@@ -23,12 +23,13 @@ export function EditEntryDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const initialStart = useMemo(() => {
     const d = new Date(entry.clockIn);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }, [entry.clockIn]);
-  // TimePicker defaults to the current week; overrides target older entries.
+
   const minDate = useMemo(() => {
     const d = new Date(entry.clockIn);
     d.setFullYear(d.getFullYear() - 1);
@@ -38,7 +39,7 @@ export function EditEntryDialog({
   const timing = useMemo(() => entryTiming(entry), [entry]);
   const initialDuration = timing.stored ?? timing.worked ?? 480;
 
-  // Preserve the original category: forcing "work" turned leaves into work.
+
   type AllowedCat = "work" | "break" | "meeting" | "training" | "sick" | "vacation";
   const ALLOWED_CATS: ReadonlyArray<AllowedCat> = ["work", "break", "meeting", "training", "sick", "vacation"];
   const category: AllowedCat =
@@ -65,7 +66,7 @@ export function EditEntryDialog({
     return new Date(y, mo - 1, d, h || 0, mi || 0, 0, 0);
   }, [start]);
 
-  // The duration is WORKED time, so the bracket also has to cover the breaks.
+
   const breakMin = timing.breakMin;
   const endLabel = useMemo(() => {
     if (!startDate || durationMin <= 0) return null;
@@ -75,11 +76,11 @@ export function EditEntryDialog({
   }, [startDate, durationMin, breakMin]);
 
   const submit = async () => {
-    if (!startDate) { toast.error("Date de début invalide"); return; }
-    if (durationMin <= 0) { toast.error("La durée doit être supérieure à 0"); return; }
+    if (!startDate) { toast.error(t("date_debut_invalide")); return; }
+    if (durationMin <= 0) { toast.error(t("duree_doit_etre_superieure_0")); return; }
     setPending(true);
-    // Leave the punches alone when only the notes changed: recomputing them
-    // would shift the real end by the stored rounding.
+
+
     const timesUnchanged = start === initialStart && durationHM === initialDurationHM;
     const newClockOut = new Date(startDate.getTime() + (durationMin + breakMin) * 60_000);
     const r = await updateTimeClockAction({
@@ -92,7 +93,7 @@ export function EditEntryDialog({
       notes: notes || null,
     });
     setPending(false);
-    if (r.success) { toast.success("Entrée modifiée"); onSaved(); }
+    if (r.success) { toast.success(t("entree_modifiee")); onSaved(); }
     else toast.error(r.error || "");
   };
 
@@ -102,38 +103,36 @@ export function EditEntryDialog({
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Pencil className="h-4 w-4" />Modifier l&apos;entrée
-            </DialogTitle>
+              <Pencil className="h-4 w-4" />{t("editentrydialog_modifier_l_entree")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               {isAdminOverride
-                ? "Override administrateur — sera tracé dans l'audit."
-                : "Vous modifiez votre propre entrée de pointage."}
+                ? t("override_administrateur_sera_trace_audit")
+                : t("vous_modifiez_propre_entree_pointage")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-5">
-          <FormSection icon={Calendar} title="Début">
+          <FormSection icon={Calendar} title={t("debut")}>
             <TimePicker value={start} onChange={setStart} minDate={minDate} disabled={pending} />
           </FormSection>
-          <FormSection icon={Calendar} title="Durée travaillée">
+          <FormSection icon={Calendar} title={t("duree_travaillee")}>
             <HourMinutePicker value={durationHM} onChange={setDurationHM} disabled={pending} />
             <p className="text-[11px] text-muted-foreground">
               {endLabel
-                ? <>
-                    Fin calculée : <span className="font-mono font-bold text-[#0F2D52]">{endLabel}</span>
+                ? <>{t("editentrydialog_fin_calculee")}<span className="font-mono font-bold text-[#0F2D52]">{endLabel}</span>
                     {breakMin > 0 && <> · pause de {breakMin} min incluse dans la plage</>}
                   </>
-                : "Renseignez une durée supérieure à 0."}
+                : t("renseignez_duree_superieure_0")}
             </p>
           </FormSection>
-          <FormSection icon={FileText} title="Notes (optionnel)">
-            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Détail de la tâche…" />
+          <FormSection icon={FileText} title={t("notes_optionnel")}>
+            <Input value={notes} onChange={(e) => setNotes(e.target.value)} placeholder={t("detail_tache")} />
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || durationMin <= 0 || !startDate}>
-            {pending ? "..." : "Enregistrer"}
+            {pending ? "..." : t("enregistrer")}
           </Button>
         </DialogFooter>
       </DialogContent>

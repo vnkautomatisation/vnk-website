@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion des webhooks sortants + replay des entrants.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
@@ -25,36 +26,36 @@ async function requireAdmin() {
 // ═══════════════════════════════════════════════════════════
 export const WEBHOOK_EVENTS = [
   // Clients
-  { key: "client.created", label: "Nouveau client" },
-  { key: "client.updated", label: "Client modifié" },
-  { key: "client.archived", label: "Client archivé" },
+  { key: "client.created", labelKey: "wh_nouveau_client" },
+  { key: "client.updated", labelKey: "wh_client_modifie" },
+  { key: "client.archived", labelKey: "wh_client_archive" },
   // Devis
-  { key: "quote.created", label: "Devis créé" },
-  { key: "quote.sent", label: "Devis envoyé" },
-  { key: "quote.accepted", label: "Devis accepté" },
-  { key: "quote.refused", label: "Devis refusé" },
-  { key: "quote.expired", label: "Devis expiré" },
+  { key: "quote.created", labelKey: "wh_devis_cree" },
+  { key: "quote.sent", labelKey: "wh_devis_envoye" },
+  { key: "quote.accepted", labelKey: "wh_devis_accepte" },
+  { key: "quote.refused", labelKey: "wh_devis_refuse" },
+  { key: "quote.expired", labelKey: "wh_devis_expire" },
   // Factures
-  { key: "invoice.created", label: "Facture créée" },
-  { key: "invoice.sent", label: "Facture envoyée" },
-  { key: "invoice.paid", label: "Facture payée" },
-  { key: "invoice.overdue", label: "Facture en retard" },
-  { key: "invoice.refunded", label: "Facture remboursée" },
+  { key: "invoice.created", labelKey: "wh_facture_creee" },
+  { key: "invoice.sent", labelKey: "wh_facture_envoyee" },
+  { key: "invoice.paid", labelKey: "wh_facture_payee" },
+  { key: "invoice.overdue", labelKey: "wh_facture_en_retard" },
+  { key: "invoice.refunded", labelKey: "wh_facture_remboursee" },
   // Contrats
-  { key: "contract.created", label: "Contrat créé" },
-  { key: "contract.sent", label: "Contrat envoyé" },
-  { key: "contract.signed", label: "Contrat signé" },
-  { key: "contract.cancelled", label: "Contrat annulé" },
+  { key: "contract.created", labelKey: "wh_contrat_cree" },
+  { key: "contract.sent", labelKey: "wh_contrat_envoye" },
+  { key: "contract.signed", labelKey: "wh_contrat_signe" },
+  { key: "contract.cancelled", labelKey: "wh_contrat_annule" },
   // Paiements
-  { key: "payment.received", label: "Paiement reçu" },
-  { key: "payment.failed", label: "Paiement échoué" },
-  { key: "payment.refunded", label: "Paiement remboursé" },
+  { key: "payment.received", labelKey: "wh_paiement_recu" },
+  { key: "payment.failed", labelKey: "wh_paiement_echoue" },
+  { key: "payment.refunded", labelKey: "wh_paiement_rembourse" },
   // Mandats
-  { key: "mandate.created", label: "Mandat créé" },
-  { key: "mandate.completed", label: "Mandat terminé" },
+  { key: "mandate.created", labelKey: "wh_mandat_cree" },
+  { key: "mandate.completed", labelKey: "wh_mandat_termine" },
   // Rendez-vous
-  { key: "appointment.scheduled", label: "RDV planifié" },
-  { key: "appointment.cancelled", label: "RDV annulé" },
+  { key: "appointment.scheduled", labelKey: "wh_rdv_planifie" },
+  { key: "appointment.cancelled", labelKey: "wh_rdv_annule" },
 ] as const;
 
 function generateSecret(): string {
@@ -67,15 +68,16 @@ function generateSecret(): string {
 const webhookSchema = z.object({
   name: z.string().min(1).max(200),
   url: z.string().url("URL invalide"),
-  events: z.array(z.string()).min(1, "Sélectionnez au moins un événement"),
+  events: z.array(z.string()).min(1, "selectionnez_au_moins_un_evenement"),
   isEnabled: z.boolean().default(true),
 });
 
 export async function createWebhookAction(input: z.infer<typeof webhookSchema>): Promise<Result<{ id: number; secret: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = webhookSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const secret = generateSecret();
   const created = await prisma.outgoingWebhook.create({
@@ -95,10 +97,11 @@ export async function createWebhookAction(input: z.infer<typeof webhookSchema>):
 }
 
 export async function updateWebhookAction(input: z.infer<typeof webhookSchema> & { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = webhookSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   await prisma.outgoingWebhook.update({
     where: { id: input.id },
@@ -141,6 +144,7 @@ export async function rotateWebhookSecretAction(input: { id: number }): Promise<
 // TEST WEBHOOK (envoi d'un payload factice)
 // ═══════════════════════════════════════════════════════════
 export async function testWebhookAction(input: { id: number }): Promise<Result<{ status: number; ms: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
@@ -151,7 +155,7 @@ export async function testWebhookAction(input: { id: number }): Promise<Result<{
     id: "evt_test_" + Date.now(),
     event: "test.ping",
     createdAt: new Date().toISOString(),
-    data: { message: "Ceci est un test depuis VNK Automatisation" },
+    data: { message: t("ceci_est_un_test_depuis_vnk_automatisation") },
   };
   const body = JSON.stringify(payload);
   const signature = crypto.createHmac("sha256", wh.secret).update(body).digest("hex");
@@ -186,7 +190,7 @@ export async function testWebhookAction(input: { id: number }): Promise<Result<{
       where: { id: input.id },
       data: { failCount: wh.failCount + 1, lastFireAt: new Date() },
     });
-    return { success: false, error: e instanceof Error ? e.message : "Erreur réseau" };
+    return { success: false, error: e instanceof Error ? e.message : t("erreur_reseau_action") };
   }
 }
 

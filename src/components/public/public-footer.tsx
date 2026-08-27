@@ -21,9 +21,7 @@ export function PublicFooter() {
                 <div className="text-[9px] opacity-60">VALUE · NETWORK · KNOWLEDGE</div>
               </div>
             </div>
-            <p className="text-sm opacity-75">
-              Services d&apos;automatisation industrielle — PLC, SCADA, HMI.
-            </p>
+            <p className="text-sm opacity-75">{t("nav.services_d_automatisation_industrielle_plc_scada_hmi")}</p>
           </div>
 
           {/* Services */}
@@ -41,9 +39,7 @@ export function PublicFooter() {
 
           {/* Nav */}
           <div>
-            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider">
-              Liens
-            </h3>
+            <h3 className="font-semibold mb-4 text-sm uppercase tracking-wider">{t("nav.liens")}</h3>
             <ul className="space-y-2 text-sm opacity-75">
               <li><Link href="/" className="hover:text-white">{t("nav.home")}</Link></li>
               <li><Link href="/a-propos" className="hover:text-white">{t("nav.about")}</Link></li>
@@ -59,14 +55,14 @@ export function PublicFooter() {
             </h3>
             <ul className="space-y-2 text-sm opacity-75">
               <li className="flex items-center gap-2"><Mail className="h-4 w-4 opacity-60" /> vnkautomatisation@gmail.com</li>
-              <li className="flex items-center gap-2"><MapPin className="h-4 w-4 opacity-60" /> Québec, Canada</li>
+              <li className="flex items-center gap-2"><MapPin className="h-4 w-4 opacity-60" /> {t("nav.quebec_canada")}</li>
             </ul>
           </div>
         </div>
 
         <div className="mt-10 pt-6 border-t border-white/10 text-xs opacity-60 flex flex-col md:flex-row justify-between gap-2">
-          <p>© {year} VNK Automatisation Inc. Tous droits réservés.</p>
-          <p>Site web conçu et développé à Québec.</p>
+          <p>{t("nav.tous_droits_reserves", { year: String(year) })}</p>
+          <p>{t("nav.site_concu_a_quebec")}</p>
         </div>
       </div>
     </footer>

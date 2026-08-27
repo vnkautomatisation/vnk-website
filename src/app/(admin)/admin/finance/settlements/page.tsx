@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { SettlementsView } from "./settlements-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Rapport de règlement" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("rapport_reglement") };
+}
 
 // Champs date filtrables (selon ce que le user veut voir)
 type DateField = "paidAt" | "settledAt" | "payoutAt";

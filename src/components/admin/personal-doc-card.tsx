@@ -59,15 +59,15 @@ export type PersonalDocCategory =
 
 const CATEGORY_META: Record<
   PersonalDocCategory,
-  { label: string; icon: LucideIcon; tone: string; bg: string }
+  { labelKey: string; icon: LucideIcon; tone: string; bg: string }
 > = {
-  licence: { label: "Licence", icon: BadgeCheck, tone: "text-sky-700", bg: "bg-sky-50 ring-sky-200" },
-  diploma: { label: "Diplôme", icon: GraduationCap, tone: "text-violet-700", bg: "bg-violet-50 ring-violet-200" },
-  certification: { label: "Certification", icon: Award, tone: "text-amber-700", bg: "bg-amber-50 ring-amber-200" },
-  id_card: { label: "Carte d'identité", icon: IdCard, tone: "text-emerald-700", bg: "bg-emerald-50 ring-emerald-200" },
-  passport: { label: "Passeport", icon: BookUser, tone: "text-indigo-700", bg: "bg-indigo-50 ring-indigo-200" },
-  medical: { label: "Médical", icon: Stethoscope, tone: "text-rose-700", bg: "bg-rose-50 ring-rose-200" },
-  other: { label: "Autre", icon: FileText, tone: "text-slate-700", bg: "bg-slate-50 ring-slate-200" },
+  licence: { labelKey: "doc_cat_licence", icon: BadgeCheck, tone: "text-sky-700", bg: "bg-sky-50 ring-sky-200" },
+  diploma: { labelKey: "doc_cat_diploma", icon: GraduationCap, tone: "text-violet-700", bg: "bg-violet-50 ring-violet-200" },
+  certification: { labelKey: "doc_cat_certification", icon: Award, tone: "text-amber-700", bg: "bg-amber-50 ring-amber-200" },
+  id_card: { labelKey: "doc_cat_id_card", icon: IdCard, tone: "text-emerald-700", bg: "bg-emerald-50 ring-emerald-200" },
+  passport: { labelKey: "doc_cat_passport", icon: BookUser, tone: "text-indigo-700", bg: "bg-indigo-50 ring-indigo-200" },
+  medical: { labelKey: "doc_cat_medical", icon: Stethoscope, tone: "text-rose-700", bg: "bg-rose-50 ring-rose-200" },
+  other: { labelKey: "doc_cat_other", icon: FileText, tone: "text-slate-700", bg: "bg-slate-50 ring-slate-200" },
 };
 
 export type PersonalDocCardData = {
@@ -110,16 +110,17 @@ export function PersonalDocCard({
   className,
 }: {
   doc: PersonalDocCardData;
-  /** Affiche les badges admin (Vérifié / À vérifier) et l'action "Vérifier". */
+
   isAdmin?: boolean;
   onPreview?: () => void;
   onDownload?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  /** Callback de vérification (admin). Reçoit les notes saisies dans le dialog. */
+
   onVerify?: (notes: string) => Promise<void> | void;
   className?: string;
 }) {
+  const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
   const meta = CATEGORY_META[doc.category] ?? CATEGORY_META.other;
   const Icon = meta.icon;
@@ -163,7 +164,7 @@ export function PersonalDocCard({
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold truncate">{doc.title}</p>
               <p className="text-[11px] text-muted-foreground truncate mt-0.5">
-                {meta.label}
+                {t(meta.labelKey)}
                 {doc.issuer ? ` · ${doc.issuer}` : ""}
                 {doc.refNumber ? ` · #${doc.refNumber}` : ""}
               </p>
@@ -172,43 +173,43 @@ export function PersonalDocCard({
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {isAdmin && doc.verifiedAt ? (
                     <ToneBadge tone="success" icon={ShieldCheck}>
-                      Vérifié
+                      {t("verifie")}
                     </ToneBadge>
                   ) : isAdmin ? (
                     <ToneBadge tone="warning" icon={ShieldAlert}>
-                      À vérifier
+                      {t("verifier")}
                     </ToneBadge>
                   ) : null}
                   {doc.isPrivate && (
                     <ToneBadge tone="info" icon={Lock}>
-                      Privé
+                      {t("prive")}
                     </ToneBadge>
                   )}
                   {isExpired && (
                     <ToneBadge tone="danger" icon={AlertTriangle}>
-                      Expiré
+                      {t("expire")}
                     </ToneBadge>
                   )}
                   {isExpiringSoon && (
                     <ToneBadge tone="warning" icon={AlertTriangle}>
-                      Expire bientôt
+                      {t("expire_bientot")}
                     </ToneBadge>
                   )}
                 </div>
               )}
             </div>
 
-            {/* Actions */}
+
             <div className="flex items-center gap-0.5 shrink-0">
               {onPreview && (
-                <ActionTooltip label="Aperçu">
+                <ActionTooltip label={t("apercu")}>
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8"
                     onClick={onPreview}
-                    aria-label="Aperçu"
+                    aria-label={t("apercu")}
                   >
                     <Eye className="h-4 w-4" />
                   </Button>
@@ -259,18 +260,18 @@ export function PersonalDocCard({
             </div>
           </div>
 
-          {/* Dates */}
+
           {(issued || expires) && (
             <div className="grid grid-cols-2 gap-2 text-[11px] border-t pt-2">
               <div>
                 <p className="text-muted-foreground uppercase tracking-wider text-[10px] font-semibold">
-                  Émission
+                  {t("emission")}
                 </p>
                 <p className="tabular-nums">{issued ?? "—"}</p>
               </div>
               <div>
                 <p className="text-muted-foreground uppercase tracking-wider text-[10px] font-semibold">
-                  Expiration
+                  {t("expiration")}
                 </p>
                 <p
                   className={cn(
@@ -290,14 +291,14 @@ export function PersonalDocCard({
             </div>
           )}
 
-          {/* Description courte */}
+
           {doc.description && (
             <p className="text-[11px] text-muted-foreground border-t pt-2 line-clamp-2">
               {doc.description}
             </p>
           )}
 
-          {/* Action admin : Vérifier */}
+
           {isAdmin && !doc.verifiedAt && onVerify && (
             <Button
               type="button"
@@ -307,11 +308,11 @@ export function PersonalDocCard({
               onClick={() => setVerifyOpen(true)}
             >
               <ShieldCheck className="h-3.5 w-3.5 mr-1.5" />
-              Marquer comme vérifié
+              {t("marquer_comme_verifie")}
             </Button>
           )}
 
-          {/* Mention "vérifié par" */}
+
           {isAdmin && doc.verifiedAt && doc.verifiedBy && (
             <p className="text-[10px] text-muted-foreground border-t pt-2">
               Vérifié par {doc.verifiedBy.fullName ?? `#${doc.verifiedBy.id}`} le{" "}
@@ -321,14 +322,14 @@ export function PersonalDocCard({
         </CardContent>
       </Card>
 
-      {/* Dialog de vérification admin */}
+
       <Dialog open={verifyOpen} onOpenChange={(o) => !o && !verifying && setVerifyOpen(false)}>
         <DialogContent className="max-w-md p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
             <DialogHeader>
               <DialogTitle className="text-base text-white flex items-center gap-2">
                 <ShieldCheck className="h-4 w-4" />
-                Vérifier le document
+                {t("verifier_document")}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
                 Confirmez que «&nbsp;{doc.title}&nbsp;» est conforme et authentique.
@@ -337,12 +338,12 @@ export function PersonalDocCard({
           </div>
           <div className="p-5 space-y-2">
             <label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Notes (optionnel)
+              {t("notes_optionnel")}
             </label>
             <Textarea
               value={verifyNotes}
               onChange={(e) => setVerifyNotes(e.target.value)}
-              placeholder="Ex : Original vu en main propre, copie conforme…"
+              placeholder={t("ex_original_vu_main_propre")}
               rows={4}
               className="text-sm"
             />

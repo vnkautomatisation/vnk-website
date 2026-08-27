@@ -29,7 +29,7 @@ export function LoginForm() {
         redirect: false,
       });
       if (result?.error) {
-        toast.error("Identifiants invalides");
+        toast.error(t("identifiants_invalides"));
         return;
       }
       const redirectTo = params.get("redirect") ?? "/admin";
@@ -44,7 +44,7 @@ export function LoginForm() {
           <span className="text-white font-bold text-lg">VNK</span>
         </div>
         <CardTitle className="text-xl">{t("admin_login_title")}</CardTitle>
-        <CardDescription>Automatisation Inc.</CardDescription>
+        <CardDescription>{t("automatisation_inc")}</CardDescription>
       </CardHeader>
       <CardContent className="pb-8">
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -77,7 +77,7 @@ export function LoginForm() {
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label={showPassword ? "Masquer" : "Afficher"}
+                aria-label={showPassword ? t("masquer") : t("afficher")}
               >
                 {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -96,7 +96,7 @@ export function LoginForm() {
 
           <Button type="submit" className="w-full" disabled={pending}>
             <LogIn className="h-4 w-4" />
-            {pending ? "Connexion…" : t("sign_in_admin")}
+            {pending ? t("connexion") : t("sign_in_admin")}
           </Button>
 
           <p className="text-center text-xs text-muted-foreground mt-6">

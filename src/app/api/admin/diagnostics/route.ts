@@ -2,6 +2,7 @@
 // Vérifie : DB · variables d'environnement · intégrations · stockage · webhooks.
 // Retourne un rapport JSON pour la page /admin/settings/diagnostics.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -51,22 +52,23 @@ export async function GET() {
     return forbiddenJson();
   }
 
+  const t = await getTranslations("settings");
   const checks: Check[] = [];
 
   // ── BASE DE DONNÉES ────────────────────────────────────
   try {
     const { ms } = await timeOp(() => prisma.$queryRaw`SELECT 1`);
     checks.push({
-      id: "db_connect", category: "Base de données", label: "Connexion PostgreSQL",
+      id: "db_connect", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_connexion_postgresql"),
       status: ms < 200 ? "ok" : ms < 1000 ? "warn" : "error",
-      message: `Réponse en ${ms} ms`,
+      message: t("diag_msg_reponse_ms", { ms }),
       ms,
     });
   } catch (e) {
     checks.push({
-      id: "db_connect", category: "Base de données", label: "Connexion PostgreSQL",
+      id: "db_connect", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_connexion_postgresql"),
       status: "error",
-      message: "Échec de connexion",
+      message: t("diag_msg_echec_de_connexion"),
       detail: e instanceof Error ? e.message : String(e),
     });
   }
@@ -79,14 +81,14 @@ export async function GET() {
       prisma.adminSession.count(),
     ]);
     checks.push({
-      id: "db_counts", category: "Base de données", label: "Comptes",
+      id: "db_counts", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_comptes"),
       status: "ok",
-      message: `${admins} admin${admins > 1 ? "s" : ""} · ${clients} client${clients > 1 ? "s" : ""} · ${sessions} session${sessions > 1 ? "s" : ""}`,
+      message: t("diag_msg_comptes", { admins, clients, sessions }),
     });
   } catch {
     checks.push({
-      id: "db_counts", category: "Base de données", label: "Comptes",
-      status: "warn", message: "Lecture impossible",
+      id: "db_counts", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_comptes"),
+      status: "warn", message: t("diag_msg_lecture_impossible"),
     });
   }
 
@@ -98,15 +100,15 @@ export async function GET() {
     ]);
     const status: CheckStatus = roles >= 7 && positions >= 6 ? "ok" : roles === 0 || positions === 0 ? "error" : "warn";
     checks.push({
-      id: "rbac_seed", category: "Base de données", label: "RBAC seedé",
+      id: "rbac_seed", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_rbac_seede"),
       status,
-      message: `${roles} rôle${roles > 1 ? "s" : ""} · ${positions} poste${positions > 1 ? "s" : ""}`,
+      message: t("diag_msg_rbac", { roles, positions }),
       detail: status !== "ok" ? "Lancer : npx tsx prisma/seed-rbac.ts" : undefined,
     });
   } catch {
     checks.push({
-      id: "rbac_seed", category: "Base de données", label: "RBAC seedé",
-      status: "error", message: "Tables non créées",
+      id: "rbac_seed", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_rbac_seede"),
+      status: "error", message: t("diag_msg_tables_non_creees"),
       detail: "Lancer : npx prisma db push && npx tsx prisma/seed-rbac.ts",
     });
   }
@@ -115,15 +117,15 @@ export async function GET() {
   try {
     const catalogCount = await prisma.catalogItem.count();
     checks.push({
-      id: "catalogs_seed", category: "Base de données", label: "Catalogues seedés",
+      id: "catalogs_seed", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_catalogues_seedes"),
       status: catalogCount >= 40 ? "ok" : catalogCount > 0 ? "warn" : "error",
-      message: `${catalogCount} items`,
+      message: t("diag_msg_items", { count: catalogCount }),
       detail: catalogCount < 40 ? "Lancer : npx tsx prisma/seed-catalogs.ts" : undefined,
     });
   } catch {
     checks.push({
-      id: "catalogs_seed", category: "Base de données", label: "Catalogues seedés",
-      status: "error", message: "Table non créée",
+      id: "catalogs_seed", category: t("diag_cat_base_de_donnees"), label: t("diag_lbl_catalogues_seedes"),
+      status: "error", message: t("diag_msg_table_non_creee"),
     });
   }
 
@@ -131,17 +133,17 @@ export async function GET() {
   for (const v of ENV_VARS_REQUIRED) {
     const present = !!process.env[v];
     checks.push({
-      id: `env_${v}`, category: "Variables d'environnement", label: v,
+      id: `env_${v}`, category: t("diag_cat_variables_d_environnement"), label: v,
       status: present ? "ok" : "error",
-      message: present ? "Définie" : "Manquante",
+      message: present ? t("diag_definie") : t("diag_manquante"),
     });
   }
   for (const v of ENV_VARS_OPTIONAL) {
     const present = !!process.env[v];
     checks.push({
-      id: `env_${v}`, category: "Variables d'environnement", label: v,
+      id: `env_${v}`, category: t("diag_cat_variables_d_environnement"), label: v,
       status: present ? "ok" : "skip",
-      message: present ? "Définie" : "Non définie (fonctionnalité optionnelle)",
+      message: present ? t("diag_definie") : t("diag_non_definie_optionnelle"),
     });
   }
 
@@ -150,30 +152,30 @@ export async function GET() {
     const integrations = await prisma.integration.findMany();
     if (integrations.length === 0) {
       checks.push({
-        id: "integrations_none", category: "Intégrations", label: "Intégrations configurées",
-        status: "skip", message: "Aucune intégration enregistrée",
+        id: "integrations_none", category: t("diag_cat_integrations"), label: t("diag_lbl_integrations_configurees"),
+        status: "skip", message: t("diag_msg_aucune_integration_enregistree"),
       });
     } else {
       for (const i of integrations) {
         let status: CheckStatus = "skip";
-        let msg = "Configurée";
+        let msg = t("diag_configuree");
         if (i.isEnabled) {
           if (i.lastError) {
             status = "error";
-            msg = "Dernière synchro échouée";
+            msg = t("diag_derniere_synchro_echouee");
           } else if (i.lastSyncAt) {
             status = "ok";
             msg = `Synchro OK le ${new Date(i.lastSyncAt).toLocaleDateString("fr-CA")}`;
           } else {
             status = "warn";
-            msg = "Activée (jamais synchronisée)";
+            msg = t("diag_activee_jamais_synchronisee");
           }
         } else {
           status = "skip";
-          msg = "Désactivée";
+          msg = t("diag_desactivee");
         }
         checks.push({
-          id: `integration_${i.provider}`, category: "Intégrations", label: i.name || i.provider,
+          id: `integration_${i.provider}`, category: t("diag_cat_integrations"), label: i.name || i.provider,
           status, message: msg,
           detail: i.lastError ?? undefined,
         });
@@ -181,17 +183,17 @@ export async function GET() {
     }
   } catch {
     checks.push({
-      id: "integrations_check", category: "Intégrations", label: "Lecture",
-      status: "warn", message: "Table integrations introuvable",
+      id: "integrations_check", category: t("diag_cat_integrations"), label: t("diag_lbl_lecture"),
+      status: "warn", message: t("diag_msg_table_integrations_introuvable"),
     });
   }
 
   // ── STOCKAGE ───────────────────────────────────────────
   try {
     const settingsCount = await prisma.setting.count();
-    const mediaCount = await prisma.setting.count({ where: { category: "cms_media" } });
+    const mediaCount = await prisma.setting.count({ where: { category: t("diag_cat_cms_media") } });
     const mediaSize = await prisma.setting.aggregate({
-      where: { category: "cms_media" },
+      where: { category: t("diag_cat_cms_media") },
       _sum: { id: true }, // pas idéal mais évite un raw query
     });
 
@@ -205,17 +207,17 @@ export async function GET() {
     const mb = (totalBytes / (1024 * 1024)).toFixed(2);
 
     checks.push({
-      id: "storage_settings", category: "Stockage", label: "Paramètres & médias",
+      id: "storage_settings", category: t("diag_cat_stockage"), label: t("diag_lbl_parametres_medias"),
       status: totalBytes < 50 * 1024 * 1024 ? "ok" : totalBytes < 200 * 1024 * 1024 ? "warn" : "error",
-      message: `${settingsCount} paramètres · ${mediaCount} médias · ${mb} Mo`,
-      detail: totalBytes > 50 * 1024 * 1024 ? "Considérer un stockage S3/R2 pour les médias volumineux" : undefined,
+      message: t("diag_msg_stockage", { settings: settingsCount, media: mediaCount, mb }),
+      detail: totalBytes > 50 * 1024 * 1024 ? t("diag_considerer_s3") : undefined,
     });
     // anti unused
     void mediaSize;
   } catch (e) {
     checks.push({
-      id: "storage_settings", category: "Stockage", label: "Paramètres & médias",
-      status: "warn", message: "Calcul impossible",
+      id: "storage_settings", category: t("diag_cat_stockage"), label: t("diag_lbl_parametres_medias"),
+      status: "warn", message: t("diag_msg_calcul_impossible"),
       detail: e instanceof Error ? e.message : undefined,
     });
   }
@@ -227,15 +229,15 @@ export async function GET() {
     });
     if (oldSessions > 0) {
       checks.push({
-        id: "stale_sessions", category: "Stockage", label: "Sessions expirées",
+        id: "stale_sessions", category: t("diag_cat_stockage"), label: t("diag_lbl_sessions_expirees"),
         status: oldSessions > 100 ? "warn" : "ok",
-        message: `${oldSessions} session${oldSessions > 1 ? "s" : ""} expirée${oldSessions > 1 ? "s" : ""}`,
-        detail: oldSessions > 100 ? "Lancer un cron de nettoyage des sessions expirées" : undefined,
+        message: t("diag_msg_sessions_expirees", { count: oldSessions }),
+        detail: oldSessions > 100 ? t("diag_cron_sessions") : undefined,
       });
     } else {
       checks.push({
-        id: "stale_sessions", category: "Stockage", label: "Sessions expirées",
-        status: "ok", message: "Aucune session expirée à purger",
+        id: "stale_sessions", category: t("diag_cat_stockage"), label: t("diag_lbl_sessions_expirees"),
+        status: "ok", message: t("diag_msg_aucune_session_expiree_a_purger"),
       });
     }
   } catch {
@@ -245,36 +247,36 @@ export async function GET() {
   // ── CONFIGURATION CRITIQUE ─────────────────────────────
   try {
     const fiscalSettings = await prisma.setting.findMany({
-      where: { category: "fiscal", key: { in: ["neq", "gst_number", "qst_number"] } },
+      where: { category: t("diag_cat_fiscal"), key: { in: ["neq", "gst_number", "qst_number"] } },
     });
     const fiscalMap = Object.fromEntries(fiscalSettings.map((s) => [s.key, s.value]));
     const hasFiscal = !!(fiscalMap.neq && fiscalMap.gst_number && fiscalMap.qst_number);
     checks.push({
-      id: "fiscal_config", category: "Configuration", label: "Identifiants fiscaux",
+      id: "fiscal_config", category: t("diag_cat_configuration"), label: t("diag_lbl_identifiants_fiscaux"),
       status: hasFiscal ? "ok" : "warn",
-      message: hasFiscal ? "NEQ, TPS et TVQ configurés" : "Identifiants fiscaux incomplets",
-      detail: !hasFiscal ? "Compléter /admin/settings/finance" : undefined,
+      message: hasFiscal ? t("diag_fiscal_ok") : t("diag_fiscal_incomplet"),
+      detail: !hasFiscal ? t("diag_completer_finance") : undefined,
     });
 
-    const rprpName = await prisma.setting.findUnique({ where: { category_key: { category: "legal", key: "rprp_name" } } });
+    const rprpName = await prisma.setting.findUnique({ where: { category_key: { category: t("diag_cat_legal"), key: "rprp_name" } } });
     checks.push({
-      id: "rprp_config", category: "Configuration", label: "RPRP (Loi 25)",
+      id: "rprp_config", category: t("diag_cat_configuration"), label: t("diag_lbl_rprp_loi_25"),
       status: rprpName?.value ? "ok" : "warn",
-      message: rprpName?.value ? `Désigné : ${rprpName.value}` : "RPRP non désigné",
-      detail: !rprpName?.value ? "Obligation Loi 25 — compléter /admin/settings/finance" : undefined,
+      message: rprpName?.value ? t("diag_designe", { name: rprpName.value }) : t("diag_rprp_non_designe"),
+      detail: !rprpName?.value ? t("diag_loi25_completer") : undefined,
     });
 
-    const logoPrimary = await prisma.setting.findUnique({ where: { category_key: { category: "appearance", key: "logo_primary" } } });
+    const logoPrimary = await prisma.setting.findUnique({ where: { category_key: { category: t("diag_cat_appearance"), key: "logo_primary" } } });
     checks.push({
-      id: "branding_logo", category: "Configuration", label: "Logo principal",
+      id: "branding_logo", category: t("diag_cat_configuration"), label: t("diag_lbl_logo_principal"),
       status: logoPrimary?.value ? "ok" : "warn",
-      message: logoPrimary?.value ? "Logo téléversé" : "Aucun logo principal",
-      detail: !logoPrimary?.value ? "Téléverser dans /admin/settings/branding" : undefined,
+      message: logoPrimary?.value ? t("diag_logo_televerse") : t("diag_aucun_logo"),
+      detail: !logoPrimary?.value ? t("diag_televerser_branding") : undefined,
     });
   } catch (e) {
     checks.push({
-      id: "config_check", category: "Configuration", label: "Vérifications",
-      status: "warn", message: "Lecture impossible",
+      id: "config_check", category: t("diag_cat_configuration"), label: t("diag_lbl_verifications"),
+      status: "warn", message: t("diag_msg_lecture_impossible"),
       detail: e instanceof Error ? e.message : undefined,
     });
   }

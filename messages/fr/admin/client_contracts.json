@@ -1,0 +1,17 @@
+{
+  "tous": "Tous",
+  "attente": "En attente",
+  "brouillon": "Brouillon",
+  "signes": "Signés",
+  "expires": "Expirés",
+  "annules": "Annulés",
+  "contrats_signes_lies_factures_refuses": "Les contrats signés ou liés à des factures seront refusés (409). Cette action est irréversible.",
+  "marquer_expire": "Marquer expiré",
+  "annuler_action": "Annuler",
+  "numero": "Numéro",
+  "montant": "Montant",
+  "signe": "Signé",
+  "expire": "Expiré",
+  "annule": "Annulé",
+  "nouveau_contrat": "Nouveau contrat"
+}

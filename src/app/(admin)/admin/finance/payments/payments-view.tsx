@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCountryName } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -81,24 +82,24 @@ type ReconcileFilter = "all" | "reconciled" | "unreconciled" | "exported";
 
 const METHOD_OPTIONS = ["stripe", "interac", "cheque", "virement", "comptant", "manual", "autre"];
 
-const METHOD_LABELS: Record<string, string> = {
-  stripe: "Carte de crédit",
-  interac: "Interac",
-  cheque: "Chèque",
-  virement: "Virement bancaire",
-  comptant: "Comptant",
-  manual: "Manuel",
-  autre: "Autre",
+const METHOD_KEYS: Record<string, string> = {
+  stripe: "carte_credit",
+  interac: "interac",
+  cheque: "cheque",
+  virement: "virement_bancaire",
+  comptant: "comptant",
+  manual: "manuel",
+  autre: "autre",
 };
 
-const TYPE_TABS: { key: TypeFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "charge", label: "Ventes" },
-  { key: "refund", label: "Remboursements" },
-  { key: "chargeback", label: "Rétrofacturations" },
-  { key: "chargeback_fee", label: "Frais rétrofact." },
-  { key: "adjustment", label: "Ajustements" },
-  { key: "topup", label: "Fonds ajoutés" },
+const TYPE_TABS: { key: TypeFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "charge", labelKey: "ventes_2" },
+  { key: "refund", labelKey: "remboursements" },
+  { key: "chargeback", labelKey: "retrofacturations" },
+  { key: "chargeback_fee", labelKey: "frais_retrofact" },
+  { key: "adjustment", labelKey: "ajustements" },
+  { key: "topup", labelKey: "fonds_ajoutes" },
 ];
 
 const CARD_BRAND_LABELS: Record<string, string> = {
@@ -106,18 +107,13 @@ const CARD_BRAND_LABELS: Record<string, string> = {
   discover: "Discover", diners: "Diners", jcb: "JCB", unionpay: "UnionPay",
 };
 
-const COUNTRY_NAMES: Record<string, string> = {
-  CA: "Canada", US: "États-Unis", FR: "France", DE: "Allemagne", GB: "Royaume-Uni",
-  IT: "Italie", ES: "Espagne", BE: "Belgique", CH: "Suisse", LU: "Luxembourg",
-  CI: "Côte d'Ivoire", SN: "Sénégal", CM: "Cameroun", MA: "Maroc", TN: "Tunisie",
-  BJ: "Bénin", TG: "Togo", BF: "Burkina Faso",
-};
 
 // SVG circle flag minimaliste, baseline-aligned avec le texte
 function CountryFlag({ code, size = 10 }: { code: string | null; size?: number }) {
+  const countryName = useCountryName();
   if (!code) return null;
   const country = code.toUpperCase();
-  // Couleur dominante adoucie (moins saturée que le drapeau brut)
+
   const COLORS: Record<string, string> = {
     CA: "#DC2626", US: "#1E40AF", FR: "#1E40AF", GB: "#1E40AF", DE: "#374151",
     IT: "#16A34A", ES: "#DC2626", BE: "#374151", CH: "#DC2626", LU: "#3B82F6",
@@ -127,7 +123,7 @@ function CountryFlag({ code, size = 10 }: { code: string | null; size?: number }
   const fill = COLORS[country] ?? "#94A3B8";
   return (
     <span
-      title={COUNTRY_NAMES[country] ?? country}
+      title={countryName(country)}
       className="inline-block rounded-full align-middle shrink-0"
       style={{ width: size, height: size, backgroundColor: fill }}
     />
@@ -146,6 +142,7 @@ function EditableSelectCell({
   onChange: (v: string) => Promise<void> | void;
   display: (v: string) => React.ReactNode;
 }) {
+  const t = useTranslations("admin.payments");
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
 
@@ -154,7 +151,7 @@ function EditableSelectCell({
       <button
         onClick={(e) => { e.stopPropagation(); setEditing(true); }}
         className="text-left hover:ring-1 hover:ring-[#0F2D52]/40 rounded px-1 py-0.5 -mx-1 -my-0.5"
-        title="Cliquer pour modifier"
+        title={t("cliquer_modifier")}
       >
         {display(value)}
       </button>
@@ -201,16 +198,18 @@ export function PaymentsView({
   countryList: string[];
   kpis: Kpis;
 }) {
+  const t = useTranslations("admin.payments");
+  const countryName = useCountryName();
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
 
-  // Filtres principaux
+
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [currencyFilter, setCurrencyFilter] = useState<string>("all");
 
-  // Filtres avancés (Popover)
+
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -229,7 +228,7 @@ export function PaymentsView({
     setCountryFilter("all");
   };
 
-  // Bulk selection
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
@@ -237,13 +236,13 @@ export function PaymentsView({
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [categoryValue, setCategoryValue] = useState("");
 
-  // Détail paiement (modal réutilisé)
+
   const [detailPaymentId, setDetailPaymentId] = useState<number | null>(null);
 
-  // Modal preview PDF (facture / reçu)
+
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; downloadName?: string } | null>(null);
 
-  // Patch d'un paiement (type / méthode)
+
   const patchPayment = async (id: number, data: Record<string, unknown>) => {
     try {
       const res = await fetch(`/api/payments/${id}`, {
@@ -253,16 +252,16 @@ export function PaymentsView({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
-      toast.success("Paiement modifié");
+      toast.success(t("paiement_modifie"));
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     }
   };
 
-  // Sticky scroll
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -336,7 +335,7 @@ export function PaymentsView({
   const selectedTotal = selectedItems.reduce((s, p) => s + Number(p.amountCad ?? p.amount), 0);
   const hasMultipleAdmins = accountants.length > 1; // n'affiche dialog assignation que si pertinent
 
-  // Bulk actions
+
   const callBulk = async (body: Record<string, unknown>, successMsg: string) => {
     setBusy(true);
     try {
@@ -347,39 +346,39 @@ export function PaymentsView({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur");
+        throw new Error(err.error || t("erreur"));
       }
       const data = await res.json();
       toast.success(`${successMsg} (${data.count})`);
       setSelectedIds(new Set());
       router.refresh();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     } finally {
       setBusy(false);
     }
   };
 
-  const bulkReconcile = () => callBulk({ action: "reconcile" }, "Confirmés reçus");
-  const bulkUnreconcile = () => callBulk({ action: "unreconcile" }, "Confirmations retirées");
+  const bulkReconcile = () => callBulk({ action: "reconcile" }, t("confirmes_recus"));
+  const bulkUnreconcile = () => callBulk({ action: "unreconcile" }, t("confirmations_retirees"));
   const bulkAssign = () => {
     if (!assignAccountantId) return;
-    callBulk({ action: "assign_accountant", accountantId: Number(assignAccountantId) }, "Comptable assigné");
+    callBulk({ action: "assign_accountant", accountantId: Number(assignAccountantId) }, t("comptable_assigne"));
     setAssignDialogOpen(false);
     setAssignAccountantId("");
   };
   const bulkSetCategory = () => {
     if (!categoryValue.trim()) return;
-    callBulk({ action: "set_category", category: categoryValue.trim() }, "Catégorie appliquée");
+    callBulk({ action: "set_category", category: categoryValue.trim() }, t("categorie_appliquee"));
     setCategoryDialogOpen(false);
     setCategoryValue("");
   };
 
-  // Export comptable
+
   const handleExport = async (format: "csv" | "quickbooks" | "sage" | "acomba") => {
     const ids = selectedIds.size > 0 ? Array.from(selectedIds) : filtered.map((p) => p.id);
     if (ids.length === 0) {
-      toast.error("Aucun paiement à exporter");
+      toast.error(t("aucun_paiement_exporter"));
       return;
     }
     try {
@@ -390,7 +389,7 @@ export function PaymentsView({
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Erreur export");
+        throw new Error(err.error || t("erreur_export"));
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
@@ -401,7 +400,7 @@ export function PaymentsView({
       URL.revokeObjectURL(url);
       toast.success(`Export ${format.toUpperCase()} téléchargé (${ids.length} entrées)`);
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur");
+      toast.error(err instanceof Error ? err.message : t("erreur"));
     }
   };
 
@@ -409,7 +408,7 @@ export function PaymentsView({
     {
       key: "select",
       header: (
-        <button onClick={toggleAll} aria-label="Tout sélectionner" className="flex items-center">
+        <button onClick={toggleAll} aria-label={t("tout_selectionner")} className="flex items-center">
           {allFilteredSelected ? (
             <CheckSquare className="h-3.5 w-3.5 text-[#0F2D52]" />
           ) : someFilteredSelected ? (
@@ -420,7 +419,7 @@ export function PaymentsView({
         </button>
       ),
       accessor: (p) => (
-        <button onClick={(e) => { e.stopPropagation(); toggleOne(p.id); }} aria-label="Sélectionner">
+        <button onClick={(e) => { e.stopPropagation(); toggleOne(p.id); }} aria-label={t("selectionner")}>
           {selectedIds.has(p.id) ? (
             <CheckSquare className="h-3.5 w-3.5 text-[#0F2D52]" />
           ) : (
@@ -434,9 +433,9 @@ export function PaymentsView({
       header: (
         <span
           className="inline-flex items-center gap-1"
-          title="Nature de la ligne (déterminée automatiquement par le système). Lecture seule pour préserver l'intégrité des rapports comptables."
+          title={t("nature_ligne_lecture_seule")}
         >
-          Type
+          {t("type")}
         </span>
       ),
       accessor: (p) => {
@@ -444,16 +443,16 @@ export function PaymentsView({
         return (
           <span
             className={cn("inline-flex px-2 py-0.5 rounded text-[10px] font-medium", meta.color)}
-            title={meta.description}
+            title={t(meta.descriptionKey)}
           >
-            {meta.label}
+            {t(meta.labelKey)}
           </span>
         );
       },
     },
     {
       key: "client",
-      header: "Client",
+      header: t("client"),
       accessor: (p) => (
         <button
           onClick={(e) => { e.stopPropagation(); p.clientId && openEntity("client", p.clientId); }}
@@ -470,7 +469,7 @@ export function PaymentsView({
     },
     {
       key: "card",
-      header: "Carte / méthode",
+      header: t("carte_methode"),
       accessor: (p) => p.cardBrand ? (
         <div className="inline-flex items-center gap-1.5">
           <span className="text-xs font-medium">{CARD_BRAND_LABELS[p.cardBrand] ?? p.cardBrand}</span>
@@ -480,16 +479,16 @@ export function PaymentsView({
       ) : (
         <EditableSelectCell
           value={p.paymentMethod ?? "manual"}
-          options={METHOD_OPTIONS.map((m) => ({ value: m, label: METHOD_LABELS[m] ?? m }))}
+          options={METHOD_OPTIONS.map((m) => ({ value: m, label: METHOD_KEYS[m] ?? m }))}
           onChange={(v) => patchPayment(p.id, { paymentMethod: v })}
-          display={(v) => <span className="text-xs">{METHOD_LABELS[v] ?? v}</span>}
+          display={(v) => <span className="text-xs">{METHOD_KEYS[v] ?? v}</span>}
         />
       ),
       hiddenOnMobile: true,
     },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (p) => (
         <div>
           <div className={cn("font-bold tabular-nums", p.amount < 0 ? "text-red-600" : "")}>
@@ -506,7 +505,7 @@ export function PaymentsView({
     },
     {
       key: "fees",
-      header: "Frais",
+      header: t("frais"),
       accessor: (p) => p.processingFee != null
         ? <span className="text-xs tabular-nums text-muted-foreground">{p.processingFee.toFixed(2)}</span>
         : <span className="text-xs text-muted-foreground italic">—</span>,
@@ -514,7 +513,7 @@ export function PaymentsView({
     },
     {
       key: "net",
-      header: "Net",
+      header: t("net"),
       accessor: (p) => p.netAmount != null
         ? <span className="text-sm font-semibold tabular-nums">{p.netAmount.toFixed(2)}</span>
         : <span className="text-xs text-muted-foreground italic">—</span>,
@@ -522,13 +521,13 @@ export function PaymentsView({
     },
     {
       key: "paidAt",
-      header: "Date",
+      header: t("date"),
       accessor: (p) => p.paidAt ? <span className="text-xs">{formatDate(new Date(p.paidAt))}</span> : "—",
       sortable: true, sortBy: (p) => p.paidAt ?? "",
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (p) => {
         const display = getStatusDisplay(p.type, p.status);
         const isInbound = INBOUND_TYPES.has(p.type);
@@ -538,7 +537,7 @@ export function PaymentsView({
               "inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold border",
               display.cls,
             )}>
-              {display.label}
+              {display.labelKey ? t(display.labelKey) : p.status}
             </span>
             {p.refundedStatus === "full" && (
               <span
@@ -546,7 +545,7 @@ export function PaymentsView({
                 className="inline-flex items-center gap-1 text-[9px] text-red-700 bg-red-50 px-1.5 py-0.5 rounded"
               >
                 <RotateCcw className="h-2.5 w-2.5" />
-                Remboursé total
+                {t("rembourse_total")}
               </span>
             )}
             {p.refundedStatus === "partial" && (
@@ -555,26 +554,26 @@ export function PaymentsView({
                 className="inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
               >
                 <RotateCcw className="h-2.5 w-2.5" />
-                Remboursé partiel
+                {t("rembourse_partiel")}
               </span>
             )}
-            {/* "Confirme recu" uniquement pour les types entrants (vente / fonds ajoutes) */}
+
             {isInbound && p.reconciledAt && (
               <span
                 title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
                 className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
               >
                 <CheckCircle2 className="h-2.5 w-2.5" />
-                Confirmé reçu
+                {t("confirme_recu")}
               </span>
             )}
             {p.exportedAt && (
               <span
-                title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? "format inconnu"}) le ${formatDate(new Date(p.exportedAt))}`}
+                title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? t("format_inconnu")}) le ${formatDate(new Date(p.exportedAt))}`}
                 className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded"
               >
                 <FolderInput className="h-2.5 w-2.5" />
-                Exporté
+                {t("exporte")}
               </span>
             )}
           </div>
@@ -583,20 +582,20 @@ export function PaymentsView({
     },
     {
       key: "actions",
-      header: "Actions",
+      header: t("actions"),
       accessor: (p) => (
         <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
-          <ActionTooltip label="Voir détail du paiement">
+          <ActionTooltip label={t("voir_detail_paiement")}>
             <button
               onClick={() => setDetailPaymentId(p.id)}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              aria-label="Voir détail du paiement"
+              aria-label={t("voir_detail_paiement")}
             >
               <Eye className="h-3.5 w-3.5" />
             </button>
           </ActionTooltip>
           {p.invoiceId && p.invoiceNumber && (
-            <ActionTooltip label="Prévisualiser la facture (PDF)">
+            <ActionTooltip label={t("previsualiser_facture_pdf")}>
               <button
                 onClick={() => setPdfPreview({
                   url: `/api/invoices/${p.invoiceId}/pdf`,
@@ -604,13 +603,13 @@ export function PaymentsView({
                   downloadName: `facture-${p.invoiceNumber}`,
                 })}
                 className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                aria-label="Prévisualiser la facture"
+                aria-label={t("previsualiser_facture")}
               >
                 <ReceiptIcon className="h-3.5 w-3.5" />
               </button>
             </ActionTooltip>
           )}
-          <ActionTooltip label="Prévisualiser le reçu VNK (PDF)">
+          <ActionTooltip label={t("previsualiser_recu_vnk_pdf")}>
             <button
               onClick={() => setPdfPreview({
                 url: `/api/payments/${p.id}/receipt`,
@@ -618,19 +617,19 @@ export function PaymentsView({
                 downloadName: `recu-${p.id}`,
               })}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-              aria-label="Prévisualiser le reçu VNK"
+              aria-label={t("previsualiser_recu_vnk")}
             >
               <FileText className="h-3.5 w-3.5" />
             </button>
           </ActionTooltip>
           {p.stripeReceiptUrl && (
-            <ActionTooltip label="Reçu officiel de la plateforme de paiement">
+            <ActionTooltip label={t("recu_officiel_plateforme_paiement")}>
               <a
                 href={p.stripeReceiptUrl}
                 target="_blank"
                 rel="noreferrer"
                 className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                aria-label="Reçu officiel"
+                aria-label={t("recu_officiel")}
               >
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
@@ -643,13 +642,13 @@ export function PaymentsView({
 
   return (
     <div className="space-y-5">
-      {/* Hero */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <CreditCard className="h-5 w-5" />
-              Tous les paiements
+              {t("tous_paiements")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
               Vue plate de toutes les transactions individuelles · {payments.length} entrées · {currencies.length} devise{currencies.length > 1 ? "s" : ""}
@@ -666,37 +665,36 @@ export function PaymentsView({
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuItem onClick={() => handleExport("csv")}>
                   <FileText className="h-3.5 w-3.5 mr-2" />
-                  CSV simple
+                  {t("csv_simple")}
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => handleExport("quickbooks")}>
                   <FolderInput className="h-3.5 w-3.5 mr-2" />
-                  QuickBooks (IIF)
+                  {t("quickbooks_iif")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("sage")}>
                   <FolderInput className="h-3.5 w-3.5 mr-2" />
-                  Sage (CSV)
+                  {t("sage_csv")}
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport("acomba")}>
                   <FolderInput className="h-3.5 w-3.5 mr-2" />
-                  Acomba (CSV)
+                  {t("acomba_csv")}
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
             <Button size="sm" variant="secondary" asChild className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
-              <a href="/admin/finance/settlements">
-                Rapport de règlement <ArrowUpRight className="h-3.5 w-3.5 ml-1" />
+              <a href="/admin/finance/settlements">{t("payments_view_rapport_de_reglement")}<ArrowUpRight className="h-3.5 w-3.5 ml-1" />
               </a>
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Crédits</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("credits")}</span>
             <TrendingUp className="h-3.5 w-3.5 text-emerald-500" />
           </div>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatCurrency(kpis.byType.charge?.total ?? 0)}</p>
@@ -704,7 +702,7 @@ export function PaymentsView({
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Remboursés</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("rembourses")}</span>
             <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
           </div>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</p>
@@ -712,7 +710,7 @@ export function PaymentsView({
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Rétrofact.</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("retrofact")}</span>
             <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
           </div>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(Math.abs(kpis.byType.chargeback?.total ?? 0))}</p>
@@ -720,49 +718,49 @@ export function PaymentsView({
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Net total</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("net_total")}</span>
             <Coins className="h-3.5 w-3.5 text-blue-500" />
           </div>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{formatCurrency(kpis.totalNet)}</p>
           <p className="text-[10px] text-muted-foreground">après {formatCurrency(kpis.totalFees)} de frais</p>
         </div>
-        <div className="rounded-lg border bg-card p-3" title="Paiements vérifiés comme reçus en banque (utile pour audit comptable)">
+        <div className="rounded-lg border bg-card p-3" title={t("paiements_verifies_comme_recus_banque")}>
           <div className="flex items-center justify-between mb-1">
-            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">Confirmés reçus</span>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("confirmes_recus")}</span>
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
           </div>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{kpis.reconciledCount}/{kpis.total}</p>
           <p className="text-[10px] text-muted-foreground">
-            {kpis.unreconciledCount > 0 ? `${kpis.unreconciledCount} à vérifier` : "Tout est vérifié"}
+            {kpis.unreconciledCount > 0 ? `${kpis.unreconciledCount} à vérifier` : t("tout_verifie")}
           </p>
         </div>
       </div>
 
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky compact bar — KPI seulement, rendu uniquement au scroll (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <CreditCard className="h-4 w-4" />
-              Tous les paiements
+              {t("tous_paiements")}
             </span>
             <span className="font-semibold text-[#0F2D52]">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Ventes : <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
-            <span className="text-muted-foreground">Remb. : <span className="font-semibold text-amber-600">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</span></span>
-            <span className="text-muted-foreground">Net : <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
-            <span className="text-muted-foreground">Confirmés : <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
+            <span className="text-muted-foreground">{t("ventes")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
+            <span className="text-muted-foreground">{t("remb")} <span className="font-semibold text-amber-600">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</span></span>
+            <span className="text-muted-foreground">{t("net")} <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
+            <span className="text-muted-foreground">{t("confirmes")} <span className="font-semibold text-emerald-600">{kpis.reconciledCount}/{kpis.total}</span></span>
           </div>
         </div>
       )}
 
-      {/* Filtres — en flow normal (plus dans la sticky) */}
+
       <div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Client, facture, référence, 4 derniers chiffres…" className="pl-9 h-9" />
+            <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("client_facture_reference_4_derniers")} className="pl-9 h-9" />
           </div>
           <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
             {TYPE_TABS.map((tab) => (
@@ -774,7 +772,7 @@ export function PaymentsView({
                   typeFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {tab.label}
+                {t(tab.labelKey)}
               </button>
             ))}
           </div>
@@ -783,9 +781,9 @@ export function PaymentsView({
               value={currencyFilter}
               onChange={(e) => setCurrencyFilter(e.target.value)}
               className="h-9 rounded-md border border-input bg-background px-2 text-xs"
-              aria-label="Filtrer par devise"
+              aria-label={t("filtrer_devise")}
             >
-              <option value="all">Toutes devises</option>
+              <option value="all">{t("toutes_devises")}</option>
               {currencies.map((c) => <option key={c} value={c}>{c}</option>)}
             </select>
           )}
@@ -793,7 +791,7 @@ export function PaymentsView({
             <PopoverTrigger asChild>
               <Button size="sm" variant="outline" className="h-9 gap-1.5">
                 <Filter className="h-3.5 w-3.5" />
-                Filtres
+                {t("filtres")}
                 {advancedActive > 0 && (
                   <span className="ml-0.5 inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full bg-[#0F2D52] text-white text-[9px] font-bold">
                     {advancedActive}
@@ -803,23 +801,23 @@ export function PaymentsView({
             </PopoverTrigger>
             <PopoverContent className="w-[340px] p-3 space-y-3" align="end">
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période de paiement</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_paiement")}</Label>
                 <div className="grid grid-cols-2 gap-2">
                   <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-8 text-xs" />
                   <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-8 text-xs" />
                 </div>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Pays du client</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("pays_client")}</Label>
                 <Select value={countryFilter} onValueChange={setCountryFilter}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les pays</SelectItem>
+                    <SelectItem value="all">{t("tous_pays")}</SelectItem>
                     {countryList.map((c) => (
                       <SelectItem key={c} value={c}>
                         <span className="inline-flex items-center gap-2">
                           <CountryFlag code={c} size={10} />
-                          {COUNTRY_NAMES[c] ?? c}
+                          {countryName(c)}
                         </span>
                       </SelectItem>
                     ))}
@@ -831,27 +829,27 @@ export function PaymentsView({
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tous les statuts</SelectItem>
+                    <SelectItem value="all">{t("tous_statuts")}</SelectItem>
                     {statusList.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Moyen de paiement</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("moyen_paiement")}</Label>
                 <Select value={methodFilter} onValueChange={setMethodFilter}>
                   <SelectTrigger className="h-8 text-xs"><SelectValue placeholder={tc("all")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Toutes méthodes</SelectItem>
-                    {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{METHOD_LABELS[m] ?? m}</SelectItem>)}
+                    <SelectItem value="all">{t("toutes_methodes")}</SelectItem>
+                    {methodList.map((m) => <SelectItem key={m} value={m} className="capitalize">{METHOD_KEYS[m] ?? m}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-1.5">
                 <Label
                   className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold"
-                  title="Confirmation que le paiement est bien arrivé en banque (vérification comptable manuelle)"
+                  title={t("confirmation_paiement_bien_arrive_banque")}
                 >
-                  Confirmation banque
+                  {t("confirmation_banque")}
                 </Label>
                 <div className="grid grid-cols-2 gap-1">
                   {(["all", "reconciled", "unreconciled", "exported"] as ReconcileFilter[]).map((k) => (
@@ -865,15 +863,14 @@ export function PaymentsView({
                           : "bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
                       )}
                     >
-                      {k === "all" ? "Tous" : k === "reconciled" ? "Confirmés reçus" : k === "unreconciled" ? "À vérifier" : "Déjà exportés"}
+                      {k === "all" ? t("tous") : k === "reconciled" ? t("confirmes_recus") : k === "unreconciled" ? t("verifier") : t("deja_exportes")}
                     </button>
                   ))}
                 </div>
               </div>
               {advancedActive > 0 && (
                 <Button variant="ghost" size="sm" onClick={clearAdvanced} className="w-full text-xs">
-                  <X className="h-3 w-3 mr-1" />Effacer les filtres
-                </Button>
+                  <X className="h-3 w-3 mr-1" />{t("payments_view_effacer_les_filtres")}</Button>
               )}
             </PopoverContent>
           </Popover>
@@ -883,7 +880,7 @@ export function PaymentsView({
         </div>
       </div>
 
-      {/* Bulk action bar */}
+
       {selectedIds.size > 0 && (
         <div className="sticky top-[112px] z-[19] bg-[#0F2D52] text-white rounded-lg p-2.5 flex items-center gap-2 flex-wrap shadow-lg">
           <CheckSquare className="h-4 w-4 shrink-0" />
@@ -892,25 +889,23 @@ export function PaymentsView({
             <span className="text-white/70 ml-2 font-normal">— {formatCurrency(selectedTotal)}</span>
           </span>
           <div className="flex-1" />
-          <ActionTooltip label="Marquer comme confirmé reçu en banque">
+          <ActionTooltip label={t("marquer_comme_confirme_recu_banque")}>
             <Button size="sm" variant="secondary" className="bg-emerald-500 hover:bg-emerald-600 text-white border-0 h-7 text-xs" onClick={bulkReconcile} disabled={busy}>
-              <CheckCircle2 className="h-3 w-3 mr-1" />Confirmer reçus
-            </Button>
+              <CheckCircle2 className="h-3 w-3 mr-1" />{t("payments_view_confirmer_recus")}</Button>
           </ActionTooltip>
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={bulkUnreconcile} disabled={busy}>
             <Clock className="h-3 w-3 mr-1" />Retirer confirmation
           </Button>
           {hasMultipleAdmins && (
-            <ActionTooltip label="Assigner à un comptable interne pour suivi">
+            <ActionTooltip label={t("assigner_comptable_interne_suivi")}>
               <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setAssignDialogOpen(true)} disabled={busy}>
                 <FolderInput className="h-3 w-3 mr-1" />Comptable
               </Button>
             </ActionTooltip>
           )}
-          <ActionTooltip label="Catégorie comptable pour export (services_recurrents, acompte...)">
+          <ActionTooltip label={t("categorie_comptable_export_services_recurrents")}>
             <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-0 h-7 text-xs" onClick={() => setCategoryDialogOpen(true)} disabled={busy}>
-              <FolderInput className="h-3 w-3 mr-1" />Catégorie
-            </Button>
+              <FolderInput className="h-3 w-3 mr-1" />{t("payments_view_categorie")}</Button>
           </ActionTooltip>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -919,10 +914,10 @@ export function PaymentsView({
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleExport("csv")}>CSV simple</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("quickbooks")}>QuickBooks</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("sage")}>Sage</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleExport("acomba")}>Acomba</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("csv")}>{t("csv_simple")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("quickbooks")}>{t("quickbooks")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("sage")}>{t("sage")}</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("acomba")}>{t("acomba")}</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="ghost" className="text-white/80 hover:text-white hover:bg-white/10 h-7 text-xs" onClick={() => setSelectedIds(new Set())}>
@@ -931,7 +926,7 @@ export function PaymentsView({
         </div>
       )}
 
-      {/* Table */}
+
       <DataTable
         data={filtered}
         columns={columns}
@@ -942,14 +937,14 @@ export function PaymentsView({
         onRowClick={(p) => setDetailPaymentId(p.id)}
       />
 
-      {/* Modal détail paiement */}
+
       <PaymentDetailDialog
         paymentId={detailPaymentId}
         open={detailPaymentId !== null}
         onOpenChange={(o) => { if (!o) setDetailPaymentId(null); }}
       />
 
-      {/* Modal prévisualisation PDF (facture ou reçu) */}
+
       {pdfPreview && (
         <PdfViewerModal
           open={!!pdfPreview}
@@ -960,21 +955,21 @@ export function PaymentsView({
         />
       )}
 
-      {/* Dialog assigner comptable (seulement si plusieurs admins actifs) */}
+
       <ConfirmDialog
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
-        title="Assigner un comptable"
+        title={t("assigner_comptable")}
         description={`Assigner les ${selectedIds.size} paiement(s) sélectionné(s) à un membre de l'équipe pour suivi comptable.`}
-        confirmLabel="Assigner"
+        confirmLabel={t("assigner")}
         variant="default"
         onConfirm={bulkAssign}
         disableConfirm={!assignAccountantId}
       >
         <div className="space-y-2 pt-2">
-          <Label>Comptable interne</Label>
+          <Label>{t("comptable_interne")}</Label>
           <Select value={assignAccountantId} onValueChange={setAssignAccountantId}>
-            <SelectTrigger><SelectValue placeholder="Sélectionner…" /></SelectTrigger>
+            <SelectTrigger><SelectValue placeholder={t("selectionner_2")} /></SelectTrigger>
             <SelectContent>
               {accountants.map((a) => (
                 <SelectItem key={a.id} value={String(a.id)}>{a.name}</SelectItem>
@@ -984,30 +979,30 @@ export function PaymentsView({
         </div>
       </ConfirmDialog>
 
-      {/* Dialog catégorie comptable */}
+
       <ConfirmDialog
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
-        title="Catégorie comptable"
+        title={t("categorie_comptable")}
         description={`Appliquer une catégorie comptable sur ${selectedIds.size} paiement(s) — utile pour les exports vers QuickBooks/Sage/Acomba.`}
-        confirmLabel="Appliquer"
+        confirmLabel={t("appliquer")}
         variant="default"
         onConfirm={bulkSetCategory}
         disableConfirm={!categoryValue.trim()}
       >
         <div className="space-y-2 pt-2">
-          <Label>Catégorie</Label>
+          <Label>{t("categorie")}</Label>
           <Select value={categoryValue} onValueChange={setCategoryValue}>
             <SelectTrigger>
-              <SelectValue placeholder="Sélectionner une catégorie" />
+              <SelectValue placeholder={t("selectionner_categorie")} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="services_recurrents">Services récurrents</SelectItem>
-              <SelectItem value="services_unique">Services uniques</SelectItem>
-              <SelectItem value="acompte">Acompte</SelectItem>
-              <SelectItem value="solde">Solde</SelectItem>
-              <SelectItem value="frais">Frais</SelectItem>
-              <SelectItem value="autre">Autre</SelectItem>
+              <SelectItem value="services_recurrents">{t("services_recurrents")}</SelectItem>
+              <SelectItem value="services_unique">{t("services_uniques")}</SelectItem>
+              <SelectItem value="acompte">{t("acompte")}</SelectItem>
+              <SelectItem value="solde">{t("solde")}</SelectItem>
+              <SelectItem value="frais">{t("frais")}</SelectItem>
+              <SelectItem value="autre">{t("autre")}</SelectItem>
             </SelectContent>
           </Select>
         </div>

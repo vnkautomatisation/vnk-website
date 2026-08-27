@@ -1,11 +1,15 @@
 // Settings · Diagnostics — page client qui appelle /api/admin/diagnostics.
 import { auth } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { DiagnosticsView } from "./diagnostics-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Diagnostics — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("diagnostics_vnk") };
+}
 
 export default async function DiagnosticsPage() {
   const session = await auth();

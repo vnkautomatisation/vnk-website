@@ -28,13 +28,13 @@ type Conflict = {
   status: string; // approved | pending
 };
 
-const TYPE_LABELS: Record<string, string> = {
-  vacation: "Vacances",
-  sick: "Maladie",
-  parental: "Parental",
-  unpaid: "Sans solde",
-  bereavement: "Décès",
-  other: "Autre",
+const TYPE_KEYS: Record<string, string> = {
+  vacation: "leave_vacation",
+  sick: "leave_sick",
+  parental: "leave_parental",
+  unpaid: "leave_unpaid",
+  bereavement: "leave_bereavement",
+  other: "leave_other",
 };
 
 const TYPE_COLORS: Record<string, string> = {
@@ -66,6 +66,7 @@ export function RequestConflictsDialog({
   open: boolean;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +92,7 @@ export function RequestConflictsDialog({
       })
       .catch((e: Error) => {
         if (!cancelled) {
-          setError(e.message || "Impossible de récupérer les conflits");
+          setError(e.message || t("impossible_recuperer_conflits"));
           setConflicts([]);
         }
       })
@@ -110,7 +111,7 @@ export function RequestConflictsDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Users className="h-4 w-4 shrink-0" />
-              <span className="truncate">Collègues en conflit</span>
+              <span className="truncate">{t("collegues_conflit")}</span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {leaveLabel || `Demande #${leaveId}`}
@@ -121,7 +122,7 @@ export function RequestConflictsDialog({
           {loading ? (
             <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
               <Loader2 className="h-4 w-4 animate-spin" />
-              Chargement des conflits...
+              {t("chargement_conflits")}
             </div>
           ) : error ? (
             <div className="rounded-md border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 flex gap-2">
@@ -131,9 +132,9 @@ export function RequestConflictsDialog({
           ) : conflicts && conflicts.length === 0 ? (
             <div className="rounded-md border bg-muted/10 p-6 text-center">
               <CheckCircle2 className="h-8 w-8 text-emerald-500/60 mx-auto mb-2" />
-              <p className="text-sm font-medium">Aucun conflit détecté</p>
+              <p className="text-sm font-medium">{t("aucun_conflit_detecte")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Aucun collègue n&apos;a de demande chevauchante sur cette période.
+                {t("aucun_collegue_n_apos_demande")}
               </p>
             </div>
           ) : (
@@ -153,17 +154,17 @@ export function RequestConflictsDialog({
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded border ${typeCls} font-semibold`}
                       >
-                        {TYPE_LABELS[c.type] ?? c.type}
+                        {TYPE_KEYS[c.type] ? t(TYPE_KEYS[c.type]) : c.type}
                       </span>
                       {isPending ? (
                         <span className="text-[10px] px-1.5 py-0.5 rounded border border-amber-300 bg-amber-50 text-amber-900 font-semibold inline-flex items-center gap-1">
                           <Clock className="h-2.5 w-2.5" />
-                          En attente
+                          {t("attente_2")}
                         </span>
                       ) : (
                         <span className="text-[10px] px-1.5 py-0.5 rounded border border-emerald-300 bg-emerald-50 text-emerald-900 font-semibold inline-flex items-center gap-1">
                           <CheckCircle2 className="h-2.5 w-2.5" />
-                          Approuvé
+                          {t("approuve")}
                         </span>
                       )}
                     </div>

@@ -3,6 +3,7 @@
 // L'employé uploade/édite/supprime ses propres docs. Un admin RH peut tout
 // voir + vérifier (sauf isPrivate=true qui n'est visible que par l'employé).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -100,8 +101,9 @@ function parseDateOnly(s: string | null | undefined): Date | null {
 export async function upsertPersonalDocAction(
   input: z.infer<typeof upsertSchema>,
 ): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = upsertSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const guard = await requireSelfOrHr(parsed.data.adminId);
   if (!guard) return unauthorized();
@@ -118,19 +120,19 @@ export async function upsertPersonalDocAction(
       return { success: false, error: "Document hors scope" };
     }
     if (existing.isPrivate && !guard.isSelf) {
-      return { success: false, error: "Document privé : seul l'employé peut le modifier" };
+      return { success: false, error: t("document_prive_seul_l_employe_peut_le") };
     }
   }
 
   // L'admin RH peut créer un doc côté employé, mais pas un doc privé en son nom
   if (!guard.isSelf && parsed.data.isPrivate) {
-    return { success: false, error: "Seul l'employé peut marquer un document privé" };
+    return { success: false, error: t("seul_l_employe_peut_marquer_un_document") };
   }
 
   const issuedAt = parseDateOnly(parsed.data.issuedAt ?? null);
   const expiresAt = parseDateOnly(parsed.data.expiresAt ?? null);
   if (issuedAt && expiresAt && expiresAt < issuedAt) {
-    return { success: false, error: "La date d'expiration est antérieure à l'émission" };
+    return { success: false, error: t("la_date_d_expiration_est_anterieure_a") };
   }
 
   // Une modif par un RH invalide la vérification précédente (l'employé doit revalider ?)
@@ -179,6 +181,7 @@ export async function upsertPersonalDocAction(
 
 // ─── deletePersonalDocAction ────────────────────────────────────
 export async function deletePersonalDocAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const { id } = input;
   if (!Number.isFinite(id)) return { success: false, error: "ID invalide" };
 
@@ -193,7 +196,7 @@ export async function deletePersonalDocAction(input: { id: number }): Promise<Re
 
   // Doc privé : seul l'employé peut supprimer
   if (doc.isPrivate && !guard.isSelf) {
-    return { success: false, error: "Document privé : seul l'employé peut le supprimer" };
+    return { success: false, error: t("document_prive_seul_l_employe_peut_le_2") };
   }
 
   await prisma.employeePersonalDocument.delete({ where: { id } });
@@ -221,8 +224,9 @@ const verifySchema = z.object({
 export async function verifyPersonalDocAction(
   input: z.infer<typeof verifySchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = verifySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const doc = await prisma.employeePersonalDocument.findUnique({
     where: { id: parsed.data.id },
@@ -258,7 +262,7 @@ export async function verifyPersonalDocAction(
 
   // Doc privé : ne peut être vérifié (l'admin RH ne le voit pas)
   if (doc.isPrivate && !isSuper) {
-    return { success: false, error: "Document privé : non vérifiable" };
+    return { success: false, error: t("document_prive_non_verifiable") };
   }
 
   await prisma.employeePersonalDocument.update({
@@ -305,8 +309,8 @@ export async function verifyPersonalDocAction(
         recipientId: doc.adminId,
         type: parsed.data.verified ? "success" : "info",
         title: parsed.data.verified
-          ? "Document personnel vérifié"
-          : "Vérification de document retirée",
+          ? t("document_personnel_verifie")
+          : t("verification_document_retiree"),
         body: doc.title + (parsed.data.notes ? ` — ${parsed.data.notes}` : ""),
         link: "/admin/mon-espace/documents",
         icon: "shield",

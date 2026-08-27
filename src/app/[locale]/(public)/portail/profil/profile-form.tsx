@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -34,12 +35,27 @@ type ClientData = {
 type Stats = { mandates: number; invoices: number; contracts: number; documents: number };
 
 const PROVINCES = [
-  { value: "QC", label: "Quebec" }, { value: "ON", label: "Ontario" },
-  { value: "BC", label: "Colombie-Britannique" }, { value: "AB", label: "Alberta" },
-  { value: "MB", label: "Manitoba" }, { value: "SK", label: "Saskatchewan" },
-  { value: "NS", label: "Nouvelle-Ecosse" }, { value: "NB", label: "Nouveau-Brunswick" },
-  { value: "PE", label: "Ile-du-Prince-Edouard" }, { value: "NL", label: "Terre-Neuve" },
+  { value: "QC", labelKey: "prov_qc" }, { value: "ON", labelKey: "prov_on" },
+  { value: "BC", labelKey: "prov_bc" }, { value: "AB", labelKey: "prov_ab" },
+  { value: "MB", labelKey: "prov_mb" }, { value: "SK", labelKey: "prov_sk" },
+  { value: "NS", labelKey: "prov_ns" }, { value: "NB", labelKey: "prov_nb" },
+  { value: "PE", labelKey: "prov_pe" }, { value: "NL", labelKey: "prov_nl" },
 ];
+
+// Le secteur est stocke en francais : seul l'affichage suit la locale.
+const SECTOR_EN: Record<string, string> = {
+  "Manufacturier": "Manufacturing",
+  "Agroalimentaire": "Agri-food",
+  "Minier": "Mining",
+  "Energie": "Energy",
+  "Petrochimie": "Petrochemicals",
+  "Pharmaceutique": "Pharmaceuticals",
+  "Papetier": "Pulp & paper",
+  "Metallurgie": "Metals",
+  "Eau / Environnement": "Water / environment",
+  "Batiment / CVC": "Building / HVAC",
+  "Autre": "Other",
+};
 
 const SECTORS = [
   "Manufacturier", "Agroalimentaire", "Minier", "Energie", "Petrochimie",
@@ -48,6 +64,8 @@ const SECTORS = [
 ];
 
 export function ProfileForm({ client, stats }: { client: ClientData; stats: Stats }) {
+  const t = useTranslations("portal");
+  const isEn = useLocale().startsWith("en");
   const router = useRouter();
   const [form, setForm] = useState(client);
   const [saving, setSaving] = useState(false);
@@ -69,16 +87,16 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
           technologies: form.technologies || null, avatarUrl: form.avatarUrl || null,
         }),
       });
-      if (res.ok) { toast.success("Profil mis a jour"); router.refresh(); }
-      else toast.error("Erreur lors de la sauvegarde");
-    } catch { toast.error("Erreur de connexion"); }
+      if (res.ok) { toast.success(t("profil_mis_jour")); router.refresh(); }
+      else toast.error(t("erreur_lors_sauvegarde"));
+    } catch { toast.error(t("erreur_connexion")); }
     finally { setSaving(false); }
   }
 
   async function handleAvatarUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { toast.error("Image trop lourde (max 2 Mo)"); return; }
+    if (file.size > 2 * 1024 * 1024) { toast.error(t("image_trop_lourde_max_2")); return; }
     const reader = new FileReader();
     reader.onload = () => update("avatarUrl", reader.result as string);
     reader.readAsDataURL(file);
@@ -91,12 +109,12 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
           <User className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="portal-title">Profil</h1>
-          <p className="text-sm text-muted-foreground">Vos informations personnelles</p>
+          <h1 className="portal-title">{t("profil")}</h1>
+          <p className="text-sm text-muted-foreground">{t("informations_personnelles")}</p>
         </div>
       </div>
 
-      {/* ── Avatar + Resume ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
@@ -123,10 +141,10 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
             </div>
             <div className="grid grid-cols-4 gap-3 text-center shrink-0">
               {[
-                { icon: Briefcase, val: stats.mandates, label: "Mandats" },
-                { icon: FileText, val: stats.invoices, label: "Factures" },
-                { icon: FileSignature, val: stats.contracts, label: "Contrats" },
-                { icon: FolderOpen, val: stats.documents, label: "Docs" },
+                { icon: Briefcase, val: stats.mandates, label: t("mandats") },
+                { icon: FileText, val: stats.invoices, label: t("factures") },
+                { icon: FileSignature, val: stats.contracts, label: t("contrats") },
+                { icon: FolderOpen, val: stats.documents, label: t("docs") },
               ].map((s) => (
                 <div key={s.label}>
                   <p className="text-lg font-bold text-[#0F2D52]">{s.val}</p>
@@ -138,76 +156,76 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
         </CardContent>
       </Card>
 
-      {/* ── Informations personnelles ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <User className="h-4 w-4 text-[#0F2D52]" />
-            Informations personnelles
+            {t("informations_personnelles_2")}
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            <div><Label className="text-xs">Nom complet</Label><Input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} /></div>
-            <div><Label className="text-xs">Courriel</Label><Input value={form.email} disabled className="bg-muted" /></div>
-            <div><Label className="text-xs">Telephone</Label><Input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(514) 000-0000" /></div>
-            <div><Label className="text-xs">Entreprise</Label><Input value={form.companyName} onChange={(e) => update("companyName", e.target.value)} /></div>
+            <div><Label className="text-xs">{t("nom_complet")}</Label><Input value={form.fullName} onChange={(e) => update("fullName", e.target.value)} /></div>
+            <div><Label className="text-xs">{t("courriel")}</Label><Input value={form.email} disabled className="bg-muted" /></div>
+            <div><Label className="text-xs">{t("telephone")}</Label><Input value={form.phone} onChange={(e) => update("phone", e.target.value)} placeholder="(514) 000-0000" /></div>
+            <div><Label className="text-xs">{t("entreprise")}</Label><Input value={form.companyName} onChange={(e) => update("companyName", e.target.value)} /></div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Adresse ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[#0F2D52]" />
-            Adresse
+            {t("adresse")}
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            <div className="sm:col-span-2"><Label className="text-xs">Adresse</Label><Input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder="123 rue Example" /></div>
-            <div><Label className="text-xs">Ville</Label><Input value={form.city} onChange={(e) => update("city", e.target.value)} /></div>
+            <div className="sm:col-span-2"><Label className="text-xs">{t("adresse")}</Label><Input value={form.address} onChange={(e) => update("address", e.target.value)} placeholder={t("123_rue_example")} /></div>
+            <div><Label className="text-xs">{t("ville")}</Label><Input value={form.city} onChange={(e) => update("city", e.target.value)} /></div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label className="text-xs">Province</Label>
+                <Label className="text-xs">{t("province")}</Label>
                 <select value={form.province} onChange={(e) => update("province", e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
+                  {PROVINCES.map((p) => <option key={p.value} value={p.value}>{t(p.labelKey)}</option>)}
                 </select>
               </div>
-              <div><Label className="text-xs">Code postal</Label><Input value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} placeholder="G1A 1A1" /></div>
+              <div><Label className="text-xs">{t("code_postal")}</Label><Input value={form.postalCode} onChange={(e) => update("postalCode", e.target.value)} placeholder="G1A 1A1" /></div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Profil industriel ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-4">
           <h3 className="text-sm font-semibold flex items-center gap-2">
             <Building2 className="h-4 w-4 text-[#0F2D52]" />
-            Profil industriel
+            {t("profil_industriel")}
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
             <div>
-              <Label className="text-xs">Secteur</Label>
+              <Label className="text-xs">{t("secteur")}</Label>
               <select value={form.sector} onChange={(e) => update("sector", e.target.value)} className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm">
-                <option value="">Selectionnez...</option>
-                {SECTORS.map((s) => <option key={s} value={s}>{s}</option>)}
+                <option value="">{t("selectionnez")}</option>
+                {SECTORS.map((s) => <option key={s} value={s}>{isEn ? SECTOR_EN[s] ?? s : s}</option>)}
               </select>
             </div>
-            <div><Label className="text-xs">Technologies / PLC</Label><Input value={form.technologies} onChange={(e) => update("technologies", e.target.value)} placeholder="Siemens, Allen-Bradley..." /></div>
+            <div><Label className="text-xs">{t("technologies_plc")}</Label><Input value={form.technologies} onChange={(e) => update("technologies", e.target.value)} placeholder={t("siemens_allen_bradley")} /></div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ── Compte ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6">
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Calendar className="h-4 w-4 text-[#0F2D52]" />
-            Compte
+            {t("compte")}
           </h3>
           <div className="grid sm:grid-cols-3 gap-3 text-sm">
-            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Membre depuis</p><p className="font-medium">{formatDate(client.createdAt)}</p></div></div>
-            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Derniere connexion</p><p className="font-medium">{client.lastLogin ? formatDate(client.lastLogin) : "—"}</p></div></div>
-            <div className="flex items-center gap-2"><HardDrive className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">Stockage</p><p className="font-medium">{(client.storageQuotaMb / 1024).toFixed(1)} Go</p></div></div>
+            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("membre_depuis")}</p><p className="font-medium">{formatDate(client.createdAt)}</p></div></div>
+            <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("derniere_connexion")}</p><p className="font-medium">{client.lastLogin ? formatDate(client.lastLogin) : "—"}</p></div></div>
+            <div className="flex items-center gap-2"><HardDrive className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("stockage")}</p><p className="font-medium">{(client.storageQuotaMb / 1024).toFixed(1)} Go</p></div></div>
           </div>
         </CardContent>
       </Card>
@@ -215,7 +233,7 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
       <div className="flex justify-end pb-4">
         <Button onClick={handleSave} disabled={saving} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
           <Save className="h-4 w-4 mr-1.5" />
-          {saving ? "Enregistrement..." : "Enregistrer"}
+          {saving ? t("enregistrement") : t("enregistrer")}
         </Button>
       </div>
     </div>

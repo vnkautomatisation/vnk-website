@@ -1,9 +1,13 @@
 // Pipeline workflow — kanban visuel du cycle de vie client
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { WorkflowKanban } from "./workflow-kanban";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Pipeline workflow" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("pipeline_workflow") };
+}
 
 export default async function WorkflowPage() {
   const [rawClients, rawEvents] = await Promise.all([

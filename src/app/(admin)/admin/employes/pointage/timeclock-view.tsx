@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { overtimeMinutes } from "@/lib/services/payroll-hours";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
@@ -244,7 +245,7 @@ export function TimeclockView(props: ReviewProps | EmployeeProps) {
 // ════════════════════════════════════════════════════════════════
 // PeriodFilter: date-range selector.
 // ════════════════════════════════════════════════════════════════
-type Period = { from: Date; to: Date; label: string };
+type Period = { from: Date; to: Date; labelKey: string };
 
 function getPresets(): Period[] {
   const now = new Date();
@@ -260,16 +261,17 @@ function getPresets(): Period[] {
   const d30 = new Date(now.getTime() - 30 * 86400000);
   const d90 = new Date(now.getTime() - 90 * 86400000);
   return [
-    { label: "Cette semaine", from: cw, to: cwE },
-    { label: "Semaine dernière", from: lw, to: lwE },
-    { label: "Ce mois", from: mStart, to: mEnd },
-    { label: "Mois dernier", from: pmStart, to: pmEnd },
-    { label: "30 derniers jours", from: d30, to: now },
-    { label: "90 derniers jours", from: d90, to: now },
+    { labelKey: "semaine", from: cw, to: cwE },
+    { labelKey: "semaine_derniere", from: lw, to: lwE },
+    { labelKey: "mois", from: mStart, to: mEnd },
+    { labelKey: "mois_dernier", from: pmStart, to: pmEnd },
+    { labelKey: "30_derniers_jours", from: d30, to: now },
+    { labelKey: "90_derniers_jours", from: d90, to: now },
   ];
 }
 
 function PeriodFilter({ from, to }: { from?: string; to?: string }) {
+  const t = useTranslations("admin.timeclock");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -278,47 +280,47 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
   const [customTo, setCustomTo] = useState(to ? isoDate(new Date(to)) : "");
 
   const currentLabel = useMemo(() => {
-    if (!from || !to) return "30 derniers jours";
-    const f = new Date(from); const t = new Date(to);
+    if (!from || !to) return t("30_derniers_jours");
+    const f = new Date(from); const toDate = new Date(to);
     const sameDay = (a: Date, b: Date) =>
       a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-    const match = presets.find((p) => sameDay(p.from, f) && sameDay(p.to, t));
-    if (match) return match.label;
-    return `${isoDate(f)} → ${isoDate(t)}`;
+    const match = presets.find((p) => sameDay(p.from, f) && sameDay(p.to, toDate));
+    if (match) return t(match.labelKey);
+    return `${isoDate(f)} → ${isoDate(toDate)}`;
   }, [from, to, presets]);
 
   // Preserves the current URL (tab, filters) and only swaps from/to.
-  const apply = useCallback((f: Date, t: Date) => {
+  const apply = useCallback((f: Date, toDate: Date) => {
     const params = new URLSearchParams(sp.toString());
     params.set("from", isoDate(f));
-    params.set("to", isoDate(t));
+    params.set("to", isoDate(toDate));
     params.delete("page");
     router.push(`${pathname}?${params.toString()}`);
   }, [router, pathname, sp]);
 
   const applyCustom = () => {
     if (!customFrom || !customTo) {
-      toast.error("Période invalide");
+      toast.error(t("periode_invalide"));
       return;
     }
     // Date-only strings parse as UTC and shift a day back.
     const f = new Date(customFrom + "T00:00:00");
-    const t = endOfDay(new Date(customTo + "T00:00:00"));
-    if (isNaN(f.getTime()) || isNaN(t.getTime()) || t < f) {
-      toast.error("Période invalide");
+    const to = endOfDay(new Date(customTo + "T00:00:00"));
+    if (isNaN(f.getTime()) || isNaN(to.getTime()) || to < f) {
+      toast.error(t("periode_invalide"));
       return;
     }
-    apply(f, t);
+    apply(f, to);
   };
 
   // One icon per period preset.
   const presetIcons: Record<string, typeof Calendar> = {
-    "Cette semaine": Calendar,
-    "Semaine dernière": CalendarRange,
-    "Ce mois": CalendarDays,
-    "Mois dernier": History,
-    "30 derniers jours": Clock,
-    "90 derniers jours": CalendarClock,
+    semaine: Calendar,
+    semaine_derniere: CalendarRange,
+    mois: CalendarDays,
+    mois_dernier: History,
+    "30_derniers_jours": Clock,
+    "90_derniers_jours": CalendarClock,
   };
 
   return (
@@ -332,17 +334,17 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72 p-0 overflow-hidden">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-3 py-2">
-          <p className="text-[10px] uppercase tracking-wider font-bold opacity-80">Période sélectionnée</p>
+          <p className="text-[10px] uppercase tracking-wider font-bold opacity-80">{t("periode_selectionnee")}</p>
           <p className="text-sm font-semibold mt-0.5 truncate">{currentLabel}</p>
         </div>
 
         <div className="p-1">
           {presets.map((p) => {
-            const Icon = presetIcons[p.label] ?? Calendar;
-            const isActive = p.label === currentLabel;
+            const Icon = presetIcons[p.labelKey] ?? Calendar;
+            const isActive = t(p.labelKey) === currentLabel;
             return (
               <button
-                key={p.label}
+                key={p.labelKey}
                 type="button"
                 onClick={() => apply(p.from, p.to)}
                 className={`w-full flex items-center gap-2 px-2 py-1.5 rounded text-xs transition ${
@@ -352,7 +354,7 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
                 }`}
               >
                 <Icon className={`h-3.5 w-3.5 ${isActive ? "text-white" : "text-[#0F2D52]"}`} />
-                <span className="flex-1 text-left">{p.label}</span>
+                <span className="flex-1 text-left">{t(p.labelKey)}</span>
                 {isActive && <CheckCircle2 className="h-3 w-3" />}
               </button>
             );
@@ -360,14 +362,14 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
         </div>
 
         <div className="border-t bg-muted/20 p-3 space-y-2" onClick={(e) => e.stopPropagation()}>
-          <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Personnalisé</p>
+          <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">{t("personnalise")}</p>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1 min-w-0">
-              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">Du</Label>
+              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">{t("du")}</Label>
               <DatePopover value={customFrom} onChange={setCustomFrom} max={isoDate(new Date())} className="w-full justify-start" />
             </div>
             <div className="space-y-1 min-w-0">
-              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">Au</Label>
+              <Label className="block text-[9px] uppercase tracking-wider text-muted-foreground">{t("au")}</Label>
               <DatePopover value={customTo} onChange={setCustomTo} min={customFrom || undefined} max={isoDate(new Date())} className="w-full justify-start" />
             </div>
           </div>
@@ -377,8 +379,7 @@ function PeriodFilter({ from, to }: { from?: string; to?: string }) {
             onClick={applyCustom}
             disabled={!customFrom || !customTo}
           >
-            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Appliquer la période
-          </Button>
+            <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />{t("timeclock_view_appliquer_la_periode")}</Button>
         </div>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -413,6 +414,7 @@ function TimeclockEmployeeView({
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const router = useRouter();
   const [manualOpen, setManualOpen] = useState(false);
   const [manualPresetDate, setManualPresetDate] = useState<string | null>(null);
@@ -553,7 +555,7 @@ function TimeclockEmployeeView({
           entries: sorted,
           spanLabel: firstIn != null && lastOut != null
             ? `${fmtTime(new Date(firstIn))} → ${fmtTime(new Date(lastOut))}`
-            : "En cours",
+            : t("cours"),
           idleMin: Math.max(0, spanMin - totalMin),
           isEmpty: sorted.length === 0,
           totalMin: sorted.reduce((s, e) => s + (e.durationMin ?? 0), 0),
@@ -600,14 +602,14 @@ function TimeclockEmployeeView({
   const handleClockIn = async (category: string = "work") => {
     const coords = await getPunchCoords();
     const r = await clockInAction({ category, ...coords });
-    if (r.success) { toast.success(`Pointage démarré · ${catLabel(t, category)}`); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("pointage_demarre_categorie", { category: catLabel(t, category) })); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
   const handleClockOut = async () => {
     const coords = await getPunchCoords();
     const r = await clockOutAction(coords);
-    if (r.success) { toast.success(`Pointage fermé à ${fmtDuration(r.data.durationMin)}`); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("pointage_ferme_duree", { duration: fmtDuration(r.data.durationMin) })); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   // Real-time weekly overtime banner: worked minutes in the CURRENT week
@@ -671,7 +673,7 @@ function TimeclockEmployeeView({
     if (!openEntry) return;
     const r = await pauseClockAction({ kind });
     if (r.success) {
-      toast.success(kind === "paid" ? "Pause courte (payée)" : "Pause repas");
+      toast.success(kind === "paid" ? t("pause_courte_payee") : t("pause_repas"));
       router.refresh();
     } else {
       toast.error(r.error || "");
@@ -681,7 +683,7 @@ function TimeclockEmployeeView({
     if (!openEntry) return;
     const r = await resumeClockAction();
     if (r.success) {
-      toast.success("Reprise");
+      toast.success(t("reprise"));
       router.refresh();
     } else {
       toast.error(r.error || "");
@@ -693,10 +695,10 @@ function TimeclockEmployeeView({
     toast.success(successMsg, {
       duration: 10_000,
       action: {
-        label: "Annuler",
+        label: t("annuler"),
         onClick: async () => {
           const u = await undoTimeClockSnapshotAction({ snapshotId });
-          if (u.success) toast.success(`${u.data.restored} entrée(s) restaurée(s)`);
+          if (u.success) toast.success(t("entrees_restaurees", { count: u.data.restored }));
           else toast.error(u.error || "");
           router.refresh();
         },
@@ -729,9 +731,9 @@ function TimeclockEmployeeView({
               <Clock className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Mon pointage</h1>
+              <h1 className="text-lg font-bold">{t("mon_pointage")}</h1>
               <p className="text-xs text-white/80">
-                Suivez vos heures de travail · approuvées avant chaque paie.
+                {t("suivez_heures_travail_approuvees_avant")}
               </p>
             </div>
           </div>
@@ -742,8 +744,8 @@ function TimeclockEmployeeView({
                 <>
                   <span className="px-2.5 py-1.5 rounded-md bg-amber-400/20 border border-amber-300/30 text-xs font-mono text-white">
                     {(openEntry as { pausedKind?: string | null }).pausedKind === "paid"
-                      ? "Pause courte (payée)"
-                      : "Pause repas"}
+                      ? t("pause_courte_payee")
+                      : t("pause_repas")}
                   </span>
                   <Button
                     variant="outline" size="sm"
@@ -761,7 +763,7 @@ function TimeclockEmployeeView({
                     totalBreakMin={openEntry.totalBreakMin ?? 0}
                     variant="light"
                   />
-                  <ActionTooltip label="Pause repas — non payée, déduite des heures">
+                  <ActionTooltip label={t("pause_repas_non_payee_deduite")}>
                     <Button
                       variant="outline" size="sm"
                       onClick={() => handlePause("meal")}
@@ -770,7 +772,7 @@ function TimeclockEmployeeView({
                       <Coffee className="h-3.5 w-3.5 mr-1.5" />Repas
                     </Button>
                   </ActionTooltip>
-                  <ActionTooltip label="Pause courte — payée, tracée mais non déduite">
+                  <ActionTooltip label={t("pause_courte_payee_tracee_mais")}>
                     <Button
                       variant="outline" size="sm"
                       onClick={() => handlePause("paid")}
@@ -786,8 +788,7 @@ function TimeclockEmployeeView({
                 onClick={handleClockOut}
                 className="bg-red-500 hover:bg-red-600 text-white border-0"
               >
-                <Square className="h-4 w-4 mr-1.5" />Arrêter
-              </Button>
+                <Square className="h-4 w-4 mr-1.5" />{t("timeclock_view_arreter")}</Button>
             </div>
           ) : (
             <div className="flex items-center gap-2 flex-wrap">
@@ -803,15 +804,14 @@ function TimeclockEmployeeView({
                   <Send className="h-3.5 w-3.5 mr-1.5" />Soumettre la semaine ({submittableThisWeek.length})
                 </Button>
               )}
-              <ActionTooltip label={myEntries.length === 0 ? "Aucune donnée à exporter pour cette période" : "Aperçu PDF du relevé"}>
+              <ActionTooltip label={myEntries.length === 0 ? t("aucune_donnee_exporter_periode") : t("apercu_pdf_releve")}>
                 <Button
                   variant="outline" size="sm"
                   onClick={() => setPdfPreviewOpen(true)}
                   disabled={myEntries.length === 0}
                   className="!bg-white/10 hover:!bg-white/20 !text-white !border-white/20 backdrop-blur disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <FileText className="h-3.5 w-3.5 mr-1.5" />Aperçu PDF
-                </Button>
+                  <FileText className="h-3.5 w-3.5 mr-1.5" />{t("timeclock_view_apercu_pdf")}</Button>
               </ActionTooltip>
               <Button
                 variant="outline" size="sm"
@@ -825,8 +825,7 @@ function TimeclockEmployeeView({
                 onClick={() => handleClockIn("work")}
                 className="bg-white text-[#0F2D52] hover:bg-white/90 font-semibold border-0"
               >
-                <Play className="h-4 w-4 mr-1.5" />Commencer ma journée
-              </Button>
+                <Play className="h-4 w-4 mr-1.5" />{t("timeclock_view_commencer_ma_journee")}</Button>
             </div>
           )}
         </div>
@@ -841,10 +840,7 @@ function TimeclockEmployeeView({
         && Date.now() - new Date(openEntry.clockIn).getTime() >= 5 * 60 * 60 * 1000 && (
         <div className="rounded-md border border-sky-300 bg-sky-50 px-3 py-2.5 flex items-center gap-2.5 text-sm text-sky-900">
           <Coffee className="h-4 w-4 shrink-0 text-sky-600" />
-          <span>
-            Vous travaillez depuis plus de 5 h sans pause punchée — si vous en
-            avez pris une, pensez à la puncher (Repas ou Pause courte).
-          </span>
+          <span>{t("timeclock_view_vous_travaillez_depuis_plus_de_5_h")}</span>
         </div>
       )}
 
@@ -860,13 +856,13 @@ function TimeclockEmployeeView({
           <AlertTriangle className={`h-4 w-4 shrink-0 ${weekOvertime.level === "over" ? "text-red-600" : "text-amber-600"}`} />
           {weekOvertime.level === "over" ? (
             <span>
-              <span className="font-semibold">Temps supplémentaire :</span>{" "}
+              <span className="font-semibold">{t("temps_supplementaire")}</span>{" "}
               {fmtDuration(weekOvertime.totalMin)} cette semaine — vous avez dépassé 40 h de{" "}
               {fmtDuration(weekOvertime.overMin)}.
             </span>
           ) : (
             <span>
-              <span className="font-semibold">Attention :</span> {fmtDuration(weekOvertime.totalMin)}{" "}
+              <span className="font-semibold">{t("attention")}</span> {fmtDuration(weekOvertime.totalMin)}{" "}
               cette semaine — le seuil de temps supplémentaire (40 h) approche.
             </span>
           )}
@@ -886,31 +882,27 @@ function TimeclockEmployeeView({
             </p>
           </div>
           <Button size="sm" variant="destructive" className="h-8 text-xs shrink-0" onClick={handleClockOut}>
-            <Square className="h-3 w-3 mr-1" />Arrêter
-          </Button>
+            <Square className="h-3 w-3 mr-1" />{t("timeclock_view_arreter")}</Button>
         </div>
       )}
 
       {entriesTruncated && (
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
           <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
-          <span>
-            Période trop longue : seuls les premiers pointages sont chargés, les totaux
-            ci-dessous sont donc incomplets. Choisissez une période plus courte.
-          </span>
+          <span>{t("timeclock_view_periode_trop_longue_seuls_les_premiers_pointages")}</span>
         </div>
       )}
       <div className={`grid grid-cols-2 gap-2 ${holidayWorkedMin > 0 ? "md:grid-cols-6" : "md:grid-cols-5"}`}>
-        <StatBox label="Total brut" value={fmtDuration(myStats.total)} accent="emerald" hint="Avec pauses" icon={Clock} />
-        <StatBox label="Travail" value={fmtDuration(myStats.work)} accent="blue" icon={Briefcase} />
-        <StatBox label="Heures sup." value={fmtDuration(totalOvertimeMin)} accent="blue" hint="Payées x1,5" icon={TrendingUp} />
+        <StatBox label={t("total_brut")} value={fmtDuration(myStats.total)} accent="emerald" hint={t("pauses_2")} icon={Clock} />
+        <StatBox label={t("travail")} value={fmtDuration(myStats.work)} accent="blue" icon={Briefcase} />
+        <StatBox label={t("heures_sup")} value={fmtDuration(totalOvertimeMin)} accent="blue" hint={t("payees_x1_5")} icon={TrendingUp} />
         {holidayWorkedMin > 0 && (
-          <StatBox label="Férié travaillé" value={fmtDuration(holidayWorkedMin)} accent="amber" hint="Payé x2" icon={CalendarDays} />
+          <StatBox label={t("ferie_travaille")} value={fmtDuration(holidayWorkedMin)} accent="amber" hint={t("paye_x2")} icon={CalendarDays} />
         )}
-        <StatBox label="Approuvé" value={fmtDuration(myStats.approved)} accent="emerald" icon={CheckCircle2} />
+        <StatBox label={t("approuve")} value={fmtDuration(myStats.approved)} accent="emerald" icon={CheckCircle2} />
         {/* Odd tile count in a 2-col grid: the last one spans, no orphan half-row. */}
         <div className={holidayWorkedMin > 0 ? "md:col-span-1" : "col-span-2 md:col-span-1"}>
-          <StatBox label="En attente" value={fmtDuration(myStats.pending)} accent="amber" icon={AlertCircle} />
+          <StatBox label={t("attente")} value={fmtDuration(myStats.pending)} accent="amber" icon={AlertCircle} />
         </div>
       </div>
       <div ref={kpiSentinelRef} aria-hidden className="h-px" />
@@ -933,12 +925,12 @@ function TimeclockEmployeeView({
             {kpisHidden && (
               <>
                 <span className="hidden sm:inline-flex items-center gap-1.5 text-xs shrink-0">
-                  <span className="text-muted-foreground">Travail</span>
+                  <span className="text-muted-foreground">{t("travail")}</span>
                   <span className="font-mono font-bold tabular-nums text-[#0F2D52]">{fmtDuration(myStats.work)}</span>
                 </span>
                 {myStats.pending > 0 && (
                   <span className="hidden md:inline-flex items-center gap-1.5 text-xs shrink-0">
-                    <span className="text-muted-foreground">En attente</span>
+                    <span className="text-muted-foreground">{t("attente")}</span>
                     <span className="font-mono font-bold tabular-nums text-amber-700">{fmtDuration(myStats.pending)}</span>
                   </span>
                 )}
@@ -971,7 +963,7 @@ function TimeclockEmployeeView({
         {groupedByDay.length === 0 ? (
           <Card>
             <div className="p-8 text-center text-sm text-muted-foreground">
-              Aucun pointage sur la période sélectionnée.
+              {t("aucun_pointage_periode_selectionnee")}
             </div>
           </Card>
         ) : (
@@ -994,7 +986,7 @@ function TimeclockEmployeeView({
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-sm font-semibold text-amber-900">{dateLabel}</span>
                         {isToday && (
-                          <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-300">Aujourd&apos;hui</Badge>
+                          <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-300">{t("aujourd_apos_hui")}</Badge>
                         )}
                         {day.holiday && (
                           <Badge className="text-[10px] bg-cyan-100 text-cyan-800 border-cyan-300">
@@ -1002,7 +994,7 @@ function TimeclockEmployeeView({
                           </Badge>
                         )}
                       </div>
-                      <p className="text-xs text-amber-900/80 mt-0.5">Aucune entrée enregistrée</p>
+                      <p className="text-xs text-amber-900/80 mt-0.5">{t("aucune_entree_enregistree")}</p>
                     </div>
                     <Button
                       size="sm"
@@ -1031,7 +1023,7 @@ function TimeclockEmployeeView({
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold">{dateLabel}</span>
                       {isToday && (
-                        <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-300">Aujourd&apos;hui</Badge>
+                        <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-300">{t("aujourd_apos_hui")}</Badge>
                       )}
                       {day.holiday && (
                         <Badge className="text-[10px] bg-cyan-100 text-cyan-800 border-cyan-300">
@@ -1043,17 +1035,15 @@ function TimeclockEmployeeView({
                         return <Badge key={c} className={`text-[10px] ${cat.color}`}>{catLabel(t, c)}</Badge>;
                       })}
                       {day.hasOpen && (
-                        <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">En cours</Badge>
+                        <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">{t("cours")}</Badge>
                       )}
                       {!day.hasOpen && day.allApproved && (
                         <Badge className="text-[10px] bg-emerald-600 text-white border-emerald-700 hover:bg-emerald-700">
-                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" />Tout validé
-                        </Badge>
+                          <CheckCircle2 className="h-2.5 w-2.5 mr-1" />{t("timeclock_view_tout_valide")}</Badge>
                       )}
                       {!day.hasOpen && !day.allApproved && day.allSubmitted && (
                         <Badge variant="outline" className="text-[10px] border-blue-300 text-blue-700 bg-blue-50">
-                          <Lock className="h-2.5 w-2.5 mr-1" />Verrouillé
-                        </Badge>
+                          <Lock className="h-2.5 w-2.5 mr-1" />{t("timeclock_view_verrouille")}</Badge>
                       )}
                       {!day.hasOpen && !day.allApproved && !day.allSubmitted && day.anyPending && (
                         <Badge variant="outline" className="text-[10px] border-amber-300 text-amber-700 bg-amber-50">
@@ -1070,7 +1060,7 @@ function TimeclockEmployeeView({
                   </div>
                   <div className="text-right shrink-0">
                     <p className="font-mono text-lg font-bold tabular-nums text-[#0F2D52]">{fmtDuration(day.totalMin)}</p>
-                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Travaillé</p>
+                    <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{t("travaille")}</p>
                   </div>
                 </button>
 
@@ -1089,9 +1079,9 @@ function TimeclockEmployeeView({
                             onClick={async (ev) => {
                               ev.stopPropagation();
                               const ok = await confirmDialog({
-                                title: "Fusionner les pointages",
-                                description: `Regrouper les pointages "Travail" qui se suivent à moins de 15 minutes (sortie puis rentrée par erreur). Le temps entre eux est compté en pause, et les pointages plus éloignés restent séparés.`,
-                                confirmLabel: "Fusionner",
+                                title: t("fusionner_pointages"),
+                                description: t("regrouper_pointages_travail_suivent_15"),
+                                confirmLabel: t("fusionner"),
                               });
                               if (!ok) return;
                               const r = await mergeDayTimeClockAction({ date: day.date });
@@ -1099,8 +1089,8 @@ function TimeclockEmployeeView({
                                 undoToast(
                                   r.data.snapshotId,
                                   r.data.groups > 1
-                                    ? `${r.data.punches} pointages regroupés en ${r.data.groups} entrées`
-                                    : `${r.data.punches} pointages fusionnés`,
+                                    ? t("pointages_regroupes_entrees", { punches: r.data.punches, groups: r.data.groups })
+                                    : t("pointages_fusionnes", { punches: r.data.punches }),
                                 );
                                 router.refresh();
                               } else toast.error(r.error || "");
@@ -1117,15 +1107,15 @@ function TimeclockEmployeeView({
                             onClick={async (ev) => {
                               ev.stopPropagation();
                               const ok = await confirmDialog({
-                                title: "Supprimer les pointages courts",
-                                description: `Supprimer les ${day.shortCount} pointage(s) de moins de 5 minutes de cette journée ?`,
-                                confirmLabel: "Supprimer",
+                                title: t("supprimer_pointages_courts"),
+                                description: t("supprimer_pointages_courts_journee", { count: day.shortCount }),
+                                confirmLabel: t("supprimer"),
                                 variant: "destructive",
                               });
                               if (!ok) return;
                               const r = await deleteShortTimeClockAction({ date: day.date, maxMin: 5 });
                               if (r.success) {
-                                undoToast(r.data.snapshotId, `${r.data.deleted} supprimé(s)`);
+                                undoToast(r.data.snapshotId, t("supprimes", { count: r.data.deleted }));
                                 router.refresh();
                               } else toast.error(r.error || "");
                             }}
@@ -1145,21 +1135,21 @@ function TimeclockEmployeeView({
                           onEdit={() => setEditEntry(e)}
                           onDelete={async () => {
                             const r = await deleteTimeClockAction({ id: e.id });
-                            if (r.success) { toast.success("Supprimé"); router.refresh(); }
+                            if (r.success) { toast.success(t("supprime")); router.refresh(); }
                             else toast.error(r.error || "");
                           }}
                           onRequestUnlock={async () => {
                             const reason = await promptDialog({
-                              title: "Demander modification",
-                              label: "Pourquoi cette modification ?",
-                              placeholder: "Ex : oubli pointage, mauvaise heure...",
+                              title: t("demander_modification"),
+                              label: t("pourquoi_modification"),
+                              placeholder: t("ex_oubli_pointage_mauvaise_heure"),
                               multiline: true,
                               required: true,
-                              confirmLabel: "Envoyer la demande",
+                              confirmLabel: t("envoyer_demande"),
                             });
                             if (!reason) return;
                             const r = await requestEditTimeClockAction({ ids: [e.id], reason });
-                            if (r.success) { toast.success("Demande envoyée"); router.refresh(); }
+                            if (r.success) { toast.success(t("demande_envoyee")); router.refresh(); }
                             else toast.error(r.error || "");
                           }}
                         />
@@ -1184,9 +1174,9 @@ function TimeclockEmployeeView({
       <PdfPreviewModal
         open={pdfPreviewOpen}
         url={pdfPreviewOpen ? pdfHref : null}
-        title="Mon relevé de pointage"
+        title={t("mon_releve_pointage")}
         description={periodFrom && periodTo
-          ? `Période ${new Date(periodFrom).toLocaleDateString("fr-CA")} → ${new Date(periodTo).toLocaleDateString("fr-CA")}`
+          ? t("periode_du_au", { from: new Date(periodFrom).toLocaleDateString(dateTag), to: new Date(periodTo).toLocaleDateString(dateTag) })
           : undefined}
         downloadFilename="releve-pointage.pdf"
         onClose={() => setPdfPreviewOpen(false)}
@@ -1223,6 +1213,7 @@ function TimeclockEmployeeView({
 // stretches between them are hatched and labelled, so a day of scattered
 // punches cannot read as one long shift.
 function DayTimeline({ entries, showLegend = false }: { entries: Entry[]; showLegend?: boolean }) {
+  const t = useTranslations("admin.timeclock");
   const closed = entries
     .filter((e) => e.clockOut)
     .sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
@@ -1254,8 +1245,8 @@ function DayTimeline({ entries, showLegend = false }: { entries: Entry[]; showLe
           const mins = minutesBetween(new Date(seg.from), new Date(seg.to));
           const range = `${fmtTime(new Date(seg.from))} → ${fmtTime(new Date(seg.to))}`;
           const label = seg.kind === "work"
-            ? `Travaillé · ${range} · ${fmtDuration(mins)}`
-            : `Hors travail · ${range} · ${fmtDuration(mins)}`;
+            ? t("travaille_plage_duree", { range, duration: fmtDuration(mins) })
+            : t("hors_travail_plage_duree", { range, duration: fmtDuration(mins) });
           return (
             <ActionTooltip key={`${seg.kind}-${seg.from}`} label={label}>
               <div
@@ -1284,7 +1275,7 @@ function DayTimeline({ entries, showLegend = false }: { entries: Entry[]; showLe
         <span className={`items-center gap-2.5 shrink-0 ${showLegend ? "flex" : "hidden"}`}>
           <span className="flex items-center gap-1">
             <span className="h-1.5 w-3 rounded-full bg-[#0F2D52]" aria-hidden />
-            Travaillé
+            {t("travaille")}
           </span>
           {segs.some((x) => x.kind === "gap") && (
             <span className="flex items-center gap-1">
@@ -1296,7 +1287,7 @@ function DayTimeline({ entries, showLegend = false }: { entries: Entry[]; showLe
                 }}
                 aria-hidden
               />
-              Hors travail
+              {t("hors_travail")}
             </span>
           )}
         </span>
@@ -1316,6 +1307,7 @@ function MyKioskPinCard({
   pinSetAt: string | null;
   pinRequestedAt: string | null;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -1324,36 +1316,36 @@ function MyKioskPinCard({
   // PIN request. Acts as a ticket: HR sees it in the time clock settings.
   const requestPin = async () => {
     const ok = await confirmDialog({
-      title: hasPin ? "Demander un nouveau NIP" : "Demander un NIP",
+      title: hasPin ? t("demander_nouveau_nip") : t("demander_nip"),
       description: hasPin
-        ? "Les ressources humaines seront prévenues et vous remettront un nouveau NIP. L'actuel restera valide jusque-là."
-        : "Les ressources humaines seront prévenues et vous attribueront un NIP pour la borne.",
-      confirmLabel: "Envoyer la demande",
+        ? t("ressources_humaines_seront_prevenues_vous")
+        : t("ressources_humaines_seront_prevenues_vous_2"),
+      confirmLabel: t("envoyer_demande"),
     });
     if (!ok) return;
     setBusy(true);
     const r = await requestKioskPinAction();
     setBusy(false);
-    if (r.success) { toast.success("Demande envoyée aux ressources humaines"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("demande_envoyee_ressources_humaines")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   // Revealing the PIN requires re-entering the account password.
   const reveal = async () => {
     const password = await promptDialog({
-      title: "Afficher mon NIP",
-      label: "Confirmez votre mot de passe",
-      placeholder: "Mot de passe du compte",
+      title: t("afficher_mon_nip"),
+      label: t("confirmez_mot_passe"),
+      placeholder: t("mot_passe_compte"),
       password: true,
       required: true,
-      confirmLabel: "Afficher",
+      confirmLabel: t("afficher"),
     });
     if (!password) return;
     setBusy(true);
     const r = await revealMyKioskPinAction({ password });
     setBusy(false);
     if (r.success) setRevealed(r.data.pin);
-    else toast.error(r.error || "Erreur");
+    else toast.error(r.error || t("erreur"));
   };
 
   return (
@@ -1365,7 +1357,7 @@ function MyKioskPinCard({
           </div>
           <div className="flex-1 min-w-[200px]">
             <div className="flex items-center gap-2 flex-wrap">
-              <p className="text-sm font-semibold">Punch sur la borne</p>
+              <p className="text-sm font-semibold">{t("punch_borne")}</p>
               {hasPin ? (
                 <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
                   NIP actif
@@ -1373,21 +1365,21 @@ function MyKioskPinCard({
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">
-                  Aucun NIP
+                  {t("aucun_nip")}
                 </Badge>
               )}
               {pinRequestedAt && (
                 <Badge variant="outline" className="text-[10px] text-amber-800 border-amber-300 bg-amber-50">
-                  Demande envoyée
+                  {t("demande_envoyee")}
                 </Badge>
               )}
             </div>
             <p className="text-[11px] text-muted-foreground mt-0.5">
               {pinRequestedAt
-                ? "Votre demande est en attente — les ressources humaines vous remettront un NIP."
+                ? t("demande_attente_ressources_humaines_vous")
                 : hasPin
-                  ? "Code à 4 chiffres qui vous identifie sur la tablette partagée. Oublié ? Affichez-le avec votre mot de passe."
-                  : "Les ressources humaines vous remettent un NIP à 4 chiffres pour poinçonner sur la tablette partagée."}
+                  ? t("code_4_chiffres_vous_identifie")
+                  : t("ressources_humaines_vous_remettent_nip")}
             </p>
           </div>
           {/* The employee reads or requests his PIN; HR issues it. */}
@@ -1400,7 +1392,7 @@ function MyKioskPinCard({
                 onClick={requestPin}
                 disabled={busy}
               >
-                {hasPin ? "Demander un nouveau NIP" : "Demander un NIP"}
+                {hasPin ? t("demander_nouveau_nip") : t("demander_nip")}
               </Button>
             )}
             {hasPin && (
@@ -1411,7 +1403,7 @@ function MyKioskPinCard({
                 disabled={busy}
               >
                 <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-                Afficher mon NIP
+                {t("afficher_mon_nip")}
               </Button>
             )}
           </div>
@@ -1423,10 +1415,9 @@ function MyKioskPinCard({
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-base text-white flex items-center gap-2">
-                <KeyRound className="h-4 w-4" />Votre NIP de borne
-              </DialogTitle>
+                <KeyRound className="h-4 w-4" />{t("timeclock_view_votre_nip_de_borne")}</DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
-                Vous pouvez le réafficher à tout moment avec votre mot de passe.
+                {t("vous_pouvez_reafficher_tout_moment")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -1439,15 +1430,15 @@ function MyKioskPinCard({
               onClick={() => {
                 if (revealed) {
                   navigator.clipboard?.writeText(revealed)
-                    .then(() => toast.success("NIP copié"))
-                    .catch(() => toast.error("Copie impossible"));
+                    .then(() => toast.success(t("nip_copie")))
+                    .catch(() => toast.error(t("copie_impossible")));
                 }
               }}
             >
               <Copy className="h-3.5 w-3.5 mr-1.5" />{tc("copy")}
             </Button>
             <p className="text-[11px] text-muted-foreground">
-              Tapez ce NIP sur la tablette partagée pour poinçonner. Ne le communiquez à personne.
+              {t("tapez_nip_tablette_partagee_poinconner")}
             </p>
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30">
@@ -1470,6 +1461,8 @@ function TimeclockReviewView({
   tab, page, pageSize, q, teamFilter, departmentFilter, statusFilter,
   overview, byEmployee, toApprove, employeesWithForgottenDays, approveQueue, reachedEntryCap,
 }: ReviewProps) {
+  const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const isFounder = scope.isFounder;
   const showSelfNotice = !isFounder; // everyone but the founder sees the reminder
   const router = useRouter();
@@ -1541,10 +1534,10 @@ function TimeclockReviewView({
     toast.success(successMsg, {
       duration: 10_000,
       action: {
-        label: "Annuler",
+        label: t("annuler"),
         onClick: async () => {
           const u = await undoTimeClockSnapshotAction({ snapshotId });
-          if (u.success) toast.success(`${u.data.restored} entrée(s) restaurée(s)`);
+          if (u.success) toast.success(t("entrees_restaurees", { count: u.data.restored }));
           else toast.error(u.error || "");
           router.refresh();
         },
@@ -1558,39 +1551,35 @@ function TimeclockReviewView({
       <div className="space-y-4">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-[#0F2D52]" />Approbation des heures
-          </h1>
+            <CheckCircle2 className="h-5 w-5 text-[#0F2D52]" />{t("timeclock_view_approbation_des_heures")}</h1>
           <p className="text-sm text-muted-foreground">
-            Gestion du pointage de votre équipe.
+            {t("gestion_pointage_equipe")}
           </p>
         </div>
         <Card className="p-10 text-center">
           <Users className="h-10 w-10 text-[#0F2D52]/40 mx-auto mb-3" />
           <p className="text-base font-semibold text-[#0F2D52]">
-            Vous n&apos;avez pas encore d&apos;employé sous votre supervision.
+            {t("vous_n_apos_avez_pas")}
           </p>
-          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">
-            Dès que des employés vous seront rattachés (en tant que manager direct ou chef d&apos;équipe),
-            leurs pointages apparaîtront ici pour approbation.
-          </p>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md mx-auto">{t("timeclock_view_des_que_des_employes_vous_seront_rattaches")}</p>
         </Card>
       </div>
     );
   }
 
   const tabs: TabItem<"overview" | "by-employee" | "to-approve">[] = [
-    { key: "overview", label: "Vue d'ensemble", shortLabel: "Ensemble", icon: LayoutGrid },
+    { key: "overview", label: t("vue_ensemble"), shortLabel: t("ensemble"), icon: LayoutGrid },
     {
       // No count here: headcount is static info, not a workload.
       key: "by-employee",
-      label: "Par employé",
-      shortLabel: "Employés",
+      label: t("employe_2"),
+      shortLabel: t("employes"),
       icon: UserIcon,
     },
     {
       key: "to-approve",
-      label: "À approuver",
-      shortLabel: "Approuver",
+      label: t("approuver"),
+      shortLabel: t("approuver"),
       icon: ListChecks,
       count: adminKpis?.toApproveCount || undefined,
     },
@@ -1598,8 +1587,8 @@ function TimeclockReviewView({
 
   // Subtitle depends on the scope.
   const subtitle = scope.isHr
-    ? "Vue d'ensemble de tous les employés"
-    : `Mon équipe (${scope.allowedAdminCount ?? 0} employé${(scope.allowedAdminCount ?? 0) > 1 ? "s" : ""})`;
+    ? t("vue_ensemble_tous_employes")
+    : t("mon_equipe_employes", { count: scope.allowedAdminCount ?? 0 });
 
   return (
     <div className="space-y-4">
@@ -1611,7 +1600,7 @@ function TimeclockReviewView({
               <CheckCircle2 className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Approbation des heures</h1>
+              <h1 className="text-lg font-bold">{t("approbation_heures")}</h1>
               <div className="flex items-center gap-2 flex-wrap mt-0.5">
                 <p className="text-xs text-white/80">{subtitle}</p>
                 {!scope.isHr && scope.myTeams.length > 0 && (
@@ -1635,7 +1624,7 @@ function TimeclockReviewView({
             <div className="[&_button]:!bg-white/10 [&_button]:hover:!bg-white/20 [&_button]:!text-white [&_button]:!border-white/20 [&_button]:backdrop-blur">
               <PeriodFilter from={periodFrom} to={periodTo} />
             </div>
-            <ActionTooltip label="Exporte uniquement les pointages approuvés sur la période sélectionnée">
+            <ActionTooltip label={t("exporte_uniquement_pointages_approuves_periode")}>
               <Button
                 variant="outline" size="sm" asChild
                 className="!bg-white/10 hover:!bg-white/20 !text-white !border-white/20 backdrop-blur"
@@ -1645,18 +1634,17 @@ function TimeclockReviewView({
                   target="_blank"
                   rel="noopener"
                 >
-                  <FileDown className="h-3.5 w-3.5 mr-1.5" />Exporter CSV (approuvés)
-                </a>
+                  <FileDown className="h-3.5 w-3.5 mr-1.5" />{t("timeclock_view_exporter_csv_approuves")}</a>
               </Button>
             </ActionTooltip>
             {scope.isHr && (
-              <ActionTooltip label="Arrondi des punchs, localisation, borne kiosque">
+              <ActionTooltip label={t("arrondi_punchs_localisation_borne_kiosque")}>
                 <Button
                   variant="outline" size="sm" asChild
                   className="!bg-white/10 hover:!bg-white/20 !text-white !border-white/20 backdrop-blur"
                 >
                   <a href="/admin/employes/pointage/parametres">
-                    <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />Paramètres
+                    <SlidersHorizontal className="h-3.5 w-3.5 mr-1.5" />{t("parametres")}
                   </a>
                 </Button>
               </ActionTooltip>
@@ -1669,7 +1657,7 @@ function TimeclockReviewView({
         tabs={tabs}
         active={tab}
         onChange={setTab}
-        ariaLabel="Vues du pointage"
+        ariaLabel={t("vues_pointage")}
       />
 
       {/* Sentinel: detects when the header scrolls out, to show the mini bar */}
@@ -1682,21 +1670,21 @@ function TimeclockReviewView({
         <div className="flex flex-col gap-2 px-3 sm:flex-row sm:items-center sm:gap-3">
           <span className="font-bold text-sm text-[#0F2D52] hidden lg:inline-flex items-center gap-1.5 shrink-0">
             <CheckCircle2 className="h-4 w-4" />
-            Approbation des heures
+            {t("approbation_heures")}
           </span>
           <div className="min-w-0 w-full sm:flex-1 lg:max-w-md">
-            <SettingsTabs tabs={tabs} active={tab} onChange={setTab} ariaLabel="Vues du pointage" dense />
+            <SettingsTabs tabs={tabs} active={tab} onChange={setTab} ariaLabel={t("vues_pointage")} dense />
           </div>
           <div className="flex items-center gap-1.5 shrink-0 sm:ml-0">
             <PeriodFilter from={periodFrom} to={periodTo} />
             <DropdownMenu>
-              <ActionTooltip label="Actions supplémentaires">
+              <ActionTooltip label={t("actions_supplementaires")}>
                 <DropdownMenuTrigger asChild>
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs"
-                    aria-label="Actions supplémentaires"
+                    aria-label={t("actions_supplementaires")}
                   >
                     <MoreHorizontal className="h-3.5 w-3.5" />
                   </Button>
@@ -1709,8 +1697,7 @@ function TimeclockReviewView({
                     target="_blank"
                     rel="noopener"
                   >
-                    <FileDown className="h-3.5 w-3.5 mr-2" />Exporter CSV (approuvés)
-                  </a>
+                    <FileDown className="h-3.5 w-3.5 mr-2" />{t("timeclock_view_exporter_csv_approuves")}</a>
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -1754,28 +1741,27 @@ function TimeclockReviewView({
                         className="h-7 text-xs border-emerald-300 text-emerald-700 hover:bg-emerald-50"
                         onClick={async () => {
                           const r = await unlockTimeClockEntriesAction({ requestId: req.id });
-                          if (r.success) { toast.success(`${r.data.unlocked} entrée(s) débloquée(s)`); router.refresh(); }
+                          if (r.success) { toast.success(t("entrees_debloquees", { count: r.data.unlocked })); router.refresh(); }
                           else toast.error(r.error || "");
                         }}
                       >
-                        <Unlock className="h-3 w-3 mr-1" />Débloquer
-                      </Button>
+                        <Unlock className="h-3 w-3 mr-1" />{t("timeclock_view_debloquer")}</Button>
                       <Button
                         size="sm"
                         variant="outline"
                         className="h-7 text-xs border-red-300 text-red-700 hover:bg-red-50"
                         onClick={async () => {
                           const reason = await promptDialog({
-                            title: "Refuser la demande",
-                            label: "Motif (optionnel)",
-                            placeholder: "Le motif sera communiqué à l'employé",
+                            title: t("refuser_demande"),
+                            label: t("motif_optionnel"),
+                            placeholder: t("motif_sera_communique_employe"),
                             multiline: true,
-                            confirmLabel: "Refuser",
+                            confirmLabel: t("refuser"),
                             variant: "destructive",
                           });
                           if (reason === null) return;
                           const r = await denyEditRequestAction({ requestId: req.id, reason: reason || undefined });
-                          if (r.success) { toast.success("Demande refusée"); router.refresh(); }
+                          if (r.success) { toast.success(t("demande_refusee")); router.refresh(); }
                           else toast.error(r.error || "");
                         }}
                       >
@@ -1795,7 +1781,7 @@ function TimeclockReviewView({
         <div className="flex items-start gap-2 rounded-md border border-[#0F2D52]/20 bg-[#0F2D52]/5 p-3 text-xs text-[#0F2D52]">
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <p>
-            Note : vos propres heures ne s&apos;affichent pas ici. Votre supérieur direct est responsable de les valider.
+            {t("note_propres_heures_ne_s")}
           </p>
         </div>
       )}
@@ -1804,8 +1790,8 @@ function TimeclockReviewView({
         <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900">
           <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
           <div>
-            <p className="font-semibold">Plus de 5000 pointages chargés sur cette période</p>
-            <p className="mt-0.5">Affinez la période pour voir le détail complet — les agrégats peuvent être tronqués.</p>
+            <p className="font-semibold">{t("plus_5000_pointages_charges_periode")}</p>
+            <p className="mt-0.5">{t("affinez_periode_voir_detail_complet")}</p>
           </div>
         </div>
       )}
@@ -1814,7 +1800,7 @@ function TimeclockReviewView({
       {selectedToApprove.size > 0 && (
         <div className="sticky top-[176px] lg:top-[140px] z-10 flex items-center gap-2 p-3 rounded-md bg-[#0F2D52] text-white shadow-lg flex-wrap">
           <Badge className="text-[11px] bg-white text-[#0F2D52] border-white">
-            {selectedToApprove.size} entrée{selectedToApprove.size > 1 ? "s" : ""} sélectionnée{selectedToApprove.size > 1 ? "s" : ""}
+            {t("entrees_selectionnees", { count: selectedToApprove.size })}
           </Badge>
           <div className="flex-1" />
           <Button
@@ -1823,34 +1809,33 @@ function TimeclockReviewView({
             onClick={async () => {
               const ids = Array.from(selectedToApprove);
               const ok = await confirmDialog({
-                title: `Approuver ${ids.length} entrée(s)`,
-                description: "Confirmer l'approbation de la sélection ?",
-                confirmLabel: "Approuver",
+                title: t("approuver_entrees", { count: ids.length }),
+                description: t("confirmer_approbation_selection"),
+                confirmLabel: t("approuver"),
               });
               if (!ok) return;
               const r = await approveTimeClockAction({ ids });
-              if (r.success) { toast.success(`${r.data.approved} approuvée(s)`); setSelectedToApprove(new Set()); router.refresh(); }
+              if (r.success) { toast.success(t("approuvees_count", { count: r.data.approved })); setSelectedToApprove(new Set()); router.refresh(); }
               else toast.error(r.error || "");
             }}
           >
-            <CheckCircle2 className="h-4 w-4 mr-1.5" />Approuver la sélection
-          </Button>
+            <CheckCircle2 className="h-4 w-4 mr-1.5" />{t("timeclock_view_approuver_la_selection")}</Button>
           <Button
             size="sm"
             className="bg-red-500 hover:bg-red-600 text-white border-red-600"
             onClick={async () => {
               const ids = Array.from(selectedToApprove);
               const reason = await promptDialog({
-                title: `Rejeter ${ids.length} entrée(s)`,
-                label: "Motif du rejet (visible par l'employé)",
-                placeholder: "Ex : période chevauchée, heure incorrecte…",
+                title: t("rejeter_entrees", { count: ids.length }),
+                label: t("motif_rejet_visible_employe"),
+                placeholder: t("ex_periode_chevauchee_heure_incorrecte"),
                 multiline: true,
                 required: true,
               });
               if (!reason) return;
               const r = await rejectManyTimeClockAction({ ids, reason });
               if (r.success) {
-                toast.success(`${r.data.rejected} entrée(s) rejetée(s)${r.data.skipped > 0 ? ` (${r.data.skipped} ignorée(s))` : ""}`);
+                toast.success(t("entrees_rejetees", { count: r.data.rejected }) + (r.data.skipped > 0 ? t("ignorees_suffixe", { count: r.data.skipped }) : ""));
               } else {
                 toast.error(r.error);
               }
@@ -1858,10 +1843,9 @@ function TimeclockReviewView({
               router.refresh();
             }}
           >
-            <XCircle className="h-4 w-4 mr-1.5" />Rejeter la sélection
-          </Button>
+            <XCircle className="h-4 w-4 mr-1.5" />{t("timeclock_view_rejeter_la_selection")}</Button>
           <Button size="sm" variant="ghost" className="text-white hover:bg-white/20" onClick={() => setSelectedToApprove(new Set())}>
-            Désélectionner tout
+            {t("deselectionner_tout")}
           </Button>
         </div>
       )}
@@ -1899,16 +1883,16 @@ function TimeclockReviewView({
           onApproveWeek={async (empId, name) => {
             // Approves the DISPLAYED week, not the current one.
             const weekStartD = periodFrom ? startOfWeek(new Date(periodFrom)) : startOfWeek(new Date());
-            const weekLabel = `la semaine du ${weekStartD.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
+            const weekLabel = t("semaine_du", { date: weekStartD.toLocaleDateString(dateTag, { day: "numeric", month: "long" }) });
             const ok = await confirmDialog({
               title: `Approuver ${weekLabel}`,
-              description: `Approuver toutes les entrées soumises de ${weekLabel} pour ${name} ?`,
-              confirmLabel: "Approuver",
+              description: t("approuver_toutes_entrees_semaine_employe", { week: weekLabel, name }),
+              confirmLabel: t("approuver"),
             });
             if (!ok) return;
             const r = await approveWeekTimeClockAction({ adminId: empId, weekStart: isoDate(weekStartD) });
             if (r.success) {
-              toast.success(`${r.data.approved} entrée(s) approuvée(s) pour ${name}`);
+              toast.success(t("entrees_approuvees_pour", { count: r.data.approved, name }));
               router.refresh();
             } else toast.error(r.error || "");
           }}
@@ -1954,35 +1938,35 @@ function TimeclockReviewView({
           onApprove={async (ids) => {
             if (ids.length === 0) return;
             const r = await approveTimeClockAction({ ids });
-            if (r.success) { toast.success(`${r.data.approved} approuvée(s)`); router.refresh(); }
+            if (r.success) { toast.success(t("approuvees_count", { count: r.data.approved })); router.refresh(); }
             else toast.error(r.error || "");
           }}
           onApproveWeek={async (empId, name) => {
             // Approves the DISPLAYED week, not the current one.
             const weekStartD = periodFrom ? startOfWeek(new Date(periodFrom)) : startOfWeek(new Date());
-            const weekLabel = `la semaine du ${weekStartD.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
+            const weekLabel = t("semaine_du", { date: weekStartD.toLocaleDateString(dateTag, { day: "numeric", month: "long" }) });
             const ok = await confirmDialog({
               title: `Approuver ${weekLabel}`,
-              description: `Approuver toutes les entrées soumises de ${weekLabel} pour ${name} ?`,
-              confirmLabel: "Approuver",
+              description: t("approuver_toutes_entrees_semaine_employe", { week: weekLabel, name }),
+              confirmLabel: t("approuver"),
             });
             if (!ok) return;
             const r = await approveWeekTimeClockAction({ adminId: empId, weekStart: isoDate(weekStartD) });
             if (r.success) {
-              toast.success(`${r.data.approved} entrée(s) approuvée(s) pour ${name}`);
+              toast.success(t("entrees_approuvees_pour", { count: r.data.approved, name }));
               router.refresh();
             } else toast.error(r.error || "");
           }}
           onReject={async (ids) => {
             if (ids.length === 0) return;
             const reason = await promptDialog({
-              title: "Rejeter la journée",
-              label: "Motif du rejet",
-              placeholder: "L'employé verra ce message",
+              title: t("rejeter_journee"),
+              label: t("motif_rejet"),
+              placeholder: t("employe_verra_message"),
               multiline: true,
               required: true,
               variant: "destructive",
-              confirmLabel: "Rejeter",
+              confirmLabel: t("rejeter"),
             });
             if (!reason) return;
             let snap: number | null = null;
@@ -1995,10 +1979,10 @@ function TimeclockReviewView({
               }
             }
             if (rejected > 0 && snap != null) {
-              undoToast(snap, `${rejected} pointage(s) rejeté(s)`);
+              undoToast(snap, t("pointages_rejetes", { count: rejected }));
               router.refresh();
             } else if (rejected === 0) {
-              toast.error("Aucun rejet effectué");
+              toast.error(t("aucun_rejet_effectue"));
             }
           }}
         />
@@ -2045,40 +2029,40 @@ function TimeclockReviewView({
               onApprove={async (ids) => {
                 if (ids.length === 0) return;
                 const r = await approveTimeClockAction({ ids });
-                if (r.success) { toast.success(`${r.data.approved} approuvée(s)`); router.refresh(); }
+                if (r.success) { toast.success(t("approuvees_count", { count: r.data.approved })); router.refresh(); }
                 else toast.error(r.error || "");
               }}
               onReject={async (id) => {
                 const reason = await promptDialog({
-                  title: "Rejeter le pointage",
-                  label: "Motif du rejet",
-                  placeholder: "L'employé verra ce message",
+                  title: t("rejeter_pointage"),
+                  label: t("motif_rejet"),
+                  placeholder: t("employe_verra_message"),
                   multiline: true,
                   required: true,
                   variant: "destructive",
-                  confirmLabel: "Rejeter",
+                  confirmLabel: t("rejeter"),
                 });
                 if (!reason) return;
                 const r = await rejectTimeClockAction({ id, reason });
                 if (r.success) {
-                  undoToast(r.data.snapshotId, "Pointage rejeté");
+                  undoToast(r.data.snapshotId, t("pointage_rejete"));
                   router.refresh();
                 } else toast.error(r.error || "");
               }}
               onUnapprove={async (ids) => {
                 if (ids.length === 0) return;
                 const reason = await promptDialog({
-                  title: "Annuler l'approbation",
-                  label: "Motif (optionnel)",
-                  placeholder: "Pourquoi revenir sur cette décision ?",
+                  title: t("annuler_approbation"),
+                  label: t("motif_optionnel"),
+                  placeholder: t("pourquoi_revenir_decision"),
                   multiline: true,
                   required: false,
                   variant: "destructive",
-                  confirmLabel: "Annuler l'approbation",
+                  confirmLabel: t("annuler_approbation"),
                 });
                 if (reason === null) return;
                 const r = await unapproveTimeClockAction({ ids, reason: reason || undefined });
-                if (r.success) { toast.success(`${r.data.unapproved} approbation(s) annulée(s)`); router.refresh(); }
+                if (r.success) { toast.success(t("approbations_annulees", { count: r.data.unapproved })); router.refresh(); }
                 else toast.error(r.error || "");
               }}
               onEditEntry={(e) => setEditEntry(e)}
@@ -2123,54 +2107,55 @@ function OverviewTab({
   onPickTeam: (teamId: number | null) => void;
   onGoToApprove: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
         <StatBox
-          label="Total heures période"
+          label={t("total_heures_periode")}
           value={fmtDuration(overview.totalMin)}
           accent="emerald"
           icon={Clock}
         />
         <StatBox
-          label="À approuver"
+          label={t("approuver")}
           value={String(overview.toApproveCount)}
           accent={overview.toApproveCount > 0 ? "amber" : "emerald"}
-          hint={overview.toApproveCount > 0 ? "Cliquer pour ouvrir" : undefined}
+          hint={overview.toApproveCount > 0 ? t("cliquer_ouvrir") : undefined}
           onClick={overview.toApproveCount > 0 ? onGoToApprove : undefined}
           icon={ListChecks}
         />
-        <StatBox label="Approuvées" value={String(overview.approvedCount)} accent="emerald" icon={CheckCircle2} />
-        <StatBox label="Employés actifs" value={String(overview.activeAdmins)} accent="blue" icon={Users} />
+        <StatBox label={t("approuvees")} value={String(overview.approvedCount)} accent="emerald" icon={CheckCircle2} />
+        <StatBox label={t("employes_actifs")} value={String(overview.activeAdmins)} accent="blue" icon={Users} />
       </div>
 
       {adminKpis && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-          {/* "Missed today" folded in as a hint: it was a subset of the same data. */}
+          {/* Missed today folded in as a hint: it was a subset of the same data. */}
           <StatBox
-            label="Pointages oubliés (semaine)"
+            label={t("pointages_oublies_semaine")}
             value={String(adminKpis.forgottenThisWeekCount)}
             accent={adminKpis.forgottenThisWeekCount > 0 ? "red" : "emerald"}
             hint={adminKpis.forgottenThisWeekCount > 0
               ? (adminKpis.forgottenTodayCount > 0
-                ? `dont ${adminKpis.forgottenTodayCount} aujourd'hui · voir détail`
-                : "Voir détail")
+                ? t("dont_aujourd_hui_voir_detail", { count: adminKpis.forgottenTodayCount })
+                : t("voir_detail"))
               : undefined}
             onClick={adminKpis.forgottenThisWeekCount > 0 ? onGoToApprove : undefined}
             icon={AlertTriangle}
           />
-          <StatBox label="Heures sup." value={fmtDuration(adminKpis.overtimeMin)} accent="blue" icon={TrendingUp} />
+          <StatBox label={t("heures_sup")} value={fmtDuration(adminKpis.overtimeMin)} accent="blue" icon={TrendingUp} />
           <StatBox
-            label="Demandes modif."
+            label={t("demandes_modif")}
             value={String(adminKpis.pendingRequests)}
             accent={adminKpis.pendingRequests > 0 ? "amber" : "blue"}
             icon={Unlock}
           />
           <StatBox
-            label="Conformité pauses"
+            label={t("conformite_pauses")}
             value={`${adminKpis.complianceRate}%`}
             accent={adminKpis.complianceRate >= 90 ? "emerald" : "amber"}
-            hint="Loi CNESST"
+            hint={t("loi_cnesst")}
             icon={Coffee}
           />
         </div>
@@ -2180,49 +2165,49 @@ function OverviewTab({
         <div className="flex items-center gap-2 mb-3">
           <Users className="h-4 w-4 text-[#0F2D52]" />
           <span className="text-xs font-bold uppercase tracking-wider text-[#0F2D52]">
-            {isHr ? "Équipes" : "Mon équipe"}
+            {isHr ? t("equipes") : t("mon_equipe")}
           </span>
         </div>
         {overview.teamStats.length === 0 ? (
-          <p className="text-sm text-muted-foreground p-4 text-center">Aucune équipe à afficher.</p>
+          <p className="text-sm text-muted-foreground p-4 text-center">{t("aucune_equipe_afficher")}</p>
         ) : (
           <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {overview.teamStats.map((t) => (
+            {overview.teamStats.map((team) => (
               <div
-                key={`${t.teamId ?? "none"}-${t.teamName}`}
+                key={`${team.teamId ?? "none"}-${team.teamName}`}
                 className="rounded-lg border p-3 hover:border-[#0F2D52]/40 hover:bg-[#0F2D52]/5 transition-colors"
-                style={t.teamColor ? { borderLeftColor: t.teamColor, borderLeftWidth: 3 } : undefined}
+                style={team.teamColor ? { borderLeftColor: team.teamColor, borderLeftWidth: 3 } : undefined}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">{t.teamName}</p>
+                    <p className="text-sm font-semibold truncate">{team.teamName}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {t.memberCount} membre{t.memberCount > 1 ? "s" : ""}
+                      {team.memberCount} membre{team.memberCount > 1 ? "s" : ""}
                     </p>
                   </div>
-                  {t.toApproveCount > 0 && (
+                  {team.toApproveCount > 0 && (
                     <Badge className="text-[10px] bg-amber-100 text-amber-800 border-amber-300 shrink-0">
-                      {t.toApproveCount} à approuver
+                      {team.toApproveCount} à approuver
                     </Badge>
                   )}
                 </div>
                 <div className="mt-2 flex items-end justify-between gap-2">
                   <div>
                     <p className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                      Total période
+                      {t("total_periode")}
                     </p>
                     <p className="font-mono text-lg font-bold tabular-nums text-[#0F2D52]">
-                      {fmtDuration(t.totalMin)}
+                      {fmtDuration(team.totalMin)}
                     </p>
                   </div>
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-7 text-xs"
-                    onClick={() => onPickTeam(t.teamId)}
+                    onClick={() => onPickTeam(team.teamId)}
                   >
-                    Voir détails
+                    {t("voir_details")}
                     <ChevronRight className="h-3 w-3 ml-0.5" />
                   </Button>
                 </div>
@@ -2232,7 +2217,7 @@ function OverviewTab({
           {/* Hint when no real team exists yet */}
           {overview.teamStats.every((t) => t.teamId == null) && (
             <p className="text-[11px] text-muted-foreground mt-2 px-1">
-              Créez des équipes (Personnes › Équipes) pour voir les statistiques par équipe.
+              {t("creez_equipes_personnes_equipes_voir")}
             </p>
           )}
           </>
@@ -2267,6 +2252,7 @@ function ByEmployeeTab({
   periodTo?: string;
   overtimeWeeklyMin: number;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   // Progress bar vs the weekly threshold: only meaningful on a ~1 week period.
@@ -2281,7 +2267,7 @@ function ByEmployeeTab({
         <div className="px-3 py-2.5 border-b bg-muted/20 flex items-center gap-3 flex-wrap">
           <span className="text-xs font-bold uppercase tracking-wider text-[#0F2D52] inline-flex items-center gap-1.5 shrink-0">
             <Users className="h-4 w-4" />
-            Employés
+            {t("employes")}
             <Badge variant="outline" className="text-[10px] tabular-nums">{total}</Badge>
           </span>
           <div className="flex-1 min-w-[240px]">
@@ -2298,7 +2284,7 @@ function ByEmployeeTab({
         </div>
         {items.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            Aucun employé correspondant aux filtres.
+            {t("aucun_employe_correspondant_filtres")}
           </div>
         ) : (
           <>
@@ -2330,11 +2316,11 @@ function ByEmployeeTab({
                   </div>
                   <div className="flex items-center gap-1.5 flex-wrap mt-2">
                     {emp.status === "pending" && (
-                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">En attente</Badge>
+                      <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">{t("attente")}</Badge>
                     )}
                     {emp.status === "approved" && <ApprovedBadge />}
                     {emp.status === "none" && (
-                      <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">Aucune heure</Badge>
+                      <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">{t("aucune_heure")}</Badge>
                     )}
                     {emp.team && (
                       <Badge variant="outline" className="text-[10px]"
@@ -2355,8 +2341,7 @@ function ByEmployeeTab({
                       onKeyDown={(ev) => { if (ev.key === "Enter") { ev.stopPropagation(); onApproveWeek(emp.id, name); } }}
                       className="mt-2 inline-flex items-center justify-center gap-1.5 h-8 w-full rounded-md border border-emerald-300 text-emerald-700 text-xs hover:bg-emerald-50"
                     >
-                      <CheckCircle2 className="h-3.5 w-3.5" />Approuver la semaine
-                    </div>
+                      <CheckCircle2 className="h-3.5 w-3.5" />{t("timeclock_view_approuver_la_semaine")}</div>
                   )}
                 </button>
               );
@@ -2368,11 +2353,11 @@ function ByEmployeeTab({
               {/* Sticky header: keeps the columns readable at 50/100 rows per page */}
               <thead className="bg-muted/40 text-[10px] uppercase tracking-wider text-muted-foreground sticky top-0 z-10 shadow-[0_1px_0_0_hsl(var(--border))]">
                 <tr>
-                  <th className="text-left px-3 py-2 font-semibold">Employé</th>
-                  <th className="text-left px-3 py-2 font-semibold">Équipe</th>
-                  <th className="text-right px-3 py-2 font-semibold">Heures période</th>
-                  <th className="text-right px-3 py-2 font-semibold">À approuver</th>
-                  <th className="text-right px-3 py-2 font-semibold">Approuvées</th>
+                  <th className="text-left px-3 py-2 font-semibold">{t("employe")}</th>
+                  <th className="text-left px-3 py-2 font-semibold">{t("equipe")}</th>
+                  <th className="text-right px-3 py-2 font-semibold">{t("heures_periode")}</th>
+                  <th className="text-right px-3 py-2 font-semibold">{t("approuver")}</th>
+                  <th className="text-right px-3 py-2 font-semibold">{t("approuvees")}</th>
                   <th className="text-left px-3 py-2 font-semibold">{tc("status")}</th>
                   <th className="text-right px-3 py-2 font-semibold">{tc("actions")}</th>
                 </tr>
@@ -2394,7 +2379,7 @@ function ByEmployeeTab({
                           onFocusEmployee(emp.id);
                         }
                       }}
-                      aria-label={`Ouvrir le panneau d'approbation pour ${name}`}
+                      aria-label={t("ouvrir_panneau_approbation_pour", { name })}
                     >
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-2 min-w-0">
@@ -2450,20 +2435,20 @@ function ByEmployeeTab({
                       <td className="px-3 py-2.5">
                         {emp.status === "pending" && (
                           <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
-                            En attente
+                            {t("attente")}
                           </Badge>
                         )}
                         {emp.status === "approved" && <ApprovedBadge strong />}
                         {emp.status === "none" && (
                           <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">
-                            Aucune heure
+                            {t("aucune_heure")}
                           </Badge>
                         )}
                       </td>
                       <td className="px-3 py-2.5 text-right">
                         <div className="flex items-center gap-1 justify-end">
                           {emp.toApprove > 0 && (
-                            <ActionTooltip label="Approuver toute la semaine (raccourci)">
+                            <ActionTooltip label={t("approuver_toute_semaine_raccourci")}>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -2534,6 +2519,7 @@ type ApproveQueueData = {
 
 // WeekNav — URL-driven week stepper.
 function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: string }) {
+  const t = useTranslations("admin.timeclock");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -2571,16 +2557,16 @@ function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: str
 
   const label = isWeekPeriod
     ? `Semaine du ${ws.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })} au ${we.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`
-    : "Période personnalisée";
+    : t("periode_personnalisee");
   // Compact label for mobile.
   const labelShort = isWeekPeriod
     ? `${ws.getDate()} – ${we.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}`
-    : "Personnalisée";
+    : t("personnalisee");
 
   return (
     <div className="flex items-center gap-1.5 flex-wrap justify-center">
-      <ActionTooltip label="Semaine précédente">
-        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goWeek(-1)} aria-label="Semaine précédente">
+      <ActionTooltip label={t("semaine_precedente")}>
+        <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => goWeek(-1)} aria-label={t("semaine_precedente")}>
           <ChevronLeft className="h-4 w-4" />
         </Button>
       </ActionTooltip>
@@ -2593,16 +2579,16 @@ function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: str
             onClick={() => goWeek(Math.round((nowWs.getTime() - ws.getTime()) / (7 * 86400_000)))}
             className="text-[10px] text-muted-foreground hover:text-[#0F2D52] underline-offset-2 hover:underline"
           >
-            Revenir à cette semaine
+            {t("revenir_semaine")}
           </button>
         )}
       </div>
-      <ActionTooltip label="Semaine suivante">
+      <ActionTooltip label={t("semaine_suivante")}>
         <Button
           variant="outline" size="icon" className="h-8 w-8"
           onClick={() => goWeek(1)}
           disabled={isCurrentWeek}
-          aria-label="Semaine suivante"
+          aria-label={t("semaine_suivante")}
         >
           <ChevronRight className="h-4 w-4" />
         </Button>
@@ -2649,6 +2635,7 @@ function ToApproveTab(props: {
   onReject: (ids: number[]) => Promise<void>;
   overtimeWeeklyMin: number;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const {
     teams, departments, q, teamFilter, departmentFilter, statusFilter,
@@ -2728,9 +2715,9 @@ function ToApproveTab(props: {
       : await remindSubmitWeekAction({ adminId: emp.adminId });
     setBusyId(null);
     if (r.success) {
-      toast.success(`${emp.name} a été relancé(e).`);
+      toast.success(t("employe_relance", { name: emp.name }));
       setRemindedIds((s) => { const n = new Set(s); n.add(emp.adminId); return n; });
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   // Bulk reminder: everyone not reminded yet.
@@ -2738,9 +2725,9 @@ function ToApproveTab(props: {
     const targets = awaiting.filter((e) => !remindedIds.has(e.adminId));
     if (targets.length === 0) return;
     const ok = await confirmDialog({
-      title: "Relancer tous les employés",
-      description: `${targets.length} employé${targets.length > 1 ? "s" : ""} recevront une notification de rappel (soumission ou pointages manquants).`,
-      confirmLabel: "Relancer tous",
+      title: t("relancer_tous_employes"),
+      description: t("employes_recevront_notification_rappel", { count: targets.length }),
+      confirmLabel: t("relancer_tous"),
     });
     if (!ok) return;
     setBusyAll(true);
@@ -2755,15 +2742,15 @@ function ToApproveTab(props: {
       }
     }
     setBusyAll(false);
-    if (sent > 0) toast.success(`${sent} employé${sent > 1 ? "s" : ""} relancé${sent > 1 ? "s" : ""}.`);
-    else toast.error("Aucune relance envoyée");
+    if (sent > 0) toast.success(t("employes_relances", { count: sent }));
+    else toast.error(t("aucune_relance_envoyee"));
   };
 
   const approveRow = async (row: ApproveQueueRow) => {
     const ok = await confirmDialog({
-      title: `Approuver la semaine de ${row.name}`,
-      description: `${fmtDuration(row.pendingMin)} sur ${row.days} jour${row.days > 1 ? "s" : ""} seront approuvées.`,
-      confirmLabel: "Approuver",
+      title: t("approuver_semaine_employe", { name: row.name }),
+      description: t("duree_sur_jours_approuvees", { duration: fmtDuration(row.pendingMin), count: row.days }),
+      confirmLabel: t("approuver"),
     });
     if (!ok) return;
     setBusyId(row.adminId);
@@ -2782,14 +2769,14 @@ function ToApproveTab(props: {
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" size="sm" className="h-8 text-xs relative">
-                  <ListChecks className="h-3.5 w-3.5 mr-1.5" />Filtres
+                  <ListChecks className="h-3.5 w-3.5 mr-1.5" />{t("filtres")}
                   {hasActiveFilters && (
                     <span className="absolute -top-1 -right-1 h-2.5 w-2.5 rounded-full bg-amber-500" aria-hidden />
                   )}
                 </Button>
               </PopoverTrigger>
               <PopoverContent align="end" className="w-[320px] p-3">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2">Filtres</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2">{t("filtres")}</p>
                 <TimesheetFilters
                   teams={teams}
                   departments={departments}
@@ -2818,8 +2805,7 @@ function ToApproveTab(props: {
                   viewMode === "by-day" ? "bg-[#0F2D52] text-white" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
-                <Calendar className="h-3 w-3 inline-block mr-1" />Par jour
-              </button>
+                <Calendar className="h-3 w-3 inline-block mr-1" />{t("timeclock_view_par_jour")}</button>
             </div>
           </div>
         </div>
@@ -2829,8 +2815,11 @@ function ToApproveTab(props: {
         <div className="flex items-center gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-900 flex-wrap">
           <AlertTriangle className="h-4 w-4 shrink-0 text-amber-600" />
           <span className="flex-1 min-w-0">
-            <strong>{approveQueue.pastPendingCount}</strong> entrée{approveQueue.pastPendingCount > 1 ? "s" : ""} soumise{approveQueue.pastPendingCount > 1 ? "s" : ""} sur{" "}
-            <strong>{approveQueue.pastPendingWeeks}</strong> semaine{approveQueue.pastPendingWeeks > 1 ? "s" : ""} antérieure{approveQueue.pastPendingWeeks > 1 ? "s" : ""} attend{approveQueue.pastPendingCount > 1 ? "ent" : ""} encore une approbation.
+            {t.rich("entrees_anterieures_attente", {
+              count: approveQueue.pastPendingCount,
+              weeks: approveQueue.pastPendingWeeks,
+              b: (chunks) => <strong>{chunks}</strong>,
+            })}
           </span>
           <WeekNavBackButton periodFrom={periodFrom} targetWeek={approveQueue.pastPendingLatestWeek} />
         </div>
@@ -2842,18 +2831,18 @@ function ToApproveTab(props: {
             <Card className="p-10 text-center space-y-3">
               <CheckCircle2 className="h-12 w-12 mx-auto text-emerald-500" />
               <p className="text-sm font-semibold">
-                {ql ? "Aucun employé correspondant en attente" : "Tout est approuvé pour cette semaine"}
+                {ql ? t("aucun_employe_correspondant_attente") : t("tout_approuve_semaine")}
               </p>
               <p className="text-xs text-muted-foreground">
                 {ql
-                  ? "Aucune heure soumise en attente pour cette recherche sur la période affichée."
-                  : "Aucune heure soumise en attente de décision sur la période affichée."}
+                  ? t("aucune_heure_soumise_attente_recherche")
+                  : t("aucune_heure_soumise_attente_decision")}
               </p>
             </Card>
           ) : (
             <div className="space-y-2">
               <p className="text-xs text-muted-foreground px-1">
-                <strong className="text-[#0F2D52]">{queueRows.length}</strong> employé{queueRows.length > 1 ? "s" : ""} en attente de votre décision.
+                {t.rich("n_employes_attente_decision", { count: queueRows.length, b: (c) => <strong className="text-[#0F2D52]">{c}</strong> })}
               </p>
               {queueRows.map((row) => {
                 const overtimeMin = Math.max(0, row.weekTotalMin - overtimeWeeklyMin);
@@ -2894,7 +2883,7 @@ function ToApproveTab(props: {
                             className="h-9 text-xs"
                             onClick={() => onFocusEmployee(row.adminId)}
                           >
-                            Détail
+                            {t("detail")}
                           </Button>
                           <Button
                             size="sm"
@@ -2903,7 +2892,7 @@ function ToApproveTab(props: {
                             className="h-9 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                           >
                             <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                            Approuver
+                            {t("approuver_2")}
                           </Button>
                         </div>
                       </div>
@@ -2928,12 +2917,12 @@ function ToApproveTab(props: {
                     : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                   <Clock className="h-4 w-4 text-slate-500 shrink-0" />
                   <span className="text-sm text-slate-700 flex-1 min-w-0">
-                    En attente de soumission
+                    {t("attente_soumission")}
                     <span className="text-muted-foreground"> · {awaiting.length} employé{awaiting.length > 1 ? "s" : ""}</span>
                   </span>
                 </button>
                 {awaiting.some((e) => !remindedIds.has(e.adminId)) && (
-                  <ActionTooltip label="Envoyer un rappel à tous les employés pas encore relancés">
+                  <ActionTooltip label={t("envoyer_rappel_tous_employes_pas")}>
                     <Button
                       variant="outline"
                       size="sm"
@@ -2942,7 +2931,7 @@ function ToApproveTab(props: {
                       onClick={remindAll}
                     >
                       <Bell className="h-3 w-3 mr-1.5" />
-                      Relancer tous
+                      {t("relancer_tous")}
                     </Button>
                   </ActionTooltip>
                 )}
@@ -2958,8 +2947,8 @@ function ToApproveTab(props: {
                         <p className="text-sm font-medium truncate">{emp.name}</p>
                         <p className="text-[10px] text-muted-foreground truncate">
                           {emp.forgottenDays.length > 0
-                            ? `${emp.forgottenDays.length} jour${emp.forgottenDays.length > 1 ? "s" : ""} sans pointage`
-                            : `${emp.draftCount} entrée${emp.draftCount > 1 ? "s" : ""} en brouillon`}
+                            ? t("jours_sans_pointage", { count: emp.forgottenDays.length })
+                            : t("entrees_brouillon", { count: emp.draftCount })}
                         </p>
                       </div>
                       <Button
@@ -2970,7 +2959,7 @@ function ToApproveTab(props: {
                         onClick={() => remind(emp)}
                       >
                         <Bell className="h-3 w-3 mr-1.5" />
-                        {remindedIds.has(emp.adminId) ? "Relancé" : "Relancer"}
+                        {remindedIds.has(emp.adminId) ? t("relance") : t("relancer")}
                       </Button>
                     </div>
                   ))}
@@ -2992,7 +2981,7 @@ function ToApproveTab(props: {
                   : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />}
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span className="text-sm text-slate-700 flex-1">
-                  À jour
+                  {t("jour")}
                   <span className="text-muted-foreground"> · {upToDateRows.length} employé{upToDateRows.length > 1 ? "s" : ""} tout approuvé</span>
                 </span>
               </button>
@@ -3046,6 +3035,7 @@ function ToApproveTab(props: {
 // Past-weeks banner button: jumps straight to the most recent week that
 // still has pending entries, not just -7 days.
 function WeekNavBackButton({ periodFrom, targetWeek }: { periodFrom?: string; targetWeek: string | null }) {
+  const t = useTranslations("admin.timeclock");
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
@@ -3071,7 +3061,7 @@ function WeekNavBackButton({ periodFrom, targetWeek }: { periodFrom?: string; ta
         const [y, m, d] = targetWeek.split("-").map(Number);
         return `Semaine du ${new Date(y, m - 1, d).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
       })()
-    : "Semaine précédente";
+    : t("semaine_precedente");
   return (
     <Button variant="outline" size="sm" className="h-7 text-xs border-amber-300 text-amber-900 hover:bg-amber-100 shrink-0" onClick={go}>
       <ChevronLeft className="h-3 w-3 mr-1" />{label}
@@ -3108,6 +3098,7 @@ function DayOnlyView({
   onToggleSelectAll: (ids: number[], v: boolean) => void;
   onClickDay: (date: string) => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   // Invert forgottenDays: date -> Set<adminId>
   const missingByDay = useMemo(() => {
     const m = new Map<string, Set<number>>();
@@ -3219,7 +3210,7 @@ function DayOnlyView({
       <div className="divide-y">
         {buckets.length === 0 ? (
           <div className="p-8 text-center text-sm text-muted-foreground">
-            Aucune journée à afficher avec ces filtres.
+            {t("aucune_journee_afficher_filtres")}
           </div>
         ) : buckets.map((b) => (
           <DayOnlyRow
@@ -3245,6 +3236,7 @@ function DayOnlyRow({
   onToggleSelectAll: (ids: number[], v: boolean) => void;
   onClick: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const isToday = bucket.date === todayKey();
   const dateLabel = capFirst(new Date(bucket.date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
@@ -3265,16 +3257,16 @@ function DayOnlyRow({
           onClick();
         }
       }}
-      aria-label={`Voir détail de la journée ${dateLabel}`}
+      aria-label={t("voir_detail_journee", { date: dateLabel })}
     >
       {/* Only SUBMITTED entries of the day are selectable. */}
       {hasPending && (
         <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-          <ActionTooltip label={allSelected ? "Désélectionner le jour" : "Sélectionner tous les pointages soumis de ce jour"}>
+          <ActionTooltip label={allSelected ? t("deselectionner_jour") : t("selectionner_tous_pointages_soumis_jour")}>
             <Checkbox
               checked={allSelected ? true : someSelected ? "indeterminate" : false}
               onCheckedChange={(v) => onToggleSelectAll(bucket.pendingIds, v === true)}
-              aria-label={`Sélectionner les pointages soumis du ${dateLabel}`}
+              aria-label={t("selectionner_pointages_soumis_du", { date: dateLabel })}
             />
           </ActionTooltip>
         </div>
@@ -3309,15 +3301,15 @@ function DayOnlyRow({
         </p>
         <div className="hidden sm:flex items-center gap-2 flex-wrap mt-1">
           {bucket.uniqueAdminCount > 0 && (
-            <ActionTooltip label="Employés ayant au moins 1 pointage">
+            <ActionTooltip label={t("employes_ayant_moins_1_pointage")}>
               <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1 cursor-help">
                 <UserIcon className="h-3 w-3" />
-                {bucket.uniqueAdminCount} employé{bucket.uniqueAdminCount > 1 ? "s" : ""} pointé{bucket.uniqueAdminCount > 1 ? "s" : ""}
+                {t("employes_pointes", { count: bucket.uniqueAdminCount })}
               </span>
             </ActionTooltip>
           )}
           {bucket.approvedCount > 0 && (
-            <ActionTooltip label={`${bucket.approvedCount} pointage(s) validé(s)`}>
+            <ActionTooltip label={t("pointages_valides", { count: bucket.approvedCount })}>
               <Badge className="text-[10px] bg-emerald-100 text-emerald-900 border-emerald-300 cursor-help">
                 <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
                 {bucket.approvedCount} validé{bucket.approvedCount > 1 ? "s" : ""}
@@ -3325,7 +3317,7 @@ function DayOnlyRow({
             </ActionTooltip>
           )}
           {bucket.submittedCount > 0 && (
-            <ActionTooltip label={`${bucket.submittedCount} pointage(s) soumis — à approuver`}>
+            <ActionTooltip label={t("pointages_soumis_approuver", { count: bucket.submittedCount })}>
               <Badge className="text-[10px] text-blue-700 border-blue-300 bg-blue-50 cursor-help">
                 <Send className="h-2.5 w-2.5 mr-1" />
                 {bucket.submittedCount} soumis
@@ -3333,7 +3325,7 @@ function DayOnlyRow({
             </ActionTooltip>
           )}
           {bucket.pendingCount > 0 && (
-            <ActionTooltip label={`${bucket.pendingCount} brouillon(s) en attente de soumission par l'employé`}>
+            <ActionTooltip label={t("brouillons_attente_soumission", { count: bucket.pendingCount })}>
               <Badge className="text-[10px] text-amber-800 border-amber-300 bg-amber-50 cursor-help">
                 <AlertCircle className="h-2.5 w-2.5 mr-1" />
                 {bucket.pendingCount} brouillon{bucket.pendingCount > 1 ? "s" : ""}
@@ -3341,7 +3333,7 @@ function DayOnlyRow({
             </ActionTooltip>
           )}
           {bucket.missingAdminCount > 0 && (
-            <ActionTooltip label={`${bucket.missingAdminCount} employé(s) sans pointage ce jour`}>
+            <ActionTooltip label={t("employes_sans_pointage_jour", { count: bucket.missingAdminCount })}>
               <Badge className="text-[10px] text-red-700 border-red-300 bg-red-50 cursor-help">
                 <AlertTriangle className="h-2.5 w-2.5 mr-1" />
                 {bucket.missingAdminCount} sans pointage
@@ -3349,7 +3341,7 @@ function DayOnlyRow({
             </ActionTooltip>
           )}
           {bucket.rejectedCount > 0 && (
-            <ActionTooltip label={`${bucket.rejectedCount} pointage(s) rejeté(s)`}>
+            <ActionTooltip label={t("pointages_rejetes_2", { count: bucket.rejectedCount })}>
               <Badge className="text-[10px] text-violet-700 border-violet-300 bg-violet-50 cursor-help">
                 <XCircle className="h-2.5 w-2.5 mr-1" />
                 {bucket.rejectedCount} rejeté{bucket.rejectedCount > 1 ? "s" : ""}
@@ -3362,7 +3354,7 @@ function DayOnlyRow({
         <p className="font-mono text-sm font-bold tabular-nums text-[#0F2D52]">
           {fmtDuration(bucket.totalWorkMin)}
         </p>
-        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Total</p>
+        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{t("total")}</p>
       </div>
       <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
     </div>
@@ -3383,6 +3375,7 @@ function Pagination({
   totalPages: number;
   onPage: (n: number) => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
@@ -3416,7 +3409,7 @@ function Pagination({
           {start}–{end} sur {total}
         </p>
         <Select value={String(pageSize)} onValueChange={(v) => setPageSize(Number(v))}>
-          <SelectTrigger className="h-8 w-[110px] text-xs" aria-label="Taille de page">
+          <SelectTrigger className="h-8 w-[110px] text-xs" aria-label={t("taille_page")}>
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -3489,6 +3482,7 @@ function SubmitWeekDialog({
   weekEntries: Entry[];
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const [pending, setPending] = useState(false);
 
@@ -3530,7 +3524,7 @@ function SubmitWeekDialog({
     const r = await submitWeekTimeClocksAction({ weekStart: ws.toISOString() });
     setPending(false);
     if (r.success) {
-      toast.success(`${r.data.submitted} entrée(s) soumise(s) · ${fmtDuration(r.data.workMin)} travaillées`);
+      toast.success(t("entrees_soumises_duree", { count: r.data.submitted, duration: fmtDuration(r.data.workMin) }));
       onSaved();
     } else toast.error(r.error || "");
   };
@@ -3543,29 +3537,28 @@ function SubmitWeekDialog({
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Send className="h-4 w-4" />Soumettre la semaine
-            </DialogTitle>
+              <Send className="h-4 w-4" />{t("timeclock_view_soumettre_la_semaine")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Les heures travaillées seront verrouillées et les administrateurs notifiés.
+              {t("heures_travaillees_seront_verrouillees_administrateurs")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4 max-h-[70vh] overflow-y-auto">
-          <FormSection icon={Clock} title="Récapitulatif de la semaine">
+          <FormSection icon={Clock} title={t("recapitulatif_semaine")}>
             <div className="rounded-lg border-2 border-[#0F2D52] bg-gradient-to-br from-[#0F2D52]/5 to-[#0F2D52]/10 p-4">
-              <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Heures travaillées</p>
+              <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">{t("heures_travaillees")}</p>
               <p className="font-mono text-3xl font-bold text-[#0F2D52] tabular-nums mt-1">{workHours}h</p>
-              <p className="text-xs text-muted-foreground mt-1">À soumettre pour la paie</p>
+              <p className="text-xs text-muted-foreground mt-1">{t("soumettre_paie")}</p>
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs">
               <div className="rounded border p-2 bg-muted/30">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Pauses</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("pauses")}</p>
                 <p className="font-mono font-bold">{fmtDuration(buckets.breakMin)}</p>
-                <p className="text-[10px] text-muted-foreground italic">info — non soumis</p>
+                <p className="text-[10px] text-muted-foreground italic">{t("info_non_soumis")}</p>
               </div>
               <div className="rounded border p-2 bg-muted/30">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Congés payés</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("conges_payes")}</p>
                 <p className="font-mono font-bold">{fmtDuration(buckets.leaveMin)}</p>
                 <p className="text-[10px] text-muted-foreground italic">auto</p>
               </div>
@@ -3575,7 +3568,7 @@ function SubmitWeekDialog({
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || buckets.workMin === 0}>
-            {pending ? "..." : "Soumettre"}
+            {pending ? "..." : t("soumettre")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -3594,6 +3587,7 @@ function ForceCloseDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const [when, setWhen] = useState(toLocalInput(new Date()));
   const [pending, setPending] = useState(false);
@@ -3610,7 +3604,7 @@ function ForceCloseDialog({
       when: new Date(when).toISOString(),
     });
     setPending(false);
-    if (r.success) { toast.success("Pointage fermé"); onSaved(); }
+    if (r.success) { toast.success(t("pointage_ferme")); onSaved(); }
     else toast.error(r.error || "");
   };
 
@@ -3628,19 +3622,19 @@ function ForceCloseDialog({
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
-          <FormSection icon={Clock} title="Fermeture du pointage">
-            <Field label="Heure de fermeture" required>
+          <FormSection icon={Clock} title={t("fermeture_pointage")}>
+            <Field label={t("heure_fermeture")} required>
               <TimePicker value={when} onChange={setWhen} minDate={minDate} />
             </Field>
             <p className="text-[11px] text-muted-foreground">
-              L&apos;employé sera notifié. Une note d&apos;audit sera ajoutée à l&apos;entrée.
+              {t("apos_employe_sera_notifie_note")}
             </p>
           </FormSection>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button variant="destructive" onClick={submit} disabled={pending}>
-            {pending ? "..." : "Fermer le pointage"}
+            {pending ? "..." : t("fermer_pointage")}
           </Button>
         </DialogFooter>
       </DialogContent>

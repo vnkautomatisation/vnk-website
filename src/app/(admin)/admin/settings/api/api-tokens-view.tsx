@@ -44,12 +44,13 @@ const SCOPE_GROUPS = [
 ];
 
 export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
+  const t = useTranslations("admin.api_tokens");
   const tc = useTranslations("common");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
 
-  // Formulaire création
+
   const [name, setName] = useState("");
   const [selectedScopes, setSelectedScopes] = useState<Set<string>>(new Set());
   const [expiresInDays, setExpiresInDays] = useState<string>("90");
@@ -76,7 +77,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
       });
       if (r.success) {
         setCreatedToken(r.data.token);
-        toast.success("Token créé");
+        toast.success(t("token_cree"));
         router.refresh();
       } else {
         toast.error(r.error);
@@ -92,24 +93,24 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
     setExpiresInDays("90");
   };
 
-  const copyToken = (t: string) => {
-    navigator.clipboard.writeText(t);
-    toast.success("Token copié");
+  const copyToken = (token: string) => {
+    navigator.clipboard.writeText(token);
+    toast.success(t("token_copie"));
   };
 
   const handleRevoke = (id: number) => {
     startTransition(async () => {
       const r = await revokeApiTokenAction({ id });
-      if (r.success) { toast.success("Token révoqué"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("token_revoque")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
       setConfirmRevoke(null);
     });
   };
   const handleDelete = (id: number) => {
     startTransition(async () => {
       const r = await deleteApiTokenAction({ id });
-      if (r.success) { toast.success("Token supprimé"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("token_supprime")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
       setConfirmDelete(null);
     });
   };
@@ -124,78 +125,75 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
           <Key className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Tokens d&apos;API personnels</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("tokens_apos_api_personnels")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
             {active.length} actif{active.length > 1 ? "s" : ""} sur {tokens.length} · pour automatiser ou intégrer le portail
           </p>
         </div>
         <Button onClick={() => setCreating(true)} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-          <Plus className="h-4 w-4 mr-1.5" />Nouveau token
+          <Plus className="h-4 w-4 mr-1.5" />{t("nouveau_token")}
         </Button>
       </div>
 
-      {/* Doc rapide */}
+
       <Card className="border-blue-200 bg-blue-50">
         <CardContent className="p-4 flex items-start gap-3">
           <Code className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
           <div className="text-xs">
-            <p className="font-semibold text-blue-900 mb-1">Utilisation</p>
-            <p className="text-blue-800 mb-2">
-              Ajoutez le token en header HTTP <code className="bg-white px-1 rounded font-mono">Authorization: Bearer vnk_pat_...</code>
+            <p className="font-semibold text-blue-900 mb-1">{t("utilisation")}</p>
+            <p className="text-blue-800 mb-2">{t("api_tokens_view_ajoutez_le_token_en_header_http")}<code className="bg-white px-1 rounded font-mono">{t("authorization_bearer_vnk_pat")}</code>
             </p>
-            <p className="text-blue-800">
-              Endpoint de base : <code className="bg-white px-1 rounded font-mono">https://vnkautomatisation.ca/api</code>
+            <p className="text-blue-800">{t("api_tokens_view_endpoint_de_base")}<code className="bg-white px-1 rounded font-mono">https://vnkautomatisation.ca/api</code>
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Liste tokens */}
+
       <Card>
         <div className="divide-y">
           {tokens.length === 0 ? (
             <p className="p-8 text-center text-sm text-muted-foreground">
-              Aucun token créé. Créez-en un pour intégrer un système externe.
+              {t("aucun_token_cree_creez_integrer")}
             </p>
           ) : (
-            tokens.map((t) => {
-              const isRevoked = !!t.revokedAt;
-              const isExpired = t.expiresAt && new Date(t.expiresAt) < new Date();
+            tokens.map((token) => {
+              const isRevoked = !!token.revokedAt;
+              const isExpired = token.expiresAt && new Date(token.expiresAt) < new Date();
               const isInactive = isRevoked || isExpired;
               return (
-                <div key={t.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/30", isInactive && "opacity-60")}>
+                <div key={token.id} className={cn("flex items-start gap-4 p-4 hover:bg-muted/30", isInactive && "opacity-60")}>
                   <div className={cn("h-9 w-9 rounded-lg flex items-center justify-center shrink-0 text-white", isInactive ? "bg-gray-400" : "bg-purple-600")}>
                     <Key className="h-4 w-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <p className="font-semibold text-sm">{t.name}</p>
-                      {isRevoked && <Badge className="text-[10px] bg-red-600 hover:bg-red-600">Révoqué</Badge>}
-                      {isExpired && !isRevoked && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">Expiré</Badge>}
+                      <p className="font-semibold text-sm">{token.name}</p>
+                      {isRevoked && <Badge className="text-[10px] bg-red-600 hover:bg-red-600">{t("revoque")}</Badge>}
+                      {isExpired && !isRevoked && <Badge className="text-[10px] bg-gray-500 hover:bg-gray-500">{t("expire")}</Badge>}
                     </div>
-                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5">{t.prefix}••••••••</p>
+                    <p className="text-[10px] font-mono text-muted-foreground mt-0.5">{token.prefix}••••••••</p>
                     <div className="flex gap-1 mt-1.5 flex-wrap">
-                      {t.scopes.map((s) => (
+                      {token.scopes.map((s) => (
                         <Badge key={s} variant="outline" className="text-[9px] font-mono">{s}</Badge>
                       ))}
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                      <span>Créé {new Date(t.createdAt).toLocaleDateString("fr-CA")}</span>
-                      {t.expiresAt && <span>Expire {new Date(t.expiresAt).toLocaleDateString("fr-CA")}</span>}
-                      {t.lastUsedAt ? (
-                        <span>Utilisé {new Date(t.lastUsedAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}{t.lastUsedIp && ` depuis ${t.lastUsedIp}`}</span>
+                      <span>Créé {new Date(token.createdAt).toLocaleDateString("fr-CA")}</span>
+                      {token.expiresAt && <span>Expire {new Date(token.expiresAt).toLocaleDateString("fr-CA")}</span>}
+                      {token.lastUsedAt ? (
+                        <span>Utilisé {new Date(token.lastUsedAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}{token.lastUsedIp && ` depuis ${token.lastUsedIp}`}</span>
                       ) : (
-                        <span>Jamais utilisé</span>
+                        <span>{t("jamais_utilise")}</span>
                       )}
                     </div>
                   </div>
                   <div className="flex gap-1 shrink-0">
                     {!isInactive && (
-                      <Button size="sm" variant="outline" onClick={() => setConfirmRevoke({ id: t.id, name: t.name })}>
-                        <Ban className="h-3.5 w-3.5 mr-1.5" />Révoquer
-                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setConfirmRevoke({ id: token.id, name: token.name })}>
+                        <Ban className="h-3.5 w-3.5 mr-1.5" />{t("api_tokens_view_revoquer")}</Button>
                     )}
-                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete({ id: t.id, name: t.name })} className="text-red-600">
+                    <Button size="sm" variant="ghost" onClick={() => setConfirmDelete({ id: token.id, name: token.name })} className="text-red-600">
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
@@ -206,7 +204,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
         </div>
       </Card>
 
-      {/* Dialog création */}
+
       <Dialog open={creating} onOpenChange={(o) => !o && closeCreate()}>
         <DialogContent className="p-0 gap-0 max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
           <div className="bg-[#0F2D52] text-white px-6 py-4 flex items-center gap-3">
@@ -215,9 +213,9 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
             </div>
             <div>
               <DialogTitle className="text-white text-base">
-                {createdToken ? "Token créé" : "Nouveau token API"}
+                {createdToken ? t("token_cree") : t("nouveau_token_api")}
               </DialogTitle>
-              <p className="text-xs text-white/70">Accès personnel à l&apos;API REST</p>
+              <p className="text-xs text-white/70">{t("acces_personnel_apos_api_rest")}</p>
             </div>
           </div>
 
@@ -227,15 +225,13 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
                   <div>
-                    <p className="font-semibold text-sm text-amber-900">Token à copier maintenant</p>
-                    <p className="text-xs text-amber-800 mt-1">
-                      Ce token donne accès à votre compte. <strong>Il ne sera plus jamais affiché.</strong> Conservez-le dans un gestionnaire de mots de passe ou des variables d&apos;environnement.
-                    </p>
+                    <p className="font-semibold text-sm text-amber-900">{t("token_copier_maintenant")}</p>
+                    <p className="text-xs text-amber-800 mt-1">{t("api_tokens_view_ce_token_donne_acces_a_votre_compte")}<strong>{t("il_ne_sera_plus_jamais")}</strong>{t("api_tokens_view_conservez_le_dans_un_gestionnaire_de_mots")}</p>
                   </div>
                 </div>
               </div>
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Token</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("token")}</Label>
                 <div className="flex gap-2 mt-1.5">
                   <code className="flex-1 text-xs font-mono bg-muted px-3 py-2 rounded border break-all">{createdToken}</code>
                   <Button onClick={() => copyToken(createdToken)} variant="outline">
@@ -245,35 +241,34 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
               </div>
               <div className="flex justify-end">
                 <Button onClick={closeCreate} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                  <ShieldCheck className="h-4 w-4 mr-1.5" />J&apos;ai copié le token
-                </Button>
+                  <ShieldCheck className="h-4 w-4 mr-1.5" />{t("api_tokens_view_j_ai_copie_le_token")}</Button>
               </div>
             </div>
           ) : (
             <>
               <div className="flex-1 overflow-y-auto p-6 space-y-4">
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Nom *</Label>
-                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ex : Intégration Zapier maison" className="mt-1" />
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("nom")}</Label>
+                  <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("ex_integration_zapier_maison")} className="mt-1" />
                 </div>
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Expiration</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("expiration")}</Label>
                   <Select value={expiresInDays} onValueChange={setExpiresInDays}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="7">7 jours</SelectItem>
-                      <SelectItem value="30">30 jours</SelectItem>
-                      <SelectItem value="90">90 jours (recommandé)</SelectItem>
-                      <SelectItem value="180">6 mois</SelectItem>
-                      <SelectItem value="365">1 an</SelectItem>
-                      <SelectItem value="never">Sans expiration</SelectItem>
+                      <SelectItem value="7">{t("7_jours")}</SelectItem>
+                      <SelectItem value="30">{t("30_jours")}</SelectItem>
+                      <SelectItem value="90">{t("90_jours_recommande")}</SelectItem>
+                      <SelectItem value="180">{t("6_mois")}</SelectItem>
+                      <SelectItem value="365">{t("1_an")}</SelectItem>
+                      <SelectItem value="never">{t("sans_expiration")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                      Permissions (scopes)
+                      {t("permissions_scopes")}
                     </Label>
                     <Badge variant="outline" className="text-[10px]">{selectedScopes.size}/{SCOPES.length}</Badge>
                   </div>
@@ -297,7 +292,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
               <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
                 <Button variant="outline" onClick={closeCreate} disabled={pending}>{tc("cancel")}</Button>
                 <Button onClick={handleCreate} disabled={pending || !name.trim() || selectedScopes.size === 0} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-                  {pending ? "..." : "Créer le token"}
+                  {pending ? "..." : t("creer_token")}
                 </Button>
               </div>
             </>
@@ -309,8 +304,8 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
         open={!!confirmRevoke}
         onOpenChange={(o) => !o && setConfirmRevoke(null)}
         title={`Révoquer ${confirmRevoke?.name} ?`}
-        description="Le token cessera immédiatement de fonctionner. L'historique reste consultable."
-        confirmLabel="Révoquer"
+        description={t("token_cessera_immediatement_fonctionner_historique")}
+        confirmLabel={t("revoquer")}
         variant="destructive"
         onConfirm={() => confirmRevoke && handleRevoke(confirmRevoke.id)}
       />
@@ -318,7 +313,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
         open={!!confirmDelete}
         onOpenChange={(o) => !o && setConfirmDelete(null)}
         title={`Supprimer définitivement ${confirmDelete?.name} ?`}
-        description="L'historique sera perdu. Préférez la révocation pour conserver la trace."
+        description={t("historique_sera_perdu_preferez_revocation")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={() => confirmDelete && handleDelete(confirmDelete.id)}

@@ -66,15 +66,15 @@ export function AdminTopbar({
           </div>
           <div className="block min-w-0">
             <div className="text-xs sm:text-sm font-bold leading-tight text-white truncate">
-              Automatisation Inc.
+              {t("automatisation_inc")}
             </div>
             <div className="text-[8px] sm:text-[9px] text-white/60 tracking-[0.12em] sm:tracking-[0.15em] font-medium truncate">
-              VALUE · NETWORK · KNOWLEDGE
+              {t("value_network_knowledge")}
             </div>
           </div>
         </NextLink>
 
-        {/* Actions droite */}
+
         <div className="flex items-center gap-2">
           {overdueCount > 0 && (
             <div className="hidden md:flex items-center gap-2 text-xs px-3 py-1.5 rounded-md bg-red-500/20 text-red-200 font-medium">
@@ -116,7 +116,7 @@ export function AdminTopbar({
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 rounded-full p-0.5 hover:bg-white/10 transition-colors" aria-label="Menu utilisateur">
+              <button className="flex items-center gap-2 rounded-full p-0.5 hover:bg-white/10 transition-colors" aria-label={t("menu_utilisateur")}>
                 <Avatar className="h-8 w-8 ring-2 ring-white/20">
                   {adminAvatarUrl && (
                     <AvatarImage src={adminAvatarUrl} alt={adminName} className="object-cover" />
@@ -128,7 +128,7 @@ export function AdminTopbar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64 p-0 overflow-hidden">
-              {/* Header navy gradient avec avatar + identité */}
+
               <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 py-3">
                 <div className="flex items-center gap-3">
                   <Avatar className="h-11 w-11 ring-2 ring-white/30 shrink-0">
@@ -146,23 +146,23 @@ export function AdminTopbar({
                 </div>
               </div>
 
-              {/* Items principaux */}
+
               <div className="py-1">
                 <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                   <NextLink href="/admin/profile">
                     <User className="h-4 w-4 mr-2 text-[#0F2D52]" />
-                    Mon profil
+                    {t("mon_profil")}
                   </NextLink>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                   <NextLink href="/admin/settings">
                     <Settings className="h-4 w-4 mr-2 text-[#0F2D52]" />
-                    Paramètres
+                    {t("parametres")}
                   </NextLink>
                 </DropdownMenuItem>
               </div>
 
-              {/* ─── Actions cachées en mobile : refresh / langue / public ─── */}
+
               <div className="sm:hidden">
                 <DropdownMenuSeparator className="my-0" />
                 <div className="py-1">
@@ -173,19 +173,19 @@ export function AdminTopbar({
                   <DropdownMenuItem asChild className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                     <a href="/" target="_blank" rel="noopener">
                       <ExternalLink className="h-4 w-4 mr-2 text-[#0F2D52]" />
-                      Voir le site public
+                      {t("voir_site_public")}
                     </a>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={toggleLocale} disabled={pending} className="cursor-pointer focus:bg-[#0F2D52]/5 focus:text-[#0F2D52]">
                     <span className="h-4 w-4 mr-2 inline-flex items-center justify-center text-[10px] font-bold border border-[#0F2D52] text-[#0F2D52] rounded">
                       {otherLabel}
                     </span>
-                    Passer en {currentLocale === "fr" ? "Anglais" : "Français"}
+                    Passer en {currentLocale === "fr" ? t("anglais") : t("francais")}
                   </DropdownMenuItem>
                 </div>
               </div>
 
-              {/* Déconnexion : section dédiée fond rouge subtil */}
+
               <DropdownMenuSeparator className="my-0" />
               <div className="py-1 bg-red-50/40">
                 <DropdownMenuItem
@@ -193,7 +193,7 @@ export function AdminTopbar({
                   className="cursor-pointer text-red-600 focus:text-red-700 focus:bg-red-100 font-medium"
                 >
                   <LogOut className="h-4 w-4 mr-2" />
-                  Déconnexion
+                  {t("deconnexion")}
                 </DropdownMenuItem>
               </div>
             </DropdownMenuContent>

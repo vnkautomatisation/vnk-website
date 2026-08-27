@@ -1,11 +1,15 @@
 // Page Organigramme — visualisation arborescente : équipes (parents/enfants) + hiérarchie managériale.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { OrgChartView } from "./org-chart-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Organigramme" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_organigramme") };
+}
 
 export default async function OrganigrammePage() {
   const session = await auth();

@@ -11,6 +11,7 @@
 // Appel attendu : Railway cron une fois par jour.
 // ─────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
@@ -25,10 +26,11 @@ function daysAgo(n: number): Date {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   // Auth via CRON_SECRET
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json({ error: "CRON_SECRET non configuré" }, { status: 500 });
+    return NextResponse.json({ error: t("cron_secret_non_configure") }, { status: 500 });
   }
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) {
@@ -101,8 +103,9 @@ export async function POST(req: Request) {
 
 // GET pour usage manuel/test (renvoie le compte qui SERAIT supprimé sans rien faire)
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const secret = process.env.CRON_SECRET;
-  if (!secret) return NextResponse.json({ error: "CRON_SECRET non configuré" }, { status: 500 });
+  if (!secret) return NextResponse.json({ error: t("cron_secret_non_configure") }, { status: 500 });
   const auth = req.headers.get("authorization");
   if (auth !== `Bearer ${secret}`) return unauthorizedJson();
 

@@ -2,6 +2,7 @@
 // POST /api/payments/export?format=... avec body { paymentIds: number[] } pour exporter une selection
 // Genere un fichier d'export comptable pour les paiements de la periode (ou de la selection)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -35,7 +36,7 @@ async function loadPayments(where: Record<string, unknown>) {
   });
 }
 
-function buildBody(payments: PaymentWithRelations[], format: string): { body: string; filename: string; suffix: string } {
+function buildBody(payments: PaymentWithRelations[], format: string, t: (k: string) => string): { body: string; filename: string; suffix: string } {
   if (format === "quickbooks") {
     const rows: (string | number | Date | null | undefined)[][] = [
       ["Date", "Type", "Num", "Name", "Memo", "Account", "Amount", "Class"],
@@ -56,7 +57,7 @@ function buildBody(payments: PaymentWithRelations[], format: string): { body: st
   }
   if (format === "sage") {
     const rows: (string | number | Date | null | undefined)[][] = [
-      ["Date", "Numéro de transaction", "Numéro de facture", "Nom du client", "Description", "Méthode", "Montant HT", "TPS", "TVQ", "Montant total", "Devise", "Compte"],
+      [t("hdr_date"), t("hdr_numero_de_transaction"), t("hdr_numero_de_facture"), t("hdr_nom_du_client"), t("hdr_description"), t("hdr_methode"), t("hdr_montant_ht"), t("hdr_tps"), t("hdr_tvq"), t("hdr_montant_total"), t("hdr_devise"), t("hdr_compte")],
     ];
     payments.forEach((p) => {
       const inv = p.invoice;
@@ -101,7 +102,7 @@ function buildBody(payments: PaymentWithRelations[], format: string): { body: st
   }
   // CSV standard
   const rows: (string | number | Date | null | undefined)[][] = [
-    ["Date", "ID", "Facture", "Client", "Entreprise", "Description", "Méthode", "Montant HT", "TPS", "TVQ", "Total TTC", "Devise", "Statut", "Stripe ID", "Catégorie", "Réconcilié", "Exporté", "Comptable"],
+    [t("hdr_date"), t("hdr_id"), t("hdr_facture"), t("hdr_client"), t("hdr_entreprise"), t("hdr_description"), t("hdr_methode"), t("hdr_montant_ht"), t("hdr_tps"), t("hdr_tvq"), t("hdr_total_ttc"), t("hdr_devise"), t("hdr_statut"), t("hdr_stripe_id"), t("hdr_categorie"), t("hdr_reconcilie"), t("hdr_exporte"), t("hdr_comptable")],
   ];
   payments.forEach((p) => {
     const inv = p.invoice;
@@ -159,6 +160,7 @@ function csvResponse(body: string, filename: string): Response {
 }
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -189,13 +191,14 @@ export async function GET(req: Request) {
   if (onlyNotExported) where.exportedAt = null;
 
   const payments = await loadPayments(where);
-  const { body, filename, suffix } = buildBody(payments, format);
+  const { body, filename, suffix } = buildBody(payments, format, t);
   const period = `${from ?? "all"}_${to ?? "now"}`;
   await markExportedAndAudit(payments, suffix, session.user.adminId ?? null, session.user.email ?? null);
   return csvResponse(body, `${filename}_${safeFileName(period)}.csv`);
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -217,7 +220,7 @@ export async function POST(req: Request) {
   }
 
   const payments = await loadPayments({ id: { in: paymentIds } });
-  const { body: csv, filename, suffix } = buildBody(payments, format);
+  const { body: csv, filename, suffix } = buildBody(payments, format, t);
   await markExportedAndAudit(payments, suffix, session.user.adminId ?? null, session.user.email ?? null);
   return csvResponse(csv, `${filename}_selection_${new Date().toISOString().slice(0, 10)}.csv`);
 }

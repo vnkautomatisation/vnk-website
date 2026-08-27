@@ -71,6 +71,7 @@ type DraftData = {
 };
 
 export function DocumentDraftEditor({ open, draftId, onClose, onSent }: DocumentDraftEditorProps) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [draft, setDraft] = useState<DraftData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -83,7 +84,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pdfStamp, setPdfStamp] = useState<number>(() => Date.now());
 
-  // ─── Charge le brouillon ─────────────────────────────────
+
   useEffect(() => {
     if (!open || !draftId) return;
     let cancelled = false;
@@ -114,7 +115,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     return () => { cancelled = true; };
   }, [open, draftId, onClose]);
 
-  // ─── Parse champs ─────────────────────────────────────────
+
   const structure = useMemo(
     () => (draft ? parseFillFields(draft.template.bodyMarkdown) : null),
     [draft],
@@ -126,11 +127,11 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     [structure, values],
   );
 
-  // ─── Autosave debounced ────────────────────────────────────
+
   const saveTimerRef = useRef<NodeJS.Timeout | null>(null);
-  // Miroir des dernieres valeurs : le timer debounce capture un closure fige
-  // au moment du scheduling (une frappe en retard) — on lit donc les refs au
-  // moment du save pour persister l'etat REEL, pas le snapshot.
+
+
+
   const latestRef = useRef({ values, notes, scheduledFor });
   latestRef.current = { values, notes, scheduledFor };
   const persistDraft = useCallback(async (silent: boolean = false) => {
@@ -146,7 +147,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
       });
       setSavedAt(new Date());
       setPdfStamp(Date.now()); // refresh PDF iframe
-      if (!silent) toast.success("Brouillon enregistre");
+      if (!silent) toast.success(t("brouillon_enregistre"));
     } catch (e) {
       toast.error(`Erreur sauvegarde : ${(e as Error).message}`);
     } finally {
@@ -159,9 +160,9 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     saveTimerRef.current = setTimeout(() => persistDraft(true), 1500);
   }, [persistDraft]);
 
-  // Fermeture : flush un autosave en attente (sinon les 1.5 dernieres
-  // secondes de saisie seraient perdues), puis ferme. Le flow "envoyer"
-  // annule le timer AVANT le send, donc aucun update post-envoi ici.
+
+
+
   const handleClose = useCallback(() => {
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
@@ -171,7 +172,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     onClose();
   }, [onClose, persistDraft]);
 
-  // Cleanup du timer au demontage.
+
   useEffect(() => () => {
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
   }, []);
@@ -190,12 +191,12 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     });
   };
 
-  // ─── Envoi pour signature ─────────────────────────────────
+
   const handleSendForSignature = async (dueDate: string | null, reason: string | null) => {
     if (!draft) return;
     try {
-      // Annule un autosave en attente : le brouillon passe "sent" juste
-      // apres, un update tardif echouerait sur "brouillon verrouille".
+
+
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current);
         saveTimerRef.current = null;
@@ -203,7 +204,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
       await persistDraft(true);
       await markDocumentDraftReadyAction(draft.id);
       await sendDocumentDraftForSignatureAction(draft.id, { dueDate, reason });
-      toast.success("Document envoye pour signature");
+      toast.success(t("document_envoye_signature"));
       setShowSendDialog(false);
       onSent?.();
       onClose();
@@ -212,10 +213,10 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
     }
   };
 
-  // ─── URL preview PDF (lit le brouillon DB avec customFieldValues actuels) ──
-  // L'endpoint dedie /document-drafts/[id]/preview-pdf injecte les fill_X
-  // dans le context et rend le PDF identique a ce que l'employe verra.
-  // Cache-buster `_t` rafraichit l'iframe apres chaque autosave reussi.
+
+
+
+
   const pdfUrl = useMemo(() => {
     if (!draft) return null;
     return `/api/admin/document-drafts/${draft.id}/preview-pdf?_t=${pdfStamp}`;
@@ -230,7 +231,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
           className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none"
           aria-describedby={undefined}
         >
-          {/* Header navy */}
+
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
             <DialogHeader>
               <DialogTitle className="text-white text-sm sm:text-base flex items-center gap-2 pr-8">
@@ -242,8 +243,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
               {draft && (
                 <div className="text-white/80 text-[11px] sm:text-xs flex items-center gap-3 flex-wrap mt-1">
                   <span className="flex items-center gap-1">
-                    <User className="h-3 w-3" />
-                    Pour : <span className="font-medium text-white">{draft.target.fullName ?? "—"}</span>
+                    <User className="h-3 w-3" />{t("document_draft_editor_pour")}<span className="font-medium text-white">{draft.target.fullName ?? "—"}</span>
                   </span>
                   <span>·</span>
                   <span>{filledCount} / {structure?.count ?? 0} champs remplis</span>
@@ -251,7 +251,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
                     <>
                       <span>·</span>
                       <span className="opacity-80">
-                        {saving ? "Sauvegarde..." : `Sauvegarde a ${formatTime(savedAt)}`}
+                        {saving ? t("sauvegarde") : `Sauvegarde a ${formatTime(savedAt)}`}
                       </span>
                     </>
                   )}
@@ -260,19 +260,19 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
             </DialogHeader>
           </div>
 
-          {/* Body 2 colonnes (desktop) ou tabs (mobile) */}
+
           {loading || !draft || !structure ? (
             <div className="flex-1 flex items-center justify-center bg-muted/20">
               <Loader2 className="h-6 w-6 animate-spin text-[#0F2D52]" />
             </div>
           ) : (
             <div className="flex-1 grid grid-cols-1 xl:grid-cols-2 overflow-hidden bg-muted/20">
-              {/* Gauche : formulaire */}
+
               <div className="overflow-y-auto px-4 sm:px-5 py-4 space-y-4 border-r border-border/60">
                 {structure.groups.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
-                    <p className="text-sm font-medium">Aucun champ à compléter</p>
+                    <p className="text-sm font-medium">{t("aucun_champ_completer")}</p>
                   </div>
                 ) : (
                   structure.groups.map((group, gIdx) => (
@@ -288,25 +288,25 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
                   ))
                 )}
 
-                {/* Notes manager */}
+
                 <section className="rounded-md border bg-card shadow-sm">
                   <div className="px-4 py-2.5 border-b">
-                    <h3 className="text-sm font-semibold text-[#0F2D52]">Notes internes (manager)</h3>
+                    <h3 className="text-sm font-semibold text-[#0F2D52]">{t("notes_internes_manager")}</h3>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
-                      Visible uniquement par toi, pas inclus dans le PDF final.
+                      {t("visible_uniquement_toi_pas_inclus")}
                     </p>
                   </div>
                   <div className="px-4 py-3">
                     <Textarea
                       value={notes}
                       onChange={(e) => { setNotes(e.target.value); scheduleAutosave(); }}
-                      placeholder="Ex: rappel a aborder ces points lors de l'entrevue..."
+                      placeholder={t("ex_rappel_aborder_points_lors")}
                       className="text-sm min-h-[64px]"
                     />
                   </div>
                 </section>
 
-                {/* Date prevue */}
+
                 <section className="rounded-md border bg-card shadow-sm">
                   <div className="px-4 py-2.5 border-b">
                     <h3 className="text-sm font-semibold text-[#0F2D52]">Date prevue d'envoi</h3>
@@ -321,16 +321,16 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
                 </section>
               </div>
 
-              {/* Droite : iframe PDF live (desktop only) */}
+
               <div className="hidden xl:flex flex-col bg-card overflow-hidden">
                 <div className="px-4 py-2 border-b text-xs text-muted-foreground bg-muted/40 shrink-0">
-                  Apercu PDF en direct
+                  {t("apercu_pdf_direct")}
                 </div>
                 {pdfUrl ? (
                   <iframe
                     key={pdfStamp}
                     src={pdfUrl}
-                    title="Apercu PDF"
+                    title={t("apercu_pdf")}
                     className="flex-1 w-full border-0 bg-white"
                   />
                 ) : (
@@ -342,7 +342,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
             </div>
           )}
 
-          {/* Footer */}
+
           <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-card shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
             <Button variant="outline" size="sm" onClick={handleClose} disabled={saving}>
               {tc("close")}
@@ -358,13 +358,13 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             >
               <Send className="h-3.5 w-3.5 mr-1.5" />
-              Envoyer pour signature
+              {t("envoyer_signature")}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de confirmation d'envoi */}
+
       <SendDraftDialog
         open={showSendDialog}
         targetName={draft?.target.fullName ?? "—"}
@@ -391,6 +391,7 @@ function SendDraftDialog({
   onClose: () => void;
   onConfirm: (dueDate: string | null, reason: string | null) => Promise<void>;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [dueDate, setDueDate] = useState<string | null>(null);
   const [reason, setReason] = useState("");
@@ -416,10 +417,9 @@ function SendDraftDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-base flex items-center gap-2">
               <Send className="h-4 w-4" />
-              Envoyer pour signature
+              {t("envoyer_signature")}
             </DialogTitle>
-            <p className="text-white/80 text-xs mt-1">
-              Le document sera envoye a <span className="font-semibold text-white">{targetName}</span>.
+            <p className="text-white/80 text-xs mt-1">{t("document_draft_editor_le_document_sera_envoye_a")}<span className="font-semibold text-white">{targetName}</span>.
             </p>
           </DialogHeader>
         </div>
@@ -436,16 +436,16 @@ function SendDraftDialog({
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium">Date limite (optionnel)</label>
-            <DatePopover value={dueDate ?? ""} onChange={(d) => setDueDate(d || null)} placeholder="Aucune" />
+            <label className="text-xs font-medium">{t("date_limite_optionnel")}</label>
+            <DatePopover value={dueDate ?? ""} onChange={(d) => setDueDate(d || null)} placeholder={t("aucune")} />
           </div>
 
           <div className="space-y-1">
-            <label className="text-xs font-medium">Message au signataire (optionnel)</label>
+            <label className="text-xs font-medium">{t("message_signataire_optionnel")}</label>
             <Textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
-              placeholder="Ex: Merci de relire et signer avant vendredi."
+              placeholder={t("ex_merci_relire_signer_avant")}
               className="text-sm min-h-[60px]"
             />
           </div>

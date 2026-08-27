@@ -1,12 +1,14 @@
 // GET /api/payments/tax-report?from=&to= — totaux TPS/TVQ + revenus pour une periode
 // Pour declaration TPS/TVQ trimestrielle/annuelle aux gouvernements
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -20,7 +22,7 @@ export async function GET(req: Request) {
   const to = searchParams.get("to");
 
   if (!from || !to) {
-    return NextResponse.json({ error: "Période requise (from + to)" }, { status: 400 });
+    return NextResponse.json({ error: t("periode_requise_from_to") }, { status: 400 });
   }
 
   const start = new Date(from);

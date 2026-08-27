@@ -1,30 +1,36 @@
 // Mon espace · Dashboard : actions à faire + résumé personnel.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { MonEspaceDashboard } from "./dashboard-view";
 import { getLeaveBalance } from "@/lib/services/leave-balance";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Mon espace" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("mon_espace") };
+}
 
 export default async function MonEspaceHome() {
+  const t = await getTranslations("admin.my_dashboard");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   const adminId = session.user.adminId!;
 
   const today = new Date();
-  // Project week convention: SUNDAY -> Saturday (cf. src/lib/week.ts).
+
   const dayIndex = today.getDay(); // 0 = Sunday
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - dayIndex);
   startOfWeek.setHours(0, 0, 0, 0);
   const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
 
-  // Note : unsignedDocs n'est PLUS fetche directement depuis LegalDocumentTemplate
-  // (cela listait les 50+ starters bibliotheque comme faux documents
-  // obligatoires). On le derive plus bas a partir des signature requests
-  // ciblees pour cet employe (cf. filteredSignatureRequests).
+
+
+
+
   const [
     me,
     openClock,
@@ -147,8 +153,8 @@ export default async function MonEspaceHome() {
     prisma.familyDependent.count({ where: { adminId } }).catch(() => 0),
   ]);
 
-  // Demandes RH/manager en attente (téléversement + signature ciblée employé/all)
-  // + activité récente (dernières notifications de l'employé)
+
+
   const [pendingUploadRequests, pendingSignatureRequests, recentNotifications] = await Promise.all([
     prisma.documentUploadRequest.findMany({
       where: { targetAdminId: adminId, status: "pending" },
@@ -178,7 +184,7 @@ export default async function MonEspaceHome() {
     }).catch(() => []),
   ]);
 
-  // Filtre les SignatureRequest pour lesquelles l'employé a déjà signé la version courante
+
   const signedTemplateIds = await prisma.legalDocumentSignature.findMany({
     where: { adminId, templateId: { in: pendingSignatureRequests.map((r) => r.template.id) } },
     select: { templateId: true, version: true },
@@ -188,8 +194,8 @@ export default async function MonEspaceHome() {
     (r) => signedByTemplate.get(r.template.id) !== r.template.version,
   );
 
-  // unsignedDocs derive UNIQUEMENT des signature requests ciblant cet employe
-  // (dedup par templateId pour ne pas montrer un meme doc plusieurs fois).
+
+
   const unsignedDocs: Array<{ id: number; title: string; version: string }> = [];
   const seenUnsigned = new Set<number>();
   for (const r of filteredSignatureRequests) {
@@ -204,7 +210,7 @@ export default async function MonEspaceHome() {
 
   if (!me) redirect("/admin/login");
 
-  // Anniversaires équipe ≤ 14 jours
+
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   const upcomingBirthdays = teamAdmins
     .filter((e) => e.birthdate)
@@ -228,27 +234,27 @@ export default async function MonEspaceHome() {
     .filter((b) => b.daysUntil <= 14)
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
-  // Complétion dossier
+
   const completionSteps = [
-    { key: "photo", label: "Ajouter une photo de profil", href: "/admin/profile", done: !!me.avatarUrl, weight: 20 },
-    { key: "emergency", label: "Contact d'urgence", href: "/admin/mon-espace/urgence", done: emergencyContactsCount > 0, weight: 20 },
-    { key: "bank", label: "Informations bancaires (dépôt direct)", href: "/admin/mon-espace/bancaire", done: !!bankInfo, weight: 20 },
-    { key: "2fa", label: "Activer la double authentification", href: "/admin/settings/security", done: me.twoFactorEnabled, weight: 20 },
-    { key: "family", label: "Personnes à charge (assurance)", href: "/admin/mon-espace/famille", done: familyDependentsCount > 0, weight: 10 },
-    { key: "birthdate", label: "Date de naissance", href: "/admin/profile", done: !!me.birthdate, weight: 10 },
+    { key: "photo", label: t("ajouter_photo_profil"), href: "/admin/profile", done: !!me.avatarUrl, weight: 20 },
+    { key: "emergency", label: t("contact_urgence"), href: "/admin/mon-espace/urgence", done: emergencyContactsCount > 0, weight: 20 },
+    { key: "bank", label: t("informations_bancaires_depot_direct"), href: "/admin/mon-espace/bancaire", done: !!bankInfo, weight: 20 },
+    { key: "2fa", label: t("activer_double_authentification"), href: "/admin/settings/security", done: me.twoFactorEnabled, weight: 20 },
+    { key: "family", label: t("personnes_charge_assurance"), href: "/admin/mon-espace/famille", done: familyDependentsCount > 0, weight: 10 },
+    { key: "birthdate", label: t("date_naissance"), href: "/admin/profile", done: !!me.birthdate, weight: 10 },
   ];
   const completionPct = completionSteps.reduce((sum, s) => sum + (s.done ? s.weight : 0), 0);
 
-  // Heures de la semaine : somme des shifts fermes + duree du shift EN COURS si l'employe
-  // est actuellement pointe (clockOut: null). Sinon le KPI affichait 0 tant que le user
-  // n'avait pas ferme son pointage du matin -> illisible.
-  // Protection : si l'employe a oublie de pointer sortie et que le clockIn date de plus
-  // de 16h, on cap a 16h pour eviter d'afficher des valeurs absurdes (24h, 48h, etc.).
+
+
+
+
+
   const MAX_OPEN_SHIFT_MIN = 16 * 60; // 16h, journee max raisonnable
   const closedMin = weekHours?._sum?.durationMin ?? 0;
   let openMin = 0;
   if (openClock && openClock.clockIn >= startOfWeek) {
-    // Si en pause, on fige le compteur a pausedAt — sinon now
+
     const refMs = openClock.pausedAt ? openClock.pausedAt.getTime() : today.getTime();
     const elapsed = Math.floor((refMs - openClock.clockIn.getTime()) / 60000);
     const worked = Math.max(0, elapsed - (openClock.totalBreakMin ?? 0));
@@ -256,7 +262,7 @@ export default async function MonEspaceHome() {
   }
   const weekHoursTotal = closedMin + openMin;
 
-  // Codes de tache dispos pour le poste de cet employe (pour le clock-in)
+
   const availableJobCodes = me.positionId
     ? await prisma.jobCode.findMany({
         where: { positionId: me.positionId, isActive: true },

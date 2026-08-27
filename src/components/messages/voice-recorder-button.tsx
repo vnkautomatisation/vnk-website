@@ -1,6 +1,7 @@
 "use client";
 // Bouton micro avec MediaRecorder API — cree un blob audio/webm encode base64
 import { useState, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import { Mic, Square, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -25,6 +26,7 @@ export function VoiceRecorderButton({
   maxSec?: number;
   className?: string;
 }) {
+  const t = useTranslations("admin.messages");
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [processing, setProcessing] = useState(false);
@@ -73,7 +75,7 @@ export function VoiceRecorderButton({
         const blob = new Blob(chunksRef.current, { type: mr.mimeType || "audio/webm" });
         cleanup();
         if (blob.size === 0) {
-          toast.error("Enregistrement vide");
+          toast.error(t("enregistrement_vide"));
           return;
         }
         setProcessing(true);
@@ -92,7 +94,7 @@ export function VoiceRecorderButton({
         };
         reader.onerror = () => {
           setProcessing(false);
-          toast.error("Lecture du fichier audio impossible");
+          toast.error(t("lecture_fichier_audio_impossible"));
         };
         reader.readAsDataURL(blob);
       };
@@ -110,8 +112,8 @@ export function VoiceRecorderButton({
       }, maxSec * 1000);
     } catch (err) {
       cleanup();
-      const msg = err instanceof Error ? err.message : "Accès micro refusé";
-      toast.error(msg.includes("denied") || msg.includes("Permission") ? "Accès au microphone refusé" : "Impossible d'accéder au micro");
+      const msg = err instanceof Error ? err.message : t("acces_micro_refuse");
+      toast.error(msg.includes("denied") || msg.includes("Permission") ? t("acces_microphone_refuse") : t("impossible_acceder_micro"));
     }
   }, [disabled, recording, maxSec, onRecorded, cleanup, stopRecording]);
 
@@ -123,7 +125,7 @@ export function VoiceRecorderButton({
         type="button"
         onClick={stopRecording}
         className={cn("flex items-center gap-1.5 h-9 px-3 rounded-md bg-red-500 text-white hover:bg-red-600 transition-colors animate-pulse", className)}
-        aria-label="Arrêter l'enregistrement"
+        aria-label={t("arreter_enregistrement")}
       >
         <Square className="h-4 w-4 fill-current" />
         <span className="text-xs font-mono tabular-nums">{fmt(elapsed)}</span>
@@ -137,7 +139,7 @@ export function VoiceRecorderButton({
       onClick={startRecording}
       disabled={disabled || processing}
       className={cn("h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-50", className)}
-      aria-label="Enregistrer un message vocal"
+      aria-label={t("enregistrer_message_vocal")}
     >
       {processing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mic className="h-5 w-5" />}
     </button>

@@ -8,6 +8,7 @@
 //   - email    : logo entête de courriel transactionnel
 //   - pdf      : logo pour entête PDF (factures, devis)
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +21,7 @@ const ALLOWED_SLOTS = ["primary", "dark", "favicon", "login", "email", "pdf"] as
 type Slot = (typeof ALLOWED_SLOTS)[number];
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -38,10 +40,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Emplacement invalide" }, { status: 400 });
     }
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
-      return NextResponse.json({ error: "Format non supporté (PNG, JPG, WebP, SVG, ICO)" }, { status: 415 });
+      return NextResponse.json({ error: t("format_non_supporte_png_jpg_webp_svg") }, { status: 415 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: `Fichier trop volumineux (max 5 Mo)` }, { status: 413 });

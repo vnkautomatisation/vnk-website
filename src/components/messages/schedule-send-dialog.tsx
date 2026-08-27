@@ -1,15 +1,17 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
+import { toast } from "sonner";
 import { Clock } from "lucide-react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const QUICK_PRESETS: { label: string; minutesFromNow: number }[] = [
-  { label: "Dans 1h", minutesFromNow: 60 },
-  { label: "Demain 9h", minutesFromNow: -1 },
-  { label: "Lundi 9h", minutesFromNow: -2 },
+const QUICK_PRESETS: { labelKey: string; minutesFromNow: number }[] = [
+  { labelKey: "preset_dans_1h", minutesFromNow: 60 },
+  { labelKey: "preset_demain_9h", minutesFromNow: -1 },
+  { labelKey: "preset_lundi_9h", minutesFromNow: -2 },
 ];
 
 function nextHour9(): Date {
@@ -41,6 +43,7 @@ export function ScheduleSendDialog({
   onOpenChange: (o: boolean) => void;
   onConfirm: (isoDate: string) => void;
 }) {
+  const t = useTranslations("admin.messages");
   const [when, setWhen] = useState<string>(fmtLocalInput(new Date(Date.now() + 60 * 60 * 1000)));
 
   const applyPreset = (p: typeof QUICK_PRESETS[number]) => {
@@ -55,7 +58,7 @@ export function ScheduleSendDialog({
     if (!when) return;
     const d = new Date(when);
     if (d.getTime() < Date.now()) {
-      alert("La date doit être dans le futur");
+      toast.error(t("date_doit_etre_futur"));
       return;
     }
     onConfirm(d.toISOString());
@@ -70,9 +73,9 @@ export function ScheduleSendDialog({
               <Clock className="h-5 w-5" />
             </div>
             <div>
-              <DialogTitle className="text-white">Programmer l&apos;envoi</DialogTitle>
+              <DialogTitle className="text-white">{t("programmer_apos_envoi")}</DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
-                Le message sera envoyé automatiquement à la date choisie
+                {t("message_sera_envoye_automatiquement_date")}
               </DialogDescription>
             </div>
           </div>
@@ -81,23 +84,23 @@ export function ScheduleSendDialog({
           <div className="flex flex-wrap gap-2">
             {QUICK_PRESETS.map((p) => (
               <button
-                key={p.label}
+                key={t(p.labelKey)}
                 type="button"
                 onClick={() => applyPreset(p)}
                 className="text-xs px-2.5 py-1 rounded-md border hover:bg-muted transition-colors"
               >
-                {p.label}
+                {t(p.labelKey)}
               </button>
             ))}
           </div>
           <div className="space-y-2">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Date & heure</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("date_heure")}</Label>
             <Input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
           </div>
         </div>
         <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Annuler</Button>
-          <Button onClick={handle} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">Programmer</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>{t("annuler")}</Button>
+          <Button onClick={handle} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">{t("programmer")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

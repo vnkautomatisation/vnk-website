@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { createPerformanceReviewAction } from "@/app/actions/hr-performance";
 
 export default function NewEvaluationPage() {
+  const t = useTranslations("admin.hr_nav");
   const tc = useTranslations("common");
   const router = useRouter();
   const [employees, setEmployees] = useState<Array<{ id: number; fullName: string | null; email: string }>>([]);
@@ -28,7 +29,7 @@ export default function NewEvaluationPage() {
   }, []);
 
   const submit = async () => {
-    if (!adminId || !reviewerId) { toast.error("Choisir employé + évaluateur"); return; }
+    if (!adminId || !reviewerId) { toast.error(t("choisir_employe_evaluateur")); return; }
     setPending(true);
     const r = await createPerformanceReviewAction({
       adminId: Number(adminId),
@@ -36,43 +37,43 @@ export default function NewEvaluationPage() {
       periodStart, periodEnd,
     });
     setPending(false);
-    if (r.success && "data" in r) { toast.success("Évaluation créée"); router.push(`/admin/employes/evaluations/${r.data.id}`); }
+    if (r.success && "data" in r) { toast.success(t("evaluation_creee")); router.push(`/admin/employes/evaluations/${r.data.id}`); }
     else if (!r.success) toast.error(r.error || "");
   };
 
   return (
     <div className="space-y-4 max-w-xl">
       <h1 className="text-xl font-bold flex items-center gap-2">
-        <Award className="h-5 w-5 text-[#0F2D52]" />Nouvelle évaluation
+        <Award className="h-5 w-5 text-[#0F2D52]" />{t("nouvelle_evaluation_titre")}
       </h1>
       <Card className="p-5 space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Employé à évaluer *</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("employe_evaluer")}</Label>
           <Select value={adminId} onValueChange={setAdminId}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir…" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("choisir")} /></SelectTrigger>
             <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold">Évaluateur (manager) *</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold">{t("evaluateur_manager")}</Label>
           <Select value={reviewerId} onValueChange={setReviewerId}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Choisir…" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("choisir")} /></SelectTrigger>
             <SelectContent>{employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}</SelectContent>
           </Select>
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Période début *</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("periode_debut")}</Label>
             <Input type="date" value={periodStart} onChange={(e) => setPeriodStart(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Période fin *</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("periode_fin")}</Label>
             <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
           </div>
         </div>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="outline" onClick={() => router.back()} disabled={pending}>{tc("cancel")}</Button>
-          <Button onClick={submit} disabled={pending}>{pending ? "..." : "Créer"}</Button>
+          <Button onClick={submit} disabled={pending}>{pending ? "..." : t("creer")}</Button>
         </div>
       </Card>
     </div>

@@ -1,10 +1,12 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { useTranslations } from "next-intl";
 import { signOut } from "next-auth/react";
 import { User, LogOut, Settings } from "lucide-react";
 import Link from "next/link";
 
 export function PortalUserMenu({ name, initials }: { name: string; initials: string }) {
+  const tc = useTranslations("portal");
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -31,7 +33,7 @@ export function PortalUserMenu({ name, initials }: { name: string; initials: str
         <div className="absolute right-0 top-12 w-56 bg-card rounded-xl shadow-2xl border z-50 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
           <div className="p-3 border-b">
             <p className="text-sm font-semibold truncate">{name}</p>
-            <p className="text-xs text-muted-foreground">Client</p>
+            <p className="text-xs text-muted-foreground">{tc("role_client")}</p>
           </div>
           <div className="p-1">
             <Link

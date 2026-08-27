@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { PaymentsView } from "./payments-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Tous les paiements" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("tous_paiements") };
+}
 
 export default async function PaymentsPage({
   searchParams,

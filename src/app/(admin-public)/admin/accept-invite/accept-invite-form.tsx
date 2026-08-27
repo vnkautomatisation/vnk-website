@@ -1,6 +1,7 @@
 "use client";
 // Formulaire d'acceptation d'invitation — création du mot de passe par l'employé.
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Eye, EyeOff, ShieldCheck, Loader2 } from "lucide-react";
@@ -16,6 +17,7 @@ export function AcceptInviteForm({
   email: string;
   fullName: string;
 }) {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [password, setPassword] = useState("");
@@ -36,17 +38,17 @@ export function AcceptInviteForm({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!checks.length || !checks.upper || !checks.lower || !checks.digit || !checks.match) {
-      toast.error("Le mot de passe ne respecte pas les critères");
+      toast.error(t("mot_passe_ne_respecte_pas"));
       return;
     }
     if (!consentPolicies) {
-      toast.error("Vous devez accepter la politique d'utilisation et la politique de confidentialité");
+      toast.error(t("vous_devez_accepter_politique_utilisation"));
       return;
     }
     startTransition(async () => {
       const result = await acceptInvitationAction({ token, password, consentAccepted: consentPolicies });
       if (result.success) {
-        toast.success("Compte créé avec succès");
+        toast.success(t("compte_cree_succes"));
         router.push("/admin/login?invited=1");
       } else {
         toast.error(result.error);
@@ -61,28 +63,28 @@ export function AcceptInviteForm({
           <div className="h-14 w-14 rounded-full bg-white/10 backdrop-blur mx-auto flex items-center justify-center ring-2 ring-white/15 mb-3">
             <ShieldCheck className="h-7 w-7" />
           </div>
-          <h1 className="text-xl font-bold">Activez votre compte</h1>
-          <p className="text-sm text-white/80 mt-1">Créez votre mot de passe pour finaliser</p>
+          <h1 className="text-xl font-bold">{t("activez_compte")}</h1>
+          <p className="text-sm text-white/80 mt-1">{t("creez_mot_passe_finaliser")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Email + nom affichés en lecture seule */}
+
           <div className="rounded-lg border bg-muted/30 p-3">
-            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Compte</p>
+            <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("compte")}</p>
             <p className="text-sm font-medium mt-0.5">{fullName}</p>
             <p className="text-xs text-muted-foreground">{email}</p>
           </div>
 
           <div>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Mot de passe
+              {t("mot_passe")}
             </Label>
             <div className="relative mt-1">
               <Input
                 type={show ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Minimum 12 caractères"
+                placeholder={t("minimum_12_caracteres")}
                 autoComplete="new-password"
                 required
                 className="pr-10"
@@ -91,7 +93,7 @@ export function AcceptInviteForm({
                 type="button"
                 onClick={() => setShow(!show)}
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label={show ? "Masquer" : "Afficher"}
+                aria-label={show ? t("masquer") : t("afficher")}
               >
                 {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
@@ -100,7 +102,7 @@ export function AcceptInviteForm({
 
           <div>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-              Confirmer le mot de passe
+              {t("confirmer_mot_passe")}
             </Label>
             <Input
               type={show ? "text" : "password"}
@@ -112,16 +114,16 @@ export function AcceptInviteForm({
             />
           </div>
 
-          {/* Checklist de validation */}
+
           <div className="rounded-lg border bg-muted/20 p-3 space-y-1">
-            <Check ok={checks.length} label="Au moins 12 caractères" />
-            <Check ok={checks.upper} label="Une majuscule" />
-            <Check ok={checks.lower} label="Une minuscule" />
-            <Check ok={checks.digit} label="Un chiffre" />
-            <Check ok={checks.match} label="Les deux mots de passe correspondent" />
+            <Check ok={checks.length} label={t("moins_12_caracteres")} />
+            <Check ok={checks.upper} label={t("majuscule")} />
+            <Check ok={checks.lower} label={t("minuscule")} />
+            <Check ok={checks.digit} label={t("chiffre")} />
+            <Check ok={checks.match} label={t("deux_mots_passe_correspondent")} />
           </div>
 
-          {/* Consentement politiques */}
+
           <label className="flex items-start gap-2 text-xs text-muted-foreground cursor-pointer p-3 rounded-md border bg-muted/20">
             <input
               type="checkbox"
@@ -132,11 +134,11 @@ export function AcceptInviteForm({
             <span>
               J&apos;ai lu et j&apos;accepte la{" "}
               <a href="/politique-utilisation" target="_blank" rel="noopener" className="text-[#0F2D52] underline font-medium">
-                politique d&apos;utilisation
+                {t("politique_apos_utilisation")}
               </a>{" "}
               et la{" "}
               <a href="/politique-confidentialite" target="_blank" rel="noopener" className="text-[#0F2D52] underline font-medium">
-                politique de confidentialité
+                {t("politique_confidentialite")}
               </a>{" "}
               de VNK Automatisation.
             </span>
@@ -148,14 +150,14 @@ export function AcceptInviteForm({
             className="w-full bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm"
           >
             {pending ? (
-              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Création en cours...</>
+              <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("creation_cours")}</>
             ) : (
-              "Créer mon compte"
+              t("creer_mon_compte")
             )}
           </Button>
 
           <p className="text-[10px] text-muted-foreground text-center">
-            Après création, vous pourrez activer la double authentification (2FA) depuis vos paramètres.
+            {t("apres_creation_vous_pourrez_activer")}
           </p>
         </form>
       </div>
@@ -164,6 +166,7 @@ export function AcceptInviteForm({
 }
 
 function Check({ ok, label }: { ok: boolean; label: string }) {
+  const t = useTranslations("auth");
   return (
     <div className={`flex items-center gap-1.5 text-xs ${ok ? "text-emerald-700" : "text-muted-foreground"}`}>
       <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-muted-foreground/30"}`} />

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -20,6 +21,7 @@ export function SettingsView({
   twoFactorEnabled: boolean;
   lastLogin: string | null;
 }) {
+  const t = useTranslations("portal");
   const router = useRouter();
   const [pwOpen, setPwOpen] = useState(false);
   const [pw, setPw] = useState({ current: "", newPw: "", confirm: "" });
@@ -27,7 +29,7 @@ export function SettingsView({
   const [showCurrent, setShowCurrent] = useState(false);
   const [twoFa, setTwoFa] = useState(twoFactorEnabled);
 
-  // 2FA state
+
   const [twoFaOpen, setTwoFaOpen] = useState(false);
   const [twoFaStep, setTwoFaStep] = useState<"idle" | "setup" | "verify" | "disable">("idle");
   const [qrCode, setQrCode] = useState("");
@@ -37,8 +39,8 @@ export function SettingsView({
   const [copied, setCopied] = useState(false);
 
   async function handlePasswordChange() {
-    if (pw.newPw !== pw.confirm) { toast.error("Les mots de passe ne correspondent pas"); return; }
-    if (pw.newPw.length < 8) { toast.error("Minimum 8 caracteres"); return; }
+    if (pw.newPw !== pw.confirm) { toast.error(t("mots_passe_ne_correspondent_pas")); return; }
+    if (pw.newPw.length < 8) { toast.error(t("minimum_8_caracteres")); return; }
     setPwSaving(true);
     try {
       const res = await fetch("/api/auth/change-password", {
@@ -47,14 +49,14 @@ export function SettingsView({
         body: JSON.stringify({ currentPassword: pw.current, newPassword: pw.newPw }),
       });
       if (res.ok) {
-        toast.success("Mot de passe modifie");
+        toast.success(t("mot_passe_modifie"));
         setPw({ current: "", newPw: "", confirm: "" });
         setPwOpen(false);
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error ?? "Mot de passe actuel incorrect");
+        toast.error(data.error ?? t("mot_passe_actuel_incorrect"));
       }
-    } catch { toast.error("Erreur de connexion"); }
+    } catch { toast.error(t("erreur_connexion")); }
     finally { setPwSaving(false); }
   }
 
@@ -62,17 +64,17 @@ export function SettingsView({
     setTwoFaLoading(true);
     try {
       const res = await fetch("/api/auth/two-factor/setup", { method: "POST" });
-      if (!res.ok) { toast.error("Erreur configuration 2FA"); return; }
+      if (!res.ok) { toast.error(t("erreur_configuration_2fa")); return; }
       const data = await res.json();
       setQrCode(data.qrCode);
       setSecret(data.secret);
       setTwoFaStep("setup");
-    } catch { toast.error("Erreur de connexion"); }
+    } catch { toast.error(t("erreur_connexion")); }
     finally { setTwoFaLoading(false); }
   }
 
   async function verifyTwoFa() {
-    if (verifyCode.length !== 6) { toast.error("Code a 6 chiffres requis"); return; }
+    if (verifyCode.length !== 6) { toast.error(t("code_6_chiffres_requis")); return; }
     setTwoFaLoading(true);
     try {
       const res = await fetch("/api/auth/two-factor/verify", {
@@ -81,7 +83,7 @@ export function SettingsView({
         body: JSON.stringify({ code: verifyCode }),
       });
       if (res.ok) {
-        toast.success("2FA activee avec succes");
+        toast.success(t("2fa_activee_succes"));
         setTwoFa(true);
         setTwoFaStep("idle");
         setTwoFaOpen(false);
@@ -89,14 +91,14 @@ export function SettingsView({
         router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error ?? "Code incorrect");
+        toast.error(data.error ?? t("code_incorrect"));
       }
-    } catch { toast.error("Erreur de connexion"); }
+    } catch { toast.error(t("erreur_connexion")); }
     finally { setTwoFaLoading(false); }
   }
 
   async function disableTwoFa() {
-    if (verifyCode.length !== 6) { toast.error("Code a 6 chiffres requis"); return; }
+    if (verifyCode.length !== 6) { toast.error(t("code_6_chiffres_requis")); return; }
     setTwoFaLoading(true);
     try {
       const res = await fetch("/api/auth/two-factor/disable", {
@@ -105,7 +107,7 @@ export function SettingsView({
         body: JSON.stringify({ code: verifyCode }),
       });
       if (res.ok) {
-        toast.success("2FA desactivee");
+        toast.success(t("2fa_desactivee"));
         setTwoFa(false);
         setTwoFaStep("idle");
         setTwoFaOpen(false);
@@ -113,9 +115,9 @@ export function SettingsView({
         router.refresh();
       } else {
         const data = await res.json().catch(() => ({}));
-        toast.error(data.error ?? "Code incorrect");
+        toast.error(data.error ?? t("code_incorrect"));
       }
-    } catch { toast.error("Erreur de connexion"); }
+    } catch { toast.error(t("erreur_connexion")); }
     finally { setTwoFaLoading(false); }
   }
 
@@ -132,20 +134,20 @@ export function SettingsView({
           <Settings className="h-5 w-5 text-white" />
         </div>
         <div>
-          <h1 className="portal-title">Parametres</h1>
-          <p className="text-sm text-muted-foreground">Securite et preferences du compte</p>
+          <h1 className="portal-title">{t("parametres")}</h1>
+          <p className="text-sm text-muted-foreground">{t("securite_preferences_compte")}</p>
         </div>
       </div>
 
-      {/* ── Securite ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-1">
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Shield className="h-4 w-4 text-[#0F2D52]" />
-            Securite
+            {t("securite")}
           </h3>
 
-          {/* Mot de passe */}
+
           <button
             type="button"
             onClick={() => setPwOpen((o) => !o)}
@@ -156,8 +158,8 @@ export function SettingsView({
                 <Lock className="h-4 w-4 text-[#0F2D52]" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium">Mot de passe</p>
-                <p className="text-xs text-muted-foreground">Modifier votre mot de passe</p>
+                <p className="text-sm font-medium">{t("mot_passe")}</p>
+                <p className="text-xs text-muted-foreground">{t("modifier_mot_passe")}</p>
               </div>
             </div>
             <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", pwOpen && "rotate-90")} />
@@ -166,7 +168,7 @@ export function SettingsView({
           {pwOpen && (
             <div className="space-y-3 p-3 ml-12 border-l-2 border-[#0F2D52]/10">
               <div>
-                <Label className="text-xs">Mot de passe actuel</Label>
+                <Label className="text-xs">{t("mot_passe_actuel")}</Label>
                 <div className="relative">
                   <Input type={showCurrent ? "text" : "password"} value={pw.current} onChange={(e) => setPw((p) => ({ ...p, current: e.target.value }))} />
                   <button type="button" onClick={() => setShowCurrent((s) => !s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
@@ -175,17 +177,17 @@ export function SettingsView({
                 </div>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
-                <div><Label className="text-xs">Nouveau</Label><Input type="password" value={pw.newPw} onChange={(e) => setPw((p) => ({ ...p, newPw: e.target.value }))} placeholder="Min. 8 caracteres" /></div>
-                <div><Label className="text-xs">Confirmer</Label><Input type="password" value={pw.confirm} onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))} /></div>
+                <div><Label className="text-xs">{t("nouveau")}</Label><Input type="password" value={pw.newPw} onChange={(e) => setPw((p) => ({ ...p, newPw: e.target.value }))} placeholder={t("min_8_caracteres")} /></div>
+                <div><Label className="text-xs">{t("confirmer")}</Label><Input type="password" value={pw.confirm} onChange={(e) => setPw((p) => ({ ...p, confirm: e.target.value }))} /></div>
               </div>
               <Button onClick={handlePasswordChange} disabled={pwSaving} size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]">
                 <Lock className="h-3.5 w-3.5 mr-1.5" />
-                {pwSaving ? "Modification..." : "Modifier"}
+                {pwSaving ? t("modification") : t("modifier")}
               </Button>
             </div>
           )}
 
-          {/* 2FA */}
+
           <button
             type="button"
             onClick={() => { setTwoFaOpen((o) => !o); setTwoFaStep("idle"); setVerifyCode(""); }}
@@ -196,15 +198,15 @@ export function SettingsView({
                 <Smartphone className="h-4 w-4 text-[#0F2D52]" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium">Authentification 2FA</p>
+                <p className="text-sm font-medium">{t("authentification_2fa")}</p>
                 <p className="text-xs text-muted-foreground">
-                  {twoFa ? "Active" : "Recommande pour plus de securite"}
+                  {twoFa ? t("active") : t("recommande_plus_securite")}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <span className={cn("text-xs font-semibold px-2.5 py-1 rounded-full", twoFa ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
-                {twoFa ? "Active" : "Desactive"}
+                {twoFa ? t("active") : t("desactive")}
               </span>
               <ChevronRight className={cn("h-4 w-4 text-muted-foreground transition-transform", twoFaOpen && "rotate-90")} />
             </div>
@@ -214,26 +216,24 @@ export function SettingsView({
             <div className="space-y-3 p-3 ml-12 border-l-2 border-[#0F2D52]/10">
               {!twoFa && twoFaStep === "idle" && (
                 <div>
-                  <p className="text-xs text-muted-foreground mb-2">
-                    Protegez votre compte avec une application d'authentification (Google Authenticator, Authy, etc.)
-                  </p>
+                  <p className="text-xs text-muted-foreground mb-2">{t("settings_view_protegez_votre_compte_avec_une_application_d")}</p>
                   <Button onClick={startTwoFaSetup} disabled={twoFaLoading} size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]">
                     <Shield className="h-3.5 w-3.5 mr-1.5" />
-                    {twoFaLoading ? "Configuration..." : "Activer la 2FA"}
+                    {twoFaLoading ? t("configuration") : t("activer_2fa")}
                   </Button>
                 </div>
               )}
 
               {twoFaStep === "setup" && (
                 <div className="space-y-3">
-                  <p className="text-xs font-medium">1. Scannez ce QR code avec votre application :</p>
+                  <p className="text-xs font-medium">{t("1_scannez_qr_code_application")}</p>
                   {qrCode && (
                     <div className="flex justify-center">
-                      <img src={qrCode} alt="QR Code 2FA" className="h-40 w-40 rounded-lg border p-2 bg-white" />
+                      <img src={qrCode} alt={t("qr_code_2fa")} className="h-40 w-40 rounded-lg border p-2 bg-white" />
                     </div>
                   )}
                   <div>
-                    <p className="text-xs text-muted-foreground mb-1">Ou entrez cette cle manuellement :</p>
+                    <p className="text-xs text-muted-foreground mb-1">{t("entrez_cle_manuellement")}</p>
                     <div className="flex items-center gap-2">
                       <code className="flex-1 text-xs font-mono bg-muted px-3 py-2 rounded-lg break-all select-all">{secret}</code>
                       <Button variant="outline" size="sm" onClick={copySecret} className="shrink-0 h-8">
@@ -242,7 +242,7 @@ export function SettingsView({
                     </div>
                   </div>
                   <div>
-                    <p className="text-xs font-medium mb-1">2. Entrez le code a 6 chiffres :</p>
+                    <p className="text-xs font-medium mb-1">{t("2_entrez_code_6_chiffres")}</p>
                     <div className="flex gap-2">
                       <Input
                         value={verifyCode}
@@ -252,7 +252,7 @@ export function SettingsView({
                         maxLength={6}
                       />
                       <Button onClick={verifyTwoFa} disabled={twoFaLoading || verifyCode.length !== 6} size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-                        {twoFaLoading ? "Verification..." : "Verifier"}
+                        {twoFaLoading ? t("verification") : t("verifier")}
                       </Button>
                     </div>
                   </div>
@@ -262,17 +262,17 @@ export function SettingsView({
               {twoFa && twoFaStep === "idle" && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2">
-                    Pour desactiver la 2FA, entrez un code de votre application.
+                    {t("desactiver_2fa_entrez_code_application")}
                   </p>
                   <Button onClick={() => setTwoFaStep("disable")} variant="outline" size="sm" className="text-destructive">
-                    Desactiver la 2FA
+                    {t("desactiver_2fa")}
                   </Button>
                 </div>
               )}
 
               {twoFaStep === "disable" && (
                 <div className="space-y-2">
-                  <p className="text-xs font-medium">Entrez le code a 6 chiffres pour confirmer :</p>
+                  <p className="text-xs font-medium">{t("entrez_code_6_chiffres_confirmer")}</p>
                   <div className="flex gap-2">
                     <Input
                       value={verifyCode}
@@ -282,7 +282,7 @@ export function SettingsView({
                       maxLength={6}
                     />
                     <Button onClick={disableTwoFa} disabled={twoFaLoading || verifyCode.length !== 6} size="sm" variant="destructive">
-                      {twoFaLoading ? "..." : "Confirmer"}
+                      {twoFaLoading ? "..." : t("confirmer")}
                     </Button>
                   </div>
                 </div>
@@ -290,14 +290,14 @@ export function SettingsView({
             </div>
           )}
 
-          {/* Session */}
+
           <div className="flex items-center justify-between p-3 rounded-lg border">
             <div className="flex items-center gap-3">
               <div className="h-9 w-9 rounded-lg bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
                 <Globe className="h-4 w-4 text-[#0F2D52]" />
               </div>
               <div>
-                <p className="text-sm font-medium">Derniere connexion</p>
+                <p className="text-sm font-medium">{t("derniere_connexion")}</p>
                 <p className="text-xs text-muted-foreground">{lastLogin ? formatDate(lastLogin) : "—"}</p>
               </div>
             </div>
@@ -305,19 +305,19 @@ export function SettingsView({
         </CardContent>
       </Card>
 
-      {/* ── Notifications ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-1">
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Bell className="h-4 w-4 text-[#0F2D52]" />
-            Notifications
+            {t("notifications")}
           </h3>
 
           {[
-            { label: "Factures et paiements", desc: "Recevoir un courriel pour chaque nouvelle facture" },
-            { label: "Devis et contrats", desc: "Etre notifie quand un devis ou contrat est pret" },
-            { label: "Messages", desc: "Notifications des nouveaux messages VNK" },
-            { label: "Rendez-vous", desc: "Rappels avant vos rendez-vous" },
+            { label: t("factures_paiements"), desc: t("recevoir_courriel_chaque_nouvelle_facture") },
+            { label: t("devis_contrats"), desc: t("etre_notifie_quand_devis_contrat") },
+            { label: t("messages"), desc: t("notifications_nouveaux_messages_vnk") },
+            { label: t("rendez_vous"), desc: t("rappels_avant_rendez_vous") },
           ].map((item) => (
             <div key={item.label} className="flex items-center justify-between p-3 rounded-lg border">
               <div>
@@ -333,34 +333,34 @@ export function SettingsView({
         </CardContent>
       </Card>
 
-      {/* ── Preferences ── */}
+
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-1">
           <h3 className="text-sm font-semibold flex items-center gap-2 mb-3">
             <Palette className="h-4 w-4 text-[#0F2D52]" />
-            Preferences
+            {t("preferences")}
           </h3>
 
           <div className="flex items-center justify-between p-3 rounded-lg border">
             <div>
-              <p className="text-sm font-medium">Langue</p>
-              <p className="text-xs text-muted-foreground">Langue de l'interface</p>
+              <p className="text-sm font-medium">{t("langue")}</p>
+              <p className="text-xs text-muted-foreground">{t("settings_view_langue_de_l_interface")}</p>
             </div>
             <select defaultValue="fr" className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="fr">Francais</option>
-              <option value="en">English</option>
+              <option value="fr">{t("francais")}</option>
+              <option value="en">{t("english")}</option>
             </select>
           </div>
 
           <div className="flex items-center justify-between p-3 rounded-lg border">
             <div>
-              <p className="text-sm font-medium">Fuseau horaire</p>
-              <p className="text-xs text-muted-foreground">Pour les rendez-vous et notifications</p>
+              <p className="text-sm font-medium">{t("fuseau_horaire")}</p>
+              <p className="text-xs text-muted-foreground">{t("rendez_vous_notifications")}</p>
             </div>
             <select defaultValue="America/Toronto" className="h-8 rounded-md border border-input bg-background px-2 text-sm">
-              <option value="America/Toronto">Montreal (EST)</option>
-              <option value="America/Vancouver">Vancouver (PST)</option>
-              <option value="America/Winnipeg">Winnipeg (CST)</option>
+              <option value="America/Toronto">{t("montreal")}</option>
+              <option value="America/Vancouver">{t("vancouver_pst")}</option>
+              <option value="America/Winnipeg">{t("winnipeg_cst")}</option>
             </select>
           </div>
         </CardContent>

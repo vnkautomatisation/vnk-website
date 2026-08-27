@@ -2,6 +2,7 @@
 // Téléchargement / aperçu du fichier téléversé en réponse à une demande.
 // Auth : employé propriétaire OU RH OU manager direct de l'employé ciblé.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -22,6 +23,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -52,7 +54,7 @@ export async function GET(
     return NextResponse.json({ error: "Demande introuvable" }, { status: 404 });
   }
   if (!docReq.fileUrl) {
-    return NextResponse.json({ error: "Aucun fichier attaché" }, { status: 404 });
+    return NextResponse.json({ error: t("aucun_fichier_attache") }, { status: 404 });
   }
 
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};

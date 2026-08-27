@@ -30,49 +30,49 @@ export async function generateMetadata({
   };
 }
 
-const ENGAGEMENTS = [
+const ENGAGEMENTS = (t: (k: string) => string) => [
   {
     icon: Clock,
-    title: "Réponse sous 24h ouvrables",
-    desc: "Votre demande est traitée le jour même ou le suivant.",
+    title: t("ct_reponse_sous_24h_ouvrables"),
+    desc: t("ct_votre_demande_est_traitee_le_jour_meme"),
   },
   {
     icon: MessageSquare,
-    title: "Consultation initiale gratuite",
-    desc: "Premier échange de 30 min sans engagement, pour cerner votre besoin.",
+    title: t("ct_consultation_initiale_gratuite"),
+    desc: t("ct_premier_echange_de_30_min_sans_engagement"),
   },
   {
     icon: FileText,
-    title: "Devis détaillé et transparent",
-    desc: "Ventilation claire par étape, sans frais cachés.",
+    title: t("ct_devis_detaille_et_transparent"),
+    desc: t("ct_ventilation_claire_par_etape_sans_frais_caches"),
   },
   {
     icon: Shield,
-    title: "Confidentialité garantie (NDA)",
-    desc: "Vos données techniques, codes PLC et secrets industriels restent confidentiels.",
+    title: t("ct_confidentialite_garantie_nda"),
+    desc: t("ct_vos_donnees_techniques_codes_plc_et_secrets"),
   },
 ];
 
-const STEPS = [
+const STEPS = (t: (k: string) => string) => [
   {
     num: "01",
-    title: "Réception de votre message",
-    desc: "Accusé de réception automatique, votre dossier est créé.",
+    title: t("ct_reception_de_votre_message"),
+    desc: t("ct_accuse_de_reception_automatique_votre_dossier_est"),
   },
   {
     num: "02",
-    title: "Appel de qualification",
-    desc: "Un technicien vous rappelle sous 24h pour cerner votre besoin.",
+    title: t("ct_appel_de_qualification"),
+    desc: t("ct_un_technicien_vous_rappelle_sous_24h_pour"),
   },
   {
     num: "03",
-    title: "Devis ou intervention urgente",
-    desc: "Selon l'urgence : devis écrit ou déploiement immédiat.",
+    title: t("ct_devis_ou_intervention_urgente"),
+    desc: t("ct_selon_l_urgence_devis_ecrit_ou_deploiement"),
   },
   {
     num: "04",
-    title: "Démarrage du mandat",
-    desc: "Contrat électronique, accès portail client, début des travaux.",
+    title: t("ct_demarrage_du_mandat"),
+    desc: t("ct_contrat_electronique_acces_portail_client_debut_des"),
   },
 ];
 
@@ -93,9 +93,7 @@ export default async function ContactPage({
         <div className="container mx-auto px-4 relative">
           <div className="max-w-3xl mx-auto text-center">
             <Badge className="bg-white/10 text-white border border-white/20 backdrop-blur-sm mb-4">
-              <MessageSquare className="h-3 w-3 mr-1" />
-              Consultation gratuite
-            </Badge>
+              <MessageSquare className="h-3 w-3 mr-1" />{t("ct_consultation_gratuite")}</Badge>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6">
               {t("hero_title")}
             </h1>
@@ -105,15 +103,15 @@ export default async function ContactPage({
             <div className="mt-8 flex flex-wrap justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-400" />
-                <span>Réponse &lt; 24h</span>
+                <span>{t("reponse_moins_24h")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-400" />
-                <span>Sans engagement</span>
+                <span>{t("ct_sans_engagement")}</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-green-400" />
-                <span>Devis gratuit</span>
+                <span>{t("ct_devis_gratuit")}</span>
               </div>
             </div>
           </div>
@@ -127,11 +125,8 @@ export default async function ContactPage({
             {/* Form — 2/3 */}
             <div className="lg:col-span-2">
               <div className="mb-6">
-                <h2 className="text-2xl font-bold mb-2">Envoyez-nous un message</h2>
-                <p className="text-sm text-muted-foreground">
-                  Remplissez le formulaire ci-dessous — nous vous répondons en moins de 24h
-                  ouvrables.
-                </p>
+                <h2 className="text-2xl font-bold mb-2">{t("envoyez_nous_message")}</h2>
+                <p className="text-sm text-muted-foreground">{t("ct_remplissez_le_formulaire_ci_dessous_nous_vous")}</p>
               </div>
               <ContactForm />
             </div>
@@ -142,10 +137,8 @@ export default async function ContactPage({
               <Card className="border-2 border-[#0F2D52]/10">
                 <CardContent className="p-6 space-y-5">
                   <div>
-                    <h3 className="text-lg font-bold mb-1">Coordonnées</h3>
-                    <p className="text-xs text-muted-foreground">
-                      Joignez-nous directement
-                    </p>
+                    <h3 className="text-lg font-bold mb-1">{t("coordonnees")}</h3>
+                    <p className="text-xs text-muted-foreground">{t("ct_joignez_nous_directement")}</p>
                   </div>
 
                   <div className="space-y-4">
@@ -154,9 +147,7 @@ export default async function ContactPage({
                         <Mail className="h-4 w-4 text-[#0F2D52]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Courriel
-                        </p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("ct_courriel")}</p>
                         <a
                           href="mailto:vnkautomatisation@gmail.com"
                           className="text-sm font-medium hover:text-[#0F2D52] break-all"
@@ -171,18 +162,14 @@ export default async function ContactPage({
                         <Phone className="h-4 w-4 text-[#0F2D52]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Téléphone
-                        </p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("ct_telephone")}</p>
                         <a
                           href="tel:+18192908686"
                           className="text-sm font-medium hover:text-[#0F2D52]"
                         >
                           (819) 290-8686
                         </a>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Urgences PLC 24/7
-                        </p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{t("ct_urgences_plc")}</p>
                       </div>
                     </div>
 
@@ -191,13 +178,9 @@ export default async function ContactPage({
                         <MapPin className="h-4 w-4 text-[#0F2D52]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Adresse
-                        </p>
-                        <p className="text-sm font-medium">Québec, QC</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Canada · Service à distance et sur site
-                        </p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("ct_adresse")}</p>
+                        <p className="text-sm font-medium">{t("quebec_qc")}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{t("ct_canada_service_a_distance_et_sur_site")}</p>
                       </div>
                     </div>
 
@@ -206,13 +189,9 @@ export default async function ContactPage({
                         <Clock className="h-4 w-4 text-[#0F2D52]" />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                          Heures d'ouverture
-                        </p>
-                        <p className="text-sm font-medium">Lun – Ven : 8h – 17h</p>
-                        <p className="text-[11px] text-muted-foreground mt-0.5">
-                          Support d'urgence 24/7
-                        </p>
+                        <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("ct_heures_ouverture")}</p>
+                        <p className="text-sm font-medium">{t("ct_lun_ven")}</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">{t("ct_support_urgence")}</p>
                       </div>
                     </div>
                   </div>
@@ -224,18 +203,14 @@ export default async function ContactPage({
                 <CardContent className="p-6">
                   <div className="flex items-center gap-2 mb-4">
                     <Building2 className="h-4 w-4" />
-                    <h3 className="text-sm font-bold uppercase tracking-wider">
-                      Entreprise
-                    </h3>
+                    <h3 className="text-sm font-bold uppercase tracking-wider">{t("ct_entreprise")}</h3>
                   </div>
                   <div className="space-y-2 text-sm">
                     <p className="font-bold text-base">VNK Automatisation Inc.</p>
-                    <p className="text-white/70 text-xs">
-                      Société par actions incorporée au Québec
-                    </p>
+                    <p className="text-white/70 text-xs">{t("ct_societe_par_actions_incorporee_au_quebec")}</p>
                     <div className="pt-3 border-t border-white/20 mt-3 space-y-1">
-                      <p className="text-white/70 text-xs">NEQ : sur demande</p>
-                      <p className="text-white/70 text-xs">TPS/TVQ : disponibles</p>
+                      <p className="text-white/70 text-xs">{t("neq_sur_demande")}</p>
+                      <p className="text-white/70 text-xs">{t("ct_tps_tvq")}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -244,11 +219,9 @@ export default async function ContactPage({
               {/* Engagements */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="text-sm font-bold uppercase tracking-wider mb-4">
-                    Nos engagements
-                  </h3>
+                  <h3 className="text-sm font-bold uppercase tracking-wider mb-4">{t("ct_nos_engagements")}</h3>
                   <ul className="space-y-3">
-                    {ENGAGEMENTS.map((e, i) => (
+                    {ENGAGEMENTS(t).map((e, i) => (
                       <li key={i} className="flex items-start gap-3">
                         <e.icon className="h-4 w-4 text-[#0F2D52] shrink-0 mt-0.5" />
                         <div>
@@ -272,20 +245,13 @@ export default async function ContactPage({
         <div className="container mx-auto px-4 max-w-5xl">
           <div className="text-center mb-12">
             <Badge variant="secondary" className="mb-3">
-              <Calendar className="h-3 w-3 mr-1" />
-              Processus
-            </Badge>
-            <h2 className="text-3xl sm:text-4xl font-bold mb-3">
-              Et après l'envoi ?
-            </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              Voici comment se déroule notre prise de contact — de votre message à
-              l'intervention
-            </p>
+              <Calendar className="h-3 w-3 mr-1" />{t("ct_processus")}</Badge>
+            <h2 className="text-3xl sm:text-4xl font-bold mb-3">{t("ct_et_apres_l_envoi")}</h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">{t("ct_voici_comment_se_deroule_notre_prise_de")}</p>
           </div>
 
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
-            {STEPS.map((step, i) => (
+            {STEPS(t).map((step, i) => (
               <div
                 key={i}
                 className="relative p-6 rounded-xl bg-background border border-border hover:border-[#0F2D52]/30 hover:shadow-md transition-all"
@@ -307,13 +273,8 @@ export default async function ContactPage({
       <section className="py-16 bg-background border-t border-border">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <Shield className="h-10 w-10 text-[#0F2D52] mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-3">Vos données sont protégées</h2>
-          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            Toutes les informations soumises via ce formulaire sont traitées de manière
-            confidentielle. Nous ne partageons jamais vos données avec des tiers et nous
-            nous engageons à respecter un accord de non-divulgation (NDA) pour tout mandat
-            sensible.
-          </p>
+          <h2 className="text-2xl font-bold mb-3">{t("vos_donnees_sont_protegees")}</h2>
+          <p className="text-muted-foreground max-w-2xl mx-auto leading-relaxed">{t("ct_toutes_les_informations_soumises_via_ce_formulaire")}</p>
         </div>
       </section>
     </>

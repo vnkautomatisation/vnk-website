@@ -66,19 +66,20 @@ interface Props {
 export function PositionMultiPicker({
   value,
   onChange,
-  label = "Postes lies",
-  placeholder = "Ajouter un poste...",
+  label,
+  placeholder,
   hint,
   disabled,
   inline = false,
 }: Props) {
+  const t = useTranslations("admin.library");
   const [positions, setPositions] = useState<PositionItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [newDialogOpen, setNewDialogOpen] = useState(false);
 
-  // ---- Fetch positions ----------------------------------------
+
   const fetchPositions = useCallback(async () => {
     setLoading(true);
     try {
@@ -87,8 +88,8 @@ export function PositionMultiPicker({
       const data = (await res.json()) as { items: PositionItem[] };
       setPositions(data.items ?? []);
     } catch (e) {
-      toast.error("Impossible de charger les postes");
-      // eslint-disable-next-line no-console
+      toast.error(t("impossible_charger_postes"));
+
       console.error(e);
     } finally {
       setLoading(false);
@@ -99,7 +100,7 @@ export function PositionMultiPicker({
     void fetchPositions();
   }, [fetchPositions]);
 
-  // ---- Helpers ------------------------------------------------
+
   const valueSet = useMemo(
     () => new Set(value.map((v) => v.toLowerCase())),
     [value],
@@ -132,10 +133,10 @@ export function PositionMultiPicker({
     void fetchPositions();
   };
 
-  // ---- Render -------------------------------------------------
+
   const content = (
     <div className="space-y-2">
-      {/* Chips selectionnes */}
+
       <div
         className={cn(
           "min-h-[40px] rounded-md border bg-background px-2 py-1.5 flex flex-wrap items-center gap-1.5",
@@ -144,7 +145,7 @@ export function PositionMultiPicker({
       >
         {value.length === 0 && (
           <span className="text-xs text-muted-foreground px-1">
-            Aucun poste selectionne
+            {t("aucun_poste_selectionne")}
           </span>
         )}
         {value.map((name) => {
@@ -164,7 +165,7 @@ export function PositionMultiPicker({
                 style={{ backgroundColor: color }}
               />
               {name}
-              <ActionTooltip label="Retirer">
+              <ActionTooltip label={t("retirer")}>
                 <button
                   type="button"
                   onClick={() => remove(name)}
@@ -179,7 +180,7 @@ export function PositionMultiPicker({
         })}
       </div>
 
-      {/* Boutons d'action */}
+
       <div className="flex flex-wrap items-center gap-2">
         <Popover open={pickerOpen} onOpenChange={setPickerOpen}>
           <PopoverTrigger asChild>
@@ -191,7 +192,7 @@ export function PositionMultiPicker({
               className="h-8 text-xs"
             >
               <Briefcase className="h-3.5 w-3.5 mr-1.5" />
-              {placeholder}
+              {placeholder ?? t("ajouter_poste")}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-72 p-0" align="start">
@@ -201,7 +202,7 @@ export function PositionMultiPicker({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher..."
+                  placeholder={t("rechercher")}
                   className="h-8 text-xs pl-7"
                 />
               </div>
@@ -213,7 +214,7 @@ export function PositionMultiPicker({
                 </div>
               ) : filteredPositions.length === 0 ? (
                 <p className="px-3 py-4 text-[11px] text-muted-foreground text-center">
-                  Aucun poste trouve
+                  {t("aucun_poste_trouve")}
                 </p>
               ) : (
                 filteredPositions.map((p) => {
@@ -260,7 +261,7 @@ export function PositionMultiPicker({
           className="h-8 text-xs text-[#0F2D52]"
         >
           <Plus className="h-3.5 w-3.5 mr-1" />
-          Nouveau poste
+          {t("nouveau_poste")}
         </Button>
       </div>
 
@@ -275,7 +276,7 @@ export function PositionMultiPicker({
   if (inline) return content;
 
   return (
-    <Field label={label} hint={hint}>
+    <Field label={label ?? t("postes_lies")} hint={hint}>
       {content}
     </Field>
   );
@@ -293,6 +294,7 @@ function NewPositionDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: (name: string) => void;
 }) {
+  const t = useTranslations("admin.library");
   const tc = useTranslations("common");
   const [name, setName] = useState("");
   const [defaultDepartment, setDefaultDepartment] = useState("");
@@ -326,7 +328,7 @@ function NewPositionDialog({
         onCreated(result.name);
         onOpenChange(false);
       } catch (e) {
-        const msg = e instanceof Error ? e.message : "Erreur lors de la creation";
+        const msg = e instanceof Error ? e.message : t("erreur_lors_creation");
         toast.error(msg);
       }
     });
@@ -335,26 +337,26 @@ function NewPositionDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !pending && onOpenChange(o)}>
       <DialogContent className="max-w-md p-0 overflow-hidden">
-        {/* Header navy gradient VNK */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-5 py-4">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Briefcase className="h-4 w-4" />
-              Nouveau poste
+              {t("nouveau_poste")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Cree un poste reutilisable pour les contrats et profils employes.
+              {t("cree_poste_reutilisable_contrats_profils")}
             </DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Body */}
+
         <div className="p-5 space-y-4">
-          <Field label="Nom du poste" required>
+          <Field label={t("nom_poste")} required>
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ex : Technicien d'automatisation"
+              placeholder={t("ex_technicien_automatisation")}
               autoFocus
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -366,27 +368,27 @@ function NewPositionDialog({
           </Field>
 
           <Field
-            label="Departement (optionnel)"
-            hint="Sera propose par defaut a la creation d'un employe avec ce poste."
+            label={t("departement_optionnel")}
+            hint={t("sera_propose_defaut_creation_employe")}
           >
             <Input
               value={defaultDepartment}
               onChange={(e) => setDefaultDepartment(e.target.value)}
-              placeholder="ex : Operations"
+              placeholder={t("ex_operations")}
             />
           </Field>
 
-          <Field label="Description (optionnel)">
+          <Field label={t("description_optionnel")}>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Courte description du poste"
+              placeholder={t("courte_description_poste")}
               maxLength={500}
             />
           </Field>
         </div>
 
-        {/* Footer */}
+
         <div className="border-t bg-muted/30 px-5 py-3 flex justify-end gap-2">
           <Button
             variant="outline"
@@ -403,12 +405,12 @@ function NewPositionDialog({
             {pending ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                Creation...
+                {t("creation")}
               </>
             ) : (
               <>
                 <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Creer le poste
+                {t("creer_poste")}
               </>
             )}
           </Button>

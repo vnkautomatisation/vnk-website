@@ -3,6 +3,7 @@
 // Permet de créer/modifier/désactiver/supprimer des comptes admin sans toucher
 // au code. Vérifie la permission users:write avant chaque mutation.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { revalidatePath } from "next/cache";
@@ -32,10 +33,11 @@ const inviteSchema = z.object({
 const INVITE_TTL_DAYS = 7;
 
 export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Promise<Result<{ invitationId: number; expiresAt: string; inviteUrl: string; emailSent: boolean; emailError?: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = inviteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Normaliser email
   const email = parsed.data.email.toLowerCase().trim();
@@ -51,17 +53,17 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
     where: { invitedById: adminId, createdAt: { gt: new Date(Date.now() - 60 * 60 * 1000) } },
   });
   if (recentByAdmin >= 20) {
-    return { success: false, error: "Limite atteinte (20 invitations par heure). Réessayez plus tard." };
+    return { success: false, error: t("limite_atteinte_20_invitations_par_heure_reessayez") };
   }
 
   // Email déjà utilisé par un admin existant ?
   const existing = await prisma.admin.findUnique({ where: { email } });
-  if (existing) return { success: false, error: "Un compte avec cet email existe déjà" };
+  if (existing) return { success: false, error: t("un_compte_avec_cet_email_existe_deja_2") };
 
   // Valider FK : si roleId fourni, vérifier qu'il existe
   if (parsed.data.roleId) {
     const role = await prisma.role.findUnique({ where: { id: parsed.data.roleId } });
-    if (!role) return { success: false, error: "Rôle introuvable" };
+    if (!role) return { success: false, error: t("role_introuvable") };
   }
   // Valider FK : si positionId fourni, vérifier qu'il existe
   if (parsed.data.positionId) {
@@ -125,14 +127,14 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : "";
     if (msg === "DUPLICATE_PENDING_INVITE") {
-      return { success: false, error: "Une invitation est déjà en cours pour cet email. Annulez-la d'abord ou utilisez « Renvoyer »." };
+      return { success: false, error: t("une_invitation_est_deja_en_cours_pour") };
     }
     if (msg === "DUPLICATE_ADMIN") {
-      return { success: false, error: "Un compte avec cet email existe déjà" };
+      return { success: false, error: t("un_compte_avec_cet_email_existe_deja_2") };
     }
     // Conflit de sérialisation Postgres → retry-friendly message
     if (msg.includes("could not serialize") || msg.includes("40001")) {
-      return { success: false, error: "Conflit détecté, réessayez s'il vous plaît." };
+      return { success: false, error: t("conflit_detecte_reessayez_s_il_vous_plait") };
     }
     throw e;
   }
@@ -147,42 +149,43 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
   try {
     const invitedBy = await prisma.admin.findUnique({
       where: { id: adminId },
-      select: { fullName: true, email: true },
+      select: { fullName: true, email: true, locale: true },
     });
     const inviterName = invitedBy?.fullName || invitedBy?.email || "L'administrateur";
+    // L'invite n'a pas encore de compte : on suit la langue de l'inviteur.
+    const inviteLocale = invitedBy?.locale?.split("-")[0] ?? "fr";
+    const te = await getTranslations({ locale: inviteLocale, namespace: "admin.emails" });
     const html = `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="${inviteLocale}">
 <head>
 <meta charset="UTF-8" />
 </head>
 <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px">
   <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)">
     <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center">
-      <h1 style="margin:0;font-size:20px;font-weight:700">Bienvenue chez VNK Automatisation</h1>
-      <p style="margin:6px 0 0;opacity:0.85;font-size:14px">Votre compte employé est prêt à être activé</p>
+      <h1 style="margin:0;font-size:20px;font-weight:700">${te("bienvenue_chez_vnk")}</h1>
+      <p style="margin:6px 0 0;opacity:0.85;font-size:14px">${te("compte_pret_active")}</p>
     </div>
     <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6">
-      <p>Bonjour <strong>${escapeHtml(parsed.data.fullName)}</strong>,</p>
-      <p><strong>${escapeHtml(inviterName)}</strong> vous invite à rejoindre le portail admin de VNK Automatisation.</p>
-      <p>Cliquez sur le bouton ci-dessous pour créer votre mot de passe et activer votre compte :</p>
+      <p>${te("bonjour_nom", { nom: `<strong>${escapeHtml(parsed.data.fullName)}</strong>` })}</p>
+      <p>${te("x_vous_invite", { inviteur: `<strong>${escapeHtml(inviterName)}</strong>` })}</p>
+      <p>${te("cliquez_bouton_creer_mdp")}</p>
       <p style="text-align:center;margin:24px 0">
         <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a>
       </p>
       <p style="color:#6b7280;font-size:12px">Ce lien expire dans ${INVITE_TTL_DAYS} jours. Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</p>
       <p style="word-break:break-all;font-family:monospace;font-size:11px;background:#f3f4f6;padding:8px;border-radius:4px;color:#374151">${escapeHtml(inviteUrl)}</p>
-      <p style="margin-top:24px;color:#6b7280;font-size:12px">Si vous ne vous attendiez pas à cette invitation, ignorez simplement cet email.</p>
+      <p style="margin-top:24px;color:#6b7280;font-size:12px">${te("si_vous_ne_vous_attendiez_pas")}</p>
     </div>
-    <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">
-      VNK Automatisation Inc. · Sécurité gérée par le portail admin
-    </div>
+    <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">{te("users_vnk_automatisation_inc_securite_geree_par_le")}</div>
   </div>
 </body>
 </html>`.trim();
 
     await sendEmail({
       to: email,
-      subject: `Invitation à rejoindre VNK Automatisation`,
+      subject: te("sujet_invitation"),
       html,
     });
     emailSent = true;
@@ -234,16 +237,17 @@ const bulkInviteSchema = z.object({
   positionId: z.number().int().nullable().optional(),
   department: z.string().max(100).nullable().optional(),
 }).refine((d) => (d.emails && d.emails.length > 0) || (d.entries && d.entries.length > 0), {
-  message: "Fournir au moins un email à inviter",
+  message: "fournir_au_moins_un_email_a_inviter",
 });
 
 export async function bulkInviteUsersAction(
   input: z.infer<typeof bulkInviteSchema>
 ): Promise<Result<{ invited: number; skipped: Array<{ email: string; reason: string }> }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = bulkInviteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Construire liste unifiée { email, fullName }
   type Entry = { email: string; fullName: string };
@@ -270,7 +274,7 @@ export async function bulkInviteUsersAction(
   }
   const list = Array.from(map.values());
   if (list.length === 0) return { success: false, error: "Aucun email valide" };
-  if (list.length > 50) return { success: false, error: "Maximum 50 invitations par envoi" };
+  if (list.length > 50) return { success: false, error: t("maximum_50_invitations_par_envoi") };
 
   const skipped: Array<{ email: string; reason: string }> = [];
   let invited = 0;
@@ -322,6 +326,7 @@ export async function revokeInvitationAction(input: { id: number }): Promise<Res
 // LOI 25 / RGPD — export et anonymisation des données user
 // ═══════════════════════════════════════════════════════════
 export async function exportUserDataAction(input: { id: number }): Promise<Result<{ data: Record<string, unknown> }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
 
@@ -377,7 +382,7 @@ export async function exportUserDataAction(input: { id: number }): Promise<Resul
     adminId: input.id,
     type: "data_export_requested",
     severity: "info",
-    message: "Export de données personnelles (Loi 25) déclenché par un administrateur",
+    message: "export_de_donnees_personnelles_loi_25_declenche",
     metadata: { byAdminId: adminId },
   });
 
@@ -387,9 +392,10 @@ export async function exportUserDataAction(input: { id: number }): Promise<Resul
 // Anonymisation — supprime les données personnelles mais conserve les références
 // pour préserver l'intégrité des logs et l'historique métier.
 export async function anonymizeUserAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
-  if (input.id === adminId) return { success: false, error: "Vous ne pouvez pas vous anonymiser vous-même" };
+  if (input.id === adminId) return { success: false, error: t("vous_ne_pouvez_pas_vous_anonymiser_vous") };
 
   // Vérifier que c'est pas le dernier super_admin
   const target = await prisma.admin.findUnique({
@@ -402,7 +408,7 @@ export async function anonymizeUserAction(input: { id: number }): Promise<Result
       where: { customRole: { name: "super_admin" }, isActive: true },
     });
     if (superAdminCount <= 1) {
-      return { success: false, error: "Impossible d'anonymiser le dernier super-administrateur" };
+      return { success: false, error: t("impossible_d_anonymiser_le_dernier_super_administrateur") };
     }
   }
 
@@ -457,6 +463,7 @@ export async function anonymizeUserAction(input: { id: number }): Promise<Result
 // RESET PASSWORD PAR EMAIL — déclenché par admin pour un user
 // ═══════════════════════════════════════════════════════════
 export async function sendPasswordResetEmailAction(input: { id: number }): Promise<Result<{ emailSent: boolean }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
 
@@ -465,7 +472,7 @@ export async function sendPasswordResetEmailAction(input: { id: number }): Promi
     select: { id: true, email: true, fullName: true, isActive: true },
   });
   if (!target) return { success: false, error: "Utilisateur introuvable" };
-  if (!target.isActive) return { success: false, error: "Compte désactivé — réactivez-le d'abord" };
+  if (!target.isActive) return { success: false, error: t("compte_desactive_reactivez_le_d_abord") };
 
   // Délègue au flow standard de reset
   const { requestPasswordResetAction } = await import("./password-reset");
@@ -495,9 +502,10 @@ export async function sendPasswordResetEmailAction(input: { id: number }): Promi
 // SÉCURITÉ — actions de gestion 2FA et déblocage
 // ═══════════════════════════════════════════════════════════
 export async function disable2FAAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
-  if (input.id === adminId) return { success: false, error: "Utilisez vos paramètres personnels pour modifier votre propre 2FA" };
+  if (input.id === adminId) return { success: false, error: t("utilisez_vos_parametres_personnels_pour_modifier_votre") };
 
   // ── Garde : impossible de désactiver la 2FA du dernier super_admin actif ──
   const target = await prisma.admin.findUnique({
@@ -516,7 +524,7 @@ export async function disable2FAAction(input: { id: number }): Promise<Result> {
     if (superAdminsWith2FA <= 1) {
       return {
         success: false,
-        error: "Impossible de désactiver la 2FA du dernier super-administrateur. Activez-la d'abord sur un autre compte super-administrateur.",
+        error: t("impossible_de_desactiver_la_2fa_du_dernier"),
       };
     }
   }
@@ -536,7 +544,7 @@ export async function disable2FAAction(input: { id: number }): Promise<Result> {
     adminId: input.id,
     type: "two_factor_disabled",
     severity: "warning",
-    message: "2FA désactivée par un administrateur",
+    message: "2fa_desactivee_par_un_administrateur",
     metadata: { byAdminId: adminId },
   });
 
@@ -562,9 +570,10 @@ export async function unlockUserAction(input: { id: number }): Promise<Result> {
 }
 
 export async function lockUserAction(input: { id: number; hours: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
-  if (input.id === adminId) return { success: false, error: "Vous ne pouvez pas vous bloquer vous-même" };
+  if (input.id === adminId) return { success: false, error: t("vous_ne_pouvez_pas_vous_bloquer_vous") };
 
   const lockedUntil = new Date(Date.now() + input.hours * 60 * 60 * 1000);
   await prisma.admin.update({
@@ -597,15 +606,16 @@ const bulkSchema = z.object({
 });
 
 export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): Promise<Result<{ updated: number; reassigned?: { timeEntries: number; notifications: number } }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = bulkSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Sécurité : exclure le propre compte de l'admin courant
   const ids = parsed.data.userIds.filter((id) => id !== adminId);
   if (ids.length === 0) {
-    return { success: false, error: "Aucun utilisateur valide (vous ne pouvez pas vous modifier vous-même)" };
+    return { success: false, error: t("aucun_utilisateur_valide_vous_ne_pouvez_pas") };
   }
 
   // ── Optimistic concurrency check ──
@@ -635,14 +645,14 @@ export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): 
   // ── Validation successeur (si transfert demandé) ──
   if (parsed.data.reassignToAdminId) {
     if (ids.includes(parsed.data.reassignToAdminId)) {
-      return { success: false, error: "Le successeur ne peut pas être dans la liste à désactiver" };
+      return { success: false, error: t("le_successeur_ne_peut_pas_etre_dans") };
     }
     const successor = await prisma.admin.findUnique({
       where: { id: parsed.data.reassignToAdminId },
       select: { id: true, isActive: true },
     });
     if (!successor || !successor.isActive) {
-      return { success: false, error: "Le successeur sélectionné est introuvable ou inactif" };
+      return { success: false, error: t("le_successeur_selectionne_est_introuvable_ou_inactif") };
     }
   }
 
@@ -708,12 +718,15 @@ export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): 
 
 // ── Renvoyer une invitation (régénère le token) ────────────
 export async function resendInvitationAction(input: { id: number }): Promise<Result<{ inviteUrl: string; emailSent: boolean; emailError?: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
 
   const invite = await prisma.adminInvitation.findUnique({ where: { id: input.id } });
+  const resendBy = await prisma.admin.findUnique({ where: { id: adminId }, select: { locale: true } });
+  const tr = await getTranslations({ locale: resendBy?.locale?.split("-")[0] ?? "fr", namespace: "admin.emails" });
   if (!invite) return { success: false, error: "Invitation introuvable" };
-  if (invite.acceptedAt) return { success: false, error: "Invitation déjà acceptée" };
+  if (invite.acceptedAt) return { success: false, error: t("invitation_deja_acceptee") };
 
   const rawToken = crypto.randomBytes(32).toString("base64url");
   const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
@@ -742,7 +755,7 @@ export async function resendInvitationAction(input: { id: number }): Promise<Res
     </div>
     <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6">
       <p>Bonjour <strong>${escapeHtml(invite.fullName ?? "")}</strong>,</p>
-      <p>Votre invitation à rejoindre VNK Automatisation est toujours active. Voici votre lien d'activation :</p>
+      <p>${tr("invitation_toujours_active")}</p>
       <p style="text-align:center;margin:24px 0">
         <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a>
       </p>
@@ -784,7 +797,7 @@ async function requireUsersWrite() {
 const createSchema = z.object({
   email: z.string().email("Email invalide").max(200),
   fullName: z.string().min(1, "Nom requis").max(200),
-  password: z.string().min(12, "Mot de passe trop court (min 12 caractères)").max(200),
+  password: z.string().min(12, "mot_de_passe_trop_court_min_12").max(200),
   roleId: z.number().int().nullable().optional(),
   positionId: z.number().int().nullable().optional(),
   department: z.string().max(100).nullable().optional(),
@@ -795,19 +808,20 @@ const createSchema = z.object({
 });
 
 export async function createUserAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Email unique ?
   const existing = await prisma.admin.findUnique({ where: { email: parsed.data.email } });
-  if (existing) return { success: false, error: "Un compte avec cet email existe déjà" };
+  if (existing) return { success: false, error: t("un_compte_avec_cet_email_existe_deja_2") };
 
   // Valider FK
   if (parsed.data.roleId) {
     const role = await prisma.role.findUnique({ where: { id: parsed.data.roleId } });
-    if (!role) return { success: false, error: "Rôle introuvable" };
+    if (!role) return { success: false, error: t("role_introuvable") };
   }
   if (parsed.data.positionId) {
     const pos = await prisma.position.findUnique({ where: { id: parsed.data.positionId } });
@@ -897,23 +911,24 @@ const updateSchema = z.object({
 });
 
 export async function updateUserAction(input: z.infer<typeof updateSchema>): Promise<Result<{ reassigned?: { timeEntries: number; notifications: number } }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const { id, startDate, endDate, reassignToAdminId, expectedUpdatedAt, managerId, ...rest } = parsed.data;
 
   // Anti-cycle hiérarchique : managerId ne peut pas être soi-même ni un descendant.
   if (managerId !== undefined && managerId !== null) {
     if (managerId === id) {
-      return { success: false, error: "Un utilisateur ne peut pas être son propre manager" };
+      return { success: false, error: t("un_utilisateur_ne_peut_pas_etre_son") };
     }
     let cursor: number | null = managerId;
     const visited = new Set<number>();
     while (cursor != null) {
       if (cursor === id) {
-        return { success: false, error: "Cycle détecté dans la hiérarchie managériale" };
+        return { success: false, error: t("cycle_detecte_dans_la_hierarchie_manageriale") };
       }
       if (visited.has(cursor)) break;
       visited.add(cursor);
@@ -938,7 +953,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
     if (Math.abs(dbTs - clientTs) > 500) {
       return {
         success: false,
-        error: "Cette fiche a été modifiée par quelqu'un d'autre. Rechargez la page pour voir les changements récents.",
+        error: t("cette_fiche_a_ete_modifiee_par_quelqu"),
       };
     }
   }
@@ -946,14 +961,14 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
   // ── Validation du successeur si fourni ──
   if (reassignToAdminId) {
     if (reassignToAdminId === id) {
-      return { success: false, error: "Le successeur ne peut pas être l'utilisateur lui-même" };
+      return { success: false, error: t("le_successeur_ne_peut_pas_etre_l") };
     }
     const successor = await prisma.admin.findUnique({
       where: { id: reassignToAdminId },
       select: { id: true, isActive: true },
     });
     if (!successor || !successor.isActive) {
-      return { success: false, error: "Le successeur sélectionné est introuvable ou inactif" };
+      return { success: false, error: t("le_successeur_selectionne_est_introuvable_ou_inactif") };
     }
   }
 
@@ -991,7 +1006,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
             recipientType: "admin",
             recipientId: managerId,
             type: "info",
-            title: "Nouvel employé à votre charge",
+            title: t("nouvel_employe_a_votre_charge"),
             body: `${employeeLabel} vous est désormais rattaché.`,
             link: "/admin/employes/organigramme",
             icon: "users",
@@ -1008,7 +1023,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
           recipientType: "admin",
           recipientId: id,
           type: "info",
-          title: managerId ? `Nouveau manager : ${newMgrLabel}` : "Manager retiré",
+          title: managerId ? t("nouveau_manager", { name: newMgrLabel }) : t("manager_retire"),
           body: managerId
             ? `Votre supérieur hiérarchique a été mis à jour.`
             : `Vous n'avez plus de supérieur hiérarchique attitré pour l'instant.`,
@@ -1026,7 +1041,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
             recipientType: "admin",
             recipientId: before.managerId,
             type: "info",
-            title: "Employé retiré de votre équipe",
+            title: t("employe_retire_de_votre_equipe"),
             body: `${employeeLabel} n'est plus sous votre supervision.`,
             link: "/admin/employes/organigramme",
             icon: "users",
@@ -1092,10 +1107,11 @@ const resetPwdSchema = z.object({
   newPassword: z.string().min(12).max(200),
 });
 export async function resetUserPasswordAction(input: z.infer<typeof resetPwdSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = resetPwdSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const passwordHash = await bcrypt.hash(parsed.data.newPassword, 12);
   await prisma.admin.update({
@@ -1116,7 +1132,7 @@ export async function resetUserPasswordAction(input: z.infer<typeof resetPwdSche
     adminId: parsed.data.id,
     type: "password_changed",
     severity: "warning",
-    message: "Mot de passe réinitialisé par un administrateur",
+    message: "mot_de_passe_reinitialise_par_un_administrateur",
     metadata: { byAdminId: adminId },
   });
 
@@ -1134,23 +1150,24 @@ const deleteSchema = z.object({
   reassignToAdminId: z.number().int().nullable().optional(),
 });
 export async function deleteUserAction(input: z.infer<typeof deleteSchema>): Promise<Result<{ reassigned?: { timeEntries: number; notifications: number } }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = deleteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
-  if (parsed.data.id === adminId) return { success: false, error: "Vous ne pouvez pas supprimer votre propre compte" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
+  if (parsed.data.id === adminId) return { success: false, error: t("vous_ne_pouvez_pas_supprimer_votre_propre") };
 
   // ── Validation du successeur si fourni ──
   if (parsed.data.reassignToAdminId) {
     if (parsed.data.reassignToAdminId === parsed.data.id) {
-      return { success: false, error: "Le successeur ne peut pas être l'utilisateur lui-même" };
+      return { success: false, error: t("le_successeur_ne_peut_pas_etre_l") };
     }
     const successor = await prisma.admin.findUnique({
       where: { id: parsed.data.reassignToAdminId },
       select: { id: true, isActive: true },
     });
     if (!successor || !successor.isActive) {
-      return { success: false, error: "Le successeur sélectionné est introuvable ou inactif" };
+      return { success: false, error: t("le_successeur_selectionne_est_introuvable_ou_inactif") };
     }
   }
 
@@ -1160,7 +1177,7 @@ export async function deleteUserAction(input: z.infer<typeof deleteSchema>): Pro
     // Hard delete — réservé aux super_admin uniquement
     const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
     if (me?.customRole?.name !== "super_admin") {
-      return { success: false, error: "Seul un super-administrateur peut supprimer définitivement un compte" };
+      return { success: false, error: t("seul_un_super_administrateur_peut_supprimer_definitivement") };
     }
     // Avant suppression : si successeur fourni, déplacer ; sinon les FK SetNull
     if (parsed.data.reassignToAdminId) {

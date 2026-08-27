@@ -263,7 +263,7 @@ function groupContainsHref(group: NavGroup, activeHref: string): boolean {
 // (pour comportement accordion : ouvrir un groupe ferme ses voisins de même niveau).
 // Ne touche pas aux ancêtres ni aux enfants.
 function getSiblingGroupKeys(entries: NavEntry[], targetKey: string): string[] | null {
-  // Liste des groupes à ce niveau
+
   const thisLevelGroups: string[] = [];
   for (const e of entries) {
     if (isGroup(e)) thisLevelGroups.push(e.key);
@@ -271,7 +271,7 @@ function getSiblingGroupKeys(entries: NavEntry[], targetKey: string): string[] |
   if (thisLevelGroups.includes(targetKey)) {
     return thisLevelGroups.filter((k) => k !== targetKey);
   }
-  // Recursion : chercher dans les enfants des groupes
+
   for (const e of entries) {
     if (isGroup(e)) {
       const result = getSiblingGroupKeys(e.children, targetKey);
@@ -341,9 +341,9 @@ export function AdminSidebar({
   canSettings = true,
 }: {
   counts?: SidebarCounts;
-  /** Ressources lisibles par l'admin courant (matrice). Omis = tout visible. */
+
   readableResources?: string[];
-  /** Accès au hub Réglages (settings.write). */
+
   canSettings?: boolean;
 }) {
   const t = useTranslations("admin.sidebar");
@@ -360,14 +360,14 @@ export function AdminSidebar({
   const setCompact = (v: boolean) => {
     setCompactState(v);
     saveJson("admin.sidebar.compact", v);
-    // Cookie pour SSR (évite CLS au rechargement)
+
     if (typeof document !== "undefined") {
       document.cookie = `admin-sidebar-compact=${v ? "1" : "0"}; path=/; max-age=${60 * 60 * 24 * 365}; SameSite=Lax`;
     }
   };
 
-  // Synchronise la largeur de la sidebar avec une CSS variable
-  // pour que le <main> du layout suive automatiquement (evite le gap blanc en mode compact)
+
+
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.documentElement.style.setProperty("--admin-sidebar-w", compact ? "64px" : "240px");
@@ -380,12 +380,12 @@ export function AdminSidebar({
     if (stored) {
       setOpenGroupsState(stored);
     } else {
-      // Premier passage : ouvrir tous les ancêtres du leaf actif
+
       const ancestors = findAncestorGroupKeys(NAV, activeHref) ?? [];
       setOpenGroupsState(ancestors);
     }
     setHydrated(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, []);
   const setOpenGroups = (groups: string[]) => {
     setOpenGroupsState(groups);
@@ -393,17 +393,17 @@ export function AdminSidebar({
   };
   const toggleGroup = (key: string) => {
     if (openGroups.includes(key)) {
-      // Fermer le groupe (et ses descendants ouverts)
+
       setOpenGroups(openGroups.filter((k) => k !== key));
     } else {
-      // Ouvrir : accordion = fermer les voisins du même niveau, garder les ancêtres
+
       const siblings = getSiblingGroupKeys(NAV, key) ?? [];
       const filtered = openGroups.filter((k) => !siblings.includes(k));
       setOpenGroups([...filtered, key]);
     }
   };
 
-  // Auto-ouvrir tous les ancêtres du leaf actif lors de la navigation
+
   useEffect(() => {
     if (!hydrated) return;
     const ancestors = findAncestorGroupKeys(NAV, activeHref);
@@ -412,10 +412,10 @@ export function AdminSidebar({
     if (missing.length > 0) {
       setOpenGroups([...openGroups, ...missing]);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [activeHref, hydrated]);
 
-  // ─── Flyout state global : un seul flyout visible a la fois ───
+
   const [activeFlyoutKey, setActiveFlyoutKey] = useState<string | null>(null);
   const flyoutPosRef = useRef<{ top: number; left: number } | null>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -432,7 +432,7 @@ export function AdminSidebar({
   const scheduleClose = useCallback((key: string) => {
     if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
     closeTimerRef.current = setTimeout(() => {
-      // Ne ferme que si le flyout cible est toujours l'actif (sinon un autre a deja pris le relais)
+
       setActiveFlyoutKey((cur) => (cur === key ? null : cur));
       closeTimerRef.current = null;
     }, 180);
@@ -449,20 +449,20 @@ export function AdminSidebar({
 
   useEffect(() => () => { if (closeTimerRef.current) clearTimeout(closeTimerRef.current); }, []);
 
-  // Fermer le flyout au changement de route
+
   useEffect(() => { setActiveFlyoutKey(null); }, [pathname]);
 
   const flyoutCtx: FlyoutCtx = { activeKey: activeFlyoutKey, openFlyout, scheduleClose, cancelClose, getPos };
 
   return (
     <FlyoutContext.Provider value={flyoutCtx}>
-      {/* Desktop sidebar (≥ 1024px) */}
+
       <aside
         className={cn(
           "hidden lg:flex fixed top-[64px] left-0 bottom-0 z-20 flex-col border-r bg-card transition-[width] duration-200",
           compact ? "w-[64px]" : "w-[240px]",
         )}
-        aria-label="Navigation admin"
+        aria-label={t("navigation_admin")}
       >
         <SidebarContent
           entries={nav}
@@ -477,24 +477,24 @@ export function AdminSidebar({
           type="button"
           onClick={() => setCompact(!compact)}
           className="border-t h-10 flex items-center justify-center text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-          aria-label={compact ? "Étendre" : "Réduire"}
-          title={compact ? "Étendre la sidebar" : "Réduire la sidebar"}
+          aria-label={compact ? t("etendre") : t("reduire")}
+          title={compact ? t("etendre_sidebar") : t("reduire_sidebar")}
         >
           {compact ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
         </button>
       </aside>
 
-      {/* Mobile/tablet portrait hamburger (< 1024px) — contraste fort pour bien etre visible sur le navy */}
+
       <button
         type="button"
         onClick={() => setMobileOpen(true)}
         className="lg:hidden fixed top-[14px] left-3 z-40 flex h-9 w-9 items-center justify-center rounded-md bg-white/20 hover:bg-white/30 text-white ring-1 ring-white/40 backdrop-blur-sm shadow-md transition-colors"
-        aria-label="Menu"
+        aria-label={t("menu")}
       >
         <Menu className="h-5 w-5" strokeWidth={2.5} />
       </button>
 
-      {/* Mobile drawer */}
+
       {mobileOpen && (
         <>
           <div
@@ -503,7 +503,7 @@ export function AdminSidebar({
           />
           <div className="lg:hidden fixed top-0 left-0 bottom-0 z-50 w-[85%] max-w-[300px] bg-card flex flex-col">
             <div className="h-[64px] px-5 flex items-center justify-between border-b">
-              <span className="font-bold text-sm">Navigation</span>
+              <span className="font-bold text-sm">{t("navigation")}</span>
               <button
                 onClick={() => setMobileOpen(false)}
                 className="h-9 w-9 rounded-md hover:bg-muted flex items-center justify-center"
@@ -551,7 +551,7 @@ function SidebarContent({
   onNavigate?: () => void;
 }) {
   return (
-    <nav className="flex-1 min-h-0 overflow-y-auto py-2 px-2 admin-sidebar-scroll" aria-label="Navigation principale">
+    <nav className="flex-1 min-h-0 overflow-y-auto py-2 px-2 admin-sidebar-scroll" aria-label={t("navigation_principale")}>
       <ul className="space-y-0.5">
         {entries.map((entry) => (
           <NavRow
@@ -660,7 +660,7 @@ function GroupRow({
   const badge = entryBadgeSum(group, counts);
   const label = t(group.key);
 
-  // Flyout : etat partage global (un seul flyout visible a la fois dans toute la sidebar)
+
   const flyoutCtx = useFlyout();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const isMyFlyoutActive = flyoutCtx?.activeKey === group.key;
@@ -674,12 +674,12 @@ function GroupRow({
     flyoutCtx?.scheduleClose(group.key);
   };
 
-  // Flyout actif si : compact OU (groupe fermé en mode normal desktop).
-  // JAMAIS de flyout sur mobile drawer : on n'a pas la place a droite, accordion inline a la place.
+
+
   const flyoutEligible = !inMobileDrawer && (compact || !isOpen);
   const flyoutPos = isMyFlyoutActive ? flyoutCtx?.getPos() : null;
 
-  // Indentation par niveau (level 0 = racine, level 1 = enfant d'un groupe, etc.)
+
   const indentClass = depth === 0 ? "" : depth === 1 ? "ml-2" : "ml-4";
 
   return (
@@ -716,7 +716,7 @@ function GroupRow({
         )}
       </button>
 
-      {/* Enfants — inline expansion (mode normal + groupe ouvert) */}
+
       {isOpen && !compact && (
         <ul className={cn(
           "mt-0.5 space-y-0.5 border-l border-border",
@@ -740,7 +740,7 @@ function GroupRow({
         </ul>
       )}
 
-      {/* Flyout — portal vers body pour eviter le clipping par overflow */}
+
       {flyoutPos && flyoutEligible && typeof document !== "undefined" && createPortal(
         <div
           className="fixed bg-card border rounded-lg shadow-xl p-1 min-w-[220px] z-[60]"
@@ -799,7 +799,7 @@ function FlyoutNavRow({
     );
   }
 
-  // Sub-group dans flyout : inline expansion au clic, pas de sous-flyout pour rester simple
+
   const Icon = entry.icon;
   const label = t(entry.key);
   const [open, setOpen] = useState(false);

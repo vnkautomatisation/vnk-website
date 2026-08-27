@@ -33,7 +33,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
     try {
       const res = await fetch("/api/profile/data-export");
       if (!res.ok) {
-        toast.error("Erreur lors de la generation de l'export");
+        toast.error(t("erreur_lors_generation_export"));
         return;
       }
       const blob = await res.blob();
@@ -45,10 +45,10 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
-      toast.success("Export telecharge");
+      toast.success(t("export_telecharge"));
       await requestDataExportAction();
     } catch {
-      toast.error("Erreur reseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setExporting(false);
     }
@@ -56,13 +56,13 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
 
   const handleDeleteRequest = () => {
     if (deleteConfirm !== admin.email) {
-      toast.error("Le courriel ne correspond pas");
+      toast.error(t("courriel_ne_correspond_pas"));
       return;
     }
     startDelete(async () => {
       const r = await requestAccountDeletionAction(deleteConfirm);
       if (r.success) {
-        toast.success("Demande enregistree. Un super-administrateur va vous contacter.");
+        toast.success(t("demande_enregistree_super_administrateur_va"));
         setDeleteOpen(false);
         setDeleteConfirm("");
       } else {
@@ -75,9 +75,9 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
     startPrefs(async () => {
       if (kind === "marketing") setMarketingOptIn(value);
       else setAnalyticsOptIn(value);
-      // On reutilise notif-prefs pour stocker consents minimaux
+
       const r = await updateNotificationPrefsAction({});
-      if (!r.success) toast.error("Erreur");
+      if (!r.success) toast.error(t("erreur"));
     });
   };
 
@@ -87,7 +87,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
 
   return (
     <div className="space-y-4">
-      {/* ── Bandeau Loi 25 ───────────────────────────── */}
+
       <Card className="border-[#0F2D52]/20 bg-gradient-to-br from-[#0F2D52]/5 to-transparent">
         <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex items-center justify-center h-12 w-12 rounded-full bg-[#0F2D52] text-white flex-shrink-0">
@@ -97,12 +97,12 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
             <p className="text-sm font-semibold text-[#0F2D52]">{t("law25_title")}</p>
             <p className="text-xs text-muted-foreground mt-0.5">{t("law25_text")}</p>
           </div>
-          <Badge variant="outline" className="self-start sm:self-center">Loi 25</Badge>
+          <Badge variant="outline" className="self-start sm:self-center">{t("loi_25")}</Badge>
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* ── Export ──────────────────────────────── */}
+
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
@@ -124,7 +124,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
           </CardContent>
         </Card>
 
-        {/* ── Hebergement ─────────────────────────── */}
+
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
@@ -135,25 +135,25 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
           <CardContent className="space-y-2 text-sm">
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-muted-foreground">{t("hosting_region")}</span>
-              <Badge variant="secondary">Amérique du Nord</Badge>
+              <Badge variant="secondary">{t("amerique_nord")}</Badge>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-muted-foreground">{t("hosting_database")}</span>
-              <Badge variant="secondary">Chiffrée</Badge>
+              <Badge variant="secondary">{t("chiffree")}</Badge>
             </div>
             <div className="flex items-center justify-between py-1.5 border-b">
               <span className="text-muted-foreground">{t("hosting_storage")}</span>
-              <Badge variant="secondary">Dropbox</Badge>
+              <Badge variant="secondary">{t("dropbox")}</Badge>
             </div>
             <div className="flex items-center justify-between py-1.5">
               <span className="text-muted-foreground">{t("hosting_payments")}</span>
-              <Badge variant="secondary">Stripe</Badge>
+              <Badge variant="secondary">{t("stripe")}</Badge>
             </div>
             <p className="text-[10px] text-muted-foreground pt-2">{t("hosting_partners")}</p>
           </CardContent>
         </Card>
 
-        {/* ── Consentements ─────────────────────── */}
+
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
@@ -180,7 +180,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
           </CardContent>
         </Card>
 
-        {/* ── Suppression ─────────────────────────── */}
+
         <Card className="border-red-200">
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2 text-red-700">
@@ -205,7 +205,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
         </Card>
       </div>
 
-      {/* Dialog Delete */}
+
       <Dialog open={deleteOpen} onOpenChange={setDeleteOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-red-600 text-white p-5">

@@ -113,10 +113,10 @@ export default async function PortalDashboard() {
   ];
 
   const quickActions = [
-    { label: "Devis", href: "/portail/devis", icon: FileText },
-    { label: "Factures", href: "/portail/factures", icon: Receipt },
-    { label: "Contrats", href: "/portail/contrats", icon: FileSignature },
-    { label: "Nouvelle demande", href: "/portail/demandes", icon: Inbox },
+    { label: t("devis"), href: "/portail/devis", icon: FileText },
+    { label: t("factures"), href: "/portail/factures", icon: Receipt },
+    { label: t("contrats"), href: "/portail/contrats", icon: FileSignature },
+    { label: t("nouvelle_demande"), href: "/portail/demandes", icon: Inbox },
   ];
 
   // Event type colors for timeline
@@ -267,9 +267,7 @@ export default async function PortalDashboard() {
               <p className="text-sm font-medium text-muted-foreground">
                 Aucune activite recente
               </p>
-              <p className="text-xs text-muted-foreground/60 mt-1">
-                Vos prochaines actions apparaitront ici
-              </p>
+              <p className="text-xs text-muted-foreground/60 mt-1">{t("page_vos_prochaines_actions_apparaitront_ici")}</p>
             </div>
           ) : (
             <div className="relative">

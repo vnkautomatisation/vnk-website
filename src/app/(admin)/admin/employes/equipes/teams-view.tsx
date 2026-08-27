@@ -40,6 +40,7 @@ type TeamRow = {
 };
 
 export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLite[] }) {
+  const t = useTranslations("admin.teams");
   const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; team: TeamRow | null }>({ open: false, team: null });
@@ -49,19 +50,19 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
   const onDelete = async () => {
     if (!confirmDel) return;
     const r = await deleteTeamAction({ id: confirmDel.id });
-    if (r.success) { toast.success("Équipe supprimée"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("equipe_supprimee")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
     setConfirmDel(null);
   };
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
             <Network className="h-5 w-5 text-[#0F2D52]" />
-            Équipes
+            {t("equipes")}
           </h1>
           <p className="text-sm text-muted-foreground">
             {teams.length} équipe{teams.length > 1 ? "s" : ""} · structurez la hiérarchie de votre organisation
@@ -69,54 +70,54 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
         </div>
         <Button onClick={() => setDialog({ open: true, team: null })}>
           <Plus className="h-4 w-4 mr-1.5" />
-          Nouvelle équipe
+          {t("nouvelle_equipe")}
         </Button>
       </div>
 
       {teams.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucune équipe créée. Commencez par en créer une pour organiser votre personnel.
+          {t("aucune_equipe_creee_commencez_creer")}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-          {teams.map((t) => (
-            <Card key={t.id} className="overflow-hidden">
+          {teams.map((team) => (
+            <Card key={team.id} className="overflow-hidden">
               <div
                 className="h-1.5"
-                style={{ backgroundColor: t.color ?? "#0F2D52" }}
+                style={{ backgroundColor: team.color ?? "#0F2D52" }}
               />
               <div className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h3 className="font-bold text-sm flex items-center gap-1.5">
-                      {t.name}
-                      {t.parent && (
+                      {team.name}
+                      {team.parent && (
                         <Badge variant="outline" className="text-[10px] gap-1">
                           <GitBranch className="h-2.5 w-2.5" />
-                          {t.parent.name}
+                          {team.parent.name}
                         </Badge>
                       )}
                     </h3>
-                    {t.description && (
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{t.description}</p>
+                    {team.description && (
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{team.description}</p>
                     )}
                   </div>
                   <div className="flex gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, team: t })} aria-label={tc("edit")}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDialog({ open: true, team: team })} aria-label={tc("edit")}>
                       <Edit className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(t)} aria-label={tc("delete")}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 hover:text-destructive" onClick={() => setConfirmDel(team)} aria-label={tc("delete")}>
                       <Trash2 className="h-3.5 w-3.5" />
                     </Button>
                   </div>
                 </div>
 
-                {t.lead && (
+                {team.lead && (
                   <div className="flex items-center gap-2 p-2 rounded-md bg-amber-50 border border-amber-200">
                     <Crown className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                     <div className="min-w-0">
-                      <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold">Chef d&apos;équipe</p>
-                      <p className="text-xs font-medium truncate">{t.lead.fullName || t.lead.email}</p>
+                      <p className="text-xs uppercase tracking-wider text-amber-700 font-semibold">{t("chef_apos_equipe")}</p>
+                      <p className="text-xs font-medium truncate">{team.lead.fullName || team.lead.email}</p>
                     </div>
                   </div>
                 )}
@@ -124,18 +125,18 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
-                      Membres ({t._count.members})
+                      Membres ({team._count.members})
                     </p>
-                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => setAssignDialog({ open: true, team: t })}>
+                    <Button variant="ghost" size="sm" className="h-6 text-[11px] px-2" onClick={() => setAssignDialog({ open: true, team: team })}>
                       <UsersIcon className="h-3 w-3 mr-1" />
-                      Gérer
+                      {t("gerer")}
                     </Button>
                   </div>
-                  {t.members.length === 0 ? (
-                    <p className="text-xs text-muted-foreground italic">Aucun membre</p>
+                  {team.members.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">{t("aucun_membre")}</p>
                   ) : (
                     <div className="flex flex-wrap gap-1">
-                      {t.members.slice(0, 6).map((m) => (
+                      {team.members.slice(0, 6).map((m) => (
                         <Link
                           key={m.id}
                           href={`/admin/employes/${m.id}/dossier`}
@@ -146,9 +147,9 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                           {!m.avatarUrl && (m.fullName || m.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}
                         </Link>
                       ))}
-                      {t.members.length > 6 && (
+                      {team.members.length > 6 && (
                         <div className="h-7 px-2 rounded-full bg-muted flex items-center text-[10px] font-medium text-muted-foreground">
-                          +{t.members.length - 6}
+                          +{team.members.length - 6}
                         </div>
                       )}
                     </div>
@@ -181,7 +182,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
         title={`Supprimer ${confirmDel?.name} ?`}
-        description="Les membres et sous-équipes seront détachés. Cette action ne peut être annulée."
+        description={t("membres_sous_equipes_seront_detaches")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={onDelete}
@@ -200,6 +201,7 @@ function TeamDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.teams");
   const tc = useTranslations("common");
   const [name, setName] = useState(team?.name ?? "");
   const [description, setDescription] = useState(team?.description ?? "");
@@ -208,7 +210,7 @@ function TeamDialog({
   const [parentId, setParentId] = useState(team?.parentTeamId ? String(team.parentTeamId) : "none");
   const [pending, setPending] = useState(false);
 
-  // Reset propre à l'ouverture / changement de team (useEffect au lieu d'un anti-pattern dans le body)
+
   useEffect(() => {
     if (open) {
       setName(team?.name ?? "");
@@ -220,7 +222,7 @@ function TeamDialog({
   }, [open, team]);
 
   const submit = async () => {
-    if (!name.trim()) { toast.error("Nom requis"); return; }
+    if (!name.trim()) { toast.error(t("nom_requis")); return; }
     setPending(true);
     const payload = {
       name: name.trim(),
@@ -234,10 +236,10 @@ function TeamDialog({
       : await createTeamAction(payload);
     setPending(false);
     if (r.success) {
-      toast.success(team ? "Équipe modifiée" : "Équipe créée");
+      toast.success(team ? t("equipe_modifiee") : t("equipe_creee"));
       onSaved();
       onClose();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   return (
@@ -247,52 +249,52 @@ function TeamDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Network className="h-4 w-4" />
-              {team ? "Modifier l'équipe" : "Nouvelle équipe"}
+              {team ? t("modifier_equipe") : t("nouvelle_equipe")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Une équipe regroupe des membres avec un objectif commun.
+              {t("equipe_regroupe_membres_objectif_commun")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Nom *</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Comptabilité, Ventes…" />
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("nom")}</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("comptabilite_ventes")} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Description</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("description")}</Label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-              placeholder="Rôle, mission, contexte…"
+              placeholder={t("role_mission_contexte")}
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Couleur</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("couleur")}</Label>
               <Input type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-9 cursor-pointer" />
             </div>
             <div className="space-y-1.5">
-              <Label className="text-xs uppercase tracking-wider font-semibold">Équipe parent</Label>
+              <Label className="text-xs uppercase tracking-wider font-semibold">{t("equipe_parent")}</Label>
               <Select value={parentId} onValueChange={setParentId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Aucune" /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("aucune")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— Aucune (top-level) —</SelectItem>
-                  {teams.filter((t) => t.id !== team?.id).map((t) => (
-                    <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                  <SelectItem value="none">{t("aucune_top_level")}</SelectItem>
+                  {teams.filter((o) => o.id !== team?.id).map((o) => (
+                    <SelectItem key={o.id} value={String(o.id)}>{o.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold">Chef d&apos;équipe</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold">{t("chef_apos_equipe")}</Label>
             <Select value={leadId} onValueChange={setLeadId}>
               <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={tc("none")} /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">— Aucun —</SelectItem>
+                <SelectItem value="none">{t("aucun")}</SelectItem>
                 {admins.map((a) => (
                   <SelectItem key={a.id} value={String(a.id)}>{a.fullName || a.email}</SelectItem>
                 ))}
@@ -303,7 +305,7 @@ function TeamDialog({
         <DialogFooter className="px-5 py-3 border-t bg-muted/30">
           <Button variant="outline" onClick={onClose} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || !name.trim()}>
-            {pending ? "..." : team ? "Enregistrer" : "Créer"}
+            {pending ? "..." : team ? t("enregistrer") : t("creer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -320,6 +322,7 @@ function AssignMembersDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.teams");
   const tc = useTranslations("common");
   const [pending, setPending] = useState(false);
 
@@ -334,9 +337,9 @@ function AssignMembersDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success(isMember ? "Membre retiré" : "Membre ajouté");
+      toast.success(isMember ? t("membre_retire") : t("membre_ajoute"));
       onSaved();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   return (
@@ -349,7 +352,7 @@ function AssignMembersDialog({
               Membres de « {team.name} »
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Activez/désactivez les membres. Un employé ne peut appartenir qu&apos;à une seule équipe.
+              {t("activez_desactivez_membres_employe_ne")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -378,17 +381,17 @@ function AssignMembersDialog({
                 </div>
                 {inOtherTeam && (
                   <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
-                    Autre équipe
+                    {t("autre_equipe")}
                   </Badge>
                 )}
                 <Link
                   href={`/admin/employes/${a.id}/dossier`}
                   onClick={(e) => e.stopPropagation()}
                   className="text-[11px] inline-flex items-center gap-1 text-[#0F2D52] hover:underline shrink-0"
-                  title="Voir le dossier"
+                  title={t("voir_dossier")}
                 >
                   <FolderOpen className="h-3 w-3" />
-                  Dossier
+                  {t("dossier")}
                 </Link>
               </label>
             );

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import {
   DollarSign,
   FileText,
@@ -39,10 +40,10 @@ const EVENT_CONFIG: Record<string, { icon: React.ComponentType<{ className?: str
   client_created: { icon: UserPlus, dotColor: "bg-blue-500" },
 };
 
-function formatRelative(iso: string): string {
+function formatRelative(iso: string, justNow: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
-  if (min < 1) return "A l'instant";
+  if (min < 1) return justNow;
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h}h`;
@@ -52,11 +53,12 @@ function formatRelative(iso: string): string {
 }
 
 export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
+  const t = useTranslations("admin.ui");
   return (
     <Card>
       <CardContent className="p-5">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="font-semibold text-sm">Activite recente</h3>
+          <h3 className="font-semibold text-sm">{t("activite_recente")}</h3>
           <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-semibold">
             {events.length}
           </span>
@@ -64,7 +66,7 @@ export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
 
         {events.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-6">
-            Aucune activite recente
+            {t("aucune_activite_recente")}
           </p>
         ) : (
           <div className="space-y-0">
@@ -76,7 +78,7 @@ export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
               const Icon = config.icon;
               return (
                 <div key={ev.id} className="flex gap-3 group">
-                  {/* Ligne + point */}
+
                   <div className="flex flex-col items-center">
                     <div
                       className={`h-7 w-7 rounded-full flex items-center justify-center text-white shrink-0 ${config.dotColor}`}
@@ -88,14 +90,14 @@ export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
                     )}
                   </div>
 
-                  {/* Contenu */}
+
                   <div className="pb-4 min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-sm font-medium truncate">
                         {ev.eventLabel || ev.eventType}
                       </p>
                       <time className="text-[10px] text-muted-foreground shrink-0">
-                        {formatRelative(ev.createdAt)}
+                        {formatRelative(ev.createdAt, t("instant"))}
                       </time>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">

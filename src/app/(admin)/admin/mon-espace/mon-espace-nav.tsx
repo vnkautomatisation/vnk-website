@@ -7,51 +7,58 @@ import {
   Sparkles, FolderClosed, Building2,
 } from "lucide-react";
 import { ModuleSidebarNav, type NavSection } from "@/components/admin/module-sidebar-nav";
+import { useTranslations } from "next-intl";
 
 // Refonte du menu : on consolide "Mes documents" et "Ma rémunération" dans
 // les groupes existants (Mon quotidien + Mon dossier) car ils ne contenaient
 // qu'un seul item chacun apres le nettoyage (Politiques RH + Mes contrats
 // retires car redondants avec les tabs de /mon-espace/documents).
-const SECTIONS: NavSection[] = [
+const SECTION_KEYS: Array<{ groupKey: string; groupIcon: React.ComponentType<{ className?: string }>; items: Array<{ href: string; labelKey: string; icon: React.ComponentType<{ className?: string }> }> }> = [
   {
-    group: "Mon quotidien",
+    groupKey: "grp_mon_quotidien",
     groupIcon: Sparkles,
     items: [
-      { href: "/admin/mon-espace", label: "Tableau de bord", icon: Home },
-      { href: "/admin/mon-espace/documents", label: "Mes documents", icon: FileText },
-      { href: "/admin/mon-espace/pointage", label: "Mon pointage", icon: Clock },
-      { href: "/admin/mon-espace/conges", label: "Mes congés", icon: CalendarDays },
+      { href: "/admin/mon-espace", labelKey: "nav_tableau_bord", icon: Home },
+      { href: "/admin/mon-espace/documents", labelKey: "nav_mes_documents", icon: FileText },
+      { href: "/admin/mon-espace/pointage", labelKey: "nav_mon_pointage", icon: Clock },
+      { href: "/admin/mon-espace/conges", labelKey: "nav_mes_conges", icon: CalendarDays },
     ],
   },
   {
-    group: "Mon dossier",
+    groupKey: "grp_mon_dossier",
     groupIcon: FolderClosed,
     items: [
-      { href: "/admin/mon-espace/paie", label: "Mes bulletins", icon: Calculator },
-      { href: "/admin/mon-espace/equipement", label: "Mon équipement", icon: Briefcase },
-      { href: "/admin/mon-espace/formations", label: "Formations & permis", icon: GraduationCap },
-      { href: "/admin/mon-espace/urgence", label: "Contacts d'urgence", icon: Heart },
-      { href: "/admin/mon-espace/bancaire", label: "Info bancaire", icon: CreditCard },
-      { href: "/admin/mon-espace/famille", label: "Famille / dépendants", icon: Users },
+      { href: "/admin/mon-espace/paie", labelKey: "nav_mes_bulletins", icon: Calculator },
+      { href: "/admin/mon-espace/equipement", labelKey: "nav_mon_equipement", icon: Briefcase },
+      { href: "/admin/mon-espace/formations", labelKey: "nav_formations_permis", icon: GraduationCap },
+      { href: "/admin/mon-espace/urgence", labelKey: "nav_contacts_urgence", icon: Heart },
+      { href: "/admin/mon-espace/bancaire", labelKey: "nav_info_bancaire", icon: CreditCard },
+      { href: "/admin/mon-espace/famille", labelKey: "nav_famille_dependants", icon: Users },
     ],
   },
   {
-    group: "Mon équipe",
+    groupKey: "grp_mon_equipe",
     groupIcon: Building2,
     items: [
-      { href: "/admin/mon-espace/equipe", label: "Annuaire", icon: UserCircle },
-      { href: "/admin/mon-espace/annonces", label: "Annonces", icon: Megaphone },
+      { href: "/admin/mon-espace/equipe", labelKey: "nav_annuaire", icon: UserCircle },
+      { href: "/admin/mon-espace/annonces", labelKey: "nav_annonces", icon: Megaphone },
     ],
   },
 ];
 
 export function MonEspaceNav() {
+  const t = useTranslations("admin.my_dashboard");
+  const sections: NavSection[] = SECTION_KEYS.map((s) => ({
+    group: t(s.groupKey),
+    groupIcon: s.groupIcon,
+    items: s.items.map((i) => ({ href: i.href, label: t(i.labelKey), icon: i.icon })),
+  }));
   return (
     <ModuleSidebarNav
-      moduleLabel="Mon espace"
+      moduleLabel={t("mon_espace")}
       moduleIcon={Home}
-      moduleTagline="VNK · Self-service"
-      sections={SECTIONS}
+      moduleTagline={t("vnk_self_service")}
+      sections={sections}
       storageKey="mon-espace-nav-collapsed"
     />
   );

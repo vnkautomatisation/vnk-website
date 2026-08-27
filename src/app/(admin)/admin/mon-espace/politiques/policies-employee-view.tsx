@@ -55,11 +55,12 @@ function isRecent(iso: string | null | undefined): boolean {
 }
 
 export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
+  const t = useTranslations("admin.my_dashboard");
   const tc = useTranslations("common");
   const [search, setSearch] = useState("");
   const [openPolicy, setOpenPolicy] = useState<Policy | null>(null);
 
-  // KPIs
+
   const recentCount = useMemo(
     () => policies.filter((p) => isRecent(p.effectiveFrom)).length,
     [policies],
@@ -76,7 +77,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
     );
   }, [policies, search]);
 
-  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -90,7 +91,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -98,7 +99,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
 
   return (
     <div className="space-y-4">
-      {/* Header navy */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -109,54 +110,52 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
             <ScrollText className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold">Politiques de l'entreprise</h1>
-            <p className="text-xs text-white/80">
-              Consultez les politiques RH en vigueur. Cliquez sur une politique pour la lire ou l'imprimer.
-            </p>
+            <h1 className="text-lg font-bold">{t("policies_employee_view_politiques_de_l_entreprise")}</h1>
+            <p className="text-xs text-white/80">{t("policies_employee_view_consultez_les_politiques_rh_en_vigueur_cliquez")}</p>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
         <DocumentStatsCard
-          label="Politiques actives"
+          label={t("politiques_actives")}
           value={policies.length}
           icon={ScrollText}
           accent="navy"
-          hint="Documents en vigueur"
+          hint={t("documents_vigueur")}
         />
         <DocumentStatsCard
-          label="Nouveautes 30 j"
+          label={t("nouveautes_30_j")}
           value={recentCount}
           icon={Sparkles}
           accent={recentCount > 0 ? "info" : "navy"}
           hint={
             recentCount > 0
               ? `Mises a jour recentes a consulter`
-              : "Aucun changement recent"
+              : t("aucun_changement_recent")
           }
         />
         <DocumentStatsCard
           label={tc("status")}
-          value={policies.length > 0 ? "A jour" : "-"}
+          value={policies.length > 0 ? t("a_jour") : "-"}
           icon={CheckCircle2}
           accent={policies.length > 0 ? "success" : "navy"}
-          hint="Toujours disponibles dans Mon espace"
+          hint={t("toujours_disponibles_mon_espace")}
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Act :</span>
-                  <span className="hidden min-[480px]:inline">Actives :</span>
+                  <span className="min-[480px]:hidden">{t("act")}</span>
+                  <span className="hidden min-[480px]:inline">{t("actives")}</span>
                 </span>
                 <span className="font-semibold text-[#0F2D52]">{policies.length}</span>
               </span>
@@ -165,8 +164,8 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
                   <span className="text-muted-foreground">·</span>
                   <span className="inline-flex items-baseline gap-1">
                     <span className="text-muted-foreground">
-                      <span className="min-[480px]:hidden">Nouv :</span>
-                      <span className="hidden min-[480px]:inline">Nouveautes :</span>
+                      <span className="min-[480px]:hidden">{t("nouv")}</span>
+                      <span className="hidden min-[480px]:inline">{t("nouveautes")}</span>
                     </span>
                     <span className="font-semibold text-sky-700">{recentCount}</span>
                   </span>
@@ -177,7 +176,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop uniquement (pas de tabs) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -191,22 +190,22 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <ScrollText className="h-4 w-4" />
-            Politiques RH
+            {t("politiques_rh")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Actives :</span>
+            <span className="text-muted-foreground">{t("actives")}</span>
             <span className="font-semibold text-[#0F2D52]">{policies.length}</span>
           </span>
           {recentCount > 0 && (
             <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-              <span className="text-muted-foreground">Nouveautes :</span>
+              <span className="text-muted-foreground">{t("nouveautes")}</span>
               <span className="font-semibold text-sky-700">{recentCount}</span>
             </span>
           )}
         </div>
       </div>
 
-      {/* Recherche */}
+
       {policies.length > 4 && (
         <Card className="p-3">
           <div className="relative">
@@ -214,24 +213,24 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher une politique (titre, contenu, cle)..."
+              placeholder={t("rechercher_politique_titre_contenu_cle")}
               className="h-9 text-sm pl-8"
             />
           </div>
         </Card>
       )}
 
-      {/* Liste des politiques */}
+
       {filtered.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <ScrollText className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm font-semibold">
-            {search ? `Aucune politique pour "${search}"` : "Aucune politique publiee"}
+            {search ? `Aucune politique pour "${search}"` : t("aucune_politique_publiee")}
           </p>
           <p className="text-xs text-muted-foreground">
             {search
-              ? "Essayez avec d'autres mots-cles."
-              : "Les politiques RH apparaitront ici lorsqu'elles seront publiees."}
+              ? t("essayez_autres_mots_cles")
+              : t("politiques_rh_apparaitront_ici_lorsqu")}
           </p>
         </Card>
       ) : (
@@ -246,7 +245,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
         </div>
       )}
 
-      {/* Sheet de lecture */}
+
       <PolicyReaderSheet
         policy={openPolicy}
         onClose={() => setOpenPolicy(null)}
@@ -265,6 +264,7 @@ function PolicyCard({
   policy: Policy;
   onOpen: () => void;
 }) {
+  const t = useTranslations("admin.my_dashboard");
   const recent = isRecent(policy.effectiveFrom);
   const preview =
     policy.bodyMarkdown
@@ -293,7 +293,7 @@ function PolicyCard({
               </span>
               {recent && (
                 <Badge className="text-[10px] bg-sky-100 text-sky-700 border-sky-200">
-                  Nouveau
+                  {t("nouveau")}
                 </Badge>
               )}
             </div>
@@ -315,7 +315,7 @@ function PolicyCard({
             className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white flex-1"
           >
             <Eye className="h-3.5 w-3.5 mr-1.5" />
-            Lire
+            {t("lire")}
           </Button>
           <TemplatePdfPreviewButton
             bodyMarkdown={policy.bodyMarkdown}
@@ -343,6 +343,7 @@ function PolicyReaderSheet({
   policy: Policy | null;
   onClose: () => void;
 }) {
+  const t = useTranslations("admin.my_dashboard");
   const tc = useTranslations("common");
   return (
     <Sheet open={!!policy} onOpenChange={(o) => !o && onClose()}>
@@ -397,7 +398,7 @@ function PolicyReaderSheet({
 
             <div className="border-t bg-muted/30 px-5 py-3 shrink-0 flex flex-wrap items-center justify-between gap-2">
               <p className="text-[11px] text-muted-foreground">
-                Document de reference. Consultez les RH pour toute question.
+                {t("document_reference_consultez_rh_toute")}
               </p>
               <div className="flex items-center gap-1.5">
                 <TemplatePdfPreviewButton
@@ -416,7 +417,7 @@ function PolicyReaderSheet({
                       className="h-8 text-xs"
                     >
                       <FileText className="h-3.5 w-3.5 mr-1.5" />
-                      Apercu PDF
+                      {t("apercu_pdf")}
                     </Button>
                   }
                 />

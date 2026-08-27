@@ -2,6 +2,7 @@
 // Export CSV du rapport RH (UTF-8 BOM pour Excel).
 // Auth : admin connecte.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -19,13 +20,14 @@ function csv(v: string | number): string {
 }
 
 export async function GET(_req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
   }
   // Rapports RH : reserves RH (super_admin / users.write / hr.write).
   if (!(await isHrAdmin(session.user.adminId!))) {
-    return NextResponse.json({ error: "Permission refusée (RH requis)" }, { status: 403 });
+    return NextResponse.json({ error: t("permission_refusee_rh_requis") }, { status: 403 });
   }
   const adminId = session.user.adminId!;
 
@@ -40,11 +42,11 @@ export async function GET(_req: NextRequest) {
   lines.push(`${csv("Embauches 12 mois")},${csv(data.hiresLast12Months)}`);
   lines.push(`${csv("Departs 12 mois")},${csv(data.departuresLast12Months)}`);
   lines.push(`${csv("Turnover (%)")},${csv(data.turnoverPct.toFixed(1))}`);
-  lines.push(`${csv("Anciennete moyenne (ans)")},${csv(data.avgTenureYears.toFixed(1))}`);
-  lines.push(`${csv("Conges en attente")},${csv(data.pendingLeaves)}`);
-  lines.push(`${csv("Conges approuves ce mois")},${csv(data.approvedLeavesThisMonth)}`);
-  lines.push(`${csv("Cas CNESST ouverts")},${csv(data.openCnesstCases)}`);
-  lines.push(`${csv("Anniversaires a venir (30 j)")},${csv(data.upcomingAnniversaries)}`);
+  lines.push(`${csv(t("csvh_anciennete_moyenne"))},${csv(data.avgTenureYears.toFixed(1))}`);
+  lines.push(`${csv(t("csvh_conges_en_attente"))},${csv(data.pendingLeaves)}`);
+  lines.push(`${csv(t("csvh_conges_approuves_mois"))},${csv(data.approvedLeavesThisMonth)}`);
+  lines.push(`${csv(t("csvh_cas_cnesst_ouverts"))},${csv(data.openCnesstCases)}`);
+  lines.push(`${csv(t("csvh_anniversaires_venir"))},${csv(data.upcomingAnniversaries)}`);
 
   // Section postes
   lines.push("");

@@ -5,6 +5,7 @@
 // Setup Railway : meme cron service que check-invoices, chainer avec &&
 //   curl ... /api/cron/check-invoices && curl ... /api/cron/check-contracts
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -20,6 +21,7 @@ function authorize(req: Request): boolean {
 }
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -51,7 +53,7 @@ export async function GET(req: Request) {
         recipientType: "admin",
         recipientId: 0,
         type: "warning",
-        title: "Contrat expiré",
+        title: t("contrat_expire"),
         body: `${ct.contractNumber} — ${ct.title}`,
         link: `/admin/contracts`,
       },

@@ -3,6 +3,7 @@
 // Couvre : creation/modif/annulation employee, revue (approve/reject) reviewer,
 // bulk actions, delegation, auto-TimeClock pour les conges payes.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +17,7 @@ import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
-const ERR_NO_AUTHORITY = "Vous n'avez pas l'autorité pour gérer ce congé.";
+const ERR_NO_AUTHORITY = "vous_n_avez_pas_l_autorite_pour";
 
 async function requireLeavesReview(): Promise<number | null> {
   const session = await auth();
@@ -67,7 +68,7 @@ async function validatePeriod(
   const now = new Date();
   const cutoff = new Date(now.getTime() - 14 * 86400000);
   if (start < cutoff && !isSuper) {
-    return "Les dates ne peuvent pas etre plus de 14 jours dans le passe — contactez RH.";
+    return "les_dates_ne_peuvent_pas_etre_14j";
   }
 
   // 2) chevauchement avec autre demande
@@ -102,7 +103,7 @@ async function validatePeriod(
   if (type === "vacation") {
     const minNotice = 7 * 86400000;
     if (start.getTime() - now.getTime() < minNotice && !isSuper) {
-      return "Les vacances exigent un preavis minimum de 7 jours.";
+      return "les_vacances_exigent_preavis_7j";
     }
   }
 
@@ -161,18 +162,19 @@ async function detectTeamConflict(
 }
 
 export async function createLeaveRequestAction(input: z.infer<typeof requestSchema>): Promise<Result<{ id: number; warning?: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Compte inactif refuse
   const me = await prisma.admin.findUnique({
     where: { id: adminId },
     select: { isActive: true, leaveBlockedUntil: true, leaveBlockedReason: true },
   });
-  if (!me || !me.isActive) return { success: false, error: "Compte désactivé — contactez RH." };
+  if (!me || !me.isActive) return { success: false, error: t("compte_desactive_contactez_rh") };
   // Soumissions bloquées par un admin ?
   if (me.leaveBlockedUntil && me.leaveBlockedUntil.getTime() > Date.now()) {
     const untilStr = me.leaveBlockedUntil.toLocaleDateString("fr-CA");
@@ -183,16 +185,16 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
   const start = new Date(parsed.data.startDate);
   const end = new Date(parsed.data.endDate);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return { success: false, error: "Dates invalides" };
-  if (end < start) return { success: false, error: "Fin avant début" };
+  if (end < start) return { success: false, error: t("fin_avant_debut") };
 
   const isHalf = !!parsed.data.halfDay;
   if (isHalf && parsed.data.startDate !== parsed.data.endDate) {
-    return { success: false, error: "Une demi-journée doit avoir la même date de début et de fin." };
+    return { success: false, error: t("une_demi_journee_doit_avoir_la_meme") };
   }
 
   // Calcul serveur : exclut weekends + jours fériés QC (table Holiday)
   const fullDays = await calculateWorkingDays(start, end);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee") };
   const days = isHalf ? 0.5 : fullDays;
 
   const err = await validatePeriod(adminId, start, end, parsed.data.type, days, isHalf);
@@ -221,7 +223,7 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
   // Detection conflit equipe
   const conflict = await detectTeamConflict(adminId, start, end);
   const conflictWarning = conflict.ratio > 0.3 && conflict.othersAbsent >= 1
-    ? `${conflict.othersAbsent} autre${conflict.othersAbsent > 1 ? "s" : ""} membre${conflict.othersAbsent > 1 ? "s" : ""} de votre equipe absent${conflict.othersAbsent > 1 ? "s" : ""} sur cette periode.`
+    ? t("n_autres_membres_absents", { count: conflict.othersAbsent })
     : undefined;
 
   // Notifier les managers + super_admins (createMany batche)
@@ -242,7 +244,7 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
         recipientType: "admin",
         recipientId: s.id,
         type: conflictWarning ? "warning" : "info",
-        title: "Nouvelle demande de congé",
+        title: t("nouvelle_demande_de_conge"),
         body: `${parsed.data.type} · ${days} jour${days > 1 ? "s" : ""} · du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")}${conflictNote}`,
         link: "/admin/employes/conges",
         icon: "calendar",
@@ -258,16 +260,17 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
 
 // Helper : si auteur modifie sa demande pending
 export async function updateLeaveRequestAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: parsed.data.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
-  if (r.adminId !== adminId) return { success: false, error: "Vous ne pouvez modifier que vos propres demandes" };
-  if (r.status !== "pending") return { success: false, error: "Seules les demandes en attente sont modifiables" };
+  if (r.adminId !== adminId) return { success: false, error: t("vous_ne_pouvez_modifier_que_vos_propres_2") };
+  if (r.status !== "pending") return { success: false, error: t("seules_les_demandes_en_attente_sont_modifiables") };
 
   const start = parsed.data.startDate ? new Date(parsed.data.startDate) : r.startDate;
   const end = parsed.data.endDate ? new Date(parsed.data.endDate) : r.endDate;
@@ -278,11 +281,11 @@ export async function updateLeaveRequestAction(input: z.infer<typeof updateSchem
   const halfDayNext = parsed.data.halfDay !== undefined ? parsed.data.halfDay : r.halfDay;
   const isHalf = !!halfDayNext;
   if (isHalf && start.toDateString() !== end.toDateString()) {
-    return { success: false, error: "Une demi-journée doit avoir la même date de début et de fin." };
+    return { success: false, error: t("une_demi_journee_doit_avoir_la_meme") };
   }
 
   const fullDays = await calculateWorkingDays(start, end);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee") };
   const days = isHalf ? 0.5 : fullDays;
 
   const err = await validatePeriod(adminId, start, end, type, days, isHalf, r.id);
@@ -406,18 +409,19 @@ async function deleteAutoTimeClocksForLeave(leaveId: number, adminId: number): P
 }
 
 export async function reviewLeaveRequestAction(input: { id: number; decision: "approved" | "rejected"; notes?: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const reviewerId = await requireLeavesReview();
   if (!reviewerId) return unauthorized();
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
-  if (r.status !== "pending") return { success: false, error: "Déjà traitée" };
+  if (r.status !== "pending") return { success: false, error: t("deja_traitee") };
 
   // Anti-self-approval + scope
   const ok = await assertCanReviewLeave(reviewerId, r.adminId);
   if (!ok) {
-    if (reviewerId === r.adminId) return { success: false, error: "Vous ne pouvez pas approuver vos propres congés." };
-    return { success: false, error: ERR_NO_AUTHORITY };
+    if (reviewerId === r.adminId) return { success: false, error: t("vous_ne_pouvez_pas_approuver_vos_propres") };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   // Race condition : updateMany retourne count = 0 si quelqu'un d'autre l'a deja revue
@@ -430,7 +434,7 @@ export async function reviewLeaveRequestAction(input: { id: number; decision: "a
       reviewNotes: input.notes?.slice(0, 500) ?? null,
     },
   });
-  if (upd.count === 0) return { success: false, error: "Demande deja traitee par un autre reviewer." };
+  if (upd.count === 0) return { success: false, error: t("demande_deja_traitee_par_un_autre_reviewer") };
 
   // Auto-creer les TimeClock pour les conges payes approuves
   if (input.decision === "approved" && PAID_LEAVE_TYPES.has(r.type)) {
@@ -455,8 +459,8 @@ export async function reviewLeaveRequestAction(input: { id: number; decision: "a
       recipientType: "admin",
       recipientId: r.adminId,
       type: input.decision === "approved" ? "success" : "warning",
-      title: input.decision === "approved" ? "Demande de congé approuvée" : "Demande de congé refusée",
-      body: input.notes || `Statut : ${input.decision === "approved" ? "approuvée" : "refusée"}`,
+      title: input.decision === "approved" ? t("demande_conge_approuvee") : t("demande_conge_refusee"),
+      body: input.notes || t("statut_decision", { statut: input.decision === "approved" ? t("approuvee") : t("refusee") }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -466,7 +470,7 @@ export async function reviewLeaveRequestAction(input: { id: number; decision: "a
     adminId: r.adminId,
     type: "profile_updated",
     severity: "info",
-    message: `Demande de congé ${input.decision === "approved" ? "approuvée" : "refusée"}`,
+    message: input.decision === "approved" ? t("demande_conge_approuvee") : t("demande_conge_refusee"),
     metadata: { leaveRequestId: input.id, decision: input.decision, by: reviewerId },
   });
 
@@ -485,6 +489,7 @@ export async function reviewLeaveRequestAction(input: { id: number; decision: "a
 export async function bulkReviewLeavesAction(
   input: { ids: number[]; decision: "approved" | "rejected"; notes?: string },
 ): Promise<Result<{ processed: number; skipped: number; errors: Array<{ id: number; reason: string }> }>> {
+  const t = await getTranslations("admin.action_errors");
   const reviewerId = await requireLeavesReview();
   if (!reviewerId) return unauthorized();
   if (!Array.isArray(input.ids) || input.ids.length === 0) {
@@ -519,7 +524,7 @@ export async function bulkReviewLeavesAction(
         id,
         reason: reviewerId === r.adminId
           ? "Auto-approbation interdite"
-          : ERR_NO_AUTHORITY,
+          : t(ERR_NO_AUTHORITY),
       });
       continue;
     }
@@ -607,8 +612,8 @@ export async function bulkReviewLeavesAction(
     recipientType: "admin",
     recipientId: r.adminId,
     type: input.decision === "approved" ? "success" : "warning",
-    title: input.decision === "approved" ? "Demande de congé approuvée" : "Demande de congé refusée",
-    body: notesClean || `Statut : ${input.decision === "approved" ? "approuvée" : "refusée"}`,
+    title: input.decision === "approved" ? t("demande_conge_approuvee") : t("demande_conge_refusee"),
+    body: notesClean || t("statut_decision", { statut: input.decision === "approved" ? t("approuvee") : t("refusee") }),
     link: "/admin/mon-espace/conges",
     icon: "calendar",
   }));
@@ -638,7 +643,7 @@ export async function bulkReviewLeavesAction(
     });
   } catch (err) {
     console.error("[bulkReviewLeavesAction] transaction failed", err);
-    return { success: false, error: "Echec de la transaction — aucune demande modifiee." };
+    return { success: false, error: t("echec_de_la_transaction_aucune_demande_modifiee") };
   }
 
   // ─── Etape 3 : audit logs + sync balances (best effort, hors txn) ─
@@ -674,7 +679,7 @@ export async function bulkReviewLeavesAction(
         adminId: r.adminId,
         type: "profile_updated",
         severity: "info",
-        message: `Demande de congé ${input.decision === "approved" ? "approuvée" : "refusée"} (bulk)`,
+        message: input.decision === "approved" ? t("demande_conge_approuvee_bulk") : t("demande_conge_refusee_bulk"),
         metadata: { leaveRequestId: r.id, decision: input.decision, by: reviewerId, bulk: true },
       }).catch(() => null),
     ),
@@ -699,11 +704,12 @@ const cancelLeaveSchema = z.object({
 export async function cancelLeaveRequestAction(
   input: { id: number; reason?: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = cancelLeaveSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: parsed.data.id } });
   if (!r) return { success: false, error: "Introuvable" };
@@ -712,10 +718,10 @@ export async function cancelLeaveRequestAction(
   const isOwner = r.adminId === actorId;
   if (!isOwner) {
     const ok = await assertCanReviewLeave(actorId, r.adminId);
-    if (!ok) return { success: false, error: ERR_NO_AUTHORITY };
+    if (!ok) return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
-  if (r.status === "rejected") return { success: false, error: "Demande déjà refusée" };
-  if (r.status === "cancelled") return { success: false, error: "Demande déjà annulée" };
+  if (r.status === "rejected") return { success: false, error: t("demande_deja_refusee") };
+  if (r.status === "cancelled") return { success: false, error: t("demande_deja_annulee") };
 
   const wasApproved = r.status === "approved";
   const wasPending = r.status === "pending";
@@ -778,7 +784,7 @@ export async function cancelLeaveRequestAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "warning",
-      title: "Votre demande de congé a été annulée",
+      title: t("votre_demande_de_conge_a_ete_annulee"),
       body: `${actorLabel} a annulé votre demande du ${periodStr}.${reasonSuffix}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -818,10 +824,10 @@ export async function cancelLeaveRequestAction(
       recipientType: "admin",
       recipientId: rid,
       type: "info",
-      title: isOwner ? "Demande de congé annulée par l'employé" : "Demande de congé annulée",
+      title: isOwner ? t("demande_conge_annulee_par_employe") : t("demande_conge_annulee"),
       body: isOwner
-        ? `${ownerLabel} a annulé sa demande du ${periodStr}${wasApproved ? " (était approuvée)" : ""}.${reasonSuffix}`
-        : `${actorLabel} a annulé la demande de ${ownerLabel} du ${periodStr}.${reasonSuffix}`,
+        ? t("owner_a_annule_sa_demande", { owner: ownerLabel, periode: periodStr, etat: wasApproved ? t("etait_approuvee") : "", raison: reasonSuffix })
+        : t("acteur_a_annule_demande_de", { acteur: actorLabel, owner: ownerLabel, periode: periodStr, raison: reasonSuffix }),
       link: "/admin/employes/conges",
       icon: "calendar",
     });
@@ -866,37 +872,38 @@ const createForEmployeeSchema = z.object({
 export async function createLeaveForEmployeeAction(
   input: z.infer<typeof createForEmployeeSchema>,
 ): Promise<Result<{ id: number; status: "pending" | "approved"; warning?: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = createForEmployeeSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Anti-self-creation : on autorise quand même (le founder peut se créer un congé pour lui)
   // mais l'autorité doit être validée via assertCanReviewLeave
   const canAct = await assertCanReviewLeave(actorId, parsed.data.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Vérifie que l'employé existe et est actif
   const target = await prisma.admin.findUnique({
     where: { id: parsed.data.employeeId },
     select: { id: true, isActive: true, fullName: true, email: true },
   });
-  if (!target) return { success: false, error: "Employé introuvable" };
-  if (!target.isActive) return { success: false, error: "Compte de l'employé désactivé" };
+  if (!target) return { success: false, error: t("employe_introuvable") };
+  if (!target.isActive) return { success: false, error: t("compte_de_l_employe_desactive") };
 
   const start = new Date(parsed.data.startDate);
   const end = new Date(parsed.data.endDate);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return { success: false, error: "Dates invalides" };
-  if (end < start) return { success: false, error: "Fin avant début" };
+  if (end < start) return { success: false, error: t("fin_avant_debut") };
 
   const isHalf = !!parsed.data.halfDay;
   if (isHalf && parsed.data.startDate !== parsed.data.endDate) {
-    return { success: false, error: "Une demi-journée doit avoir la même date de début et de fin." };
+    return { success: false, error: t("une_demi_journee_doit_avoir_la_meme") };
   }
 
   const fullDays = await calculateWorkingDays(start, end);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee") };
   const days = isHalf ? 0.5 : fullDays;
 
   // Validations (sauf 14-jours-passé : l'admin a l'autorité de rattraper)
@@ -983,8 +990,8 @@ export async function createLeaveForEmployeeAction(
       recipientType: "admin",
       recipientId: parsed.data.employeeId,
       type: autoApprove ? "success" : "info",
-      title: autoApprove ? "Congé créé et approuvé pour vous" : "Demande de congé créée pour vous",
-      body: `${actorLabel} a ${autoApprove ? "créé et approuvé" : "créé"} une demande de ${parsed.data.type} : ${days} jour${days > 1 ? "s" : ""} du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")}.`,
+      title: autoApprove ? t("conge_cree_approuve_pour_vous") : t("demande_conge_creee_pour_vous"),
+      body: `${actorLabel} a ${autoApprove ? t("cree_et_approuve") : t("cree")} une demande de ${parsed.data.type} : ${days} jour${days > 1 ? "s" : ""} du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")}.`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -994,7 +1001,7 @@ export async function createLeaveForEmployeeAction(
     adminId: parsed.data.employeeId,
     type: "profile_updated",
     severity: "info",
-    message: `Demande de congé créée par admin (${autoApprove ? "auto-approuvée" : "en attente"})`,
+    message: autoApprove ? t("demande_creee_admin_auto") : t("demande_creee_admin_attente"),
     metadata: { leaveRequestId: r.id, by: actorId, autoApprove },
   });
 
@@ -1018,10 +1025,11 @@ const mandatoryClosureSchema = z.object({
 export async function createMandatoryClosureAction(
   input: z.infer<typeof mandatoryClosureSchema>,
 ): Promise<Result<{ created: number; skipped: number; conflicts: Array<{ adminId: number; reason: string }> }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireLeavesReview();
-  if (!actorId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!actorId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = mandatoryClosureSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const start = new Date(parsed.data.startDate);
   const end = new Date(parsed.data.endDate);
@@ -1029,7 +1037,7 @@ export async function createMandatoryClosureAction(
   if (end < start) return { success: false, error: "Fin avant debut" };
 
   const fullDays = await calculateWorkingDays(start, end);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage selectionnee" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee_2") };
 
   // Bloquer si une PayPeriod payee chevauche
   const paidPeriod = await prisma.payPeriod.findFirst({
@@ -1049,7 +1057,7 @@ export async function createMandatoryClosureAction(
     select: { id: true, fullName: true, email: true },
   });
   const targets = allActives.filter((a) => !excluded.has(a.id));
-  if (targets.length === 0) return { success: false, error: "Aucun employe cible (tous exclus)." };
+  if (targets.length === 0) return { success: false, error: t("aucun_employe_cible_tous_exclus") };
 
   let created = 0;
   let skipped = 0;
@@ -1151,23 +1159,24 @@ const adminUpdateSchema = z.object({
 export async function adminUpdateLeaveRequestAction(
   input: z.infer<typeof adminUpdateSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = adminUpdateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: parsed.data.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Bloque si l'un des TimeClock liés est sur un payStubId (période payée)
   const start0 = parsed.data.startDate ? new Date(parsed.data.startDate) : r.startDate;
   const end0 = parsed.data.endDate ? new Date(parsed.data.endDate) : r.endDate;
   if (isNaN(start0.getTime()) || isNaN(end0.getTime())) return { success: false, error: "Dates invalides" };
-  if (end0 < start0) return { success: false, error: "Fin avant début" };
+  if (end0 < start0) return { success: false, error: t("fin_avant_debut") };
 
   if (r.status === "approved" && PAID_LEAVE_TYPES.has(r.type)) {
     const paid = await prisma.timeClock.findFirst({
@@ -1178,18 +1187,18 @@ export async function adminUpdateLeaveRequestAction(
       },
       select: { id: true },
     });
-    if (paid) return { success: false, error: "Demande déjà incluse dans une paie versée — modification impossible." };
+    if (paid) return { success: false, error: t("demande_deja_incluse_dans_une_paie_versee") };
   }
 
   const type = parsed.data.type ?? r.type;
   const halfDayNext = parsed.data.halfDay !== undefined ? parsed.data.halfDay : r.halfDay;
   const isHalf = !!halfDayNext;
   if (isHalf && start0.toDateString() !== end0.toDateString()) {
-    return { success: false, error: "Une demi-journée doit avoir la même date de début et de fin." };
+    return { success: false, error: t("une_demi_journee_doit_avoir_la_meme") };
   }
 
   const fullDays = await calculateWorkingDays(start0, end0);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee") };
   const days = isHalf ? 0.5 : fullDays;
 
   // Vérifie chevauchement (en excluant cette demande)
@@ -1280,8 +1289,8 @@ export async function adminUpdateLeaveRequestAction(
         recipientType: "admin",
         recipientId: r.adminId,
         type: "info",
-        title: "Votre demande de congé a été modifiée",
-        body: `${actorLabel} a modifié votre demande : ${diff.join(" ; ") || "détails ajustés"}.`,
+        title: t("votre_demande_de_conge_a_ete_modifiee"),
+        body: t("acteur_a_modifie_votre_demande", { acteur: actorLabel, diff: diff.join(" ; ") || t("details_ajustes") }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       },
@@ -1297,19 +1306,20 @@ export async function adminUpdateLeaveRequestAction(
 export async function adminCancelApprovedLeaveAction(
   input: { id: number; reason: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
-    return { success: false, error: "Une raison est requise pour annuler un congé approuvé." };
+    return { success: false, error: t("une_raison_est_requise_pour_annuler_un") };
   }
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
-  if (r.status !== "approved") return { success: false, error: "Seules les demandes approuvées peuvent être annulées ici." };
+  if (r.status !== "approved") return { success: false, error: t("seules_les_demandes_approuvees_peuvent_etre_annulees") };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Vérifie qu'aucun TimeClock lié n'a été payé
   if (PAID_LEAVE_TYPES.has(r.type)) {
@@ -1321,7 +1331,7 @@ export async function adminCancelApprovedLeaveAction(
       },
       select: { id: true },
     });
-    if (paid) return { success: false, error: "Période déjà payée — annulation impossible." };
+    if (paid) return { success: false, error: t("periode_deja_payee_annulation_impossible") };
   }
 
   await prisma.leaveRequest.update({
@@ -1364,7 +1374,7 @@ export async function adminCancelApprovedLeaveAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "warning",
-      title: "Votre congé a été annulé",
+      title: t("votre_conge_a_ete_annule"),
       body: `${actorLabel} a annulé votre congé du ${r.startDate.toLocaleDateString("fr-CA")} au ${r.endDate.toLocaleDateString("fr-CA")} : ${input.reason}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1375,7 +1385,7 @@ export async function adminCancelApprovedLeaveAction(
     adminId: r.adminId,
     type: "profile_updated",
     severity: "warning",
-    message: "Congé approuvé annulé par admin",
+    message: t("conge_approuve_annule_par_admin"),
     metadata: { leaveRequestId: r.id, by: actorId, reason: input.reason },
   });
 
@@ -1388,6 +1398,7 @@ export async function adminCancelApprovedLeaveAction(
 export async function adminDeleteLeaveAction(
   input: { id: number },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1396,7 +1407,7 @@ export async function adminDeleteLeaveAction(
   if (!r) return { success: false, error: "Demande introuvable" };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Bloque si payé
   if (PAID_LEAVE_TYPES.has(r.type)) {
@@ -1408,7 +1419,7 @@ export async function adminDeleteLeaveAction(
       },
       select: { id: true },
     });
-    if (paid) return { success: false, error: "Période déjà payée — suppression impossible." };
+    if (paid) return { success: false, error: t("periode_deja_payee_suppression_impossible") };
     await deleteAutoTimeClocksForLeave(r.id, r.adminId);
   }
 
@@ -1446,7 +1457,7 @@ export async function adminDeleteLeaveAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "warning",
-      title: "Une de vos demandes de congé a été supprimée",
+      title: t("une_de_vos_demandes_de_conge_a"),
       body: `${actorLabel} a supprimé votre demande du ${r.startDate.toLocaleDateString("fr-CA")} au ${r.endDate.toLocaleDateString("fr-CA")} (${r.type}).`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1457,7 +1468,7 @@ export async function adminDeleteLeaveAction(
     adminId: r.adminId,
     type: "profile_updated",
     severity: "warning",
-    message: "Demande de congé supprimée par admin",
+    message: t("demande_de_conge_supprimee_par_admin"),
     metadata: { leaveRequestId: r.id, by: actorId, snapshot },
   });
 
@@ -1468,14 +1479,15 @@ export async function adminDeleteLeaveAction(
 
 // ─── Delegation d'approbation ─────────────────────────────────
 export async function delegateLeaveApprovalAction(input: { delegateId: number | null }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   if (input.delegateId !== null) {
-    if (input.delegateId === adminId) return { success: false, error: "Vous ne pouvez pas vous deleguer a vous-meme." };
+    if (input.delegateId === adminId) return { success: false, error: t("vous_ne_pouvez_pas_vous_deleguer_a") };
     const target = await prisma.admin.findUnique({ where: { id: input.delegateId }, select: { id: true, isActive: true } });
-    if (!target || !target.isActive) return { success: false, error: "Delegue introuvable ou inactif." };
+    if (!target || !target.isActive) return { success: false, error: t("delegue_introuvable_ou_inactif") };
   }
 
   // Update typé via Prisma (champ disponible dans le client après generate)
@@ -1485,7 +1497,7 @@ export async function delegateLeaveApprovalAction(input: { delegateId: number | 
       data: { delegateApprovalTo: input.delegateId },
     });
   } catch {
-    return { success: false, error: "Echec de la mise a jour de la delegation." };
+    return { success: false, error: t("echec_de_la_mise_a_jour_de") };
   }
 
   await logAudit({ adminId, action: "update", entityType: "admin", entityId: adminId, changes: { delegateApprovalTo: input.delegateId } });
@@ -1497,8 +1509,8 @@ export async function delegateLeaveApprovalAction(input: { delegateId: number | 
         recipientType: "admin",
         recipientId: input.delegateId,
         type: "info",
-        title: "Delegation d'approbation reçue",
-        body: "Vous avez été désigné pour approuver les congés en l'absence d'un collègue.",
+        title: t("delegation_d_approbation_recue"),
+        body: t("vous_avez_ete_designe_pour_approuver_les"),
         link: "/admin/employes/conges",
         icon: "shield",
       },
@@ -1517,18 +1529,19 @@ export async function delegateLeaveApprovalAction(input: { delegateId: number | 
 export async function unapproveLeaveAction(
   input: { id: number; reason: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
-    return { success: false, error: "Une raison est requise." };
+    return { success: false, error: t("une_raison_est_requise") };
   }
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
-  if (r.status !== "approved") return { success: false, error: "La demande n'est pas approuvée" };
+  if (r.status !== "approved") return { success: false, error: t("la_demande_n_est_pas_approuvee") };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Période payée → impossible
   if (PAID_LEAVE_TYPES.has(r.type)) {
@@ -1540,7 +1553,7 @@ export async function unapproveLeaveAction(
       },
       select: { id: true },
     });
-    if (paid) return { success: false, error: "Période déjà payée — impossible de retirer l'approbation." };
+    if (paid) return { success: false, error: t("periode_deja_payee_impossible_de_retirer_l") };
     await deleteAutoTimeClocksForLeave(r.id, r.adminId);
     revalidatePath("/admin/employes/pointage");
     revalidatePath("/admin/mon-espace/pointage");
@@ -1579,7 +1592,7 @@ export async function unapproveLeaveAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "warning",
-      title: "Approbation retirée — votre demande repasse en attente",
+      title: t("approbation_retiree_votre_demande_repasse_en_attente"),
       body: `Raison : ${input.reason}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1595,6 +1608,7 @@ export async function unapproveLeaveAction(
 export async function convertLeaveTypeAction(
   input: { id: number; newType: string; reason: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1602,14 +1616,14 @@ export async function convertLeaveTypeAction(
     return { success: false, error: "Type invalide" };
   }
   if (!input.reason || input.reason.trim().length < 3) {
-    return { success: false, error: "Une raison est requise." };
+    return { success: false, error: t("une_raison_est_requise") };
   }
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
   if (!r) return { success: false, error: "Demande introuvable" };
-  if (r.type === input.newType) return { success: false, error: "Aucun changement de type" };
+  if (r.type === input.newType) return { success: false, error: t("aucun_changement_de_type") };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Période payée → bloque
   if (r.status === "approved" && PAID_LEAVE_TYPES.has(r.type)) {
@@ -1621,7 +1635,7 @@ export async function convertLeaveTypeAction(
       },
       select: { id: true },
     });
-    if (paid) return { success: false, error: "Période déjà payée — conversion impossible." };
+    if (paid) return { success: false, error: t("periode_deja_payee_conversion_impossible") };
   }
 
   const prevType = r.type;
@@ -1669,7 +1683,7 @@ export async function convertLeaveTypeAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "info",
-      title: "Type de congé modifié",
+      title: t("type_de_conge_modifie"),
       body: `${prevType} → ${input.newType}. Raison : ${input.reason}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1685,6 +1699,7 @@ export async function convertLeaveTypeAction(
 export async function duplicateLeaveAction(
   input: { id: number; newStartDate: string; newEndDate: string },
 ): Promise<Result<{ newId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1693,19 +1708,19 @@ export async function duplicateLeaveAction(
   if (!r) return { success: false, error: "Demande introuvable" };
 
   const canAct = await assertCanReviewLeave(actorId, r.adminId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   const start = new Date(input.newStartDate);
   const end = new Date(input.newEndDate);
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return { success: false, error: "Dates invalides" };
-  if (end < start) return { success: false, error: "Fin avant début" };
+  if (end < start) return { success: false, error: t("fin_avant_debut") };
 
   const isHalf = !!r.halfDay;
   if (isHalf && input.newStartDate !== input.newEndDate) {
-    return { success: false, error: "Une demi-journée doit avoir la même date de début et de fin." };
+    return { success: false, error: t("une_demi_journee_doit_avoir_la_meme") };
   }
   const fullDays = await calculateWorkingDays(start, end);
-  if (fullDays <= 0) return { success: false, error: "Aucun jour ouvrable dans la plage sélectionnée" };
+  if (fullDays <= 0) return { success: false, error: t("aucun_jour_ouvrable_dans_la_plage_selectionnee") };
   const days = isHalf ? 0.5 : fullDays;
 
   const err = await validatePeriod(r.adminId, start, end, r.type, days, isHalf);
@@ -1742,7 +1757,7 @@ export async function duplicateLeaveAction(
       recipientType: "admin",
       recipientId: r.adminId,
       type: "info",
-      title: "Demande de congé dupliquée pour vous",
+      title: t("demande_de_conge_dupliquee_pour_vous"),
       body: `Nouvelle demande du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")} (${days} j) — en attente.`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1758,11 +1773,12 @@ export async function duplicateLeaveAction(
 export async function uploadLeaveAttachmentAction(
   input: { id: number; attachmentUrl: string; attachmentName: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.attachmentUrl || !input.attachmentName) {
-    return { success: false, error: "URL et nom de fichier requis." };
+    return { success: false, error: t("url_et_nom_de_fichier_requis") };
   }
 
   const r = await prisma.leaveRequest.findUnique({ where: { id: input.id } });
@@ -1771,7 +1787,7 @@ export async function uploadLeaveAttachmentAction(
   // L'auteur OU un reviewer peut joindre un justificatif
   if (r.adminId !== actorId) {
     const canAct = await assertCanReviewLeave(actorId, r.adminId);
-    if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+    if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   await prisma.leaveRequest.update({
@@ -1809,7 +1825,7 @@ export async function uploadLeaveAttachmentAction(
           recipientType: "admin",
           recipientId: s.id,
           type: "info",
-          title: "Justificatif ajouté à une demande de congé",
+          title: t("justificatif_ajoute_a_une_demande_de_conge"),
           body: `Demande #${r.id} : ${input.attachmentName}`,
           link: "/admin/employes/conges",
           icon: "calendar",
@@ -1828,19 +1844,20 @@ export async function uploadLeaveAttachmentAction(
 export async function adjustLeaveBalanceAction(
   input: { employeeId: number; deltaDays: number; reason: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
-    return { success: false, error: "Une raison est requise." };
+    return { success: false, error: t("une_raison_est_requise") };
   }
   if (!Number.isFinite(input.deltaDays) || input.deltaDays === 0) {
-    return { success: false, error: "Delta invalide (doit être un nombre non nul)." };
+    return { success: false, error: t("delta_invalide_doit_etre_un_nombre_non") };
   }
   const delta = Math.round(input.deltaDays * 10) / 10;
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   // Cherche/crée la période courante via leave-balance helper
   const { getCurrentReferencePeriod } = await import("@/lib/services/leave-balance");
@@ -1903,7 +1920,7 @@ export async function adjustLeaveBalanceAction(
       recipientType: "admin",
       recipientId: input.employeeId,
       type: "info",
-      title: "Solde de congés ajusté",
+      title: t("solde_de_conges_ajuste"),
       body: `Votre solde a été ajusté manuellement de ${sign}${delta} j. Raison : ${input.reason}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1919,14 +1936,15 @@ export async function adjustLeaveBalanceAction(
 export async function assignLeavePolicyAction(
   input: { employeeId: number; policyId: number | null },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
-  let policyName = "Aucune (défaut)";
+  let policyName = t("aucune_defaut");
   if (input.policyId !== null) {
     const p = await prisma.leavePolicy.findUnique({ where: { id: input.policyId }, select: { name: true } });
     if (!p) return { success: false, error: "Politique introuvable" };
@@ -1951,7 +1969,7 @@ export async function assignLeavePolicyAction(
       recipientType: "admin",
       recipientId: input.employeeId,
       type: "info",
-      title: "Nouvelle politique de congés assignée",
+      title: t("nouvelle_politique_de_conges_assignee"),
       body: `Politique : ${policyName}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -1967,17 +1985,18 @@ export async function assignLeavePolicyAction(
 export async function blockEmployeeLeaveAction(
   input: { employeeId: number; until: string; reason: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   if (!input.reason || input.reason.trim().length < 3) {
-    return { success: false, error: "Une raison est requise." };
+    return { success: false, error: t("une_raison_est_requise") };
   }
   const until = new Date(input.until);
   if (isNaN(until.getTime())) return { success: false, error: "Date invalide" };
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   await prisma.admin.update({
     where: { id: input.employeeId },
@@ -1998,7 +2017,7 @@ export async function blockEmployeeLeaveAction(
     adminId: input.employeeId,
     type: "profile_updated",
     severity: "warning",
-    message: "Soumissions de congé bloquées par un admin",
+    message: t("soumissions_de_conge_bloquees_par_un_admin"),
     metadata: { by: actorId, until: until.toISOString(), reason: input.reason },
   });
   await prisma.notification.create({
@@ -2006,7 +2025,7 @@ export async function blockEmployeeLeaveAction(
       recipientType: "admin",
       recipientId: input.employeeId,
       type: "warning",
-      title: "Vos soumissions de congé sont bloquées",
+      title: t("vos_soumissions_de_conge_sont_bloquees"),
       body: `Bloquées jusqu'au ${until.toLocaleDateString("fr-CA")}. Raison : ${input.reason}`,
       link: "/admin/mon-espace/conges",
       icon: "calendar",
@@ -2022,12 +2041,13 @@ export async function blockEmployeeLeaveAction(
 export async function unblockEmployeeLeaveAction(
   input: { employeeId: number },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const canAct = await assertCanReviewLeave(actorId, input.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   await prisma.admin.update({
     where: { id: input.employeeId },
@@ -2045,7 +2065,7 @@ export async function unblockEmployeeLeaveAction(
     adminId: input.employeeId,
     type: "profile_updated",
     severity: "info",
-    message: "Soumissions de congé débloquées par un admin",
+    message: t("soumissions_de_conge_debloquees_par_un_admin"),
     metadata: { by: actorId },
   });
   await prisma.notification.create({
@@ -2053,8 +2073,8 @@ export async function unblockEmployeeLeaveAction(
       recipientType: "admin",
       recipientId: input.employeeId,
       type: "success",
-      title: "Vos soumissions de congé sont à nouveau autorisées",
-      body: "Vous pouvez de nouveau créer des demandes de congé.",
+      title: t("vos_soumissions_de_conge_sont_a_nouveau"),
+      body: t("vous_pouvez_de_nouveau_creer_des_demandes"),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -2073,7 +2093,7 @@ const notifyEmployeeSchema = z.object({
   link: z
     .string()
     .max(500)
-    .regex(/^\/admin\//, "Le lien doit commencer par /admin/")
+    .regex(/^\/admin\//, "le_lien_doit_commencer_par_admin")
     .optional(),
 });
 
@@ -2086,12 +2106,13 @@ const FORBIDDEN_LINK_PREFIXES = /^(https?:|\/\/|javascript:|data:|vbscript:|file
 export async function notifyEmployeeDirectAction(
   input: { employeeId: number; subject: string; body: string; link?: string },
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const parsed = notifyEmployeeSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Defense in depth sur le lien
   if (parsed.data.link) {
@@ -2101,7 +2122,7 @@ export async function notifyEmployeeDirectAction(
   }
 
   const canAct = await assertCanReviewLeave(actorId, parsed.data.employeeId);
-  if (!canAct) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!canAct) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   await prisma.notification.create({
     data: {

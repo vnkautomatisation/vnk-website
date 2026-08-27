@@ -30,104 +30,104 @@ export async function generateMetadata({
   return {
     title: t("page_title"),
     description:
-      "VNK Automatisation Inc. — Société québécoise spécialisée en automatisation industrielle. Mission, vision, valeurs et partenaires technologiques.",
+      t("ab_vnk_automatisation_inc_societe_quebecoise_specialisee_en"),
   };
 }
 
 // ─── Valeurs de l'entreprise ─────────────────────────
-const VALUES = [
+const VALUES = (t: (k: string) => string) => [
   {
     icon: Target,
-    title: "Spécialisation",
-    desc: "Nous ne sommes pas généralistes. Toute notre expertise est concentrée exclusivement sur l'automatisation industrielle — PLC, SCADA, HMI.",
+    title: t("ab_specialisation"),
+    desc: t("ab_nous_ne_sommes_pas_generalistes_toute_notre"),
   },
   {
     icon: Shield,
     title: "Transparence",
-    desc: "Tarifs publics, rapports écrits systématiques, engagements clairs. Aucune zone d'ombre dans nos interventions ni nos factures.",
+    desc: t("ab_tarifs_publics_rapports_ecrits_systematiques_engagements_clairs"),
   },
   {
     icon: Heart,
-    title: "Qualité technique",
-    desc: "Code propre, normalisé IEC 61131-3, testé et documenté. Nous ne livrons jamais un travail dont nous ne serions pas fiers.",
+    title: t("ab_qualite_technique"),
+    desc: t("ab_code_propre_normalise_iec_61131_3_teste"),
   },
   {
     icon: TrendingUp,
-    title: "Amélioration continue",
-    desc: "Veille technologique permanente, formations aux nouvelles versions des outils, participation active à la communauté automation.",
+    title: t("ab_amelioration_continue"),
+    desc: t("ab_veille_technologique_permanente_formations_aux_nouvelles_versions"),
   },
 ];
 
 // ─── Marques d'automates supportées ──────────────────
-const BRANDS = [
+const BRANDS = (t: (k: string) => string) => [
   {
     name: "Siemens",
     software: ["Step 7", "TIA Portal", "WinCC"],
-    desc: "Expertise S7-1200 / S7-1500 / S7-300 / S7-400",
+    desc: t("ab_expertise_s7_1200_s7_1500_s7_300"),
   },
   {
-    name: "Rockwell Automation",
+    name: t("ab_rockwell_automation"),
     software: ["RSLogix 5000", "Studio 5000", "FactoryTalk"],
-    desc: "Expertise ControlLogix / CompactLogix / MicroLogix",
+    desc: t("ab_expertise_controllogix_compactlogix_micrologix"),
   },
   {
-    name: "B&R Automation",
+    name: t("ab_b_r_automation"),
     software: ["Automation Studio", "X20 / X2X"],
-    desc: "Expertise X20, Mapp Technology, Servocommandes",
+    desc: t("ab_expertise_x20_mapp_technology_servocommandes"),
   },
   {
-    name: "Schneider Electric",
+    name: t("ab_schneider_electric"),
     software: ["EcoStruxure", "Control Expert", "Unity Pro"],
-    desc: "Expertise Modicon M340 / M580 / Quantum",
+    desc: t("ab_expertise_modicon_m340_m580_quantum"),
   },
 ];
 
 // ─── Logiciels & technologies maîtrisés ───────────────
-const SOFTWARE = [
-  { name: "TIA Portal", category: "IDE PLC" },
-  { name: "Studio 5000", category: "IDE PLC" },
-  { name: "Automation Studio", category: "IDE PLC" },
-  { name: "EcoStruxure", category: "IDE PLC" },
-  { name: "WinCC", category: "SCADA / HMI" },
-  { name: "FactoryTalk", category: "SCADA / HMI" },
-  { name: "Ignition", category: "SCADA / HMI" },
-  { name: "Wonderware", category: "SCADA / HMI" },
-  { name: "Profinet", category: "Protocole réseau" },
-  { name: "EtherNet/IP", category: "Protocole réseau" },
-  { name: "Modbus TCP/RTU", category: "Protocole réseau" },
-  { name: "OPC UA", category: "Protocole réseau" },
+const SOFTWARE = (t: (k: string) => string) => [
+  { name: t("ab_tia_portal"), category: t("ab_ide_plc") },
+  { name: t("ab_studio_5000"), category: t("ab_ide_plc") },
+  { name: t("ab_automation_studio"), category: t("ab_ide_plc") },
+  { name: "EcoStruxure", category: t("ab_ide_plc") },
+  { name: "WinCC", category: t("ab_scada_hmi") },
+  { name: "FactoryTalk", category: t("ab_scada_hmi") },
+  { name: "Ignition", category: t("ab_scada_hmi") },
+  { name: "Wonderware", category: t("ab_scada_hmi") },
+  { name: "Profinet", category: t("ab_protocole_reseau") },
+  { name: "EtherNet/IP", category: t("ab_protocole_reseau") },
+  { name: t("ab_modbus_tcp_rtu"), category: t("ab_protocole_reseau") },
+  { name: t("ab_opc_ua"), category: t("ab_protocole_reseau") },
 ];
 
 // ─── Secteurs desservis ──────────────────────────────
-const SECTORS = [
-  "Fabrication industrielle",
-  "Agroalimentaire",
-  "Pâtes et papiers",
-  "Métallurgie",
-  "Automobile",
-  "Pharmaceutique",
-  "Chimie",
-  "Énergie",
-  "Aéronautique",
-  "Mines",
+const SECTORS = (t: (k: string) => string) => [
+  t("ab_sec_fabrication"),
+  t("ab_sec_agroalimentaire"),
+  t("ab_sec_pates_papiers"),
+  t("ab_sec_metallurgie"),
+  t("ab_sec_automobile"),
+  t("ab_sec_pharmaceutique"),
+  t("ab_sec_chimie"),
+  t("ab_sec_energie"),
+  t("ab_sec_aeronautique"),
+  t("ab_sec_mines"),
 ];
 
 // ─── Timeline ────────────────────────────────────────
-const TIMELINE = [
+const TIMELINE = (t: (k: string) => string) => [
   {
     year: "2026",
-    title: "Constitution au Québec",
-    desc: "VNK Automatisation Inc. est constituée comme société par actions en mars 2026, enregistrée au Registre des entreprises du Québec.",
+    title: t("ab_constitution_au_quebec"),
+    desc: t("ab_vnk_automatisation_inc_est_constituee_comme_societe"),
   },
   {
     year: "2026",
-    title: "Lancement des services",
-    desc: "Démarrage officiel des services : support PLC à distance, audit technique, documentation industrielle et refactorisation de code legacy.",
+    title: t("ab_lancement_des_services"),
+    desc: t("ab_demarrage_officiel_des_services_support_plc_a"),
   },
   {
     year: "2026",
-    title: "Portail client en ligne",
-    desc: "Mise en ligne du portail client permettant le suivi des mandats, devis, factures et échanges en temps réel.",
+    title: t("ab_portail_client_en_ligne"),
+    desc: t("ab_mise_en_ligne_du_portail_client_permettant"),
   },
 ];
 
@@ -138,6 +138,7 @@ export default async function AboutPage({
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
+  const t = await getTranslations({ locale, namespace: "about" });
 
   return (
     <>
@@ -150,17 +151,11 @@ export default async function AboutPage({
         </div>
         <div className="relative container mx-auto px-4 max-w-4xl">
           <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-white/10 backdrop-blur-sm rounded-full text-xs font-semibold uppercase tracking-wider border border-white/20 mb-6">
-            <Building2 className="h-3 w-3" />
-            À propos de l&apos;entreprise
-          </span>
+            <Building2 className="h-3 w-3" />{t("ab_a_propos_de_l_entreprise")}</span>
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold">
             VNK Automatisation Inc.
           </h1>
-          <p className="text-xl opacity-90 mt-6 max-w-2xl">
-            Une société québécoise spécialisée en automatisation industrielle,
-            dédiée à offrir des services techniques de haut niveau aux
-            entreprises manufacturières.
-          </p>
+          <p className="text-xl opacity-90 mt-6 max-w-2xl">{t("ab_une_societe_quebecoise_specialisee_en_automatisation_industrielle")}</p>
         </div>
       </section>
 
@@ -175,13 +170,8 @@ export default async function AboutPage({
                 <div className="h-12 w-12 rounded-lg vnk-gradient flex items-center justify-center mb-4">
                   <Target className="h-6 w-6 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold mb-3">Notre mission</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Accompagner les entreprises industrielles québécoises dans la
-                  fiabilisation, la modernisation et la documentation de leurs
-                  systèmes automatisés, avec une approche technique rigoureuse
-                  et une transparence totale sur nos interventions.
-                </p>
+                <h2 className="text-2xl font-bold mb-3">{t("ab_notre_mission")}</h2>
+                <p className="text-muted-foreground leading-relaxed">{t("ab_accompagner_les_entreprises_industrielles_quebecoises_dans_la")}</p>
               </CardContent>
             </Card>
 
@@ -190,13 +180,8 @@ export default async function AboutPage({
                 <div className="h-12 w-12 rounded-lg vnk-gradient flex items-center justify-center mb-4">
                   <Eye className="h-6 w-6 text-white" />
                 </div>
-                <h2 className="text-2xl font-bold mb-3">Notre vision</h2>
-                <p className="text-muted-foreground leading-relaxed">
-                  Devenir la référence au Québec pour les services
-                  d&apos;automatisation industrielle spécialisés — reconnue pour
-                  la qualité de son code, la clarté de sa documentation et la
-                  rapidité de ses interventions.
-                </p>
+                <h2 className="text-2xl font-bold mb-3">{t("ab_notre_vision")}</h2>
+                <p className="text-muted-foreground leading-relaxed">{t("ab_devenir_la_reference_au_quebec_pour_les")}</p>
               </CardContent>
             </Card>
           </div>
@@ -209,16 +194,12 @@ export default async function AboutPage({
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Nos valeurs
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
-              Ce qui nous guide au quotidien
-            </h2>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("ab_nos_valeurs")}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">{t("ab_ce_qui_nous_guide_au_quotidien")}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {VALUES.map((val) => {
+            {VALUES(t).map((val) => {
               const Icon = val.icon;
               return (
                 <Card key={val.title} className="vnk-card-hover">
@@ -244,20 +225,13 @@ export default async function AboutPage({
       <section className="py-24">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Partenaires technologiques
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
-              Marques d&apos;automates supportées
-            </h2>
-            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">
-              Nous maîtrisons les grandes familles de PLC utilisées dans
-              l&apos;industrie nord-américaine et européenne.
-            </p>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("ab_partenaires_technologiques")}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">{t("ab_marques_d_automates_supportees")}</h2>
+            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">{t("ab_nous_maitrisons_les_grandes_familles_de_plc")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {BRANDS.map((brand) => (
+            {BRANDS(t).map((brand) => (
               <Card key={brand.name} className="vnk-card-hover">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
@@ -294,17 +268,12 @@ export default async function AboutPage({
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold">
-              Logiciels et technologies maîtrisés
-            </h2>
-            <p className="text-muted-foreground mt-3">
-              Nous travaillons au quotidien avec les outils standards de
-              l&apos;industrie.
-            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold">{t("ab_logiciels_et_technologies_maitrises")}</h2>
+            <p className="text-muted-foreground mt-3">{t("ab_nous_travaillons_au_quotidien_avec_les_outils")}</p>
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-            {SOFTWARE.map((sw) => (
+            {SOFTWARE(t).map((sw) => (
               <div
                 key={sw.name}
                 className="p-4 rounded-lg border bg-card text-center vnk-card-hover"
@@ -329,21 +298,12 @@ export default async function AboutPage({
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
-              <span className="text-xs font-bold text-primary uppercase tracking-wider">
-                Secteurs d&apos;activité
-              </span>
-              <h2 className="text-3xl sm:text-4xl font-bold mt-3">
-                Industries desservies
-              </h2>
-              <p className="text-muted-foreground mt-4 text-lg leading-relaxed">
-                VNK Automatisation Inc. intervient dans l&apos;ensemble des
-                secteurs industriels où l&apos;automatisation est présente, du
-                petit atelier manufacturier aux grandes installations de
-                production continue.
-              </p>
+              <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("ab_secteurs_d_activite")}</span>
+              <h2 className="text-3xl sm:text-4xl font-bold mt-3">{t("ab_industries_desservies")}</h2>
+              <p className="text-muted-foreground mt-4 text-lg leading-relaxed">{t("ab_vnk_automatisation_inc_intervient_dans_l_ensemble")}</p>
 
               <div className="flex flex-wrap gap-2 mt-6">
-                {SECTORS.map((sector) => (
+                {SECTORS(t).map((sector) => (
                   <span
                     key={sector}
                     className="inline-flex px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium"
@@ -357,7 +317,7 @@ export default async function AboutPage({
             <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-xl">
               <Image
                 src="/images/about-workspace.jpg"
-                alt="Environnement industriel"
+                alt={t("ab_alt_environnement")}
                 fill
                 className="object-cover"
                 sizes="(max-width: 1024px) 100vw, 50vw"
@@ -368,21 +328,17 @@ export default async function AboutPage({
       </section>
 
       {/* ═══════════════════════════════════════════════════
-          HISTORIQUE / TIMELINE
+          HISTORIQUE / TIMELINE(t)
           ═══════════════════════════════════════════════════ */}
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Notre histoire
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-bold mt-3">
-              Un projet né de l&apos;expertise terrain
-            </h2>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("ab_notre_histoire")}</span>
+            <h2 className="text-3xl sm:text-4xl font-bold mt-3">{t("ab_un_projet_ne_de_l_expertise_terrain")}</h2>
           </div>
 
           <div className="relative space-y-8 pl-8 before:content-[''] before:absolute before:left-3 before:top-2 before:bottom-2 before:w-0.5 before:bg-primary/20">
-            {TIMELINE.map((event, i) => (
+            {TIMELINE(t).map((event, i) => (
               <div key={i} className="relative">
                 <div className="absolute -left-8 top-2 h-6 w-6 rounded-full vnk-gradient flex items-center justify-center ring-4 ring-muted/30">
                   <div className="h-2 w-2 rounded-full bg-white" />
@@ -416,33 +372,23 @@ export default async function AboutPage({
                   <Award className="h-6 w-6 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <h2 className="text-xl font-bold">Informations légales</h2>
+                  <h2 className="text-xl font-bold">{t("informations_legales")}</h2>
                   <div className="grid sm:grid-cols-2 gap-4 mt-4 text-sm">
                     <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Dénomination
-                      </div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider">{t("ab_denomination")}</div>
                       <div className="font-semibold">VNK Automatisation Inc.</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Forme juridique
-                      </div>
-                      <div className="font-semibold">Société par actions (Inc.)</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider">{t("ab_forme_juridique")}</div>
+                      <div className="font-semibold">{t("societe_par_actions")}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Constituée
-                      </div>
-                      <div className="font-semibold">Mars 2026 · Québec, Canada</div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider">{t("ab_constituee")}</div>
+                      <div className="font-semibold">{t("mars_2026_quebec")}</div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                        Secteur
-                      </div>
-                      <div className="font-semibold">
-                        Services d&apos;automatisation industrielle
-                      </div>
+                      <div className="text-xs text-muted-foreground uppercase tracking-wider">{t("ab_secteur")}</div>
+                      <div className="font-semibold">{t("ab_services_d_automatisation_industrielle")}</div>
                     </div>
                   </div>
                 </div>
@@ -457,21 +403,14 @@ export default async function AboutPage({
           ═══════════════════════════════════════════════════ */}
       <section className="py-24 vnk-gradient text-white">
         <div className="container mx-auto px-4 text-center max-w-3xl">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">
-            Travaillons ensemble
-          </h2>
-          <p className="mt-4 text-lg opacity-90">
-            Que ce soit pour une urgence, un audit ou une modernisation, nous
-            sommes à votre disposition pour en discuter.
-          </p>
+          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold">{t("ab_travaillons_ensemble")}</h2>
+          <p className="mt-4 text-lg opacity-90">{t("ab_que_ce_soit_pour_une_urgence_un")}</p>
           <Button
             asChild
             size="lg"
             className="bg-white text-[#0F2D52] hover:bg-white/90 h-14 px-8 mt-8"
           >
-            <Link href="/contact">
-              Nous contacter
-              <ArrowRight className="h-5 w-5" />
+            <Link href="/contact">{t("ab_nous_contacter")}<ArrowRight className="h-5 w-5" />
             </Link>
           </Button>
         </div>

@@ -1,0 +1,12 @@
+{
+  "n_resultats": "{count, plural, =0 {0 results} one {# result} other {# results}}",
+  "plage_sur_total": "{from}–{to} of {total}",
+  "filtrer_par_statut": "Filter by status",
+  "tous_statuts": "Every status",
+  "aucun_resultat": "No result",
+  "rien_a_afficher": "There is nothing to show yet.",
+  "lignes_par_page": "Rows per page",
+  "lignes": "Rows:",
+  "rechercher": "Search",
+  "rechercher_points": "Search..."
+}

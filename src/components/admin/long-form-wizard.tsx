@@ -65,18 +65,19 @@ export function LongFormWizard({
   templateTitle,
   bodyMarkdown,
   initialValues,
-  submitLabel = "Envoyer pour signature",
+  submitLabel,
   onClose,
   onSubmit,
 }: LongFormWizardProps) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const structure = useMemo(() => parseFillFields(bodyMarkdown), [bodyMarkdown]);
   const [values, setValues] = useState<Record<string, string>>(initialValues ?? {});
   const [submitting, setSubmitting] = useState(false);
-  // Sections repliees (par index dans structure.groups).
+
   const [collapsed, setCollapsed] = useState<Set<number>>(new Set());
 
-  // Reset values quand le dialog s'ouvre.
+
   useEffect(() => {
     if (open) {
       setValues(initialValues ?? {});
@@ -106,9 +107,9 @@ export function LongFormWizard({
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      // On envoie TOUS les fields (meme ceux vides) pour que le serveur
-      // sache que l'admin a explicitement laisse vide -> ligne strippee
-      // dans le PDF final.
+
+
+
       const payload: Record<string, string> = {};
       for (const f of structure.fields) {
         payload[`fill_${f.index}`] = (values[`fill_${f.index}`] ?? "").trim();
@@ -125,7 +126,7 @@ export function LongFormWizard({
         className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-3xl sm:max-h-[92vh] sm:h-auto sm:rounded-lg"
         aria-describedby={undefined}
       >
-        {/* Header navy gradient VNK */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-white text-base flex items-center gap-2">
@@ -144,14 +145,14 @@ export function LongFormWizard({
           </DialogHeader>
         </div>
 
-        {/* Body scrollable */}
+
         <div className="flex-1 overflow-y-auto bg-muted/20 px-4 sm:px-6 py-4 space-y-4">
           {structure.groups.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <FileText className="h-12 w-12 text-muted-foreground/40 mb-3" />
-              <p className="text-sm font-medium text-foreground">Aucun champ détecté</p>
+              <p className="text-sm font-medium text-foreground">{t("aucun_champ_detecte")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Ce template ne contient pas de lignes à remplir.
+                {t("template_ne_contient_pas_lignes")}
               </p>
             </div>
           ) : (
@@ -170,14 +171,11 @@ export function LongFormWizard({
 
           <div className="rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] text-blue-900 flex gap-2 items-start">
             <CheckCircle2 className="h-3.5 w-3.5 mt-0.5 shrink-0" />
-            <span>
-              Les champs laissés vides apparaîtront comme lignes à remplir à la main
-              dans le PDF final.
-            </span>
+            <span>{t("long_form_wizard_les_champs_laisses_vides_apparaitront_comme_lignes")}</span>
           </div>
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-4 sm:px-6 py-3 border-t bg-card shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button variant="outline" size="sm" onClick={onClose} disabled={submitting}>
             {tc("cancel")}
@@ -193,7 +191,7 @@ export function LongFormWizard({
             ) : (
               <Send className="h-3.5 w-3.5 mr-1.5" />
             )}
-            {submitLabel}
+            {submitLabel ?? t("enregistrer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -311,18 +309,19 @@ export function FieldRow({
   value: string;
   onChange: (v: string) => void;
 }) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
-  // Detection du type d'input selon le label :
-  //   - Date / annee / mois / jour     -> DatePopover (calendrier inline)
-  //   - longtext / Notes / Commentaires -> Textarea
-  //   - Sinon                           -> Input texte court
+
+
+
+
   const labelLower = field.label.toLowerCase();
   const isDate = /\b(date|jour|annee|année|mois)\b/.test(labelLower);
   const isLong = field.kind === "longtext"
     || /\b(notes?|commentaires?|motifs?|observations?|remarques?|details?|description|plan d'?action|bilan|preciser)\b/i.test(labelLower);
 
-  // Helper : pretty label quand parser a mis "Champ N" generique. Garde la
-  // numerotation mais ajoute un contexte minimal (la section ou la sous-section).
+
+
   const displayLabel = (() => {
     const isGeneric = /^(champ|element|bloc libre|objectif)\s*\d*$/i.test(field.label.trim());
     if (!isGeneric) return field.label;
@@ -345,20 +344,20 @@ export function FieldRow({
         <DatePopover
           value={value || ""}
           onChange={(v) => onChange(v ?? "")}
-          placeholder="Choisir une date"
+          placeholder={t("choisir_date")}
         />
       ) : isLong ? (
         <Textarea
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Saisir le texte libre…"
+          placeholder={t("saisir_texte_libre")}
           className="text-sm min-h-[72px] resize-y"
         />
       ) : (
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder="Saisir la valeur…"
+          placeholder={t("saisir_valeur")}
           className="text-sm h-9"
         />
       )}

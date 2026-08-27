@@ -37,10 +37,10 @@ type RequestFull = {
   client: { id: number; fullName: string; companyName: string | null; email: string; phone: string | null } | null;
 };
 
-const URGENCY_LABELS: Record<string, string> = {
-  normal: "Normal",
-  urgent: "Urgent",
-  critical: "Critique",
+const URGENCY_KEYS: Record<string, string> = {
+  normal: "normal",
+  urgent: "urgent",
+  critical: "critique",
 };
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -49,15 +49,15 @@ const URGENCY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-700 border-red-200",
 };
 
-const SERVICE_LABELS: Record<string, string> = {
-  "plc-support": "Support PLC",
-  "plc-programming": "Programmation PLC",
-  "scada": "SCADA",
-  "hmi": "Interface HMI",
-  "web-development": "Développement web",
-  "automation": "Automatisation",
-  "consulting": "Consultation",
-  "maintenance": "Maintenance",
+const SERVICE_KEYS: Record<string, string> = {
+  "plc-support": "support_plc",
+  "plc-programming": "programmation_plc",
+  "scada": "scada",
+  "hmi": "interface_hmi",
+  "web-development": "developpement_web",
+  "automation": "automatisation",
+  "consulting": "consultation",
+  "maintenance": "maintenance",
 };
 
 export function RequestDetailPanel({
@@ -69,6 +69,7 @@ export function RequestDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.requests");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -109,7 +110,7 @@ export function RequestDetailPanel({
       });
       if (res.ok) { if (msg) toast.success(msg); await refresh(); return true; }
       const d = await res.json();
-      toast.error(d.error || "Erreur");
+      toast.error(d.error || t("erreur"));
       return false;
     } finally { setBusy(false); }
   };
@@ -117,9 +118,9 @@ export function RequestDetailPanel({
   const handleDelete = async () => {
     if (!request) return;
     const ok = await confirm({
-      title: "Supprimer cette demande ?",
+      title: t("supprimer_demande"),
       description: `La demande "${request.title}" sera supprimée définitivement.`,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("supprimer"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -127,10 +128,10 @@ export function RequestDetailPanel({
     try {
       const res = await fetch(`/api/project-requests/${request.id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Demande supprimée");
+        toast.success(t("demande_supprimee"));
         onOpenChange(false);
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
@@ -140,7 +141,7 @@ export function RequestDetailPanel({
     if (convertTarget === "quote") {
       const amt = Number(convertAmount);
       if (!amt || Number.isNaN(amt) || amt <= 0) {
-        toast.error("Montant HT invalide");
+        toast.error(t("montant_ht_invalide"));
         return;
       }
       body.amountHt = amt;
@@ -154,15 +155,15 @@ export function RequestDetailPanel({
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(convertTarget === "mandate" ? "Demande convertie en mandat" : `Devis ${data.quoteNumber} créé`);
+        toast.success(convertTarget === "mandate" ? t("demande_convertie_mandat") : `Devis ${data.quoteNumber} créé`);
         setConvertOpen(false);
         setConvertAmount("");
         await refresh();
-        // Ouvre l'entite creee
+
         if (data.mandateId) openEntity("mandate", data.mandateId);
         else if (data.quoteId) openEntity("quote", data.quoteId);
       } else {
-        toast.error(data.error || "Erreur de conversion");
+        toast.error(data.error || t("erreur_conversion"));
       }
     } finally { setBusy(false); }
   };
@@ -174,20 +175,20 @@ export function RequestDetailPanel({
       open={open}
       onOpenChange={onOpenChange}
       loading={loading || !request}
-      title={request?.title ?? "Demande"}
+      title={request?.title ?? t("demande")}
       subtitle={request?.client ? `${request.client.fullName}${request.client.companyName ? ` · ${request.client.companyName}` : ""}` : undefined}
       icon={<Inbox className="h-7 w-7 text-white" />}
       headerStats={
         request ? (
           <div className="grid grid-cols-3 gap-2">
             <PanelStatBox icon={Tag} label={tc("status")} value={
-              request.status === "new" ? "Nouvelle"
-              : request.status === "in_progress" ? "Traitement"
-              : request.status === "converted" ? "Convertie"
-              : "Fermée"
+              request.status === "new" ? t("nouvelle")
+              : request.status === "in_progress" ? t("traitement")
+              : request.status === "converted" ? t("convertie")
+              : t("fermee")
             } />
-            <PanelStatBox icon={AlertTriangle} label="Urgence" value={URGENCY_LABELS[request.urgency] ?? request.urgency} />
-            <PanelStatBox icon={DollarSign} label="Budget" value={request.budgetRange ?? "—"} />
+            <PanelStatBox icon={AlertTriangle} label={t("urgence")} value={URGENCY_KEYS[request.urgency] ? t(URGENCY_KEYS[request.urgency]) : request.urgency} />
+            <PanelStatBox icon={DollarSign} label={t("budget")} value={request.budgetRange ?? "—"} />
           </div>
         ) : undefined
       }
@@ -214,14 +215,14 @@ export function RequestDetailPanel({
     >
       {request && (
         <div className="space-y-4">
-          {/* Bandeau converti — si applicable */}
+
           {isConverted && (request.convertedToMandateId || request.convertedToQuoteId) && (
             <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3">
               <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 text-sm text-emerald-700">
                   <Check className="h-4 w-4" />
                   <span className="font-medium">
-                    {request.convertedToMandateId ? "Convertie en mandat" : "Convertie en devis"}
+                    {request.convertedToMandateId ? t("convertie_mandat") : t("convertie_devis")}
                   </span>
                 </div>
                 <Button size="sm" variant="outline" className="h-7 text-xs"
@@ -235,8 +236,8 @@ export function RequestDetailPanel({
             </div>
           )}
 
-          {/* Section Statut & traitement */}
-          <PanelSection icon={Tag} title="Statut & traitement">
+
+          <PanelSection icon={Tag} title={t("statut_traitement")}>
             <EditableField
               label={tc("status")}
               display={<StatusBadge status={request.status} />}
@@ -244,117 +245,116 @@ export function RequestDetailPanel({
                 <Select value={v} onValueChange={setV}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="new">Nouvelle</SelectItem>
-                    <SelectItem value="in_progress">En traitement</SelectItem>
-                    <SelectItem value="converted" disabled={!isConverted}>Convertie</SelectItem>
-                    <SelectItem value="closed">Fermée</SelectItem>
+                    <SelectItem value="new">{t("nouvelle")}</SelectItem>
+                    <SelectItem value="in_progress">{t("traitement")}</SelectItem>
+                    <SelectItem value="converted" disabled={!isConverted}>{t("convertie")}</SelectItem>
+                    <SelectItem value="closed">{t("fermee")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
               initialValue={request.status}
-              onSave={(v) => patch({ status: v }, "Statut modifié")}
+              onSave={(v) => patch({ status: v }, t("statut_modifie"))}
               disabled={busy}
             />
             <EditableField
-              label="Urgence"
+              label={t("urgence")}
               display={
                 <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border", URGENCY_COLORS[request.urgency] ?? "bg-gray-100 text-gray-700")}>
-                  {URGENCY_LABELS[request.urgency] ?? request.urgency}
+                  {URGENCY_KEYS[request.urgency] ? t(URGENCY_KEYS[request.urgency]) : request.urgency}
                 </span>
               }
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="normal">Normal</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
-                    <SelectItem value="critical">Critique</SelectItem>
+                    <SelectItem value="normal">{t("normal")}</SelectItem>
+                    <SelectItem value="urgent">{t("urgent")}</SelectItem>
+                    <SelectItem value="critical">{t("critique")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
               initialValue={request.urgency}
-              onSave={(v) => patch({ urgency: v }, "Urgence modifiée")}
+              onSave={(v) => patch({ urgency: v }, t("urgence_modifiee"))}
               disabled={busy}
             />
-            <InfoRow label="Reçue le" value={formatDate(new Date(request.createdAt))} />
-            <InfoRow label="Dernière mise à jour" value={formatDate(new Date(request.updatedAt))} />
+            <InfoRow label={t("recue")} value={formatDate(new Date(request.createdAt))} />
+            <InfoRow label={t("derniere_mise_jour")} value={formatDate(new Date(request.updatedAt))} />
           </PanelSection>
 
-          {/* Section Détails projet */}
-          <PanelSection icon={FileText} title="Détails du projet">
+
+          <PanelSection icon={FileText} title={t("details_projet")}>
             <EditableField
-              label="Service"
-              display={<span className="text-sm">{request.serviceType ? (SERVICE_LABELS[request.serviceType] ?? request.serviceType) : "—"}</span>}
+              label={t("service")}
+              display={<span className="text-sm">{request.serviceType ? (SERVICE_KEYS[request.serviceType] ? t(SERVICE_KEYS[request.serviceType]) : request.serviceType) : "—"}</span>}
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
-                  <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(SERVICE_LABELS).map(([val, label]) => (
-                      <SelectItem key={val} value={val}>{label}</SelectItem>
+                    {Object.entries(SERVICE_KEYS).map(([val, key]) => (
+                      <SelectItem key={val} value={val}>{t(key)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               )}
               initialValue={request.serviceType ?? ""}
-              onSave={(v) => patch({ serviceType: v || null }, "Service modifié")}
+              onSave={(v) => patch({ serviceType: v || null }, t("service_modifie"))}
               disabled={busy}
             />
             <EditableField
-              label="Marque PLC"
+              label={t("marque_plc")}
               display={<span className="text-sm">{request.plcBrand ?? "—"}</span>}
-              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder="Siemens, Allen-Bradley, etc." />}
+              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder={t("siemens_allen_bradley_etc")} />}
               initialValue={request.plcBrand ?? ""}
-              onSave={(v) => patch({ plcBrand: v.trim() || null }, "Marque PLC modifiée")}
+              onSave={(v) => patch({ plcBrand: v.trim() || null }, t("marque_plc_modifiee"))}
               disabled={busy}
             />
             <EditableField
-              label="Budget estimé"
+              label={t("budget_estime")}
               display={<span className="text-sm">{request.budgetRange ?? "—"}</span>}
-              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder="Ex : 5 000 - 10 000 $" />}
+              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder={t("ex_5_000_10_000")} />}
               initialValue={request.budgetRange ?? ""}
-              onSave={(v) => patch({ budgetRange: v.trim() || null }, "Budget modifié")}
+              onSave={(v) => patch({ budgetRange: v.trim() || null }, t("budget_modifie"))}
               disabled={busy}
             />
           </PanelSection>
 
-          {/* Description complète */}
-          <PanelSection icon={FileText} title="Description">
+
+          <PanelSection icon={FileText} title={t("description")}>
             <EditableTextarea
               display={request.description}
               initialValue={request.description}
-              onSave={(v) => v.trim() ? patch({ description: v.trim() }, "Description modifiée") : false}
+              onSave={(v) => v.trim() ? patch({ description: v.trim() }, t("description_modifiee")) : false}
               disabled={busy}
               rows={5}
             />
           </PanelSection>
 
-          {/* Coordonnées client */}
+
           {request.client && (
-            <PanelSection icon={User} title="Contact client">
-              <InfoRow label="Nom" value={request.client.fullName} />
-              {request.client.companyName && <InfoRow label="Entreprise" value={request.client.companyName} />}
-              <InfoRow label="Courriel" value={request.client.email} />
-              {request.client.phone && <InfoRow label="Téléphone" value={request.client.phone} />}
+            <PanelSection icon={User} title={t("contact_client")}>
+              <InfoRow label={t("nom")} value={request.client.fullName} />
+              {request.client.companyName && <InfoRow label={t("entreprise")} value={request.client.companyName} />}
+              <InfoRow label={t("courriel")} value={request.client.email} />
+              {request.client.phone && <InfoRow label={t("telephone")} value={request.client.phone} />}
             </PanelSection>
           )}
 
-          {/* Zone danger : delete */}
-          <PanelSection icon={Cpu} title="Actions avancées">
+
+          <PanelSection icon={Cpu} title={t("actions_avancees")}>
             <Button
               variant="outline"
               className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               disabled={busy}
               onClick={handleDelete}
             >
-              <Trash2 className="h-4 w-4 mr-1.5" />Supprimer la demande
-            </Button>
+              <Trash2 className="h-4 w-4 mr-1.5" />{t("request_detail_panel_supprimer_la_demande")}</Button>
           </PanelSection>
         </div>
       )}
 
       {ConfirmModal}
 
-      {/* Dialog conversion en mandat / devis */}
+
       <Dialog open={convertOpen} onOpenChange={setConvertOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-6 py-5 text-white">
@@ -363,9 +363,9 @@ export function RequestDetailPanel({
                 <Briefcase className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-white">Convertir la demande</DialogTitle>
+                <DialogTitle className="text-white">{t("convertir_demande")}</DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
-                  Crée un mandat ou un devis depuis cette demande
+                  {t("cree_mandat_devis_depuis_demande")}
                 </DialogDescription>
               </div>
             </div>
@@ -383,8 +383,8 @@ export function RequestDetailPanel({
                 )}
               >
                 <Briefcase className="h-5 w-5 text-[#0F2D52] mb-2" />
-                <p className="font-semibold text-sm">Mandat</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Travail récurrent / suivi</p>
+                <p className="font-semibold text-sm">{t("mandat")}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t("travail_recurrent_suivi")}</p>
               </button>
               <button
                 type="button"
@@ -397,14 +397,14 @@ export function RequestDetailPanel({
                 )}
               >
                 <FileText className="h-5 w-5 text-[#0F2D52] mb-2" />
-                <p className="font-semibold text-sm">Devis</p>
-                <p className="text-[11px] text-muted-foreground mt-0.5">Proposition tarifée</p>
+                <p className="font-semibold text-sm">{t("devis")}</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">{t("proposition_tarifee")}</p>
               </button>
             </div>
 
             {convertTarget === "quote" && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant HT *</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ht")}</Label>
                 <Input
                   type="number"
                   min="0"
@@ -413,13 +413,13 @@ export function RequestDetailPanel({
                   onChange={(e) => setConvertAmount(e.target.value)}
                   placeholder="5000"
                 />
-                <p className="text-[10px] text-muted-foreground">Les taxes (TPS+TVQ) seront calculées automatiquement</p>
+                <p className="text-[10px] text-muted-foreground">{t("taxes_tps_tvq_seront_calculees")}</p>
               </div>
             )}
 
             <div className="rounded-lg bg-muted/30 p-3 text-xs space-y-1">
-              <p className="text-muted-foreground">Le titre, la description et le service seront copiés depuis la demande.</p>
-              <p className="text-muted-foreground">La demande passera au statut « Convertie ».</p>
+              <p className="text-muted-foreground">{t("titre_description_service_seront_copies")}</p>
+              <p className="text-muted-foreground">{t("demande_passera_statut_convertie")}</p>
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
@@ -429,7 +429,7 @@ export function RequestDetailPanel({
               disabled={busy || (convertTarget === "quote" && !convertAmount)}
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
             >
-              {busy ? "Conversion…" : convertTarget === "mandate" ? "Créer le mandat" : "Créer le devis"}
+              {busy ? t("conversion_cours") : convertTarget === "mandate" ? t("creer_mandat") : t("creer_devis")}
             </Button>
           </DialogFooter>
         </DialogContent>

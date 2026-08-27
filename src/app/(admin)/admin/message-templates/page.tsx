@@ -1,9 +1,13 @@
 // Admin · Templates de messages
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { TemplatesView } from "./templates-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Templates de messages" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("templates_messages") };
+}
 
 export default async function MessageTemplatesPage() {
   const templates = await prisma.messageTemplate.findMany({

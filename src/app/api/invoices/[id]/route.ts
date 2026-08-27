@@ -2,6 +2,7 @@
 // PATCH /api/invoices/[id] — mettre a jour (interdit si payee)
 // DELETE /api/invoices/[id] — supprimer une facture non payee
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -26,7 +27,7 @@ const updateSchema = z.object({
   invoicePhase: z.string().max(60).nullable().optional(),
   phaseNumber: z.number().int().positive().nullable().optional(),
   paymentMethod: z.string().max(60).nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
@@ -54,6 +55,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -75,7 +77,7 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -122,6 +124,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -141,7 +144,7 @@ export async function DELETE(
   }
   if (existing.status === "paid" || existing._count.payments > 0 || existing._count.refunds > 0) {
     return NextResponse.json(
-      { error: "Facture payee ou liee a des paiements/remboursements — impossible de supprimer" },
+      { error: t("facture_payee_ou_liee_a_des_paiements") },
       { status: 409 }
     );
   }

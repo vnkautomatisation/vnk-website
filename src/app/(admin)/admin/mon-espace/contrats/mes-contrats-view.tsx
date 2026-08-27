@@ -46,7 +46,7 @@ import { ToneBadge } from "@/components/admin/tone-badge";
 import { SignatureStatusBadge } from "@/components/admin/signature-status-badge";
 import { SignaturePad } from "../../employes/contrats/signature-pad";
 import { signContractAsEmployeeAction } from "@/app/actions/hr-contracts";
-import { getContractTypeLabel } from "@/lib/document-templates/contract-types";
+import { getContractTypeKey } from "@/lib/document-templates/contract-types";
 
 export type EmployeeContract = {
   id: number;
@@ -65,21 +65,22 @@ export type EmployeeContract = {
   terminatedAt: string | null;
 };
 
-const STATUS_TONE: Record<string, { label: string; tone: "success" | "warning" | "danger" | "info" | "neutral" }> = {
-  draft: { label: "Brouillon", tone: "neutral" },
-  sent: { label: "A signer", tone: "warning" },
-  signed_employee: { label: "En attente employeur", tone: "info" },
-  signed_employer: { label: "En attente de votre signature", tone: "warning" },
-  active: { label: "Actif", tone: "success" },
-  terminated: { label: "Resilie", tone: "danger" },
-  expired: { label: "Expire", tone: "neutral" },
+const STATUS_TONE: Record<string, { labelKey: string; tone: "success" | "warning" | "danger" | "info" | "neutral" }> = {
+  draft: { labelKey: "ct_draft", tone: "neutral" },
+  sent: { labelKey: "ct_sent", tone: "warning" },
+  signed_employee: { labelKey: "ct_signed_employee", tone: "info" },
+  signed_employer: { labelKey: "ct_signed_employer", tone: "warning" },
+  active: { labelKey: "ct_active", tone: "success" },
+  terminated: { labelKey: "ct_terminated", tone: "danger" },
+  expired: { labelKey: "ct_expired", tone: "neutral" },
 };
 
 // Label de type de contrat (terminologie QC + rétro-compat legacy via getContractTypeLabel)
-function typeLabel(value: string | null | undefined): string {
+function typeLabel(value: string | null | undefined, autre: string, t: (k: string) => string): string {
   if (!value) return "-";
-  if (value === "autre") return "Autre";
-  return getContractTypeLabel(value) || value;
+  if (value === "autre") return autre;
+  const key = getContractTypeKey(value);
+  return key ? t(key) : value;
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -104,6 +105,7 @@ export function MesContratsView({
   contracts: EmployeeContract[];
   meName: string;
 }) {
+  const t = useTranslations("admin.my_contracts");
   const router = useRouter();
   const [pdfPreview, setPdfPreview] = useState<{
     url: string;
@@ -124,7 +126,7 @@ export function MesContratsView({
     [meName],
   );
 
-  // KPIs
+
   const kpis = useMemo(() => {
     const actifs = contracts.filter((c) => c.status === "active").length;
     const aSigner = contracts.filter(
@@ -136,7 +138,7 @@ export function MesContratsView({
     return { actifs, aSigner, archives };
   }, [contracts]);
 
-  // Buckets pour affichage : a signer / actifs / archives
+
   const buckets = useMemo(() => {
     const aSigner = contracts.filter((c) => c.status === "sent" && !c.employeeSignedAt);
     const enCours = contracts.filter(
@@ -154,7 +156,7 @@ export function MesContratsView({
     return { aSigner, enCours, archives, autres };
   }, [contracts]);
 
-  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -168,7 +170,7 @@ export function MesContratsView({
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -176,7 +178,7 @@ export function MesContratsView({
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy ====== */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -187,15 +189,15 @@ export function MesContratsView({
             <FileSignature className="h-5 w-5 text-white" />
           </div>
           <div className="min-w-0">
-            <h1 className="text-lg font-bold">Mes contrats</h1>
+            <h1 className="text-lg font-bold">{t("mes_contrats")}</h1>
             <p className="text-xs text-white/80">
-              Consultez vos contrats d'emploi et signez electroniquement ceux qui sont en attente.
+              {t("consultez_contrats_signez")}
             </p>
           </div>
         </div>
       </div>
 
-      {/* ====== Bandeau urgent : contrats a signer ====== */}
+
       {buckets.aSigner.length > 0 && (
         <UrgentSignBanner
           contracts={buckets.aSigner}
@@ -203,50 +205,50 @@ export function MesContratsView({
         />
       )}
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-3 gap-3">
         <DocumentStatsCard
-          label="Actifs"
+          label={t("actifs_2")}
           value={kpis.actifs}
           icon={CheckCircle2}
           accent="success"
-          hint="Contrats en cours d'execution"
+          hint={t("contrats_cours_execution")}
         />
         <DocumentStatsCard
-          label="A signer"
+          label={t("signer_3")}
           value={kpis.aSigner}
           icon={AlertCircle}
           accent={kpis.aSigner > 0 ? "warning" : "info"}
-          hint={kpis.aSigner > 0 ? "Action requise" : "Aucune signature requise"}
+          hint={kpis.aSigner > 0 ? t("action_requise") : t("aucune_signature_requise")}
         />
         <DocumentStatsCard
-          label="Archives"
+          label={t("archives_2")}
           value={kpis.archives}
           icon={Archive}
           accent="navy"
-          hint="Resilies ou expires"
+          hint={t("resilies_expires")}
         />
       </div>
 
-      {/* Sentinel : detecte la sortie des KPIs */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile (sur la meme ligne que "Mon espace") */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Act :</span>
-                  <span className="hidden min-[480px]:inline">Actifs :</span>
+                  <span className="min-[480px]:hidden">{t("act")}</span>
+                  <span className="hidden min-[480px]:inline">{t("actifs")}</span>
                 </span>
                 <span className="font-semibold text-emerald-600">{kpis.actifs}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">À sig :</span>
-                  <span className="hidden min-[480px]:inline">A signer :</span>
+                  <span className="min-[480px]:hidden">{t("sig")}</span>
+                  <span className="hidden min-[480px]:inline">{t("signer")}</span>
                 </span>
                 <span className={kpis.aSigner > 0 ? "font-semibold text-amber-600" : "font-semibold"}>
                   {kpis.aSigner}
@@ -255,8 +257,8 @@ export function MesContratsView({
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Arch :</span>
-                  <span className="hidden min-[480px]:inline">Archives :</span>
+                  <span className="min-[480px]:hidden">{t("arch")}</span>
+                  <span className="hidden min-[480px]:inline">{t("archives")}</span>
                 </span>
                 <span className="font-semibold text-muted-foreground">{kpis.archives}</span>
               </span>
@@ -265,7 +267,7 @@ export function MesContratsView({
           )
         : null}
 
-      {/* Sticky container : mini-bar DESKTOP uniquement (mobile = portal) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -279,41 +281,39 @@ export function MesContratsView({
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <FileSignature className="h-4 w-4" />
-            Mes contrats
+            {t("mes_contrats")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Actifs :</span>
+            <span className="text-muted-foreground">{t("actifs")}</span>
             <span className="font-semibold text-emerald-600">{kpis.actifs}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">A signer :</span>
+            <span className="text-muted-foreground">{t("signer")}</span>
             <span className={kpis.aSigner > 0 ? "font-semibold text-amber-600" : "font-semibold text-muted-foreground"}>
               {kpis.aSigner}
             </span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Archives :</span>
+            <span className="text-muted-foreground">{t("archives")}</span>
             <span className="font-semibold text-muted-foreground">{kpis.archives}</span>
           </span>
         </div>
       </div>
 
-      {/* ====== Sections ====== */}
+
       {contracts.length === 0 ? (
         <Card className="p-10 text-center space-y-3">
           <FileSignature className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm text-muted-foreground">
-            Aucun contrat emis pour votre compte.
+            {t("aucun_contrat_emis_compte")}
           </p>
-          <p className="text-xs text-muted-foreground">
-            Lorsqu'un contrat vous sera assigne, vous le retrouverez ici.
-          </p>
+          <p className="text-xs text-muted-foreground">{t("mes_contrats_view_lorsqu_un_contrat_vous_sera_assigne_vous")}</p>
         </Card>
       ) : (
         <div className="space-y-4">
           {buckets.aSigner.length > 0 && (
             <ContractSection
-              title="A signer"
+              title={t("signer_3")}
               icon={AlertCircle}
               contracts={buckets.aSigner}
               onOpenPdf={openContractPdf}
@@ -323,7 +323,7 @@ export function MesContratsView({
 
           {buckets.enCours.length > 0 && (
             <ContractSection
-              title="En cours"
+              title={t("cours")}
               icon={Briefcase}
               contracts={buckets.enCours}
               onOpenPdf={openContractPdf}
@@ -333,7 +333,7 @@ export function MesContratsView({
 
           {buckets.autres.length > 0 && (
             <ContractSection
-              title="Autres"
+              title={t("autres")}
               icon={FileText}
               contracts={buckets.autres}
               onOpenPdf={openContractPdf}
@@ -343,7 +343,7 @@ export function MesContratsView({
 
           {buckets.archives.length > 0 && (
             <ContractSection
-              title="Archives"
+              title={t("archives_2")}
               icon={Archive}
               contracts={buckets.archives}
               onOpenPdf={openContractPdf}
@@ -353,7 +353,7 @@ export function MesContratsView({
         </div>
       )}
 
-      {/* Modals */}
+
       <PdfPreviewModal
         open={!!pdfPreview}
         url={pdfPreview?.url ?? null}
@@ -383,6 +383,7 @@ function UrgentSignBanner({
   contracts: EmployeeContract[];
   onSign: (c: EmployeeContract) => void;
 }) {
+  const t = useTranslations("admin.my_contracts");
   return (
     <div
       className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
@@ -394,11 +395,11 @@ function UrgentSignBanner({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-bold text-amber-900">
           {contracts.length === 1
-            ? "1 contrat a signer"
+            ? t("1_contrat_signer")
             : `${contracts.length} contrats a signer`}
         </p>
         <p className="text-xs text-amber-800/80 mt-0.5">
-          Veuillez signer electroniquement vos contrats afin de finaliser votre engagement.
+          {t("veuillez_signer_electroniquement_contrats_afin")}
         </p>
         <div className="mt-2 flex flex-col gap-1.5">
           {contracts.slice(0, 4).map((c) => (
@@ -418,7 +419,7 @@ function UrgentSignBanner({
                 onClick={() => onSign(c)}
                 className="h-6 text-[11px] px-2 text-white shrink-0 bg-[#0F2D52] hover:bg-[#1a3a66]"
               >
-                Signer
+                {t("signer_2")}
               </Button>
             </div>
           ))}
@@ -481,17 +482,18 @@ function EmployeeContractCard({
   onOpenPdf: () => void;
   onSign: () => void;
 }) {
+  const t = useTranslations("admin.my_contracts");
   const c = contract;
-  const status = STATUS_TONE[c.status] ?? { label: c.status, tone: "neutral" as const };
+  const status = STATUS_TONE[c.status] ?? { labelKey: "", tone: "neutral" as const };
   const canSign = c.status === "sent" && !c.employeeSignedAt;
-  // Apercu PDF disponible des qu'un contrat est emis (pas seulement signe) :
-  // l'API /api/admin/contracts/[id]/pdf rend a la volee depuis le markdown stocke.
+
+
   const canPreviewPdf = c.status !== "draft";
 
   return (
     <Card className="vnk-card-hover overflow-hidden">
       <div className="p-4 space-y-3">
-        {/* Header */}
+
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/8 ring-1 ring-[#0F2D52]/15 flex items-center justify-center shrink-0">
             <FileSignature className="h-5 w-5 text-[#0F2D52]" />
@@ -499,33 +501,33 @@ function EmployeeContractCard({
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold truncate">{c.title}</p>
             <div className="flex flex-wrap gap-1 mt-1.5">
-              <ToneBadge tone={status.tone}>{status.label}</ToneBadge>
+              <ToneBadge tone={status.tone}>{status.labelKey ? t(status.labelKey) : c.status}</ToneBadge>
               <ToneBadge tone="info">
-                {typeLabel(c.contractType)}
+                {typeLabel(c.contractType, t("autre"), t)}
               </ToneBadge>
             </div>
           </div>
         </div>
 
-        {/* Infos cles */}
+
         <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2">
-          <InfoRow icon={CalendarIcon} label="Debut" value={formatDate(c.startDate)} />
-          {c.endDate && <InfoRow icon={CalendarIcon} label="Fin" value={formatDate(c.endDate)} />}
+          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate)} />
+          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate)} />}
           {c.salaryAnnual != null && (
-            <InfoRow icon={Coins} label="Salaire / an" value={fmtMoney(c.salaryAnnual) ?? "-"} />
+            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual) ?? "-"} />
           )}
           {c.hourlyRate != null && (
-            <InfoRow icon={Coins} label="Taux / h" value={`${Number(c.hourlyRate).toFixed(2)} $`} />
+            <InfoRow icon={Coins} label={t("taux_h")} value={`${Number(c.hourlyRate).toFixed(2)} $`} />
           )}
           {c.hoursPerWeek != null && (
-            <InfoRow icon={TrendingUp} label="Heures / sem" value={`${c.hoursPerWeek} h`} />
+            <InfoRow icon={TrendingUp} label={t("heures_sem")} value={`${c.hoursPerWeek} h`} />
           )}
           {c.vacationPct != null && (
-            <InfoRow icon={TrendingUp} label="Vacances" value={`${c.vacationPct} %`} />
+            <InfoRow icon={TrendingUp} label={t("vacances")} value={`${c.vacationPct} %`} />
           )}
         </div>
 
-        {/* Signatures status (dual party) */}
+
         <div className="flex flex-wrap gap-1.5 text-[10px]">
           <SignatureStatusBadge
             employeeSignedAt={c.employeeSignedAt}
@@ -535,7 +537,7 @@ function EmployeeContractCard({
           />
         </div>
 
-        {/* Actions */}
+
         {(canSign || canPreviewPdf) && (
           <div className="flex flex-wrap gap-1.5 pt-1 border-t -mb-1">
             {canSign && (
@@ -545,7 +547,7 @@ function EmployeeContractCard({
                 onClick={onSign}
               >
                 <FileSignature className="h-3.5 w-3.5 mr-1.5" />
-                Signer maintenant
+                {t("signer_maintenant")}
               </Button>
             )}
             {canPreviewPdf && (
@@ -556,7 +558,7 @@ function EmployeeContractCard({
                 onClick={onOpenPdf}
               >
                 <FileText className="h-3.5 w-3.5 mr-1.5" />
-                Apercu PDF
+                {t("apercu_pdf")}
               </Button>
             )}
           </div>
@@ -598,6 +600,7 @@ function SignDialog({
   onClose: () => void;
   onSigned: () => void;
 }) {
+  const t = useTranslations("admin.my_contracts");
   const tc = useTranslations("common");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
@@ -619,7 +622,7 @@ function SignDialog({
 
   const submit = async () => {
     if (!signatureData) {
-      toast.error("Signez avant de soumettre");
+      toast.error(t("signez_avant_soumettre"));
       return;
     }
     setPending(true);
@@ -629,10 +632,10 @@ function SignDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Contrat signe avec succes !");
+      toast.success(t("contrat_signe_succes"));
       onSigned();
       onClose();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   const clear = () => {
@@ -647,7 +650,7 @@ function SignDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-sm sm:text-base flex items-center gap-2">
               <FileSignature className="h-4 w-4 shrink-0" />
-              <span className="truncate">Signer mon contrat</span>
+              <span className="truncate">{t("signer_mon_contrat")}</span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs truncate">
               {contract.title} - Votre signature confirme votre engagement.
@@ -658,11 +661,11 @@ function SignDialog({
         <div className="p-4 sm:p-5 space-y-3 overflow-y-auto flex-1">
           <div className="rounded-lg border bg-muted/20 p-3">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">
-              Resume du contrat
+              {t("resume_contrat")}
             </p>
             <p className="text-sm font-semibold">{contract.title}</p>
             <p className="text-xs text-muted-foreground">
-              {typeLabel(contract.contractType)} - Debut{" "}
+              {typeLabel(contract.contractType, t("autre"), t)} - Debut{" "}
               {formatDate(contract.startDate)}
               {contract.endDate ? ` - Fin ${formatDate(contract.endDate)}` : ""}
             </p>
@@ -690,22 +693,17 @@ function SignDialog({
               onChange={(e) => setAcknowledged(e.target.checked)}
               className="h-4 w-4 mt-0.5 rounded border-input shrink-0 accent-[#0F2D52]"
             />
-            <span>
-              J'ai lu l'integralite du contrat et j'accepte ses termes en toute connaissance de cause.
-            </span>
+            <span>{t("mes_contrats_view_j_ai_lu_l_integralite_du_contrat")}</span>
           </label>
 
           <div className="space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Votre signature
+              {t("signature")}
             </p>
             <SignaturePad key={padKey} onChange={setSignatureData} />
           </div>
 
-          <p className="text-[10px] text-muted-foreground">
-            En signant, vous certifiez avoir lu et accepte l'integralite des termes du contrat.
-            Votre signature est horodatee et archivee pour conformite legale.
-          </p>
+          <p className="text-[10px] text-muted-foreground">{t("mes_contrats_view_en_signant_vous_certifiez_avoir_lu_et")}</p>
         </div>
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
@@ -717,7 +715,7 @@ function SignDialog({
             disabled={pending || !signatureData}
           >
             <Eraser className="h-3.5 w-3.5 mr-1.5" />
-            Effacer
+            {t("effacer")}
           </Button>
           <Button variant="outline" onClick={onClose} disabled={pending}>
             {tc("cancel")}

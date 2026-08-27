@@ -6,6 +6,7 @@
 // A executer toutes les 5-10 minutes via Railway cron
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/release-scheduled-messages
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
@@ -21,6 +22,7 @@ function authorize(req: Request): boolean {
 }
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -45,7 +47,7 @@ export async function GET(req: Request) {
     await createWorkflowEvent({
       clientId: m.clientId,
       eventType: m.sender === "vnk" ? "message_from_admin" : "message_from_client",
-      eventLabel: count > 0 ? `Message programmé envoyé + ${count} pièce(s)` : "Message programmé envoyé",
+      eventLabel: count > 0 ? t("message_programme_pieces", { count }) : t("message_programme_envoye"),
       triggeredBy: "system",
     });
 

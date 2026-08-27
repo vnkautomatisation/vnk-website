@@ -89,6 +89,7 @@ export function TimeclockSettingsView({
   employees: EmployeePin[];
   pinList: PinList;
 }) {
+  const t = useTranslations("admin.timeclock_settings");
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
@@ -98,13 +99,13 @@ export function TimeclockSettingsView({
   const [pinBusyId, setPinBusyId] = useState<number | null>(null);
   const [issued, setIssued] = useState<{ name: string; pin: string } | null>(null);
   const [pinSearch, setPinSearch] = useState(pinList.q);
-  // Coordinates are held as text: Number("-") is NaN, so parsing on each
-  // keystroke broke the field on the first character of a negative longitude.
+
+
   const [latText, setLatText] = useState(config.geofenceLat?.toString() ?? "");
   const [lngText, setLngText] = useState(config.geofenceLng?.toString() ?? "");
   const [navPending, startNav] = useTransition();
 
-  // URL-driven search, filters and paging: the server only loads the visible page.
+
   const pushPinParams = useCallback((overrides: Record<string, string | null>) => {
     const params = new URLSearchParams(sp.toString());
     for (const [k, v] of Object.entries(overrides)) {
@@ -129,8 +130,8 @@ export function TimeclockSettingsView({
     if (emp.hasPin) {
       const ok = await confirmDialog({
         title: `Remplacer le NIP de ${emp.name}`,
-        description: "Son NIP actuel cessera immédiatement de fonctionner. Le nouveau s'affiche une seule fois — notez-le pour le lui remettre.",
-        confirmLabel: "Remplacer",
+        description: t("nip_actuel_cessera_fonctionner"),
+        confirmLabel: t("remplacer"),
       });
       if (!ok) return;
     }
@@ -140,22 +141,22 @@ export function TimeclockSettingsView({
     if (r.success) {
       setIssued({ name: r.data.name, pin: r.data.pin });
       router.refresh();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   const removePin = async (emp: EmployeePin) => {
     const ok = await confirmDialog({
       title: `Retirer le NIP de ${emp.name}`,
-      description: "Cette personne ne pourra plus poinçonner sur la borne partagée.",
-      confirmLabel: "Retirer",
+      description: t("personne_ne_pourra_plus_poinconner"),
+      confirmLabel: t("retirer"),
       variant: "destructive",
     });
     if (!ok) return;
     setPinBusyId(emp.id);
     const r = await clearKioskPinForAction({ adminId: emp.id });
     setPinBusyId(null);
-    if (r.success) { toast.success("NIP retiré"); router.refresh(); }
-    else toast.error(r.error || "Erreur");
+    if (r.success) { toast.success(t("nip_retire")); router.refresh(); }
+    else toast.error(r.error || t("erreur"));
   };
 
   const parseCoord = (t: string): number | null | undefined => {
@@ -166,7 +167,7 @@ export function TimeclockSettingsView({
   };
   const lat = parseCoord(latText);
   const lng = parseCoord(lngText);
-  // Mirrors the server rules: both coordinates required and in range.
+
   const coordsValid =
     !form.geofenceEnabled
     || (lat != null && lng != null && Math.abs(lat) <= 90 && Math.abs(lng) <= 180);
@@ -185,22 +186,22 @@ export function TimeclockSettingsView({
 
   const useMyPosition = () => {
     if (typeof navigator === "undefined" || !navigator.geolocation) {
-      toast.error("Géolocalisation indisponible sur cet appareil");
+      toast.error(t("geolocalisation_indisponible_cet_appareil"));
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         setLatText(pos.coords.latitude.toFixed(6));
         setLngText(pos.coords.longitude.toFixed(6));
-        toast.success("Position actuelle utilisée comme centre de la zone");
+        toast.success(t("position_actuelle_utilisee_comme_centre"));
       },
-      () => toast.error("Position refusée ou indisponible"),
+      () => toast.error(t("position_refusee_indisponible")),
       { timeout: 8000 },
     );
   };
 
   const save = async () => {
-    if (!coordsValid) { toast.error("Latitude ou longitude invalide"); return; }
+    if (!coordsValid) { toast.error(t("latitude_longitude_invalide")); return; }
     setPending(true);
     const r = await updateTimeclockSettingsAction({
       roundingMin: form.roundingMin,
@@ -214,10 +215,10 @@ export function TimeclockSettingsView({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Paramètres enregistrés");
+      toast.success(t("parametres_enregistres"));
       router.refresh();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -231,9 +232,9 @@ export function TimeclockSettingsView({
               <SlidersHorizontal className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Paramètres du pointage</h1>
+              <h1 className="text-lg font-bold">{t("parametres_pointage")}</h1>
               <p className="text-xs text-white/80">
-                Arrondi des punchs, localisation et borne partagée.
+                {t("arrondi_punchs_localisation_borne_partagee")}
               </p>
             </div>
           </div>
@@ -248,17 +249,17 @@ export function TimeclockSettingsView({
             {navPending
               ? <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
               : <ChevronLeft className="h-3.5 w-3.5 mr-1.5" />}
-            Retour au pointage
+            {t("retour_pointage")}
           </Button>
         </div>
       </div>
 
       <Card className="p-4">
-        <FormSection icon={Clock} title="Punchs">
+        <FormSection icon={Clock} title={t("punchs")}>
           <div className="divide-y">
             <SettingRow
-              label="Seuil des heures supplémentaires"
-              hint="Au-delà de ce total hebdomadaire, les heures sont comptées en supplémentaires et payées à 1,5× par la paie. Semaine du dimanche au samedi."
+              label={t("seuil_heures_supplementaires")}
+              hint={t("dela_total_hebdomadaire_heures_comptees")}
             >
               <Select
                 value={String(form.overtimeWeeklyMin)}
@@ -274,8 +275,8 @@ export function TimeclockSettingsView({
             </SettingRow>
 
             <SettingRow
-              label="Arrondi des punchs"
-              hint="Arrondit l'heure d'entrée et de sortie au pas le plus proche. « Aucun » conserve la minute exacte."
+              label={t("arrondi_punchs")}
+              hint={t("arrondit_heure_entree_sortie_pas")}
             >
               <Select
                 value={String(form.roundingMin)}
@@ -283,10 +284,10 @@ export function TimeclockSettingsView({
               >
                 <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Aucun (minute)</SelectItem>
-                  <SelectItem value="5">5 minutes</SelectItem>
-                  <SelectItem value="10">10 minutes</SelectItem>
-                  <SelectItem value="15">15 minutes</SelectItem>
+                  <SelectItem value="0">{t("aucun_minute")}</SelectItem>
+                  <SelectItem value="5">{t("5_minutes")}</SelectItem>
+                  <SelectItem value="10">{t("10_minutes")}</SelectItem>
+                  <SelectItem value="15">{t("15_minutes")}</SelectItem>
                 </SelectContent>
               </Select>
             </SettingRow>
@@ -295,28 +296,28 @@ export function TimeclockSettingsView({
       </Card>
 
       <Card className="p-4">
-        <FormSection icon={MapPin} title="Localisation">
+        <FormSection icon={MapPin} title={t("localisation")}>
           <div className="divide-y">
             <SettingRow
-              label="Enregistrer la position au punch"
-              hint="La position GPS est demandée au navigateur et jointe au pointage. Un refus ne bloque jamais le punch."
+              label={t("enregistrer_position_punch")}
+              hint={t("position_gps_demandee_navigateur_jointe")}
             >
               <Switch
                 checked={form.geolocEnabled}
                 onCheckedChange={(v) => set("geolocEnabled", v)}
-                aria-label="Enregistrer la position au punch"
+                aria-label={t("enregistrer_position_punch")}
               />
             </SettingRow>
 
             <SettingRow
-              label="Géorepérage (zone autorisée)"
-              hint="Refuse les punchs faits hors du rayon défini. Les punchs sur la borne kiosque ne sont jamais bloqués."
+              label={t("georeperage_zone_autorisee")}
+              hint={t("refuse_punchs_faits_hors_rayon")}
               danger={form.geofenceEnabled}
             >
               <Switch
                 checked={form.geofenceEnabled}
                 onCheckedChange={(v) => set("geofenceEnabled", v)}
-                aria-label="Géorepérage"
+                aria-label={t("georeperage")}
               />
             </SettingRow>
 
@@ -324,14 +325,11 @@ export function TimeclockSettingsView({
               <div className="pt-3 space-y-3">
                 <div className="flex items-start gap-2.5 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
                   <AlertTriangle className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-600" />
-                  <span>
-                    Les employés hors zone ne pourront plus pointer depuis le web. Vérifiez les coordonnées
-                    avant d&apos;enregistrer — une zone mal placée bloque tout le monde.
-                  </span>
+                  <span>{t("timeclock_settings_view_les_employes_hors_zone_ne_pourront_plus")}</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Latitude</label>
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("latitude")}</label>
                     <Input
                       value={latText}
                       onChange={(e) => setLatText(e.target.value)}
@@ -341,7 +339,7 @@ export function TimeclockSettingsView({
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Longitude</label>
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("longitude")}</label>
                     <Input
                       value={lngText}
                       onChange={(e) => setLngText(e.target.value)}
@@ -351,7 +349,7 @@ export function TimeclockSettingsView({
                     />
                   </div>
                   <div>
-                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Rayon (m)</label>
+                    <label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("rayon_m")}</label>
                     <Input
                       value={form.geofenceRadiusM}
                       onChange={(e) => set("geofenceRadiusM", Number(e.target.value.replace(/\D/g, "")) || 0)}
@@ -365,15 +363,14 @@ export function TimeclockSettingsView({
                     <Crosshair className="h-3.5 w-3.5 mr-1.5" />Utiliser ma position actuelle
                   </Button>
                   {lat != null && lng != null && (
-                    <ActionTooltip label="Vérifier le centre de la zone sur Google Maps">
+                    <ActionTooltip label={t("verifier_centre_zone_google_maps")}>
                       <Button variant="ghost" size="sm" className="h-8 text-xs text-muted-foreground" asChild>
                         <a
                           href={`https://www.google.com/maps?q=${lat},${lng}`}
                           target="_blank"
                           rel="noopener noreferrer"
                         >
-                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />Voir sur la carte
-                        </a>
+                          <ExternalLink className="h-3.5 w-3.5 mr-1.5" />{t("timeclock_settings_view_voir_sur_la_carte")}</a>
                       </Button>
                     </ActionTooltip>
                   )}
@@ -385,28 +382,28 @@ export function TimeclockSettingsView({
       </Card>
 
       <Card className="p-4">
-        <FormSection icon={Monitor} title="Borne kiosque">
+        <FormSection icon={Monitor} title={t("borne_kiosque")}>
           <div className="divide-y">
             <SettingRow
-              label="Activer la borne partagée"
-              hint="Une tablette laissée sur place ouvre /kiosque : l'employé tape son NIP et poinçonne, sans session personnelle."
+              label={t("activer_borne_partagee")}
+              hint={t("tablette_laissee_place_ouvre_kiosque")}
             >
               <Switch
                 checked={form.kioskEnabled}
                 onCheckedChange={(v) => set("kioskEnabled", v)}
-                aria-label="Activer la borne kiosque"
+                aria-label={t("activer_borne_kiosque")}
               />
             </SettingRow>
 
           </div>
 
-          {/* Per-employee PIN */}
+
           <div className="rounded-lg border overflow-hidden">
             <div className="px-3 py-2.5 bg-muted/30 border-b space-y-2.5">
               <div className="flex items-center gap-3 flex-wrap">
                 <span className="text-xs font-bold uppercase tracking-wider text-[#0F2D52] inline-flex items-center gap-1.5 shrink-0">
                   <KeyRound className="h-3.5 w-3.5" />
-                  NIP des employés
+                  {t("nip_employes")}
                   <Badge variant="outline" className="text-[10px] tabular-nums">
                     {pinList.withPin} / {pinList.totalEmployees}
                   </Badge>
@@ -416,17 +413,17 @@ export function TimeclockSettingsView({
                   <Input
                     value={pinSearch}
                     onChange={(e) => setPinSearch(e.target.value)}
-                    placeholder="Rechercher un employé…"
+                    placeholder={t("rechercher_employe")}
                     className="h-8 text-xs pl-7"
                   />
                 </div>
               </div>
-              {/* Filters, pending requests first */}
+
               <div className="flex items-center gap-1.5 flex-wrap">
                 {([
-                  { key: "all", label: "Tous", count: pinList.totalEmployees },
-                  { key: "requested", label: "Demandes", count: pinList.requested },
-                  { key: "none", label: "Sans NIP", count: pinList.totalEmployees - pinList.withPin },
+                  { key: "all", label: t("tous"), count: pinList.totalEmployees },
+                  { key: "requested", label: t("demandes"), count: pinList.requested },
+                  { key: "none", label: t("sans_nip"), count: pinList.totalEmployees - pinList.withPin },
                 ] as const).map((f) => {
                   const active = pinList.filter === f.key;
                   return (
@@ -449,13 +446,10 @@ export function TimeclockSettingsView({
                 })}
               </div>
             </div>
-            <p className="px-3 py-2 text-[11px] text-muted-foreground border-b bg-muted/10">
-              « Générer et envoyer » attribue un NIP et prévient l&apos;employé dans son espace —
-              aucun message à écrire. Lui seul peut ensuite l&apos;afficher, avec son mot de passe.
-            </p>
+            <p className="px-3 py-2 text-[11px] text-muted-foreground border-b bg-muted/10">{t("timeclock_settings_view_generer_et_envoyer_attribue_un_nip_et")}</p>
             <div className="divide-y">
               {employees.length === 0 ? (
-                <p className="p-6 text-center text-sm text-muted-foreground">Aucun employé correspondant.</p>
+                <p className="p-6 text-center text-sm text-muted-foreground">{t("aucun_employe_correspondant")}</p>
               ) : employees.map((emp) => (
                 <div
                   key={emp.id}
@@ -473,11 +467,11 @@ export function TimeclockSettingsView({
                     </div>
                     <p className="text-[10px] text-muted-foreground truncate">
                       {emp.hasPin && !emp.canReveal
-                        ? "L'employé ne peut pas l'afficher — remplacez-le"
+                        ? t("employe_ne_peut_pas_afficher")
                         : emp.hasPin
                           ? emp.setAt
                             ? `NIP remis le ${new Date(emp.setAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}`
-                            : "NIP actif"
+                            : t("nip_actif")
                           : emp.email}
                     </p>
                   </div>
@@ -491,7 +485,7 @@ export function TimeclockSettingsView({
                           : "text-slate-500 border-slate-200 bg-slate-50"
                     }`}
                   >
-                    {emp.hasPin ? (emp.canReveal ? "Configuré" : "À remplacer") : "Aucun"}
+                    {emp.hasPin ? (emp.canReveal ? t("configure") : t("remplacer_2")) : t("aucun")}
                   </Badge>
                   <div className="flex items-center gap-1.5 shrink-0 ml-auto">
                     {emp.hasPin && (
@@ -500,7 +494,7 @@ export function TimeclockSettingsView({
                         onClick={() => removePin(emp)}
                         disabled={pinBusyId === emp.id}
                       >
-                        Retirer
+                        {t("retirer")}
                       </Button>
                     )}
                     <Button
@@ -511,14 +505,14 @@ export function TimeclockSettingsView({
                       disabled={pinBusyId === emp.id}
                     >
                       <KeyRound className="h-3.5 w-3.5 mr-1.5" />
-                      {emp.hasPin ? "Remplacer" : "Générer et envoyer"}
+                      {emp.hasPin ? t("remplacer") : t("generer_envoyer")}
                     </Button>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Server-side paging: never more than 10 rows loaded */}
+
             {pinList.total > pinList.pageSize && (
               <div className="flex items-center justify-between gap-2 px-3 py-2 border-t bg-muted/20 flex-wrap">
                 <p className="text-[11px] text-muted-foreground tabular-nums">
@@ -549,21 +543,20 @@ export function TimeclockSettingsView({
 
           {form.kioskEnabled && (
             <div className="rounded-md border bg-muted/20 px-3 py-2.5 text-[11px] text-muted-foreground space-y-1">
-              <p className="font-semibold text-[#0F2D52] uppercase tracking-wider text-[10px]">Mise en place</p>
-              <p>1. Générez un NIP ci-dessus pour chaque employé : il est envoyé dans son espace automatiquement.</p>
-              <p>2. Ouvrez <span className="font-mono">/kiosque</span> en plein écran sur la tablette laissée sur place.</p>
-              <p>3. L&apos;employé tape son NIP, voit son nom, poinçonne — l&apos;écran se réinitialise pour le suivant.</p>
+              <p className="font-semibold text-[#0F2D52] uppercase tracking-wider text-[10px]">{t("mise_place")}</p>
+              <p>{t("1_generez_nip_ci_dessus")}</p>
+              <p>{t("2_ouvrez")} <span className="font-mono">/kiosque</span> {t("plein_ecran_tablette_laissee_place")}</p>
+              <p>{t("3_apos_employe_tape_nip")}</p>
               <Button variant="ghost" size="sm" className="h-7 text-xs px-0 text-[#0F2D52]" asChild>
                 <a href="/kiosque" target="_blank" rel="noopener noreferrer">
-                  <ExternalLink className="h-3 w-3 mr-1.5" />Ouvrir la borne
-                </a>
+                  <ExternalLink className="h-3 w-3 mr-1.5" />{t("timeclock_settings_view_ouvrir_la_borne")}</a>
               </Button>
             </div>
           )}
         </FormSection>
       </Card>
 
-      {/* Issued PIN, shown once */}
+
       <Dialog open={issued != null} onOpenChange={(o) => { if (!o) setIssued(null); }}>
         <DialogContent className="max-w-sm p-0 overflow-hidden">
           <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
@@ -572,7 +565,7 @@ export function TimeclockSettingsView({
                 <KeyRound className="h-4 w-4" />NIP de {issued?.name}
               </DialogTitle>
               <DialogDescription className="text-white/80 text-xs">
-                Déjà envoyé dans son espace. Notez-le seulement si vous devez le lui remettre en main propre.
+                {t("deja_envoye_espace_notez_seulement")}
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -585,15 +578,15 @@ export function TimeclockSettingsView({
               onClick={() => {
                 if (issued) {
                   navigator.clipboard?.writeText(issued.pin)
-                    .then(() => toast.success("NIP copié"))
-                    .catch(() => toast.error("Copie impossible"));
+                    .then(() => toast.success(t("nip_copie")))
+                    .catch(() => toast.error(t("copie_impossible")));
                 }
               }}
             >
               <Copy className="h-3.5 w-3.5 mr-1.5" />{tc("copy")}
             </Button>
             <p className="text-[11px] text-muted-foreground">
-              L&apos;employé pourra le réafficher lui-même depuis Mon espace, avec son mot de passe.
+              {t("apos_employe_pourra_reafficher_lui")}
             </p>
           </div>
           <DialogFooter className="px-5 py-3 border-t bg-muted/30">
@@ -606,7 +599,7 @@ export function TimeclockSettingsView({
 
       {dirty && (
         <div className="sticky bottom-4 z-20 flex items-center gap-3 rounded-lg bg-[#0F2D52] text-white px-4 py-3 shadow-lg flex-wrap">
-          <span className="text-xs flex-1">Modifications non enregistrées</span>
+          <span className="text-xs flex-1">{t("modifications_non_enregistrees")}</span>
           <Button
             variant="ghost" size="sm"
             className="text-white hover:bg-white/20 h-8 text-xs"
@@ -626,7 +619,7 @@ export function TimeclockSettingsView({
             disabled={pending || !coordsValid}
           >
             <Save className="h-3.5 w-3.5 mr-1.5" />
-            {pending ? "Enregistrement…" : "Enregistrer"}
+            {pending ? t("enregistrement") : t("enregistrer")}
           </Button>
         </div>
       )}

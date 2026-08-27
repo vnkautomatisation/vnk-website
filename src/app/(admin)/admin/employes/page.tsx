@@ -1,15 +1,17 @@
 // Module Employés — Page principale (Liste).
 // Réutilise la TeamView existante pour ne pas dupliquer la logique.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
 import { TeamView } from "../settings/team/team-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = {
-  title: "Employés — Liste",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_liste") };
+}
 
 export default async function EmployesListPage() {
   const session = await auth();

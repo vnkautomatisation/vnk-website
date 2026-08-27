@@ -70,6 +70,7 @@ function formatDate(iso: string | null | undefined): string {
 // MAIN VIEW
 // =============================================================
 export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[] }) {
+  const t = useTranslations("admin.tax_docs");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("overview");
   const [issueDialog, setIssueDialog] = useState(false);
@@ -77,7 +78,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
   const [bulkDialog, setBulkDialog] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
-  // Sticky bar pattern STANDARD (ref my-documents-view.tsx)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -91,7 +92,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
@@ -106,7 +107,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
     });
   }, []);
 
-  // --- KPIs ----------------------------------------------------
+
   const kpis = useMemo(() => {
     const currentYear = new Date().getFullYear();
     const lastYear = currentYear - 1;
@@ -124,21 +125,21 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
     };
   }, [docs, employees]);
 
-  // --- Tabs ----------------------------------------------------
+
   const t4Docs = docs.filter((d) => d.type === "t4");
   const rl1Docs = docs.filter((d) => d.type === "releve1");
   const otherDocs = docs.filter((d) => d.type !== "t4" && d.type !== "releve1");
 
   const TABS: TabItem<TabKey>[] = [
-    { key: "overview", label: "Vue d'ensemble", icon: Sparkles },
+    { key: "overview", label: t("vue_ensemble"), icon: Sparkles },
     { key: "t4", label: "T4", icon: Receipt, count: t4Docs.length },
-    { key: "releve1", label: "Releve 1", icon: BadgePercent, count: rl1Docs.length },
-    { key: "other", label: "Autres", icon: Briefcase, count: otherDocs.length },
+    { key: "releve1", label: t("releve_1"), icon: BadgePercent, count: rl1Docs.length },
+    { key: "other", label: t("autres"), icon: Briefcase, count: otherDocs.length },
   ];
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -150,9 +151,9 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
               <FileText className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Documents fiscaux</h1>
+              <h1 className="text-lg font-bold">{t("documents_fiscaux")}</h1>
               <p className="text-xs text-white/80">
-                Emission T4, Releve 1, NR4, T2200 et lettres d&apos;emploi par employe.
+                {t("emission_t4_releve_1_nr4")}
               </p>
             </div>
           </div>
@@ -163,7 +164,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
               className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
             >
               <Users className="h-3.5 w-3.5 mr-1.5" />
-              Generer en lot
+              {t("generer_lot")}
             </Button>
             <Button
               size="sm" variant="outline"
@@ -171,7 +172,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
               className="h-8 text-xs bg-white/15 text-white border-white/30 hover:bg-white/25 hover:text-white"
             >
               <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-              Generer auto
+              {t("generer_auto")}
             </Button>
             <Button
               size="sm"
@@ -179,16 +180,16 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
               className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
             >
               <Upload className="h-3.5 w-3.5 mr-1.5" />
-              Televerser
+              {t("televerser")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="Documents emis"
+          label={t("documents_emis")}
           value={kpis.total}
           icon={Archive}
           accent="navy"
@@ -199,17 +200,17 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
           value={kpis.currentYear}
           icon={Calendar}
           accent="info"
-          hint="Documents emis cette annee"
+          hint={t("documents_emis_annee")}
         />
         <DocumentStatsCard
           label={`Annee ${new Date().getFullYear() - 1}`}
           value={kpis.lastYear}
           icon={Calendar}
           accent="info"
-          hint="T4 / RL-1 de l'an dernier"
+          hint={t("t4_rl_1_an_dernier")}
         />
         <DocumentStatsCard
-          label="Couverture employes"
+          label={t("couverture_employes")}
           value={`${kpis.coverage}%`}
           icon={Users}
           accent={kpis.coverage >= 90 ? "success" : kpis.coverage >= 60 ? "warning" : "danger"}
@@ -217,25 +218,25 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Tot :</span>
-                  <span className="hidden min-[480px]:inline">Total :</span>
+                  <span className="min-[480px]:hidden">{t("tot")}</span>
+                  <span className="hidden min-[480px]:inline">{t("total")}</span>
                 </span>
                 <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Couv :</span>
-                  <span className="hidden min-[480px]:inline">Couverture :</span>
+                  <span className="min-[480px]:hidden">{t("couv")}</span>
+                  <span className="hidden min-[480px]:inline">{t("couverture")}</span>
                 </span>
                 <span className={kpis.coverage >= 90 ? "font-semibold text-emerald-600" : kpis.coverage >= 60 ? "font-semibold text-amber-600" : "font-semibold text-red-600"}>
                   {kpis.coverage}%
@@ -246,7 +247,7 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -260,14 +261,14 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <FileText className="h-4 w-4" />
-            Documents fiscaux
+            {t("documents_fiscaux")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Total :</span>
+            <span className="text-muted-foreground">{t("total")}</span>
             <span className="font-semibold text-[#0F2D52]">{kpis.total}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Couverture :</span>
+            <span className="text-muted-foreground">{t("couverture")}</span>
             <span className={kpis.coverage >= 90 ? "font-semibold text-emerald-600" : kpis.coverage >= 60 ? "font-semibold text-amber-600" : "font-semibold text-red-600"}>
               {kpis.coverage}%
             </span>
@@ -278,15 +279,15 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
             className="h-7 text-xs ml-auto bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
             <Upload className="h-3.5 w-3.5 mr-1.5" />
-            Televerser
+            {t("televerser")}
           </Button>
         </div>
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation documents fiscaux" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_documents_fiscaux")} />
         </div>
       </div>
 
-      {/* ====== Tab content ====== */}
+
       {tab === "overview" && (
         <OverviewTab
           docs={docs}
@@ -299,11 +300,11 @@ export function TaxDocsView({ employees, docs }: { employees: Emp[]; docs: Doc[]
         />
       )}
 
-      {tab === "t4" && <DocsByYearTab docs={t4Docs} onOpenPdf={openPdf} emptyLabel="Aucun T4 emis." />}
-      {tab === "releve1" && <DocsByYearTab docs={rl1Docs} onOpenPdf={openPdf} emptyLabel="Aucun Releve 1 emis." />}
-      {tab === "other" && <DocsByYearTab docs={otherDocs} onOpenPdf={openPdf} emptyLabel="Aucun autre document fiscal." />}
+      {tab === "t4" && <DocsByYearTab docs={t4Docs} onOpenPdf={openPdf} emptyLabel={t("aucun_t4_emis")} />}
+      {tab === "releve1" && <DocsByYearTab docs={rl1Docs} onOpenPdf={openPdf} emptyLabel={t("aucun_releve_1_emis")} />}
+      {tab === "other" && <DocsByYearTab docs={otherDocs} onOpenPdf={openPdf} emptyLabel={t("aucun_autre_document_fiscal")} />}
 
-      {/* ============== Modals ============== */}
+
       <IssueDialog
         open={issueDialog}
         employees={employees}
@@ -348,6 +349,7 @@ function OverviewTab({
   onAuto: () => void;
   onBulk: () => void;
 }) {
+  const t = useTranslations("admin.tax_docs");
   const recentDocs = useMemo(
     () => [...docs].sort((a, b) => new Date(b.issuedAt).getTime() - new Date(a.issuedAt).getTime()).slice(0, 6),
     [docs],
@@ -363,16 +365,16 @@ function OverviewTab({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-      {/* Actions rapides */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#0F2D52]" />
-            Actions rapides
+            {t("actions_rapides")}
           </h3>
         </div>
         <p className="text-xs text-muted-foreground">
-          Generation automatique a partir des bulletins de paie publies, ou televersement manuel.
+          {t("generation_automatique_partir_bulletins_paie")}
         </p>
         <Button
           size="sm"
@@ -380,7 +382,7 @@ function OverviewTab({
           onClick={onAuto}
         >
           <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-          Generer T4 / RL-1 (1 employe)
+          {t("generer_t4_rl_1_1")}
         </Button>
         <Button
           size="sm"
@@ -389,7 +391,7 @@ function OverviewTab({
           onClick={onBulk}
         >
           <Users className="h-3.5 w-3.5 mr-1.5" />
-          Generer en lot (tous)
+          {t("generer_lot_tous")}
         </Button>
         <Button
           size="sm"
@@ -398,16 +400,16 @@ function OverviewTab({
           onClick={onIssue}
         >
           <Upload className="h-3.5 w-3.5 mr-1.5" />
-          Televerser un PDF
+          {t("televerser_pdf")}
         </Button>
       </Card>
 
-      {/* Annees */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Calendar className="h-4 w-4 text-[#0F2D52]" />
-            Par annee fiscale
+            {t("annee_fiscale")}
           </h3>
         </div>
         {yearStats.length > 0 ? (
@@ -430,19 +432,19 @@ function OverviewTab({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucun document emis.</p>
+          <p className="text-xs text-muted-foreground">{t("aucun_document_emis")}</p>
         )}
         <p className="text-[10px] text-muted-foreground/80 pt-1">
-          {employees.length} employe{employees.length > 1 ? "s" : ""} actif{employees.length > 1 ? "s" : ""} au total.
+          {t("employes_actifs_total", { count: employees.length })}
         </p>
       </Card>
 
-      {/* Documents recents */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <Archive className="h-4 w-4 text-[#0F2D52]" />
-            Recemment emis
+            {t("recemment_emis")}
           </h3>
         </div>
         {recentDocs.length > 0 ? (
@@ -464,7 +466,7 @@ function OverviewTab({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Aucun document recemment emis.</p>
+          <p className="text-xs text-muted-foreground">{t("aucun_document_recemment_emis")}</p>
         )}
       </Card>
     </div>
@@ -481,6 +483,7 @@ function DocsByYearTab({
   onOpenPdf: (d: Doc) => void;
   emptyLabel: string;
 }) {
+  const t = useTranslations("admin.tax_docs");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("all");
 
@@ -505,7 +508,7 @@ function DocsByYearTab({
   const byYear = useMemo(() => {
     const map = new Map<number | string, Doc[]>();
     for (const d of filtered) {
-      const y = d.taxYear ?? "Sans annee";
+      const y = d.taxYear ?? t("sans_annee");
       if (!map.has(y)) map.set(y, []);
       map.get(y)!.push(d);
     }
@@ -534,14 +537,14 @@ function DocsByYearTab({
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Rechercher employe ou titre..."
+              placeholder={t("rechercher_employe_titre")}
               className="h-9 text-sm pl-7"
             />
           </div>
           <Select value={yearFilter} onValueChange={setYearFilter}>
-            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Annee" /></SelectTrigger>
+            <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("annee")} /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Toutes les annees</SelectItem>
+              <SelectItem value="all">{t("toutes_annees")}</SelectItem>
               {years.map((y) => (
                 <SelectItem key={y} value={String(y)}>{y}</SelectItem>
               ))}
@@ -552,7 +555,7 @@ function DocsByYearTab({
 
       {byYear.length === 0 ? (
         <Card className="p-8 text-center text-sm text-muted-foreground">
-          Aucun resultat avec ces filtres.
+          {t("aucun_resultat_filtres")}
         </Card>
       ) : (
         byYear.map(([year, list]) => (
@@ -579,6 +582,7 @@ function DocsByYearTab({
 }
 
 function DocRow({ doc, onOpenPdf }: { doc: Doc; onOpenPdf: () => void }) {
+  const t = useTranslations("admin.tax_docs");
   const meta = TYPE_META[doc.type] ?? { label: doc.type, short: doc.type, tone: "navy" as const };
   return (
     <div className="p-3 flex items-center gap-3 hover:bg-[#0F2D52]/5 transition">
@@ -592,10 +596,10 @@ function DocRow({ doc, onOpenPdf }: { doc: Doc; onOpenPdf: () => void }) {
           {doc.title} - emis le {formatDate(doc.issuedAt)}
         </p>
       </div>
-      <ActionTooltip label="Apercu PDF">
+      <ActionTooltip label={t("apercu_pdf")}>
         <Button
           size="icon" variant="ghost" className="h-8 w-8"
-          aria-label="Apercu PDF"
+          aria-label={t("apercu_pdf")}
           onClick={onOpenPdf}
         >
           <Eye className="h-4 w-4" />
@@ -616,6 +620,7 @@ function AutoGenerateDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.tax_docs");
   const tc = useTranslations("common");
   const lastYear = new Date().getFullYear() - 1;
   const [adminId, setAdminId] = useState("");
@@ -633,18 +638,18 @@ function AutoGenerateDialog({
   }, [open, lastYear]);
 
   const submit = async () => {
-    if (!adminId) { toast.error("Selectionnez un employe"); return; }
+    if (!adminId) { toast.error(t("selectionnez_employe")); return; }
     const y = Number(year);
-    if (!Number.isFinite(y) || y < 2000 || y > 2100) { toast.error("Annee invalide"); return; }
+    if (!Number.isFinite(y) || y < 2000 || y > 2100) { toast.error(t("annee_invalide")); return; }
     setPending(true);
     const r = await generateAnnualTaxDocAction({ adminId: Number(adminId), year: y, type });
     setPending(false);
     if (r.success) {
-      toast.success(`${type === "t4" ? "T4" : "Releve 1"} ${y} genere et notifie`);
+      toast.success(`${type === "t4" ? "T4" : t("releve_1")} ${y} genere et notifie`);
       onSaved();
       onClose();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -655,18 +660,18 @@ function AutoGenerateDialog({
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Sparkles className="h-4 w-4" />
-              Generation automatique
+              {t("generation_automatique")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              A partir des bulletins de paie publies de l&apos;annee selectionnee.
+              {t("partir_bulletins_paie_publies_apos")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4">
-          <FormSection icon={Users} title="Employe">
-            <Field label="Employe" required>
+          <FormSection icon={Users} title={t("employe")}>
+            <Field label={t("employe")} required>
               <Select value={adminId} onValueChange={setAdminId}>
-                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selectionner..." /></SelectTrigger>
+                <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                 <SelectContent>
                   {employees.map((e) => (
                     <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>
@@ -675,24 +680,24 @@ function AutoGenerateDialog({
               </Select>
             </Field>
           </FormSection>
-          <FormSection icon={FileText} title="Document">
+          <FormSection icon={FileText} title={t("document")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Type" required>
+              <Field label={t("type")} required>
                 <Select value={type} onValueChange={(v) => setType(v as "t4" | "releve1")}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="t4">T4 (Canada)</SelectItem>
-                    <SelectItem value="releve1">Releve 1 (Quebec)</SelectItem>
+                    <SelectItem value="t4">{t("t4_canada")}</SelectItem>
+                    <SelectItem value="releve1">{t("releve_1_quebec")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Annee fiscale" required>
+              <Field label={t("annee_fiscale_2")} required>
                 <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-9" />
               </Field>
             </div>
           </FormSection>
           <div className="rounded-md border border-amber-300/60 bg-amber-50 p-2.5 text-[11px] text-amber-900">
-            Resume non officiel — agrege les bulletins publies (releasedAt non nul) pour l&apos;annee et l&apos;employe selectionnes.
+            {t("resume_non_officiel_agrege_bulletins")}
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
@@ -702,7 +707,7 @@ function AutoGenerateDialog({
             disabled={pending}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? "Generation..." : "Generer le PDF"}
+            {pending ? t("generation") : t("generer_pdf")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -720,6 +725,7 @@ function BulkGenerateDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.tax_docs");
   const tc = useTranslations("common");
   const lastYear = new Date().getFullYear() - 1;
   const [type, setType] = useState<"t4" | "releve1">("t4");
@@ -736,7 +742,7 @@ function BulkGenerateDialog({
 
   const submit = async () => {
     const y = Number(year);
-    if (!Number.isFinite(y) || y < 2000 || y > 2100) { toast.error("Annee invalide"); return; }
+    if (!Number.isFinite(y) || y < 2000 || y > 2100) { toast.error(t("annee_invalide")); return; }
     setPending(true);
     const r = await generateAnnualTaxDocsBulkAction({ year: y, type });
     setPending(false);
@@ -746,7 +752,7 @@ function BulkGenerateDialog({
       onSaved();
       onClose();
     } else {
-      toast.error(r.error || "Erreur");
+      toast.error(r.error || t("erreur"));
     }
   };
 
@@ -757,32 +763,32 @@ function BulkGenerateDialog({
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Users className="h-4 w-4" />
-              Generation en lot
+              {t("generation_lot")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Genere un document pour chaque employe actif ayant au moins un bulletin publie.
+              {t("genere_document_chaque_employe_actif")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4">
-          <FormSection icon={FileText} title="Parametres">
+          <FormSection icon={FileText} title={t("parametres")}>
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Type" required>
+              <Field label={t("type")} required>
                 <Select value={type} onValueChange={(v) => setType(v as "t4" | "releve1")}>
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="t4">T4 (Canada)</SelectItem>
-                    <SelectItem value="releve1">Releve 1 (Quebec)</SelectItem>
+                    <SelectItem value="t4">{t("t4_canada")}</SelectItem>
+                    <SelectItem value="releve1">{t("releve_1_quebec")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Annee fiscale" required>
+              <Field label={t("annee_fiscale_2")} required>
                 <Input type="number" value={year} onChange={(e) => setYear(e.target.value)} className="h-9" />
               </Field>
             </div>
           </FormSection>
           <div className="rounded-md border border-amber-300/60 bg-amber-50 p-2.5 text-[11px] text-amber-900">
-            Operation potentiellement longue. Un document est cree par employe eligible.
+            {t("operation_potentiellement_longue_document_cree")}
           </div>
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
@@ -792,7 +798,7 @@ function BulkGenerateDialog({
             disabled={pending}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? "Generation..." : "Lancer la generation"}
+            {pending ? t("generation") : t("lancer_generation")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -811,6 +817,7 @@ function IssueDialog({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.tax_docs");
   const tc = useTranslations("common");
   const [adminId, setAdminId] = useState("");
   const [type, setType] = useState<"t4" | "releve1" | "employment_letter" | "nr4" | "t2200" | "other">("t4");
@@ -832,7 +839,7 @@ function IssueDialog({
 
   const submit = async () => {
     if (!adminId || !title || !fileUrl) {
-      toast.error("Employe, titre et fichier requis");
+      toast.error(t("employe_titre_fichier_requis"));
       return;
     }
     setPending(true);
@@ -842,7 +849,7 @@ function IssueDialog({
     });
     setPending(false);
     if (r.success) {
-      toast.success("Document emis et notifie a l'employe");
+      toast.success(t("document_emis_notifie_employe"));
       onSaved();
       onClose();
     } else {
@@ -857,19 +864,19 @@ function IssueDialog({
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Televerser un document fiscal
+              {t("televerser_document_fiscal")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              L&apos;employe sera notifie automatiquement de la disponibilite.
+              {t("apos_employe_sera_notifie_automatiquement")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-4 overflow-y-auto flex-1">
-          <FormSection icon={Users} title="Destinataire">
+          <FormSection icon={Users} title={t("destinataire")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Employe" required>
+              <Field label={t("employe")} required>
                 <Select value={adminId} onValueChange={setAdminId}>
-                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder="Selectionner..." /></SelectTrigger>
+                  <SelectTrigger className="h-9 text-sm"><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                   <SelectContent>
                     {employees.map((e) => (
                       <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>
@@ -877,34 +884,34 @@ function IssueDialog({
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Type" required>
+              <Field label={t("type")} required>
                 <Select
                   value={type}
                   onValueChange={(v) => setType(v as "t4" | "releve1" | "employment_letter" | "nr4" | "t2200" | "other")}
                 >
                   <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="t4">T4 (Canada)</SelectItem>
-                    <SelectItem value="releve1">Releve 1 (Quebec)</SelectItem>
+                    <SelectItem value="t4">{t("t4_canada")}</SelectItem>
+                    <SelectItem value="releve1">{t("releve_1_quebec")}</SelectItem>
                     <SelectItem value="nr4">NR4</SelectItem>
-                    <SelectItem value="t2200">T2200 (frais teletravail)</SelectItem>
-                    <SelectItem value="employment_letter">Lettre d&apos;emploi</SelectItem>
-                    <SelectItem value="other">Autre</SelectItem>
+                    <SelectItem value="t2200">{t("t2200_frais_teletravail")}</SelectItem>
+                    <SelectItem value="employment_letter">{t("lettre_apos_emploi")}</SelectItem>
+                    <SelectItem value="other">{t("autre")}</SelectItem>
                   </SelectContent>
                 </Select>
               </Field>
             </div>
           </FormSection>
-          <FormSection icon={FileText} title="Document">
+          <FormSection icon={FileText} title={t("document")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Annee fiscale">
+              <Field label={t("annee_fiscale_2")}>
                 <Input type="number" value={taxYear} onChange={(e) => setTaxYear(e.target.value)} className="h-9" />
               </Field>
-              <Field label="Titre" required>
+              <Field label={t("titre")} required>
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="T4 - 2024" className="h-9" />
               </Field>
             </div>
-            <Field label="Fichier PDF" required>
+            <Field label={t("fichier_pdf")} required>
               <FileUploadInput
                 value={fileUrl}
                 onChange={setFileUrl}
@@ -922,7 +929,7 @@ function IssueDialog({
             disabled={pending}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? "..." : "Emettre le document"}
+            {pending ? "..." : t("emettre_document")}
           </Button>
         </DialogFooter>
       </DialogContent>

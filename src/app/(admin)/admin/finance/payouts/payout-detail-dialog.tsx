@@ -62,12 +62,12 @@ type PayoutDetail = {
   }>;
 };
 
-const STATUS_META: Record<string, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  paid: { label: "Versé", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
-  in_transit: { label: "En transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine },
-  pending: { label: "En attente", color: "bg-amber-100 text-amber-700", icon: Clock },
-  failed: { label: "Échoué", color: "bg-red-100 text-red-700", icon: XCircle },
-  canceled: { label: "Annulé", color: "bg-gray-100 text-gray-700", icon: XCircle },
+const STATUS_META: Record<string, { labelKey: string; color: string; icon: typeof CheckCircle2 }> = {
+  paid: { labelKey: "verse", color: "bg-emerald-100 text-emerald-700", icon: CheckCircle2 },
+  in_transit: { labelKey: "transit", color: "bg-blue-100 text-blue-700", icon: ArrowDownToLine },
+  pending: { labelKey: "attente", color: "bg-amber-100 text-amber-700", icon: Clock },
+  failed: { labelKey: "echoue", color: "bg-red-100 text-red-700", icon: XCircle },
+  canceled: { labelKey: "annule", color: "bg-gray-100 text-gray-700", icon: XCircle },
 };
 
 function Section({ title, icon: Icon, children, action }: {
@@ -108,6 +108,7 @@ export function PayoutDetailDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
 }) {
+  const t = useTranslations("admin.payouts");
   const tc = useTranslations("common");
   const [data, setData] = useState<PayoutDetail | null>(null);
   const [loading, setLoading] = useState(false);
@@ -122,7 +123,7 @@ export function PayoutDetailDialog({
     fetch(`/api/payouts/${payoutId}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r)))
       .then((d) => setData(d))
-      .catch(() => toast.error("Impossible de charger le détail"))
+      .catch(() => toast.error(t("impossible_charger_detail")))
       .finally(() => setLoading(false));
   }, [open, payoutId]);
 
@@ -135,7 +136,7 @@ export function PayoutDetailDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-3xl p-0 overflow-hidden max-h-[92vh] flex flex-col">
-        {/* Header */}
+
         <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 space-y-1">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <Banknote className="h-5 w-5" />
@@ -145,9 +146,9 @@ export function PayoutDetailDialog({
           <DialogDescription className="text-white/70 text-xs inline-flex items-center flex-wrap gap-1.5">
             {p && (
               <>
-                <span>{statusMeta?.label ?? p.status}</span>
-                <span>· {p.method === "instant" ? "Instantané" : p.method === "standard" ? "Standard" : p.method ?? "—"}</span>
-                <span>· {p.itemCount} {p.itemCount > 1 ? "paiements groupés" : "paiement"}</span>
+                <span>{statusMeta ? t(statusMeta.labelKey) : p.status}</span>
+                <span>· {p.method === "instant" ? t("instantane") : p.method === "standard" ? t("standard") : p.method ?? "—"}</span>
+                <span>· {t("paiements_groupes", { count: p.itemCount })}</span>
               </>
             )}
           </DialogDescription>
@@ -159,10 +160,10 @@ export function PayoutDetailDialog({
 
           {data && p && statusMeta && StatusIcon && (
             <>
-              {/* Sommaire — 3 cartes */}
+
               <div className="grid grid-cols-3 gap-3">
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Montant versé</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("montant_verse")}</p>
                   <p className="text-xl font-bold mt-1 tabular-nums">{formatCurrency(Number(p.amount))}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">{p.currency}</p>
                 </div>
@@ -170,11 +171,11 @@ export function PayoutDetailDialog({
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{tc("status")}</p>
                   <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium mt-1.5", statusMeta.color)}>
                     <StatusIcon className="h-3 w-3" />
-                    {statusMeta.label}
+                    {t(statusMeta.labelKey)}
                   </span>
                 </div>
                 <div className="p-3 rounded-md border bg-card">
-                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Paiements liés</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("paiements_lies")}</p>
                   <p className="text-xl font-bold mt-1 tabular-nums">{p.itemCount}</p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     Net total {formatCurrency(totalNet)}
@@ -182,55 +183,55 @@ export function PayoutDetailDialog({
                 </div>
               </div>
 
-              {/* Section : Dates clés */}
-              <Section title="Dates" icon={Calendar}>
-                <Row label="Initié" value={formatDate(new Date(p.initiatedAt))} />
-                {p.arrivalDate && <Row label="Date d'arrivée prévue" value={formatDate(new Date(p.arrivalDate))} />}
-                {p.paidAt && <Row label="Versé en banque" value={formatDate(new Date(p.paidAt))} />}
+
+              <Section title={t("dates")} icon={Calendar}>
+                <Row label={t("initie")} value={formatDate(new Date(p.initiatedAt))} />
+                {p.arrivalDate && <Row label={t("date_arrivee_prevue")} value={formatDate(new Date(p.arrivalDate))} />}
+                {p.paidAt && <Row label={t("verse_banque")} value={formatDate(new Date(p.paidAt))} />}
               </Section>
 
-              {/* Section : Destination */}
-              <Section title="Destination bancaire" icon={Building2}>
-                <Row label="Banque" value={p.destinationBank ?? <span className="italic text-muted-foreground">—</span>} />
-                <Row label="Compte" value={p.destinationLast4 ? <span className="font-mono">···{p.destinationLast4}</span> : <span className="italic text-muted-foreground">—</span>} />
-                <Row label="Méthode" value={p.method === "instant" ? "Instantané (frais supplémentaires)" : p.method === "standard" ? "Standard (gratuit)" : p.method ?? "—"} />
-                {p.description && <Row label="Description" value={p.description} />}
+
+              <Section title={t("destination_bancaire")} icon={Building2}>
+                <Row label={t("banque")} value={p.destinationBank ?? <span className="italic text-muted-foreground">—</span>} />
+                <Row label={t("compte")} value={p.destinationLast4 ? <span className="font-mono">···{p.destinationLast4}</span> : <span className="italic text-muted-foreground">—</span>} />
+                <Row label={t("methode")} value={p.method === "instant" ? t("instantane_frais_supplementaires") : p.method === "standard" ? t("standard_gratuit") : p.method ?? "—"} />
+                {p.description && <Row label={t("description")} value={p.description} />}
               </Section>
 
-              {/* Section : Frais (si applicable) */}
+
               {(Number(p.feeTotal) > 0 || totalFees > 0) && (
-                <Section title="Frais & totaux" icon={Coins}>
+                <Section title={t("frais_totaux")} icon={Coins}>
                   {Number(p.feeTotal) > 0 && (
-                    <Row label="Frais du versement" value={<span className="tabular-nums text-red-600">−{formatCurrency(Number(p.feeTotal))}</span>} />
+                    <Row label={t("frais_versement")} value={<span className="tabular-nums text-red-600">−{formatCurrency(Number(p.feeTotal))}</span>} />
                   )}
                   {totalFees > 0 && (
-                    <Row label="Frais cumulés des paiements" value={<span className="tabular-nums text-red-600">−{formatCurrency(totalFees)}</span>} />
+                    <Row label={t("frais_cumules_paiements")} value={<span className="tabular-nums text-red-600">−{formatCurrency(totalFees)}</span>} />
                   )}
-                  <Row label="Net total des paiements" value={<span className="tabular-nums font-semibold text-emerald-700">{formatCurrency(totalNet)}</span>} />
-                  <Row label="Montant versé" value={<span className="tabular-nums font-bold">{formatCurrency(Number(p.amount))}</span>} />
+                  <Row label={t("net_total_paiements")} value={<span className="tabular-nums font-semibold text-emerald-700">{formatCurrency(totalNet)}</span>} />
+                  <Row label={t("montant_verse")} value={<span className="tabular-nums font-bold">{formatCurrency(Number(p.amount))}</span>} />
                 </Section>
               )}
 
-              {/* Section : Échec (si applicable) */}
+
               {p.status === "failed" && p.failureReason && (
                 <div className="p-3 rounded-md bg-rose-50 border border-rose-200">
                   <div className="flex items-start gap-2">
                     <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-rose-900">Versement échoué</p>
+                      <p className="text-sm font-semibold text-rose-900">{t("versement_echoue")}</p>
                       <p className="text-xs text-rose-800 mt-0.5">{p.failureReason}</p>
                       <p className="text-[10px] text-rose-700 mt-1">
-                        Les fonds sont retournés dans votre solde. Vérifiez les informations bancaires sur la plateforme de paiement.
+                        {t("fonds_retournes_solde_verifiez_informations")}
                       </p>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Section : Paiements groupés */}
+
               <Section title={`Paiements composant ce versement (${data.payments.length})`} icon={Banknote}>
                 {data.payments.length === 0 ? (
-                  <p className="px-3 py-3 text-xs italic text-muted-foreground">Aucun paiement lié pour le moment</p>
+                  <p className="px-3 py-3 text-xs italic text-muted-foreground">{t("aucun_paiement_lie_moment")}</p>
                 ) : (
                   data.payments.map((pay) => {
                     const typeMeta = TYPE_META[pay.type ?? "charge"];
@@ -245,11 +246,11 @@ export function PayoutDetailDialog({
                           <div className="flex items-center gap-2 mt-0.5">
                             {typeMeta && (
                               <span className={cn("inline-flex px-1.5 py-0.5 rounded text-[9px] font-medium", typeMeta.color)}>
-                                {typeMeta.label}
+                                {t(typeMeta.labelKey)}
                               </span>
                             )}
                             <span className={cn("inline-flex px-1.5 py-0.5 rounded text-[9px] font-semibold border", statusDisplay.cls)}>
-                              {statusDisplay.label}
+                              {statusDisplay.labelKey ? t(statusDisplay.labelKey) : pay.status}
                             </span>
                             <span className="text-[10px] text-muted-foreground">
                               {pay.paidAt ? formatDate(new Date(pay.paidAt)) : "—"}
@@ -262,11 +263,11 @@ export function PayoutDetailDialog({
                             <p className="text-[10px] text-emerald-700 tabular-nums">Net : {Number(pay.netAmount).toFixed(2)}</p>
                           )}
                         </div>
-                        <ActionTooltip label="Voir détail du paiement">
+                        <ActionTooltip label={t("voir_detail_paiement")}>
                           <button
                             onClick={() => setDrillPaymentId(pay.id)}
                             className="inline-flex items-center justify-center h-6 w-6 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
-                            aria-label="Voir détail du paiement"
+                            aria-label={t("voir_detail_paiement")}
                           >
                             <Eye className="h-3 w-3" />
                           </button>
@@ -277,31 +278,30 @@ export function PayoutDetailDialog({
                 )}
               </Section>
 
-              {/* Référence externe */}
-              <Section title="Référence" icon={ExternalLink} action={
-                <ActionTooltip label="Ouvrir ce versement sur la plateforme de paiement">
+
+              <Section title={t("reference")} icon={ExternalLink} action={
+                <ActionTooltip label={t("ouvrir_versement_plateforme_paiement")}>
                   <a
                     href={`https://dashboard.stripe.com/payouts/${p.stripePayoutId}`}
                     target="_blank"
                     rel="noreferrer"
                     className="text-[10px] text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
-                    aria-label="Ouvrir le versement sur la plateforme"
-                  >
-                    Voir sur la plateforme <ExternalLink className="h-2.5 w-2.5" />
+                    aria-label={t("ouvrir_versement_plateforme")}
+                  >{t("payout_detail_dialog_voir_sur_la_plateforme")}<ExternalLink className="h-2.5 w-2.5" />
                   </a>
                 </ActionTooltip>
               }>
-                <Row label="Référence versement" value={<span className="font-mono text-[10px] truncate inline-block max-w-[260px]">{p.stripePayoutId}</span>} />
+                <Row label={t("reference_versement")} value={<span className="font-mono text-[10px] truncate inline-block max-w-[260px]">{p.stripePayoutId}</span>} />
               </Section>
 
-              {/* Footer */}
+
               <div className="flex flex-wrap gap-2 pt-2 border-t">
                 <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>{tc("close")}</Button>
                 <a
                   href={`/admin/finance/payments?payoutId=${p.stripePayoutId}`}
                   className="inline-flex items-center justify-center text-xs h-9 px-3 rounded-md bg-[#0F2D52] text-white hover:bg-[#15406d] flex-1 min-w-[160px]"
                 >
-                  Voir tous les paiements liés dans le tableau
+                  {t("voir_tous_paiements_lies_tableau")}
                 </a>
               </div>
             </>
@@ -309,7 +309,7 @@ export function PayoutDetailDialog({
         </div>
       </DialogContent>
 
-      {/* Drill-down modal détail paiement */}
+
       <PaymentDetailDialog
         paymentId={drillPaymentId}
         open={drillPaymentId !== null}

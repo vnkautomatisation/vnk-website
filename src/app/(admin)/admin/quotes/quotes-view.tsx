@@ -60,29 +60,29 @@ type ClientOption = { id: number; fullName: string; companyName: string | null }
 type MandateOption = { id: number; title: string; clientId: number };
 type StatusFilter = "all" | "pending" | "accepted" | "declined" | "expired";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "pending", label: "En attente" },
-  { key: "accepted", label: "Acceptés" },
-  { key: "declined", label: "Refusés" },
-  { key: "expired", label: "Expirés" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "pending", labelKey: "attente" },
+  { key: "accepted", labelKey: "acceptes" },
+  { key: "declined", labelKey: "refuses" },
+  { key: "expired", labelKey: "expires" },
 ];
 
 const SERVICE_TYPES = [
-  { value: "plc-support", label: "Support PLC" },
-  { value: "audit", label: "Audit technique" },
-  { value: "documentation", label: "Documentation" },
-  { value: "refactoring", label: "Refactorisation" },
-  { value: "modernization", label: "Modernisation" },
-  { value: "training", label: "Formation" },
+  { value: "plc-support", labelKey: "support_plc" },
+  { value: "audit", labelKey: "audit_technique" },
+  { value: "documentation", labelKey: "documentation" },
+  { value: "refactoring", labelKey: "refactorisation" },
+  { value: "modernization", labelKey: "modernisation" },
+  { value: "training", labelKey: "formation" },
 ];
 
 const PAYMENT_PLANS = [
-  { value: "full", label: "Paiement complet à la signature" },
-  { value: "split_50_50", label: "50% acompte / 50% livraison" },
-  { value: "split_30_70", label: "30% acompte / 70% livraison" },
-  { value: "split_60_40", label: "60% acompte / 40% livraison" },
-  { value: "milestones", label: "Par jalons (à définir)" },
+  { value: "full", labelKey: "paiement_complet_signature" },
+  { value: "split_50_50", labelKey: "50_acompte_50_livraison" },
+  { value: "split_30_70", labelKey: "30_acompte_70_livraison" },
+  { value: "split_60_40", labelKey: "60_acompte_40_livraison" },
+  { value: "milestones", labelKey: "jalons_definir" },
 ];
 
 export function QuotesView({
@@ -94,6 +94,7 @@ export function QuotesView({
   clients: ClientOption[];
   mandates: MandateOption[];
 }) {
+  const t = useTranslations("admin.quotes");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -182,9 +183,9 @@ export function QuotesView({
   const handleCreate = async () => {
     if (submitting) return;
     if (!fClientId || !fTitle.trim() || !fAmount) {
-      toast.error("Client, titre et montant requis"); return;
+      toast.error(t("client_titre_montant_requis")); return;
     }
-    if (Number(fAmount) <= 0) { toast.error("Montant invalide"); return; }
+    if (Number(fAmount) <= 0) { toast.error(t("montant_invalide")); return; }
     setSubmitting(true);
     try {
       const res = await fetch("/api/quotes", {
@@ -202,17 +203,17 @@ export function QuotesView({
         }),
       });
       if (res.ok) {
-        toast.success("Devis créé");
+        toast.success(t("devis_cree"));
         setCreateOpen(false);
         resetForm();
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleEdit = async () => {
     if (submitting || !editQuote) return;
-    if (!fTitle.trim() || !fAmount) { toast.error("Titre et montant requis"); return; }
+    if (!fTitle.trim() || !fAmount) { toast.error(t("titre_montant_requis")); return; }
     setSubmitting(true);
     try {
       const res = await fetch(`/api/quotes/${editQuote.id}`, {
@@ -230,37 +231,37 @@ export function QuotesView({
         }),
       });
       if (res.ok) {
-        toast.success("Devis modifié");
+        toast.success(t("devis_modifie"));
         setEditQuote(null);
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteQuote) return;
     const res = await fetch(`/api/quotes/${deleteQuote.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Devis supprimé"); setDeleteQuote(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("devis_supprime")); setDeleteQuote(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   // ── Quick actions ────────────────────────────────────
   const handleAccept = async (q: Quote) => {
     const ok = await confirm({
-      title: "Accepter ce devis ?",
+      title: t("accepter_devis"),
       description: `Le devis ${q.quoteNumber} sera marqué comme accepté et un contrat sera généré automatiquement.`,
-      confirmLabel: "Accepter",
+      confirmLabel: t("accepter"),
     });
     if (!ok) return;
     const res = await fetch(`/api/quotes/${q.id}/accept`, { method: "POST" });
-    if (res.ok) { toast.success("Devis accepté, contrat généré"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("devis_accepte_contrat_genere")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleSetStatus = async (q: Quote, status: string, label: string) => {
     const ok = await confirm({
       title: `${label} ce devis ?`,
-      description: `Le devis ${q.quoteNumber} passera au statut « ${status === "declined" ? "Refusé" : status === "expired" ? "Expiré" : status === "pending" ? "En attente" : status} ».`,
+      description: `Le devis ${q.quoteNumber} passera au statut « ${status === "declined" ? t("refuse") : status === "expired" ? t("expire") : status === "pending" ? t("attente") : status} ».`,
       confirmLabel: label,
       variant: status === "declined" ? "destructive" : "default",
     });
@@ -270,8 +271,8 @@ export function QuotesView({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    if (res.ok) { toast.success("Statut mis à jour"); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("statut_mis_jour")); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const openPdf = (q: Quote) => {
@@ -281,9 +282,9 @@ export function QuotesView({
   // ── Envoyer au client : Document + Message + Notification (1 seul endpoint atomique) ──
   const handleSendToClient = async (q: Quote) => {
     const ok = await confirm({
-      title: "Envoyer ce devis au client ?",
-      description: `Le devis ${q.quoteNumber} sera ajouté dans la catégorie "Devis" du portail client + message chat + notification.`,
-      confirmLabel: "Envoyer",
+      title: t("envoyer_devis_client"),
+      description: `Le devis ${q.quoteNumber} sera ajouté dans la catégorie t("devis") du portail client + message chat + notification.`,
+      confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     try {
@@ -294,10 +295,10 @@ export function QuotesView({
         router.refresh();
       } else {
         const d = await res.json();
-        toast.error(d.error || "Erreur");
+        toast.error(d.error || t("erreur"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     }
   };
 
@@ -306,8 +307,8 @@ export function QuotesView({
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} devis ?`,
-      description: "Les devis acceptés ou liés à des contrats seront refusés (409). Cette action est irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("devis_acceptes_lies_contrats_refuses"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -390,21 +391,21 @@ export function QuotesView({
   const getActions = useCallback((q: Quote) => {
     const editable = q.status !== "accepted";
     const a: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("quote", q.id) },
-      { label: "Voir le PDF", icon: <FileText className="h-3.5 w-3.5" />, onClick: () => openPdf(q) },
+      { label: t("voir_detail"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("quote", q.id) },
+      { label: t("voir_pdf"), icon: <FileText className="h-3.5 w-3.5" />, onClick: () => openPdf(q) },
     ];
     if (q.status === "pending") {
-      a.push({ label: "Accepter", icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q) });
-      a.push({ label: "Refuser", icon: <XCircle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "declined", "Refuser") });
-      a.push({ label: "Marquer expiré", icon: <FileX className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "expired", "Marquer expiré") });
+      a.push({ label: t("accepter"), icon: <CheckCircle2 className="h-3.5 w-3.5" />, onClick: () => handleAccept(q) });
+      a.push({ label: t("refuser"), icon: <XCircle className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "declined", t("refuser")) });
+      a.push({ label: t("marquer_expire"), icon: <FileX className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "expired", t("marquer_expire")) });
     }
     if (q.status === "declined" || q.status === "expired") {
-      a.push({ label: "Remettre en attente", icon: <Clock className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "pending", "Remettre en attente") });
+      a.push({ label: t("remettre_attente"), icon: <Clock className="h-3.5 w-3.5" />, onClick: () => handleSetStatus(q, "pending", t("remettre_attente")) });
     }
-    a.push({ label: "Envoyer au client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(q) });
+    a.push({ label: t("envoyer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(q) });
     if (editable) {
-      a.push({ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(q), separator: true });
-      a.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteQuote(q), variant: "destructive" });
+      a.push({ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(q), separator: true });
+      a.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteQuote(q), variant: "destructive" });
     }
     return a;
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -417,14 +418,14 @@ export function QuotesView({
   const columns: Column<Quote>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.quoteNumber}`} />
       ),
     },
-    { key: "number", header: "Numéro", accessor: (r) => <span className="font-mono text-xs">{r.quoteNumber}</span>, sortable: true, sortBy: (r) => r.quoteNumber },
+    { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.quoteNumber}</span>, sortable: true, sortBy: (r) => r.quoteNumber },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -434,19 +435,19 @@ export function QuotesView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "title", header: "Titre",
+      key: "title", header: t("titre"),
       accessor: (r) => (
         <div>
           <p className="text-sm font-medium">{r.title}</p>
-          {r.serviceType && <p className="text-[10px] text-muted-foreground">{SERVICE_TYPES.find((s) => s.value === r.serviceType)?.label ?? r.serviceType}</p>}
+          {r.serviceType && <p className="text-[10px] text-muted-foreground">{(() => { const st = SERVICE_TYPES.find((s) => s.value === r.serviceType); return st ? t(st.labelKey) : r.serviceType; })()}</p>}
         </div>
       ),
       sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true,
     },
     { key: "ht", header: "HT", accessor: (r) => formatCurrency(r.amountHt), sortable: true, sortBy: (r) => r.amountHt, hiddenOnMobile: true },
     { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "expiry", header: "Expiration", accessor: (r) => r.expiryDate ? formatDate(new Date(r.expiryDate)) : "—", hiddenOnMobile: true },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "expiry", header: t("expiration"), accessor: (r) => r.expiryDate ? formatDate(new Date(r.expiryDate)) : "—", hiddenOnMobile: true },
     {
       key: "actions",
       header: "",
@@ -493,23 +494,23 @@ export function QuotesView({
               <FileText className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Devis</h1>
-              <p className="text-white/70 text-sm mt-0.5">TPS et TVQ calculés automatiquement — accepter génère un contrat</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("devis")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("tps_tvq_calcules_automatiquement_accepter")}</p>
             </div>
           </div>
           <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
             onClick={() => { resetForm(); setCreateOpen(true); }}>
-            <Plus className="h-4 w-4" />Nouveau devis
+            <Plus className="h-4 w-4" />{t("nouveau_devis")}
           </Button>
         </div>
       </div>
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total devis" value={quotes.length} icon={FileText} accent="bg-blue-500" />
-        <StatCard label="En attente" value={pendingCount} icon={Clock} accent="bg-amber-500" deltaLabel={pendingCount > 0 ? formatCurrency(totalPendingTtc) : undefined} />
-        <StatCard label="Acceptés" value={acceptedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={acceptedCount > 0 ? formatCurrency(totalAcceptedTtc) : undefined} />
-        <StatCard label="Pipeline TTC" value={formatCurrency(totalPendingTtc + totalAcceptedTtc)} icon={DollarSign} accent="bg-violet-500" />
+        <StatCard label={t("total_devis")} value={quotes.length} icon={FileText} accent="bg-blue-500" />
+        <StatCard label={t("attente")} value={pendingCount} icon={Clock} accent="bg-amber-500" deltaLabel={pendingCount > 0 ? formatCurrency(totalPendingTtc) : undefined} />
+        <StatCard label={t("acceptes")} value={acceptedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={acceptedCount > 0 ? formatCurrency(totalAcceptedTtc) : undefined} />
+        <StatCard label={t("pipeline_ttc")} value={formatCurrency(totalPendingTtc + totalAcceptedTtc)} icon={DollarSign} accent="bg-violet-500" />
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
@@ -519,12 +520,12 @@ export function QuotesView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileText className="h-4 w-4" />
-              Devis
+              {t("devis")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{pendingCount}</span></span>
-            <span className="text-muted-foreground">Acceptés <span className="font-semibold text-emerald-600">{acceptedCount}</span></span>
-            <span className="ml-auto text-muted-foreground">Pipeline <span className="font-semibold text-violet-600">{formatCurrency(totalPendingTtc + totalAcceptedTtc)}</span></span>
+            <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{pendingCount}</span></span>
+            <span className="text-muted-foreground">{t("acceptes")} <span className="font-semibold text-emerald-600">{acceptedCount}</span></span>
+            <span className="ml-auto text-muted-foreground">{t("pipeline")} <span className="font-semibold text-violet-600">{formatCurrency(totalPendingTtc + totalAcceptedTtc)}</span></span>
           </div>
         </div>
       )}
@@ -533,14 +534,14 @@ export function QuotesView({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Numéro, titre, client..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("numero_titre_client")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -550,14 +551,14 @@ export function QuotesView({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             {clients.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Client</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("client")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {clients.map((c) => {
                     const isOn = filterClients.has(c.id);
@@ -578,14 +579,14 @@ export function QuotesView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Montant TTC</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("montant_ttc")}</p>
               <div className="grid grid-cols-2 gap-2">
-                <Input type="number" placeholder="Min" value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
-                <Input type="number" placeholder="Max" value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("min")} value={filterAmountMin} onChange={(e) => setFilterAmountMin(e.target.value)} className="h-8 text-xs" />
+                <Input type="number" placeholder={t("max")} value={filterAmountMax} onChange={(e) => setFilterAmountMax(e.target.value)} className="h-8 text-xs" />
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période de création</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_creation")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -593,8 +594,7 @@ export function QuotesView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("quotes_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -630,8 +630,8 @@ export function QuotesView({
               subtitle={`${q.quoteNumber} — ${q.clientName}`}
               avatarName={q.clientName}
               badges={[
-                { label: q.status === "pending" ? "En attente" : q.status === "accepted" ? "Accepté" : q.status === "declined" ? "Refusé" : q.status === "expired" ? "Expiré" : q.status, variant: q.status === "accepted" ? "secondary" : "outline" },
-                ...(q.serviceType ? [{ label: SERVICE_TYPES.find((s) => s.value === q.serviceType)?.label ?? q.serviceType, variant: "outline" as const }] : []),
+                { label: q.status === "pending" ? t("attente") : q.status === "accepted" ? t("accepte") : q.status === "declined" ? t("refuse") : q.status === "expired" ? t("expire") : q.status, variant: q.status === "accepted" ? "secondary" : "outline" },
+                ...(q.serviceType ? [{ label: (() => { const st = SERVICE_TYPES.find((s) => s.value === q.serviceType); return st ? t(st.labelKey) : q.serviceType; })(), variant: "outline" as const }] : []),
               ]}
               stats={[{ label: "TTC", value: formatCurrency(q.amountTtc) }]}
               actions={getActions(q)}
@@ -639,13 +639,13 @@ export function QuotesView({
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(q.amountHt)} HT</span>
-                  <span>{q.expiryDate ? `Expire le ${formatDate(new Date(q.expiryDate))}` : "Pas d'expiration"}</span>
+                  <span>{q.expiryDate ? `Expire le ${formatDate(new Date(q.expiryDate))}` : t("pas_expiration")}</span>
                 </div>
               }
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun devis trouvé</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucun_devis_trouve")}</div>
           )}
         </div>
       ) : (
@@ -654,7 +654,7 @@ export function QuotesView({
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={(r) => openPdf(r)}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           exportFilename="devis"
           storageKey="admin-quotes"
         />
@@ -706,7 +706,7 @@ export function QuotesView({
       <ConfirmDialog
         open={!!deleteQuote}
         onOpenChange={(o) => { if (!o) setDeleteQuote(null); }}
-        title="Supprimer ce devis ?"
+        title={t("supprimer_devis")}
         description={`Le devis "${deleteQuote?.quoteNumber}" sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -755,6 +755,7 @@ function QuoteFormDialog({
   setters: QFormSetters;
   onSubmit: () => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.quotes");
   const tc = useTranslations("common");
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
@@ -774,10 +775,10 @@ function QuoteFormDialog({
             </div>
             <div>
               <DialogTitle className="text-white text-lg">
-                {isCreate ? "Nouveau devis" : "Modifier le devis"}
+                {isCreate ? t("nouveau_devis") : t("modifier_devis")}
               </DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5">
-                {isCreate ? "Le numéro sera généré automatiquement (D-AAAA-NNN)" : (editingQuoteNumber || "Modification")}
+                {isCreate ? t("numero_genere_automatiquement") : (editingQuoteNumber || t("modification"))}
               </DialogDescription>
             </div>
           </div>
@@ -785,13 +786,13 @@ function QuoteFormDialog({
 
         {/* Body scrollable */}
         <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-          <FormSection title="Identité" icon={<FileText className="h-3.5 w-3.5" />}>
+          <FormSection title={t("identite")} icon={<FileText className="h-3.5 w-3.5" />}>
             {isCreate && (
               <>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                   <Select value={values.clientId} onValueChange={setters.setClientId}>
-                    <SelectTrigger><SelectValue placeholder="Sélectionner un client" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("selectionner_client")} /></SelectTrigger>
                     <SelectContent>
                       {clients.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>
@@ -803,11 +804,11 @@ function QuoteFormDialog({
                 </div>
                 {availableMandates.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat associé (optionnel)</Label>
+                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("mandat_associe_optionnel")}</Label>
                     <Select value={values.mandateId || "__none__"} onValueChange={(v) => setters.setMandateId(v === "__none__" ? "" : v)}>
-                      <SelectTrigger><SelectValue placeholder="Aucun mandat" /></SelectTrigger>
+                      <SelectTrigger><SelectValue placeholder={t("aucun_mandat")} /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="__none__">Aucun mandat</SelectItem>
+                        <SelectItem value="__none__">{t("aucun_mandat")}</SelectItem>
                         {availableMandates.map((m) => (
                           <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>
                         ))}
@@ -818,58 +819,58 @@ function QuoteFormDialog({
               </>
             )}
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Titre *</Label>
-              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder="Audit PLC Siemens — phase 1" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("titre")}</Label>
+              <Input value={values.title} onChange={(e) => setters.setTitle(e.target.value)} placeholder={t("audit_plc_siemens_phase_1")} />
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type de service</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("type_service")}</Label>
               <Select value={values.service || "__none__"} onValueChange={(v) => setters.setService(v === "__none__" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none__">{tc("none")}</SelectItem>
-                  {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
+                  {SERVICE_TYPES.map((s) => <SelectItem key={s.value} value={s.value}>{t(s.labelKey)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
-              <Textarea value={values.desc} onChange={(e) => setters.setDesc(e.target.value)} rows={3} placeholder="Détails du devis…" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description")}</Label>
+              <Textarea value={values.desc} onChange={(e) => setters.setDesc(e.target.value)} rows={3} placeholder={t("details_devis")} />
             </div>
           </FormSection>
 
-          <FormSection title="Montant & taxes" icon={<DollarSign className="h-3.5 w-3.5" />}>
+          <FormSection title={t("montant_taxes")} icon={<DollarSign className="h-3.5 w-3.5" />}>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Montant HT (CAD) *</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("montant_ht_cad")}</Label>
               <Input type="number" min="0" step="0.01" value={values.amount} onChange={(e) => setters.setAmount(e.target.value)} placeholder="0.00" />
             </div>
             {amountNum > 0 && (
               <div className="rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 p-3 space-y-1 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">Sous-total HT</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TPS (5%)</span><span className="tabular-nums">{formatCurrency(tps)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">TVQ (9.975%)</span><span className="tabular-nums">{formatCurrency(tvq)}</span></div>
-                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>Total TTC</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("sous_total_ht")}</span><span className="tabular-nums">{formatCurrency(amountNum)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tps_5")}</span><span className="tabular-nums">{formatCurrency(tps)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq_9_975")}</span><span className="tabular-nums">{formatCurrency(tvq)}</span></div>
+                <div className="flex justify-between border-t pt-1 mt-1 font-bold text-[#0F2D52]"><span>{t("total_ttc")}</span><span className="tabular-nums">{formatCurrency(ttc)}</span></div>
               </div>
             )}
           </FormSection>
 
-          <FormSection title="Modalités de paiement" icon={<Briefcase className="h-3.5 w-3.5" />}>
+          <FormSection title={t("modalites_paiement")} icon={<Briefcase className="h-3.5 w-3.5" />}>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Plan de paiement</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("plan_paiement")}</Label>
               <Select value={values.paymentPlan} onValueChange={setters.setPaymentPlan}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {PAYMENT_PLANS.map((p) => <SelectItem key={p.value} value={p.value}>{p.label}</SelectItem>)}
+                  {PAYMENT_PLANS.map((p) => <SelectItem key={p.value} value={p.value}>{t(p.labelKey)}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Conditions particulières</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("conditions_particulieres")}</Label>
               <Textarea value={values.paymentConditions} onChange={(e) => setters.setPaymentConditions(e.target.value)} rows={2}
-                placeholder="Ex : Délai 30 jours, frais de retard 1.5%/mois…" />
+                placeholder={t("ex_delai_30_jours_frais")} />
             </div>
             {!isCreate && (
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date d&apos;expiration</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("date_apos_expiration")}</Label>
                 <Input type="date" value={values.expiry} onChange={(e) => setters.setExpiry(e.target.value)} />
               </div>
             )}
@@ -883,7 +884,7 @@ function QuoteFormDialog({
             disabled={submitting || !values.title.trim() || !values.amount || (isCreate && !values.clientId)}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
           >
-            {submitting ? "Enregistrement…" : (isCreate ? "Créer le devis" : "Enregistrer")}
+            {submitting ? t("enregistrement_cours") : (isCreate ? t("creer_devis") : t("enregistrer"))}
           </Button>
         </DialogFooter>
       </DialogContent>

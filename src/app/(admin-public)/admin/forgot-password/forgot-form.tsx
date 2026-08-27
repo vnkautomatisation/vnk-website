@@ -1,6 +1,7 @@
 "use client";
 // Formulaire "mot de passe oublié" — saisie de l'email + redirection vers page de code
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -11,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { requestPasswordResetAction } from "@/app/actions/password-reset";
 
 export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" }) {
+  const t = useTranslations("auth");
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [email, setEmail] = useState("");
@@ -22,15 +24,15 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
     startTransition(async () => {
       const r = await requestPasswordResetAction({ email, audience });
       if (r.success) {
-        // Toujours afficher confirmation, même si email inconnu (anti-énumération)
+
         setSent(true);
-        // Si on a un token (email existe), pré-naviguer vers la page code avec le token en query
+
         if ("data" in r && r.data.tokenHint) {
-          // On stocke le token dans sessionStorage pour la page suivante
+
           sessionStorage.setItem("vnk-reset-token", r.data.tokenHint);
           sessionStorage.setItem("vnk-reset-audience", audience);
           sessionStorage.setItem("vnk-reset-email", email);
-          // Redirection après un court délai pour que l'user voie la confirmation
+
           setTimeout(() => {
             router.push(`/${audience === "admin" ? "admin" : "portail"}/reset-password`);
           }, 1500);
@@ -50,26 +52,24 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
               {sent ? <CheckCircle2 className="h-7 w-7" /> : <Mail className="h-7 w-7" />}
             </div>
             <h1 className="text-xl font-bold">
-              {sent ? "Vérifiez votre courriel" : "Mot de passe oublié ?"}
+              {sent ? t("verifiez_courriel") : t("mot_passe_oublie")}
             </h1>
             <p className="text-sm text-white/80 mt-1">
               {sent
-                ? "Si un compte existe, un courriel a été envoyé"
-                : "Saisissez votre adresse, on vous envoie un code"}
+                ? t("si_compte_existe_courriel_ete")
+                : t("saisissez_adresse_on_vous_envoie")}
             </p>
           </div>
 
           {sent ? (
             <div className="p-6 space-y-4 text-center">
-              <p className="text-sm text-muted-foreground">
-                Si l&apos;adresse <span className="font-medium text-foreground">{email}</span> est associée à un compte, vous recevrez un courriel avec un code à 6 chiffres et un lien.
-              </p>
+              <p className="text-sm text-muted-foreground">{t("forgot_form_si_l_adresse")}<span className="font-medium text-foreground">{email}</span>{t("forgot_form_est_associee_a_un_compte_vous_recevrez")}</p>
               <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 text-left">
-                <p className="font-semibold mb-1">Pas reçu de courriel ?</p>
+                <p className="font-semibold mb-1">{t("pas_recu_courriel")}</p>
                 <ul className="list-disc list-inside space-y-1">
-                  <li>Vérifiez vos courriers indésirables</li>
-                  <li>Patientez 1-2 minutes</li>
-                  <li>Vérifiez que l&apos;adresse saisie est correcte</li>
+                  <li>{t("verifiez_courriers_indesirables")}</li>
+                  <li>{t("patientez_1_2_minutes")}</li>
+                  <li>{t("verifiez_apos_adresse_saisie_correcte")}</li>
                 </ul>
               </div>
               <div className="flex flex-col gap-2 pt-2">
@@ -81,13 +81,13 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
                   }}
                   className="w-full"
                 >
-                  Essayer une autre adresse
+                  {t("essayer_autre_adresse")}
                 </Button>
                 <Link
                   href={audience === "admin" ? "/admin/login" : "/portail/login"}
                   className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1"
                 >
-                  <ArrowLeft className="h-3 w-3" />Retour à la connexion
+                  <ArrowLeft className="h-3 w-3" />{t("retour_a_la_connexion")}
                 </Link>
               </div>
             </div>
@@ -95,13 +95,13 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
             <form onSubmit={handleSubmit} className="p-6 space-y-4">
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                  Adresse courriel
+                  {t("adresse_courriel")}
                 </Label>
                 <Input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="vous@exemple.ca"
+                  placeholder={t("forgot_form_vous_exemple_ca")}
                   autoComplete="email"
                   required
                   className="mt-1"
@@ -114,9 +114,9 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
                 className="w-full bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm"
               >
                 {pending ? (
-                  <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />Envoi en cours...</>
+                  <><Loader2 className="h-4 w-4 mr-1.5 animate-spin" />{t("envoi_cours")}</>
                 ) : (
-                  <>Envoyer le lien de réinitialisation<Mail className="h-4 w-4 ml-1.5" /></>
+                  <>{t("envoyer_lien_reinitialisation")}<Mail className="h-4 w-4 ml-1.5" /></>
                 )}
               </Button>
 
@@ -124,14 +124,14 @@ export function ForgotPasswordForm({ audience }: { audience: "admin" | "client" 
                 href={audience === "admin" ? "/admin/login" : "/portail/login"}
                 className="text-xs text-muted-foreground hover:text-foreground inline-flex items-center justify-center gap-1 w-full"
               >
-                <ArrowLeft className="h-3 w-3" />Retour à la connexion
+                <ArrowLeft className="h-3 w-3" />{t("retour_a_la_connexion")}
               </Link>
             </form>
           )}
         </div>
 
         <p className="text-[10px] text-center text-muted-foreground mt-4">
-          VNK Automatisation Inc. · Sécurité gérée par le portail
+          {t("vnk_automatisation_inc_securite_geree")}
         </p>
       </div>
     </div>

@@ -2,6 +2,7 @@
 // PATCH /api/disputes/[id] — mettre a jour
 // DELETE /api/disputes/[id] — supprimer
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -40,7 +41,7 @@ const updateSchema = z.object({
   smallClaimsFiledAt: z.string().nullable().optional(),
   invoiceId: z.number().int().positive().nullable().optional(),
   mandateId: z.number().int().positive().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
@@ -74,6 +75,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -92,7 +94,7 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };

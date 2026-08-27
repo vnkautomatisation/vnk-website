@@ -41,42 +41,43 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
+  const th = await getTranslations({ locale, namespace: "home" });
   return {
     title: t("site_name"),
     description:
-      "Services d'automatisation industrielle : support PLC, SCADA, HMI, audit, documentation, refactorisation. Québec.",
+      th("hm_services_d_automatisation_industrielle_support_plc_scada"),
     openGraph: {
       title: t("site_name"),
-      description: "Solutions PLC, SCADA & HMI pour l'industrie",
+      description: th("hm_solutions_plc_scada_hmi_pour_l_industrie"),
       images: ["/images/vnk-twitter-card-1200x600.png"],
     },
   };
 }
 
 // ─── Données des 4 services ───────────────────────────
-const SERVICES = [
+const SERVICES = (t: (k: string) => string) => [
   {
     key: "support_plc",
     icon: Wrench,
     image: "/images/plc-support.jpg",
     tags: ["Siemens", "Rockwell", "B&R"],
-    price: "120–150 CAD/h",
+    price: t("home.hm_120150_cad_h"),
     href: "/services#support-plc",
   },
   {
     key: "audit",
     icon: FileCheck,
     image: "/images/audit.jpg",
-    tags: ["Analyse code", "Rapport détaillé"],
-    price: "1 500–4 000 CAD",
+    tags: [t("home.hm_tag_analyse_code"), t("home.hm_tag_rapport_detaille")],
+    price: t("home.hm_1_5004_000_cad"),
     href: "/services#audit",
   },
   {
     key: "documentation",
     icon: Cpu,
     image: "/images/documentation.jpg",
-    tags: ["Opérateur", "Maintenance"],
-    price: "800–5 000 CAD",
+    tags: [t("home.hm_tag_operateur"), t("home.hm_tag_maintenance")],
+    price: t("home.hm_8005_000_cad"),
     href: "/services#documentation",
   },
   {
@@ -84,149 +85,149 @@ const SERVICES = [
     icon: Clock,
     image: "/images/refactoring.jpg",
     tags: ["IEC 61131-3", "Legacy code"],
-    price: "3 000–50 000 CAD",
+    price: t("home.hm_3_00050_000_cad"),
     href: "/services#refactoring",
   },
 ] as const;
 
 // ─── Marques d'automates supportées ──────────────────
-const BRANDS = [
-  { name: "Siemens", sub: "WinCC · Step 7" },
-  { name: "Rockwell", sub: "ControlLogix · Studio 5000" },
-  { name: "B&R Automation", sub: "Automation Studio · X20" },
-  { name: "Schneider Electric", sub: "Modicon · EcoStruxure" },
-  { name: "Autres marques", sub: "Sur demande" },
+const BRANDS = (t: (k: string) => string) => [
+  { name: "Siemens", sub: t("home.hm_wincc_step_7") },
+  { name: "Rockwell", sub: t("home.hm_controllogix_studio_5000") },
+  { name: t("home.hm_b_r_automation"), sub: t("home.hm_automation_studio_x20") },
+  { name: t("home.hm_schneider_electric"), sub: t("home.hm_modicon_ecostruxure") },
+  { name: t("home.hm_autres_marques"), sub: t("home.hm_sur_demande") },
 ];
 
 // ─── Stats ────────────────────────────────────────────
-const STATS = [
-  { num: 120, unit: "CAD/h", label: "Taux horaire de départ — support PLC" },
-  { num: 24, unit: "h", label: "Temps de réponse maximum" },
-  { num: 100, unit: "%", label: "Intervention documentée avec rapport écrit" },
-  { num: 5, unit: "+", label: "Marques d'automates supportées" },
+const STATS = (t: (k: string) => string) => [
+  { num: 120, unit: "CAD/h", label: t("home.hm_taux_horaire_de_depart_support_plc") },
+  { num: 24, unit: "h", label: t("home.hm_temps_de_reponse_maximum") },
+  { num: 100, unit: "%", label: t("home.hm_intervention_documentee_avec_rapport_ecrit") },
+  { num: 5, unit: "+", label: t("home.hm_marques_d_automates_supportees") },
 ];
 
 // ─── Pourquoi VNK ? ───────────────────────────────────
-const WHY = [
+const WHY = (t: (k: string) => string) => [
   {
     icon: Award,
-    title: "Spécialisé",
-    desc: "Pas de généraliste — expertise exclusive en automatisation industrielle PLC, SCADA, HMI.",
+    title: t("home.hm_specialise"),
+    desc: t("home.hm_pas_de_generaliste_expertise_exclusive_en_automatisation"),
   },
   {
     icon: Zap,
     title: "Rapide",
-    desc: "Support à distance dans les 24h — pas besoin d'attendre un déplacement sur site.",
+    desc: t("home.hm_support_a_distance_dans_les_24h_pas"),
   },
   {
     icon: Shield,
-    title: "Documenté",
-    desc: "Chaque intervention est accompagnée d'un rapport écrit livré à votre équipe.",
+    title: t("home.hm_documente"),
+    desc: t("home.hm_chaque_intervention_est_accompagnee_d_un_rapport"),
   },
   {
     icon: TrendingUp,
-    title: "Pérenne",
-    desc: "Refactorisation de code legacy pour éliminer la dette technique sur le long terme.",
+    title: t("home.hm_perenne"),
+    desc: t("home.hm_refactorisation_de_code_legacy_pour_eliminer_la"),
   },
 ];
 
 // ─── Processus de travail (4 étapes) ─────────────────
-const PROCESS = [
+const PROCESS = (t: (k: string) => string) => [
   {
     num: "01",
     icon: MessageCircle,
-    title: "Contact initial",
-    desc: "Appel ou courriel pour comprendre vos besoins et contraintes techniques.",
+    title: t("home.hm_contact_initial"),
+    desc: t("home.hm_appel_ou_courriel_pour_comprendre_vos_besoins"),
   },
   {
     num: "02",
     icon: Search,
-    title: "Diagnostic & devis",
-    desc: "Analyse à distance ou sur site, puis devis détaillé avec échéancier.",
+    title: t("home.hm_diagnostic_devis"),
+    desc: t("home.hm_analyse_a_distance_ou_sur_site_puis"),
   },
   {
     num: "03",
     icon: Hammer,
     title: "Intervention",
-    desc: "Exécution selon le planning convenu, avec suivi en temps réel sur votre portail.",
+    desc: t("home.hm_execution_selon_le_planning_convenu_avec_suivi"),
   },
   {
     num: "04",
     icon: Rocket,
-    title: "Livraison & support",
-    desc: "Rapport écrit, documentation et support post-intervention garanti.",
+    title: t("home.hm_livraison_support"),
+    desc: t("home.hm_rapport_ecrit_documentation_et_support_post_intervention"),
   },
 ];
 
 // ─── Garanties / engagements ─────────────────────────
-const GUARANTEES = [
+const GUARANTEES = (t: (k: string) => string) => [
   {
     icon: Shield,
-    title: "Confidentialité garantie",
-    desc: "NDA signé avant toute intervention. Votre code et vos données restent chez vous.",
+    title: t("home.hm_confidentialite_garantie"),
+    desc: t("home.hm_nda_signe_avant_toute_intervention_votre_code"),
   },
   {
     icon: BadgeCheck,
-    title: "Travail documenté",
-    desc: "Chaque intervention est livrée avec un rapport écrit détaillé et réutilisable.",
+    title: t("home.hm_travail_documente"),
+    desc: t("home.hm_chaque_intervention_est_livree_avec_un_rapport"),
   },
   {
     icon: Headphones,
-    title: "Support 24h",
-    desc: "Temps de réponse maximum garanti de 24 heures ouvrables sur toute demande.",
+    title: t("home.hm_support_24h"),
+    desc: t("home.hm_temps_de_reponse_maximum_garanti_de_24"),
   },
   {
     icon: Lock,
-    title: "Sans engagement",
-    desc: "Pas de contrat de rétention obligatoire. Payez uniquement ce que vous utilisez.",
+    title: t("home.hm_sans_engagement"),
+    desc: t("home.hm_pas_de_contrat_de_retention_obligatoire_payez"),
   },
 ];
 
-// ─── FAQ ──────────────────────────────────────────────
-const FAQ = [
+// ─── FAQ(t) ──────────────────────────────────────────────
+const FAQ = (t: (k: string) => string) => [
   {
-    q: "Intervenez-vous en urgence ?",
-    a: "Oui, nous priorisons les interventions urgentes (ligne de production arrêtée). Temps de réponse maximum : 24h ouvrables, souvent beaucoup moins.",
+    q: t("home.hm_intervenez_vous_en_urgence"),
+    a: t("home.hm_oui_nous_priorisons_les_interventions_urgentes_ligne"),
   },
   {
-    q: "Travaillez-vous à distance ou sur site ?",
-    a: "Les deux. Nous privilégions le support à distance (VPN, TeamViewer, AnyDesk) pour la rapidité, mais intervenons sur site au Québec lorsque nécessaire.",
+    q: t("home.hm_travaillez_vous_a_distance_ou_sur_site"),
+    a: t("home.hm_les_deux_nous_privilegions_le_support_a"),
   },
   {
-    q: "Quelles marques d'automates supportez-vous ?",
-    a: "Siemens (Step 7, TIA Portal, WinCC), Rockwell/Allen-Bradley (RSLogix, Studio 5000, FactoryTalk), B&R (Automation Studio), Schneider (Modicon, EcoStruxure). Autres marques sur demande.",
+    q: t("home.hm_quelles_marques_d_automates_supportez_vous"),
+    a: t("home.hm_siemens_step_7_tia_portal_wincc_rockwell"),
   },
   {
-    q: "Comment se déroule un audit technique ?",
-    a: "Nous analysons votre code, votre architecture et vos procédures. Livrable : un rapport détaillé avec les risques identifiés, les améliorations possibles et un plan d'action chiffré.",
+    q: t("home.hm_comment_se_deroule_un_audit_technique"),
+    a: t("home.hm_nous_analysons_votre_code_votre_architecture_et"),
   },
   {
-    q: "Acceptez-vous les paiements Stripe ?",
-    a: "Oui, nous acceptons les paiements par carte via Stripe (sécurisé), virement bancaire, et chèque pour les clients établis.",
+    q: t("home.hm_acceptez_vous_les_paiements_stripe"),
+    a: t("home.hm_oui_nous_acceptons_les_paiements_par_carte"),
   },
 ];
 
 // ─── Témoignages ──────────────────────────────────────
-const TESTIMONIALS = [
+const TESTIMONIALS = (t: (k: string) => string) => [
   {
     content:
-      "VNK a diagnostiqué et corrigé un problème sur notre ligne de production en moins de 4 heures. Service impeccable, rapport détaillé fourni.",
-    author: "Directeur Maintenance",
-    company: "Fabrication industrielle",
+      t("home.hm_vnk_a_diagnostique_et_corrige_un_probleme"),
+    author: t("home.hm_directeur_maintenance"),
+    company: t("home.hm_fabrication_industrielle"),
     rating: 5,
   },
   {
     content:
-      "L'audit technique nous a permis d'identifier 3 failles critiques qu'on avait jamais vues. Plan d'action clair, chiffré et réaliste.",
-    author: "Responsable automatisation",
+      t("home.hm_l_audit_technique_nous_a_permis_d"),
+    author: t("home.hm_responsable_automatisation"),
     company: "Agroalimentaire",
     rating: 5,
   },
   {
     content:
-      "La refactorisation du code PLC a divisé par 2 le temps de cycle de notre machine. Expertise Siemens impressionnante.",
-    author: "Ingénieur procédés",
-    company: "Pâtes et papiers",
+      t("home.hm_la_refactorisation_du_code_plc_a_divise"),
+    author: t("home.hm_ingenieur_procedes"),
+    company: t("home.hm_pates_et_papiers"),
     rating: 5,
   },
 ];
@@ -304,21 +305,15 @@ export default async function HomePage({
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-6 mt-12 pt-10 border-t border-white/20 max-w-2xl">
               <div>
                 <div className="text-4xl font-bold text-white">4</div>
-                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">
-                  Services spécialisés
-                </div>
+                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">{t("home.hm_services_specialises")}</div>
               </div>
               <div>
                 <div className="text-4xl font-bold text-white">5+</div>
-                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">
-                  Marques d&apos;automates
-                </div>
+                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">{t("home.hm_marques_d_automates")}</div>
               </div>
               <div>
                 <div className="text-4xl font-bold text-white">B2B</div>
-                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">
-                  Marché industriel
-                </div>
+                <div className="text-xs uppercase tracking-wider text-white/70 mt-1">{t("home.hm_marche_industriel")}</div>
               </div>
             </div>
           </div>
@@ -331,11 +326,9 @@ export default async function HomePage({
       <ScrollReveal animation="animate-reveal-up">
       <section className="py-16 bg-muted/30 border-y">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-8">
-            Nous supportons les principales marques d&apos;automates
-          </p>
+          <p className="text-center text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-8">{t("home.hm_nous_supportons_les_principales_marques_d_automates")}</p>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-6">
-            {BRANDS.map((brand) => (
+            {BRANDS(t).map((brand) => (
               <div
                 key={brand.name}
                 className="flex flex-col items-center justify-center py-6 px-4 text-center border-r last:border-r-0"
@@ -353,7 +346,7 @@ export default async function HomePage({
       </ScrollReveal>
 
       {/* ═══════════════════════════════════════════════════
-          SERVICES — 4 cartes avec image
+          SERVICES(t) — 4 cartes avec image
           ═══════════════════════════════════════════════════ */}
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
@@ -370,7 +363,7 @@ export default async function HomePage({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {SERVICES.map((svc, i) => {
+            {SERVICES(t).map((svc, i) => {
               const Icon = svc.icon;
               return (
                 <ScrollReveal key={svc.key} delay={i * 100}>
@@ -414,9 +407,7 @@ export default async function HomePage({
                       <Link
                         href={svc.href as "/services"}
                         className="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1"
-                      >
-                        En savoir plus
-                        <ArrowRight className="h-3 w-3" />
+                      >{t("home.hm_en_savoir_plus")}<ArrowRight className="h-3 w-3" />
                       </Link>
                     </div>
                   </CardContent>
@@ -438,13 +429,13 @@ export default async function HomePage({
       </section>
 
       {/* ═══════════════════════════════════════════════════
-          STATS — bande stats
+          STATS(t) — bande stats
           ═══════════════════════════════════════════════════ */}
       <ScrollReveal animation="animate-reveal-scale">
       <section className="py-20 vnk-gradient text-white">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-6xl">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
-            {STATS.map((stat, i) => (
+            {STATS(t).map((stat, i) => (
               <div key={i} className="text-center">
                 <div className="text-5xl sm:text-6xl font-bold tracking-tight">
                   <AnimatedCounter value={stat.num} duration={1500 + i * 200} />
@@ -474,7 +465,7 @@ export default async function HomePage({
               <div className="relative aspect-[4/5] max-w-md mx-auto rounded-2xl overflow-hidden shadow-2xl">
                 <Image
                   src="/images/about-hero.jpg"
-                  alt="Expert en automatisation industrielle"
+                  alt={t("home.hm_alt_expert")}
                   fill
                   className="object-cover"
                   sizes="(max-width: 1024px) 100vw, 50vw"
@@ -483,13 +474,9 @@ export default async function HomePage({
               <div className="absolute -bottom-4 -right-4 lg:right-0 bg-card rounded-xl p-4 shadow-xl border max-w-[240px]">
                 <div className="flex items-center gap-2 mb-1">
                   <Award className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-bold text-primary uppercase">
-                    Société par actions
-                  </span>
+                  <span className="text-xs font-bold text-primary uppercase">{t("home.hm_societe_par_actions")}</span>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  Constituée au Québec — mars 2026
-                </p>
+                <p className="text-xs text-muted-foreground">{t("home.hm_constituee_au_quebec_mars_2026")}</p>
               </div>
             </div>
 
@@ -506,7 +493,7 @@ export default async function HomePage({
               </p>
 
               <div className="grid sm:grid-cols-2 gap-4 mt-8">
-                {WHY.map((item) => {
+                {WHY(t).map((item) => {
                   const Icon = item.icon;
                   return (
                     <div key={item.title} className="flex gap-3">
@@ -535,16 +522,12 @@ export default async function HomePage({
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center mb-12">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Témoignages
-            </span>
-            <h2 className="text-3xl sm:text-4xl font-bold mt-3">
-              Ce que disent nos clients
-            </h2>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("home.hm_temoignages")}</span>
+            <h2 className="text-3xl sm:text-4xl font-bold mt-3">{t("home.hm_ce_que_disent_nos_clients")}</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {TESTIMONIALS.map((testimonial, i) => (
+            {TESTIMONIALS(t).map((testimonial, i) => (
               <Card key={i} className="vnk-card-hover">
                 <CardContent className="p-6">
                   <div className="flex gap-0.5 mb-4">
@@ -577,23 +560,16 @@ export default async function HomePage({
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Notre processus
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
-              Du premier appel à la livraison
-            </h2>
-            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">
-              Un processus clair en 4 étapes pour que vous sachiez exactement où
-              en est votre projet à chaque instant.
-            </p>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("home.hm_notre_processus")}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">{t("home.hm_du_premier_appel_a_la_livraison")}</h2>
+            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">{t("home.hm_un_processus_clair_en_4_etapes_pour")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 relative">
             {/* Ligne de connexion desktop */}
             <div className="hidden lg:block absolute top-12 left-[12%] right-[12%] h-0.5 bg-gradient-to-r from-primary/10 via-primary/40 to-primary/10" />
 
-            {PROCESS.map((step) => {
+            {PROCESS(t).map((step) => {
               const Icon = step.icon;
               return (
                 <div
@@ -623,20 +599,13 @@ export default async function HomePage({
       <section className="py-24 bg-background">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Nos engagements
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
-              Des garanties claires
-            </h2>
-            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">
-              Nous nous engageons sur la transparence, la qualité et la rapidité.
-              Voici nos promesses concrètes.
-            </p>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("home.hm_nos_engagements")}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">{t("home.hm_des_garanties_claires")}</h2>
+            <p className="text-muted-foreground mt-4 text-lg max-w-2xl mx-auto">{t("home.hm_nous_nous_engageons_sur_la_transparence_la")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {GUARANTEES.map((item) => {
+            {GUARANTEES(t).map((item) => {
               const Icon = item.icon;
               return (
                 <div
@@ -658,21 +627,17 @@ export default async function HomePage({
       </section>
 
       {/* ═══════════════════════════════════════════════════
-          FAQ
+          FAQ(t)
           ═══════════════════════════════════════════════════ */}
       <section className="py-24 bg-muted/30">
         <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-4xl">
           <div className="text-center mb-16">
-            <span className="text-xs font-bold text-primary uppercase tracking-wider">
-              Questions fréquentes
-            </span>
-            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">
-              Des réponses claires
-            </h2>
+            <span className="text-xs font-bold text-primary uppercase tracking-wider">{t("home.hm_questions_frequentes")}</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold mt-3">{t("home.hm_des_reponses_claires")}</h2>
           </div>
 
           <div className="space-y-4">
-            {FAQ.map((item, i) => (
+            {FAQ(t).map((item, i) => (
               <details
                 key={i}
                 className="group rounded-xl border bg-card overflow-hidden"
@@ -691,13 +656,9 @@ export default async function HomePage({
           </div>
 
           <div className="text-center mt-12">
-            <p className="text-muted-foreground mb-4">
-              Une autre question ?
-            </p>
+            <p className="text-muted-foreground mb-4">{t("home.hm_une_autre_question")}</p>
             <Button asChild size="lg">
-              <Link href="/contact">
-                Contactez-nous
-                <ArrowRight className="h-4 w-4" />
+              <Link href="/contact">{t("home.hm_contactez_nous")}<ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
           </div>
@@ -740,7 +701,7 @@ export default async function HomePage({
               variant="outline"
               className="bg-transparent border-white/30 text-white hover:bg-white/10 h-14 px-8"
             >
-              <Link href="/services">Voir les services</Link>
+              <Link href="/services">{t("home.voir_les_services")}</Link>
             </Button>
           </div>
         </div>

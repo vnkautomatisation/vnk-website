@@ -10,6 +10,7 @@
 //      d'attribuer le choix #1, sinon #2, sinon #3 ; cree une LeaveRequest
 //      approuvee pour chaque preference granted ; passe le status a "allocated"
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -20,7 +21,7 @@ import { unauthorized, forbidden } from "@/lib/refusals";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
-const ERR_NO_AUTHORITY = "Vous n'avez pas l'autorite pour gerer les fenetres de vacances.";
+const ERR_NO_AUTHORITY = "vous_n_avez_pas_l_autorite_pour_4";
 
 async function requireAdminWrite(): Promise<number | null> {
   const session = await auth();
@@ -46,10 +47,11 @@ const createWindowSchema = z.object({
 });
 
 export async function createVacationWindowAction(input: z.infer<typeof createWindowSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = createWindowSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const opening = new Date(parsed.data.openingDate);
   const closing = new Date(parsed.data.closingDate);
@@ -83,8 +85,9 @@ export async function createVacationWindowAction(input: z.infer<typeof createWin
 export type VacationWindowStatus = "draft" | "open" | "closed" | "in_review" | "allocated" | "archived";
 
 export async function updateVacationWindowStatusAction(input: { id: number; status: VacationWindowStatus }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: input.id } });
   if (!w) return { success: false, error: "Fenetre introuvable" };
 
@@ -142,7 +145,7 @@ export async function updateVacationWindowStatusAction(input: { id: number; stat
           recipientId: s.id,
           type: "info",
           title: `Fenetre fermee : ${w.name}`,
-          body: "Prete pour la revue et l'attribution.",
+          body: t("prete_pour_la_revue_et_l_attribution"),
           link: "/admin/employes/conges/fenetres",
           icon: "calendar",
         })),
@@ -158,11 +161,12 @@ export async function updateVacationWindowStatusAction(input: { id: number; stat
 }
 
 export async function deleteVacationWindowAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: input.id } });
   if (!w) return { success: false, error: "Introuvable" };
-  if (w.status === "allocated") return { success: false, error: "Impossible de supprimer une fenetre dont l'attribution est faite." };
+  if (w.status === "allocated") return { success: false, error: t("impossible_de_supprimer_une_fenetre_dont_l") };
   await prisma.vacationSelectionWindow.delete({ where: { id: input.id } });
   await logAudit({ adminId, action: "delete", entityType: "vacation_window", entityId: input.id });
   revalidatePath("/admin/employes/conges/fenetres");
@@ -181,18 +185,19 @@ const submitPreferencesSchema = z.object({
 });
 
 export async function submitPreferencesAction(input: z.infer<typeof submitPreferencesSchema>): Promise<Result<{ count: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = submitPreferencesSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: parsed.data.windowId } });
   if (!w) return { success: false, error: "Fenetre introuvable" };
-  if (w.status !== "open") return { success: false, error: "Cette fenetre n'est pas ouverte aux soumissions." };
+  if (w.status !== "open") return { success: false, error: t("cette_fenetre_n_est_pas_ouverte_aux") };
   const now = new Date();
   if (now < w.openingDate || now > w.closingDate) {
-    return { success: false, error: "Hors de la periode de soumission." };
+    return { success: false, error: t("hors_de_la_periode_de_soumission") };
   }
 
   // Valide chaque choix
@@ -216,7 +221,7 @@ export async function submitPreferencesAction(input: z.infer<typeof submitPrefer
   // Verifie unicite des rank
   const ranks = parsedChoices.map((c) => c.rank);
   if (new Set(ranks).size !== ranks.length) {
-    return { success: false, error: "Chaque choix doit avoir un rang unique." };
+    return { success: false, error: t("chaque_choix_doit_avoir_un_rang_unique") };
   }
 
   // Reset les preferences existantes de cet employe pour cette fenetre, puis re-cree
@@ -244,8 +249,9 @@ export async function submitPreferencesAction(input: z.infer<typeof submitPrefer
 
 // ─── Bulk transitions (ouvrir/fermer toutes les fenetres eligibles) ──
 export async function bulkOpenWindowsAction(): Promise<Result<{ opened: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const drafts = await prisma.vacationSelectionWindow.findMany({
     where: { status: "draft" },
     select: { id: true, name: true, closingDate: true },
@@ -277,8 +283,9 @@ export async function bulkOpenWindowsAction(): Promise<Result<{ opened: number }
 }
 
 export async function bulkCloseWindowsAction(): Promise<Result<{ closed: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const opens = await prisma.vacationSelectionWindow.findMany({
     where: { status: "open" },
     select: { id: true, name: true, preferences: { select: { adminId: true } } },
@@ -321,12 +328,13 @@ export type SimulationResult = {
 };
 
 export async function simulateAllocationAction(input: { id: number }): Promise<Result<SimulationResult>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: input.id } });
   if (!w) return { success: false, error: "Fenetre introuvable" };
   if (w.status !== "closed" && w.status !== "in_review" && w.status !== "open") {
-    return { success: false, error: "Simulation possible uniquement sur fenetre ouverte/fermee/en revue." };
+    return { success: false, error: t("simulation_possible_uniquement_sur_fenetre_ouverte_fermee") };
   }
 
   const preferences = await prisma.vacationPreference.findMany({
@@ -409,7 +417,7 @@ export async function simulateAllocationAction(input: { id: number }): Promise<R
     }
   }
 
-  // Detection conflits inter-employes : meme date avec > 30% du scope absent
+  // Detection conflits inter-employes : meme date avec >30% du scope absent
   const dateMap = new Map<string, number>();
   for (const g of granted) {
     const s = new Date(g.startDate);
@@ -445,13 +453,14 @@ export async function simulateAllocationAction(input: { id: number }): Promise<R
 export async function allocateVacationsAction(
   input: { id: number },
 ): Promise<Result<{ granted: number; denied: number; round1Granted?: number; round2Granted?: number; round3Granted?: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: input.id } });
   if (!w) return { success: false, error: "Fenetre introuvable" };
   if (w.status !== "closed" && w.status !== "in_review") {
-    return { success: false, error: "La fenetre doit etre fermee ou en revue avant attribution." };
+    return { success: false, error: t("la_fenetre_doit_etre_fermee_ou_en") };
   }
 
   // Charge toutes les preferences pending
@@ -631,7 +640,7 @@ export async function allocateVacationsAction(
         recipientId: adId,
         type: "warning",
         title: `Vacances non attribuees : ${w.name}`,
-        body: "Aucun de vos choix n'a pu etre accorde. Contactez RH pour proposer d'autres dates.",
+        body: t("aucun_de_vos_choix_n_a_pu"),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       });
@@ -688,10 +697,11 @@ const updatePrefSchema = z.object({
 export async function updateVacationPreferenceAction(
   input: z.infer<typeof updatePrefSchema>,
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = updatePrefSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const pref = await prisma.vacationPreference.findUnique({
     where: { id: parsed.data.id },
@@ -700,7 +710,7 @@ export async function updateVacationPreferenceAction(
   if (!pref) return { success: false, error: "Preference introuvable" };
   if (!pref.window) return { success: false, error: "Fenetre introuvable" };
   if (pref.window.status !== "closed" && pref.window.status !== "in_review") {
-    return { success: false, error: "Edition manuelle uniquement quand fenetre fermee ou en revue." };
+    return { success: false, error: t("edition_manuelle_uniquement_quand_fenetre_fermee_ou") };
   }
 
   // Cas 1 : on veut granted, mais une autre pref du meme employe est deja granted -> erreur
@@ -727,7 +737,7 @@ export async function updateVacationPreferenceAction(
       },
       select: { id: true },
     });
-    if (overlap) return { success: false, error: "Conflit avec une demande de conge existante." };
+    if (overlap) return { success: false, error: t("conflit_avec_une_demande_de_conge_existante_2") };
 
     // Cree la LeaveRequest approuvee + lie a la preference
     const leave = await prisma.leaveRequest.create({
@@ -804,10 +814,11 @@ const unallocateSchema = z.object({
 export async function unallocateVacationsAction(
   input: z.infer<typeof unallocateSchema>,
 ): Promise<Result<{ unallocated: number; deletedLeaves: number; affectedEmployees: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdminWrite();
-  if (!adminId) return { success: false, error: ERR_NO_AUTHORITY };
+  if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = unallocateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const w = await prisma.vacationSelectionWindow.findUnique({
     where: { id: parsed.data.windowId },
@@ -815,7 +826,7 @@ export async function unallocateVacationsAction(
   });
   if (!w) return { success: false, error: "Fenetre introuvable" };
   if (w.status !== "allocated") {
-    return { success: false, error: "L'unallocation n'est possible que sur une fenetre allocated." };
+    return { success: false, error: t("l_unallocation_n_est_possible_que_sur") };
   }
 
   // Charge toutes les preferences granted avec leaveRequestId
@@ -842,7 +853,7 @@ export async function unallocateVacationsAction(
     if (paid) {
       return {
         success: false,
-        error: "Au moins une attribution est deja payee — unallocation impossible.",
+        error: t("au_moins_une_attribution_est_deja_payee"),
       };
     }
   }
@@ -886,7 +897,7 @@ export async function unallocateVacationsAction(
     });
   } catch (err) {
     console.error("[unallocateVacationsAction] transaction failed", err);
-    return { success: false, error: "Echec de la transaction — aucune modification appliquee." };
+    return { success: false, error: t("echec_de_la_transaction_aucune_modification_appliquee") };
   }
 
   // Resync balances pour les vacances (hors transaction)

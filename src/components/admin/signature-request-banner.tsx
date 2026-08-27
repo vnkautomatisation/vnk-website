@@ -15,6 +15,7 @@
 // /api/admin/signature-requests).
 // ─────────────────────────────────────────────────────────
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { FileSignature, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -48,10 +49,11 @@ export function SignatureRequestBanner({
   className,
 }: {
   requests: PendingSignatureRequest[];
-  /** Appelé avec le templateId à signer — ouvre <SignaturePadDialog>. */
+
   onSign: (templateId: number) => void;
   className?: string;
 }) {
+  const t = useTranslations("admin.ui");
   const { isUrgent, urgentCount } = useMemo(() => {
     const urgent = requests.filter((r) => {
       const days = daysUntil(r.dueDate);
@@ -105,7 +107,7 @@ export function SignatureRequestBanner({
       <div className="flex-1 min-w-0">
         <p className={cn("text-sm font-bold", palette.title)}>
           {requests.length === 1
-            ? "1 document à signer"
+            ? t("1_document_signer")
             : `${requests.length} documents à signer`}
           {isUrgent && urgentCount > 0 && (
             <span className="ml-2 text-xs font-medium">
@@ -115,11 +117,11 @@ export function SignatureRequestBanner({
         </p>
         <p className={cn("text-xs mt-0.5", palette.sub)}>
           {isUrgent
-            ? "Au moins une signature arrive à échéance — merci de signer rapidement."
-            : "Veuillez prendre quelques minutes pour signer les documents qui vous ont été assignés."}
+            ? t("moins_signature_arrive_echeance_merci")
+            : t("veuillez_prendre_quelques_minutes_signer")}
         </p>
 
-        {/* Liste compacte des demandes */}
+
         <div className="mt-2 flex flex-col gap-1.5">
           {requests.slice(0, 4).map((r) => {
             const days = daysUntil(r.dueDate);
@@ -159,7 +161,7 @@ export function SignatureRequestBanner({
                     palette.btn
                   )}
                 >
-                  Signer
+                  {t("signer")}
                 </Button>
               </div>
             );
@@ -171,8 +173,8 @@ export function SignatureRequestBanner({
           )}
         </div>
       </div>
-      {/* Bouton "Signer maintenant" retire : doublon visuel avec le bouton
-          "Signer" en bout de chaque ligne. Le per-item suffit. */}
+      {/* Bouton t("signer_maintenant") retire : doublon visuel avec le bouton
+          t("signer") en bout de chaque ligne. Le per-item suffit. */}
     </div>
   );
 }

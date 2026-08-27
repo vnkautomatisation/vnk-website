@@ -2,6 +2,7 @@
 // Stocke en data URL base64 dans la table Setting (pool partagé), retourne
 // l'URL utilisable directement dans <img src>. Limite : 5 Mo, formats image.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -27,10 +29,10 @@ export async function POST(request: NextRequest) {
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
-      return NextResponse.json({ error: "Format non supporté (PNG, JPG, WebP, GIF, SVG)" }, { status: 415 });
+      return NextResponse.json({ error: t("format_non_supporte_png_jpg_webp_gif") }, { status: 415 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: `Fichier trop volumineux (max 5 Mo)` }, { status: 413 });

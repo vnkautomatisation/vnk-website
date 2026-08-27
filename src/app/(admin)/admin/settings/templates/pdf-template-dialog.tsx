@@ -31,6 +31,7 @@ export function PdfTemplateDialog({
   commonVars: Record<string, string>;
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.email_templates");
   const tc = useTranslations("common");
   const mode = template ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -68,7 +69,7 @@ export function PdfTemplateDialog({
       setKey(defaultKey ?? "");
       setLocale("fr"); setIsEnabled(true);
       setHeaderHtml('<div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid {{accent}};padding-bottom:8px"><img src="{{company_logo}}" style="height:48px" /><div style="text-align:right"><h1 style="color:{{accent}};margin:0">{{document_title}}</h1><p style="margin:4px 0 0;color:#666">{{document_number}}</p></div></div>');
-      setBodyHtml('<p>Bonjour {{client_name}},</p>\n<p></p>\n<table style="width:100%;border-collapse:collapse;margin-top:16px">\n  <thead style="background:{{accent}};color:white"><tr><th style="padding:8px;text-align:left">Description</th><th style="padding:8px;text-align:right">{tc("amount")}</th></tr></thead>\n  <tbody><tr><td style="padding:8px;border-bottom:1px solid #eee">{{item_description}}</td><td style="padding:8px;text-align:right;border-bottom:1px solid #eee">{{item_amount}}</td></tr></tbody>\n</table>');
+      setBodyHtml('<p>Bonjour {{client_name}},</p>\n<p></p>\n<table style="width:100%;border-collapse:collapse;margin-top:16px">\n  <thead style="background:{{accent}};color:white"><tr><th style="padding:8px;text-align:left">{t("description")}</th><th style="padding:8px;text-align:right">{tc("amount")}</th></tr></thead>\n  <tbody><tr><td style="padding:8px;border-bottom:1px solid #eee">{{item_description}}</td><td style="padding:8px;text-align:right;border-bottom:1px solid #eee">{{item_amount}}</td></tr></tbody>\n</table>');
       setFooterHtml('<p style="text-align:center;color:#666;font-size:10px">{{company_name}} · {{company_phone}} · {{company_email}} · © {{current_year}}</p>');
       setPageSize("A4"); setMarginTop(40); setMarginRight(40);
       setMarginBottom(40); setMarginLeft(40); setAccentColor("#0F2D52");
@@ -92,7 +93,7 @@ export function PdfTemplateDialog({
         isEnabled,
       });
       if (r.success) {
-        toast.success("Modèle PDF enregistré");
+        toast.success(t("modele_pdf_enregistre"));
         onSaved(); onOpenChange(false);
       } else {
         toast.error(r.error);
@@ -106,7 +107,7 @@ export function PdfTemplateDialog({
     else setBodyHtml((h) => h + `{{${v}}}`);
   };
 
-  // Génère l'aperçu PDF (HTML simulant la page)
+
   useEffect(() => {
     if (section !== "preview" || !open) return;
     let cancelled = false;
@@ -123,7 +124,7 @@ export function PdfTemplateDialog({
           }),
         });
         if (!res.ok) {
-          toast.error("Erreur prévisualisation");
+          toast.error(t("erreur_previsualisation"));
           return;
         }
         const html = await res.text();
@@ -135,7 +136,7 @@ export function PdfTemplateDialog({
           return url;
         });
       } catch {
-        if (!cancelled) toast.error("Erreur réseau");
+        if (!cancelled) toast.error(t("erreur_reseau"));
       }
     })();
     return () => { cancelled = true; };
@@ -156,32 +157,32 @@ export function PdfTemplateDialog({
           </div>
           <div className="flex-1">
             <DialogTitle className="text-white text-base">
-              {defaultLabel ?? (mode === "create" ? "Nouveau modèle PDF" : template?.key)}
+              {defaultLabel ?? (mode === "create" ? t("nouveau_modele_pdf") : template?.key)}
             </DialogTitle>
-            <p className="text-xs text-white/70">Document PDF · sections en-tête / corps / pied de page</p>
+            <p className="text-xs text-white/70">{t("document_pdf_sections_tete_corps")}</p>
           </div>
           <Switch checked={isEnabled} onCheckedChange={setIsEnabled} aria-label={tc("enabled")} />
         </div>
 
-        {/* Métadonnées en haut */}
+
         <div className="border-b bg-muted/30 px-6 py-3 flex flex-wrap gap-3 items-end">
           <div className="flex-1 min-w-[150px]">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Clé</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("cle")}</Label>
             <Input value={key} onChange={(e) => setKey(e.target.value.toLowerCase().replace(/\s+/g, "_"))} disabled={mode === "edit"} className="mt-1 font-mono text-sm h-8" />
           </div>
           <div className="w-32">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Langue</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("langue")}</Label>
             <Select value={locale} onValueChange={(v) => setLocale(v as "fr" | "en")}>
               <SelectTrigger className="mt-1 h-8"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="fr">Français</SelectItem>
-                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="fr">{t("francais")}</SelectItem>
+                <SelectItem value="en">{t("english")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Tabs sections */}
+
         <div className="border-b px-6">
           <div className="flex gap-1 overflow-x-auto">
             {(["header", "body", "footer", "page", "vars", "preview"] as Section[]).map((s) => (
@@ -190,12 +191,12 @@ export function PdfTemplateDialog({
                 onClick={() => setSection(s)}
                 className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px whitespace-nowrap ${section === s ? "border-[#0F2D52] text-[#0F2D52]" : "border-transparent text-muted-foreground"}`}
               >
-                {s === "header" && "En-tête"}
-                {s === "body" && "Corps"}
-                {s === "footer" && "Pied de page"}
-                {s === "page" && (<><Ruler className="h-3.5 w-3.5 inline mr-1" />Format</>)}
-                {s === "vars" && (<><Variable className="h-3.5 w-3.5 inline mr-1" />Variables</>)}
-                {s === "preview" && (<><Eye className="h-3.5 w-3.5 inline mr-1" />Aperçu</>)}
+                {s === "header" && t("tete")}
+                {s === "body" && t("corps")}
+                {s === "footer" && t("pied_page")}
+                {s === "page" && (<><Ruler className="h-3.5 w-3.5 inline mr-1" />{t("format")}</>)}
+                {s === "vars" && (<><Variable className="h-3.5 w-3.5 inline mr-1" />{t("variables")}</>)}
+                {s === "preview" && (<><Eye className="h-3.5 w-3.5 inline mr-1" />{t("apercu")}</>)}
               </button>
             ))}
           </div>
@@ -203,33 +204,32 @@ export function PdfTemplateDialog({
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {section === "header" && (
-            <RichEditor value={headerHtml} onChange={setHeaderHtml} rows={10} placeholder="HTML pour l'en-tête (logo, titre, numéro de document...)" />
+            <RichEditor value={headerHtml} onChange={setHeaderHtml} rows={10} placeholder={t("html_pour_en_tete")} />
           )}
           {section === "body" && (
-            <RichEditor value={bodyHtml} onChange={setBodyHtml} rows={16} placeholder="HTML pour le corps principal" />
+            <RichEditor value={bodyHtml} onChange={setBodyHtml} rows={16} placeholder={t("html_corps_principal")} />
           )}
           {section === "footer" && (
-            <RichEditor value={footerHtml} onChange={setFooterHtml} rows={6} placeholder="HTML pour le pied de page (mentions légales, coordonnées...)" />
+            <RichEditor value={footerHtml} onChange={setFooterHtml} rows={6} placeholder={t("html_pied_page_mentions_legales")} />
           )}
 
           {section === "page" && (
             <div className="space-y-5">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Format papier</Label>
+                  <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("format_papier")}</Label>
                   <Select value={pageSize} onValueChange={(v) => setPageSize(v as "A4" | "Letter" | "Legal")}>
                     <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="A4">A4 (210×297 mm)</SelectItem>
-                      <SelectItem value="Letter">Letter (8.5×11 po)</SelectItem>
-                      <SelectItem value="Legal">Legal (8.5×14 po)</SelectItem>
+                      <SelectItem value="A4">{t("a4_210_297_mm")}</SelectItem>
+                      <SelectItem value="Letter">{t("letter_8_5_11_po")}</SelectItem>
+                      <SelectItem value="Legal">{t("legal_8_5_14_po")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    <Palette className="h-3 w-3 inline mr-1" />Couleur d&apos;accent
-                  </Label>
+                    <Palette className="h-3 w-3 inline mr-1" />{t("pdf_template_dialog_couleur_d_accent")}</Label>
                   <div className="flex gap-2 mt-1">
                     <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="h-9 w-12 rounded-md border cursor-pointer" />
                     <Input value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="font-mono text-xs flex-1" />
@@ -238,13 +238,13 @@ export function PdfTemplateDialog({
               </div>
 
               <div>
-                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Marges (pixels)</Label>
+                <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("marges_pixels")}</Label>
                 <div className="grid grid-cols-4 gap-2 mt-1.5">
                   {[
-                    { label: "Haut", value: marginTop, set: setMarginTop },
-                    { label: "Droite", value: marginRight, set: setMarginRight },
-                    { label: "Bas", value: marginBottom, set: setMarginBottom },
-                    { label: "Gauche", value: marginLeft, set: setMarginLeft },
+                    { label: t("haut"), value: marginTop, set: setMarginTop },
+                    { label: t("droite"), value: marginRight, set: setMarginRight },
+                    { label: t("bas"), value: marginBottom, set: setMarginBottom },
+                    { label: t("gauche"), value: marginLeft, set: setMarginLeft },
                   ].map((m) => (
                     <div key={m.label}>
                       <Label className="text-[9px] text-muted-foreground">{m.label}</Label>
@@ -266,14 +266,12 @@ export function PdfTemplateDialog({
           {section === "preview" && (
             <div className="space-y-2">
               <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5 text-xs text-blue-900">
-                <Eye className="h-3.5 w-3.5 inline mr-1.5" />
-                Aperçu HTML à l&apos;échelle 96 dpi avec données fictives. L&apos;export PDF utilisera la même mise en page via PDFKit.
-              </div>
+                <Eye className="h-3.5 w-3.5 inline mr-1.5" />{t("pdf_template_dialog_apercu_html_a_l_echelle_96_dpi")}</div>
               <iframe
                 src={previewUrl}
                 sandbox="allow-same-origin"
                 className="w-full h-[600px] rounded-md border bg-muted"
-                title="Aperçu du PDF"
+                title={t("apercu_pdf")}
               />
             </div>
           )}
@@ -281,7 +279,7 @@ export function PdfTemplateDialog({
           {section === "vars" && (
             <>
               <p className="text-xs text-muted-foreground">
-                Cliquez pour insérer une variable dans la section actuellement éditée. Variables additionnelles : <code className="bg-muted px-1 rounded">{`{{accent}}`}</code> pour la couleur, <code className="bg-muted px-1 rounded">{`{{company_logo}}`}</code> pour le logo.
+                {t("cliquez_inserer_variable_section_editee")} <code className="bg-muted px-1 rounded">{`{{accent}}`}</code> {t("pour_couleur")} <code className="bg-muted px-1 rounded">{`{{company_logo}}`}</code> {t("pour_logo")}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {Object.entries(commonVars).map(([k, label]) => (
@@ -295,7 +293,7 @@ export function PdfTemplateDialog({
                       <code className="text-xs font-mono font-semibold text-[#0F2D52]">{`{{${k}}}`}</code>
                       <p className="text-[10px] text-muted-foreground">{label}</p>
                     </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">Insérer</Badge>
+                    <Badge variant="outline" className="text-[10px] shrink-0">{t("inserer")}</Badge>
                   </button>
                 ))}
               </div>
@@ -306,7 +304,7 @@ export function PdfTemplateDialog({
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={handleSave} disabled={pending || !key.trim()} className="bg-[#0F2D52] hover:bg-[#0F2D52]/90">
-            {pending ? "..." : "Enregistrer"}
+            {pending ? "..." : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

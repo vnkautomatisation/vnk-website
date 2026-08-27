@@ -1,0 +1,17 @@
+{
+  "tous": "All",
+  "attente": "Pending",
+  "brouillon": "Draft",
+  "signes": "Signed",
+  "expires": "Expired",
+  "annules": "Cancelled",
+  "contrats_signes_lies_factures_refuses": "Contracts that are signed or attached to invoices are refused (409). This cannot be undone.",
+  "marquer_expire": "Mark expired",
+  "annuler_action": "Cancel",
+  "numero": "Number",
+  "montant": "Amount",
+  "signe": "Signed",
+  "expire": "Expired",
+  "annule": "Cancelled",
+  "nouveau_contrat": "New contract"
+}

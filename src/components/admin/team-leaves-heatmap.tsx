@@ -7,6 +7,7 @@
 // Style cohérent avec ColleaguesMonthTable de vacation-window-banner.tsx.
 
 import { useEffect, useMemo, useState } from "react";
+import { useTranslations } from "next-intl";
 import { CalendarRange, Loader2, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -40,13 +41,13 @@ const ABS_TYPE_COLORS: Record<string, { bg: string; text: string; border: string
   bereavement: { bg: "bg-gray-200", text: "text-gray-900", border: "border-gray-400" },
   other: { bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-400" },
 };
-const ABS_TYPE_LABELS: Record<string, string> = {
-  vacation: "Vacances",
-  sick: "Maladie",
-  parental: "Parental",
-  unpaid: "Sans solde",
-  bereavement: "Décès",
-  other: "Autre congé",
+const ABS_TYPE_KEYS: Record<string, string> = {
+  vacation: "leave_vacation",
+  sick: "leave_sick",
+  parental: "leave_parental",
+  unpaid: "leave_unpaid",
+  bereavement: "leave_bereavement",
+  other: "leave_other_absence",
 };
 
 function isoLocal(d: Date): string {
@@ -57,12 +58,13 @@ function isoLocal(d: Date): string {
 }
 
 export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number }) {
+  const t = useTranslations("admin.ui");
   const [absences, setAbsences] = useState<CalendarAbsence[]>([]);
   const [holidays, setHolidays] = useState<HolidayInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPending, setShowPending] = useState(true);
 
-  // Plage : aujourd'hui → +28j
+
   const range = useMemo(() => {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -106,7 +108,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
     return m;
   }, [holidays]);
 
-  // Filtre selon toggle
+
   const visibleAbsences = useMemo(() => {
     return absences.filter((a) => {
       if (a.status === "approved") return true;
@@ -115,7 +117,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
     });
   }, [absences, showPending]);
 
-  // Index absences par date
+
   const absByDate = useMemo(() => {
     const map = new Map<string, CalendarAbsence[]>();
     for (const a of visibleAbsences) {
@@ -132,7 +134,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
     return map;
   }, [visibleAbsences]);
 
-  // Employés présents
+
   const employees = useMemo(() => {
     const map = new Map<number, { id: number; fullName: string; isMine: boolean }>();
     for (const a of visibleAbsences) {
@@ -159,19 +161,19 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
             <CalendarRange className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#0F2D52]">Absences à venir — 4 semaines</p>
+            <p className="text-sm font-semibold text-[#0F2D52]">{t("absences_venir_4_semaines")}</p>
             <p className="text-[11px] text-muted-foreground">
               {typeof teamScopeCount === "number"
                 ? `${teamScopeCount} collègue${teamScopeCount > 1 ? "s" : ""} dans votre périmètre`
-                : "Vos collègues directs"}
+                : t("collegues_directs")}
             </p>
           </div>
         </div>
         <ActionTooltip
           label={
             showPending
-              ? "Masquer les demandes en attente d'approbation"
-              : "Inclure les demandes en attente d'approbation"
+              ? t("masquer_demandes_attente_approbation")
+              : t("inclure_demandes_attente_approbation")
           }
         >
           <Button
@@ -180,16 +182,16 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
             onClick={() => setShowPending((v) => !v)}
             className="h-8 text-xs"
           >
-            {showPending ? "Approuvé + En attente" : "Approuvé seulement"}
+            {showPending ? t("approuve_attente") : t("approuve_seulement")}
           </Button>
         </ActionTooltip>
       </div>
 
-      {/* Légende */}
+
       <div className="flex items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground flex-wrap">
         <span className="inline-flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm bg-cyan-200 border border-cyan-400" />
-          Approuvé
+          {t("approuve")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span
@@ -199,33 +201,33 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
                 "repeating-linear-gradient(45deg, rgb(254 215 170) 0 3px, transparent 3px 6px)",
             }}
           />
-          En attente
+          {t("attente")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm bg-purple-100 border border-purple-300" />
-          Férié
+          {t("ferie")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm bg-slate-200 border border-slate-300" />
-          Weekend
+          {t("weekend")}
         </span>
         <span className="inline-flex items-center gap-1">
           <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-[#0F2D52] bg-white" />
-          Aujourd&apos;hui
+          {t("aujourd_apos_hui")}
         </span>
       </div>
 
       {loading ? (
         <div className="flex items-center justify-center py-8 text-xs text-muted-foreground gap-2">
           <Loader2 className="h-4 w-4 animate-spin" />
-          Chargement...
+          {t("chargement")}
         </div>
       ) : employees.length === 0 ? (
         <div className="rounded-md border bg-muted/10 p-6 text-center">
           <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-          <p className="text-sm font-medium">Aucune absence chez vos collègues sur 4 semaines</p>
+          <p className="text-sm font-medium">{t("aucune_absence_chez_collegues_4")}</p>
           <p className="text-xs text-muted-foreground mt-1">
-            Tout le monde est présent — bonne période pour planifier des projets en équipe.
+            {t("tout_monde_present_bonne_periode")}
           </p>
         </div>
       ) : (
@@ -238,9 +240,9 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
                 minWidth,
               }}
             >
-              {/* En-tête */}
+
               <div className="sticky left-0 z-20 bg-muted/40 border-r border-b px-2 py-1.5 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-                Employé
+                {t("employe")}
               </div>
               {days.map(({ date, iso }, i) => {
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -270,7 +272,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
                 );
               })}
 
-              {/* Lignes employés */}
+
               {employees.map((emp) => (
                 <EmployeeHeatmapRow
                   key={emp.id}
@@ -284,7 +286,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
             </div>
           </div>
           <div className="px-2 py-1.5 text-[10px] text-muted-foreground bg-muted/10 border-t">
-            Survolez une cellule pour voir le détail.
+            {t("survolez_cellule_voir_detail")}
           </div>
         </div>
       )}
@@ -305,6 +307,7 @@ function EmployeeHeatmapRow({
   holidayByDate: Map<string, HolidayInfo>;
   absByDate: Map<string, CalendarAbsence[]>;
 }) {
+  const t = useTranslations("admin.ui");
   return (
     <>
       <ActionTooltip label={emp.fullName} side="right">
@@ -315,7 +318,7 @@ function EmployeeHeatmapRow({
         >
           {emp.isMine && (
             <span className="text-[8px] uppercase tracking-wider font-bold text-[#0F2D52] bg-[#0F2D52]/10 px-1 rounded shrink-0">
-              Moi
+              {t("moi")}
             </span>
           )}
           <span className="truncate">{emp.fullName}</span>
@@ -337,11 +340,11 @@ function EmployeeHeatmapRow({
         let style: React.CSSProperties | undefined;
         if (abs) {
           const c = ABS_TYPE_COLORS[abs.type] ?? ABS_TYPE_COLORS.other;
-          label = ABS_TYPE_LABELS[abs.type] ?? abs.type;
+          label = ABS_TYPE_KEYS[abs.type] ? t(ABS_TYPE_KEYS[abs.type]) : abs.type;
           border = c.border;
           isPending = abs.status === "pending";
           if (isPending) {
-            // Pattern hachuré pour "en attente"
+
             bg = "";
             style = {
               backgroundImage: `repeating-linear-gradient(45deg, var(--vnk-pending-a, rgba(245, 158, 11, 0.35)) 0 4px, transparent 4px 8px)`,
@@ -354,7 +357,7 @@ function EmployeeHeatmapRow({
 
         const tooltip = abs
           ? `${emp.fullName} — ${label}${abs.halfDay ? ` (½ ${abs.halfDay})` : ""}${
-              isPending ? " (en attente)" : ""
+              isPending ? t("attente") : ""
             } · ${date.toLocaleDateString("fr-CA", {
               weekday: "long",
               day: "numeric",
@@ -372,7 +375,7 @@ function EmployeeHeatmapRow({
                 month: "long",
               });
 
-        // Contraste : aujourd'hui + congé → ring amber visible sur fond cyan/red/etc.
+
         const todayRing = isToday
           ? abs
             ? "ring-2 ring-amber-400 ring-inset"

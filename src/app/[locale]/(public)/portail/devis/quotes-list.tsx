@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar, X, Download } from "lucide-react";
@@ -27,11 +28,11 @@ type Q = {
   createdAt: string;
 };
 
-const FILTER_OPTIONS: FilterOption[] = [
-  { value: "pending", label: "En attente" },
-  { value: "accepted", label: "Accepte" },
-  { value: "expired", label: "Expire" },
-  { value: "declined", label: "Refuse" },
+const FILTER_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "pending", labelKey: "opt_en_attente" },
+  { value: "accepted", labelKey: "opt_accepte" },
+  { value: "expired", labelKey: "opt_expire" },
+  { value: "declined", labelKey: "opt_refuse" },
 ];
 
 const STATUS_BAR_COLORS: Record<string, string> = {
@@ -42,6 +43,7 @@ const STATUS_BAR_COLORS: Record<string, string> = {
 };
 
 export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
+  const t = useTranslations("portal");
   const router = useRouter();
   const [pdfQuote, setPdfQuote] = useState<Q | null>(null);
   const [showSignature, setShowSignature] = useState(false);
@@ -62,12 +64,12 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     setAccepted(false);
   };
 
-  // Step 1: user clicks "Accepter ce devis" in footer → show signature canvas
+
   const startAccept = () => {
     setShowSignature(true);
   };
 
-  // Step 2: user draws signature and clicks save → submit acceptance
+
   const handleSignAndAccept = async (signatureDataUrl: string) => {
     if (!pdfQuote) return;
     setAccepting(true);
@@ -79,17 +81,17 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           body: JSON.stringify({ signatureData: signatureDataUrl }),
         });
         if (res.ok) {
-          toast.success("Devis accepte et signe — contrat genere automatiquement");
+          toast.success(t("devis_accepte_signe_contrat_genere"));
           setShowSignature(false);
           setAccepted(true);
           setPdfKey((k) => k + 1);
           router.refresh();
         } else {
           const data = await res.json().catch(() => ({}));
-          toast.error(data.error ?? "Erreur lors de l'acceptation");
+          toast.error(data.error ?? t("erreur_lors_acceptation"));
         }
       } catch {
-        toast.error("Erreur de connexion");
+        toast.error(t("erreur_connexion"));
       } finally {
         setAccepting(false);
       }
@@ -109,7 +111,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
     {
       key: "info",
-      header: "Devis",
+      header: t("devis"),
       accessor: (r) => (
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.quoteNumber}</span>
@@ -121,7 +123,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
     {
       key: "amount",
-      header: "Montant TTC",
+      header: t("montant_ttc"),
       accessor: (r) => (
         <span className="font-bold text-[#0F2D52]">{formatCurrency(r.amountTtc)}</span>
       ),
@@ -130,7 +132,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => (
         <span className="text-muted-foreground text-sm">
           {formatDate(new Date(r.createdAt))}
@@ -142,12 +144,12 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "acceptedAt",
-      header: "Accepte le",
+      header: t("accepte"),
       accessor: (r) => (
         <span className="text-sm text-muted-foreground">
           {r.acceptedAt ? formatDate(r.acceptedAt) : "\u2014"}
@@ -159,7 +161,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     },
     {
       key: "expiry",
-      header: "Expire le",
+      header: t("expire"),
       accessor: (r) => (
         <span className="text-muted-foreground text-sm">
           {r.expiryDate ? formatDate(new Date(r.expiryDate)) : "\u2014"}
@@ -178,12 +180,12 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           {r.status === "pending" ? (
             <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <CheckCircle className="h-3.5 w-3.5 mr-1" />
-              Accepter
+              {t("accepter")}
             </Button>
           ) : (
             <Button size="sm" className="bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(r, e)}>
               <Eye className="h-3.5 w-3.5 mr-1" />
-              Voir
+              {t("voir")}
             </Button>
           )}
         </div>
@@ -202,7 +204,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow">
         <div className={`h-1 ${STATUS_BAR_COLORS[q.status] ?? "bg-gray-300"}`} />
         <CardContent className="p-4 space-y-3">
-          {/* Header: quote number + date + status badge */}
+
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="text-xs text-muted-foreground font-mono">{q.quoteNumber}</p>
@@ -215,10 +217,10 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
             <StatusBadge status={q.status} />
           </div>
 
-          {/* Amount TTC prominent */}
+
           <p className="text-2xl font-bold text-[#0F2D52]">{formatCurrency(q.amountTtc)}</p>
 
-          {/* Tax breakdown */}
+
           <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground border-t pt-2">
             <div>
               <span className="block text-[10px] uppercase tracking-wide font-medium">HT</span>
@@ -234,28 +236,28 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
             </div>
           </div>
 
-          {/* Expiry + warning */}
+
           {q.expiryDate && (
             <div className={`flex items-center gap-1.5 text-xs ${expiryClose ? "text-amber-600 font-medium" : "text-muted-foreground"}`}>
               {expiryClose && <AlertTriangle className="h-3.5 w-3.5 shrink-0" />}
               <span>
-                {expiryClose ? "Expire bientot : " : "Expire le "}
+                {expiryClose ? t("expire_bientot") : t("expire")}
                 {formatDate(new Date(q.expiryDate))}
               </span>
             </div>
           )}
 
-          {/* Action button */}
+
           <div className="pt-1">
             {q.status === "pending" ? (
               <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
                 <CheckCircle className="h-3.5 w-3.5 mr-1" />
-                Accepter
+                {t("accepter")}
               </Button>
             ) : (
               <Button size="sm" className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={(e) => openPdf(q, e)}>
                 <Eye className="h-3.5 w-3.5 mr-1" />
-                Voir
+                {t("voir")}
               </Button>
             )}
           </div>
@@ -264,7 +266,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
     );
   };
 
-  // Build footer actions for PDF modal
+
   const pdfActions = accepted ? (
     <Button className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white" size="sm" onClick={() => {
       const a = document.createElement("a");
@@ -273,13 +275,13 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
       a.click();
     }}>
       <Download className="h-4 w-4 mr-1.5" />
-      Telecharger le devis
+      {t("telecharger_devis")}
     </Button>
   ) : pdfQuote?.status === "pending" ? (
     showSignature ? null : (
       <Button className="bg-[#0F2D52] hover:bg-[#1a3a66]" size="sm" onClick={startAccept}>
         <PenLine className="h-4 w-4 mr-1.5" />
-        Accepter ce devis
+        {t("accepter_devis_2")}
       </Button>
     )
   ) : undefined;
@@ -294,8 +296,8 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                 <FileText className="h-5 w-5 text-white" />
               </div>
               <div>
-                <h1 className="portal-title">Devis</h1>
-                <p className="text-sm text-muted-foreground">Consultez et acceptez vos devis</p>
+                <h1 className="portal-title">{t("devis")}</h1>
+                <p className="text-sm text-muted-foreground">{t("consultez_acceptez_devis")}</p>
               </div>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 portal-kpi-grid mb-3">
@@ -305,7 +307,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                     <Hash className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Total devis</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("total_devis")}</p>
                     <p className="portal-kpi-number">{quotes.length}</p>
                   </div>
                 </div>
@@ -316,7 +318,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                     <Clock className="h-4 w-4 text-amber-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-amber-600">En attente</p>
+                    <p className="portal-kpi-label text-amber-600">{t("attente")}</p>
                     <p className="portal-kpi-number">{quotes.filter((q) => q.status === "pending").length}</p>
                   </div>
                 </div>
@@ -327,7 +329,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                     <CheckCircle className="h-4 w-4 text-emerald-600" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-emerald-600">Acceptes</p>
+                    <p className="portal-kpi-label text-emerald-600">{t("acceptes")}</p>
                     <p className="portal-kpi-number">{quotes.filter((q) => q.status === "accepted").length}</p>
                   </div>
                 </div>
@@ -338,7 +340,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                     <DollarSign className="h-4 w-4 text-[#0F2D52]" />
                   </div>
                   <div>
-                    <p className="portal-kpi-label text-muted-foreground">Montant total</p>
+                    <p className="portal-kpi-label text-muted-foreground">{t("montant_total")}</p>
                     <p className="portal-kpi-number">{formatCurrency(quotes.reduce((s, q) => s + q.amountTtc, 0))}</p>
                   </div>
                 </div>
@@ -351,14 +353,14 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         getRowId={(r) => r.id}
         renderCard={renderCard}
         storageKey="portal-quotes"
-        searchPlaceholder="Rechercher un devis..."
+        searchPlaceholder={t("rechercher_devis")}
         searchFn={(r) => `${r.quoteNumber} ${r.title}`}
-        filterOptions={FILTER_OPTIONS}
+        filterOptions={FILTER_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
         filterFn={(r) => r.status}
-        emptyMessage="Aucun devis"
+        emptyMessage={t("aucun_devis")}
       />
 
-      {/* PDF preview modal */}
+
       {pdfQuote && (
         <PdfViewerModal
           open={!!pdfQuote}
@@ -373,12 +375,12 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
         />
       )}
 
-      {/* Signature overlay — appears on top of the PDF modal */}
+
       {pdfQuote && showSignature && (
         <div className="fixed inset-0 bottom-14 lg:bottom-0 z-[10000] flex items-end sm:items-center justify-center">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowSignature(false)} />
           <div className="relative z-10 w-full max-w-xl mx-4 mb-4 sm:mb-0 bg-white rounded-2xl shadow-2xl overflow-hidden">
-            {/* Header navy */}
+
             <div className="bg-[#0F2D52] px-6 py-5 text-white relative">
               <button
                 onClick={() => setShowSignature(false)}
@@ -391,7 +393,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
                   <FileText className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold">Accepter le devis</h2>
+                  <h2 className="text-lg font-bold">{t("accepter_devis")}</h2>
                   <p className="text-white/60 text-sm mt-0.5">
                     {pdfQuote.quoteNumber} — {pdfQuote.title}
                   </p>
@@ -399,48 +401,48 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
               </div>
               <div className="mt-4 flex items-center gap-3">
                 <div className="bg-white/10 rounded-lg px-3 py-2">
-                  <span className="text-white/70 text-xs">Montant TTC</span>
+                  <span className="text-white/70 text-xs">{t("montant_ttc")}</span>
                   <p className="text-white font-bold text-lg">{formatCurrency(pdfQuote.amountTtc)}</p>
                 </div>
                 {pdfQuote.expiryDate && (
                   <div className="bg-white/10 rounded-lg px-3 py-2">
-                    <span className="text-white/70 text-xs">Expire le</span>
+                    <span className="text-white/70 text-xs">{t("expire")}</span>
                     <p className="text-white font-medium text-sm">{formatDate(new Date(pdfQuote.expiryDate))}</p>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Info banner */}
+
             <div className="mx-6 mt-5 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/10 px-4 py-3">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                En signant, vous acceptez ce devis. Un contrat de service sera automatiquement genere pour signature.
+                {t("signant_vous_acceptez_devis_contrat")}
               </p>
             </div>
 
-            {/* Signature canvas */}
+
             <div className="px-6 py-4">
               <SignatureCanvas
                 onSave={handleSignAndAccept}
                 height={180}
                 disabled={accepting}
-                legalText="les conditions du devis"
+                legalText={t("conditions_devis")}
               />
               {accepting && (
                 <p className="text-xs text-muted-foreground text-center mt-2 animate-pulse">
-                  Acceptation en cours...
+                  {t("acceptation_cours")}
                 </p>
               )}
             </div>
 
-            {/* Footer */}
+
             <div className="px-6 py-4 border-t bg-muted/30 flex items-center justify-between">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <CheckCircle className="h-3.5 w-3.5" />
-                <span>Contrat genere automatiquement</span>
+                <span>{t("contrat_genere_automatiquement")}</span>
               </div>
               <Button variant="outline" size="sm" onClick={() => setShowSignature(false)} disabled={accepting}>
-                Annuler
+                {t("annuler")}
               </Button>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use server";
 // Server Actions pour la section Paramètres
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -25,6 +26,7 @@ export type UpdateSettingsResult =
 export async function updateSettingsAction(
   input: z.infer<typeof updateSchema>
 ): Promise<UpdateSettingsResult> {
+  const t = await getTranslations("admin.action_errors");
   // 1) Auth
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
@@ -35,7 +37,7 @@ export async function updateSettingsAction(
     const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
     const perms = await getCurrentAdminPermissions();
     if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
-      return { success: false, error: "Permission refusée (settings)" };
+      return { success: false, error: t("permission_refusee_settings") };
     }
   }
   const adminId = session.user.adminId!;
@@ -43,7 +45,7 @@ export async function updateSettingsAction(
   // 2) Validation
   const parsed = updateSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Données invalides" };
+    return { success: false, error: t("donnees_invalides") };
   }
 
   try {
@@ -109,6 +111,7 @@ export async function updateSettingsAction(
 export async function resetCategoryAction(
   category: string
 ): Promise<UpdateSettingsResult> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -118,7 +121,7 @@ export async function resetCategoryAction(
     const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
     const perms = await getCurrentAdminPermissions();
     if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
-      return { success: false, error: "Permission refusée (settings)" };
+      return { success: false, error: t("permission_refusee_settings") };
     }
   }
   const adminId = session.user.adminId!;
@@ -139,6 +142,7 @@ export async function resetCategoryAction(
 export async function testConnectionAction(
   provider: string
 ): Promise<UpdateSettingsResult> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -148,7 +152,7 @@ export async function testConnectionAction(
     const { getCurrentAdminPermissions, canAct } = await import("@/lib/permissions");
     const perms = await getCurrentAdminPermissions();
     if (!canAct(perms, "settings", "write") && !canAct(perms, "client_portal", "write") && !canAct(perms, "website", "write")) {
-      return { success: false, error: "Permission refusée (settings)" };
+      return { success: false, error: t("permission_refusee_settings") };
     }
   }
 

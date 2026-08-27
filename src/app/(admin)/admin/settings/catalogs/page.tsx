@@ -2,13 +2,17 @@
 // sources, industries, catégories de dépenses, statuts workflow, devises.
 // Vue server qui charge tous les catalogues en parallèle.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { CatalogsView } from "./catalogs-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Catalogues — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("catalogues_vnk") };
+}
 
 export default async function CatalogsPage() {
   const session = await auth();

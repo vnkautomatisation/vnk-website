@@ -7,6 +7,7 @@
 // disparaisse quand le composant est demonte/remonte (ex: switch d'onglets
 // dans HandbookSignatureMobile).
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Eraser } from "lucide-react";
 
@@ -17,16 +18,17 @@ export function SignaturePad({
   onChange: (dataUrl: string | null) => void;
   value?: string | null;
 }) {
+  const t = useTranslations("admin.contracts");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [drawing, setDrawing] = useState(false);
   const [hasInk, setHasInk] = useState(false);
   const [ready, setReady] = useState(false);
   const lastPoint = useRef<{ x: number; y: number } | null>(null);
-  // Marqueur : data URL deja emis par CE composant. Sert a ignorer les
-  // re-renders du parent qui repassent la meme valeur (evite boucle redraw).
+
+
   const lastEmittedRef = useRef<string | null>(null);
 
-  // Resize canvas à la largeur du conteneur
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -54,21 +56,21 @@ export function SignaturePad({
     return () => window.removeEventListener("resize", resize);
   }, []);
 
-  // Sync : `value` (parent) → canvas
-  // - value=null && canvas a de l'encre → clear
-  // - value=dataURL && canvas vide → redraw (restauration apres remount)
-  // - value === lastEmittedRef → no-op (vient de nous, deja a l'ecran)
+
+
+
+
   useEffect(() => {
     if (!ready) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    // Source = nous-meme : ignorer
+
     if (value && value === lastEmittedRef.current) return;
 
     if (!value) {
-      // Clear demande par le parent
+
       if (!hasInk) return;
       const dpr = window.devicePixelRatio || 1;
       ctx.setTransform(1, 0, 0, 1, 0, 0);
@@ -82,7 +84,7 @@ export function SignaturePad({
       lastEmittedRef.current = null;
       return;
     }
-    // Restaurer le trait depuis la data URL
+
     const img = new Image();
     img.onload = () => {
       const dpr = window.devicePixelRatio || 1;
@@ -121,7 +123,7 @@ export function SignaturePad({
     lastPoint.current = p;
     if (!hasInk) {
       setHasInk(true);
-      // Émettre data URL au premier trait
+
       const url = canvas.toDataURL("image/png");
       lastEmittedRef.current = url;
       onChange(url);
@@ -129,7 +131,7 @@ export function SignaturePad({
   };
   const end = () => {
     if (drawing && hasInk) {
-      // Émettre la version finale
+
       const url = canvasRef.current!.toDataURL("image/png");
       lastEmittedRef.current = url;
       onChange(url);
@@ -167,13 +169,13 @@ export function SignaturePad({
         />
         {!hasInk && (
           <span className="pointer-events-none absolute inset-0 flex items-center justify-center text-xs text-muted-foreground italic">
-            Signez ici à la souris ou au doigt
+            {t("signez_ici_souris_doigt")}
           </span>
         )}
       </div>
       <div className="flex justify-between items-center">
         <span className="text-[10px] text-muted-foreground">
-          {hasInk ? "Signature capturée — vous pouvez recommencer si nécessaire" : "En attente de signature"}
+          {hasInk ? t("signature_capturee_vous_pouvez_recommencer") : t("attente_signature")}
         </span>
         <Button type="button" variant="ghost" size="sm" className="h-7 text-[11px]" onClick={clear}>
           <Eraser className="h-3 w-3 mr-1" />Effacer

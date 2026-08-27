@@ -3,6 +3,7 @@
 // Auth : admin avec autorité revue des congés. Scope hiérarchique via getLeavesScope.
 // Query optionnels : ?from=YYYY-MM-DD&to=YYYY-MM-DD&type=&status=
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,22 +29,23 @@ function fmtDate(d: Date | null | undefined): string {
   return d.toLocaleDateString("fr-CA"); // yyyy-mm-dd
 }
 
-const TYPE_LABEL: Record<string, string> = {
-  vacation: "Vacances",
-  sick: "Maladie",
-  parental: "Parental",
-  unpaid: "Sans solde",
-  bereavement: "Décès",
-  other: "Autre",
+const TYPE_KEY: Record<string, string> = {
+  vacation: "exp_vacances",
+  sick: "exp_maladie",
+  parental: "exp_parental",
+  unpaid: "exp_sans_solde",
+  bereavement: "exp_deces",
+  other: "exp_autre",
 };
-const STATUS_LABEL: Record<string, string> = {
-  pending: "En attente",
-  approved: "Approuvé",
-  rejected: "Refusé",
-  cancelled: "Annulé",
+const STATUS_KEY: Record<string, string> = {
+  pending: "exp_en_attente",
+  approved: "exp_approuve",
+  rejected: "exp_refuse",
+  cancelled: "exp_annule",
 };
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -54,7 +56,7 @@ export async function GET(req: NextRequest) {
   const scope = await getLeavesScope(adminId);
   const isReviewer = scope.isHr || (scope.allowedAdminIds?.length ?? 0) > 0;
   if (!isReviewer) {
-    return NextResponse.json({ error: "Permission RH ou manager requise" }, { status: 403 });
+    return NextResponse.json({ error: t("permission_rh_ou_manager_requise") }, { status: 403 });
   }
 
   const url = new URL(req.url);
@@ -105,18 +107,18 @@ export async function GET(req: NextRequest) {
   });
 
   const headerCells = [
-    "Employé",
-    "Email",
-    "Équipe",
-    "Type",
-    "Date début",
-    "Date fin",
-    "Demi-journée",
-    "Jours",
-    "Statut",
-    "Approuvé par",
-    "Demandé le",
-    "Motif",
+    t("exp_h_employe"),
+    t("exp_h_email"),
+    t("exp_h_equipe"),
+    t("exp_h_type"),
+    t("exp_h_date_debut"),
+    t("exp_h_date_fin"),
+    t("exp_h_demi_journee"),
+    t("exp_h_jours"),
+    t("exp_h_statut"),
+    t("exp_h_approuve_par"),
+    t("exp_h_demande_le"),
+    t("exp_h_motif"),
   ];
   const lines: string[] = [headerCells.map((h) => csv(h)).join(SEP)];
 
@@ -125,12 +127,12 @@ export async function GET(req: NextRequest) {
       e.admin.fullName || e.admin.email,
       e.admin.email,
       e.admin.team?.name ?? "",
-      TYPE_LABEL[e.type] ?? e.type,
+      TYPE_KEY[e.type] ? t(TYPE_KEY[e.type]) : e.type,
       fmtDate(e.startDate),
       fmtDate(e.endDate),
       e.halfDay ?? "",
       String(Number(e.daysCount)).replace(".", ","),
-      STATUS_LABEL[e.status] ?? e.status,
+      STATUS_KEY[e.status] ? t(STATUS_KEY[e.status]) : e.status,
       e.reviewer ? (e.reviewer.fullName || e.reviewer.email) : "",
       fmtDate(e.createdAt),
       e.reason ?? "",

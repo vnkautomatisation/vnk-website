@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,9 +16,9 @@ type Slot = {
 };
 
 const MEETING_TYPES = [
-  { key: "video" as const, label: "Video", icon: Video },
-  { key: "phone" as const, label: "Telephone", icon: Phone },
-  { key: "onsite" as const, label: "Sur place", icon: MapPin },
+  { key: "video" as const, labelKey: "type_video", icon: Video },
+  { key: "phone" as const, labelKey: "type_telephone", icon: Phone },
+  { key: "onsite" as const, labelKey: "type_sur_place", icon: MapPin },
 ];
 
 const SERVICES = [
@@ -33,6 +34,7 @@ const SERVICES = [
 type Mandate = { id: number; title: string };
 
 export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?: Mandate[] }) {
+  const t = useTranslations("portal");
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [meetingType, setMeetingType] = useState<"video" | "phone" | "onsite">("video");
@@ -42,13 +44,13 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
 
-  // Convertit une date ISO en date locale YYYY-MM-DD (pas UTC)
+
   const toLocalDate = (iso: string) => {
     const d = new Date(iso);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   };
 
-  // Group slots by date locale
+
   const slotsByDate = useMemo(() => {
     const map = new Map<string, Slot[]>();
     for (const s of slots) {
@@ -61,15 +63,15 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
 
   const dates = Array.from(slotsByDate.keys()).sort();
 
-  // Calendar grid: show current week/month of available dates
+
   const calendarWeeks = useMemo(() => {
     if (dates.length === 0) return [];
     const first = new Date(dates[0]);
     const last = new Date(dates[dates.length - 1]);
-    // Start from Sunday of first week
+
     const start = new Date(first);
     start.setDate(start.getDate() - start.getDay());
-    // End at Saturday of last week
+
     const end = new Date(last);
     end.setDate(end.getDate() + (6 - end.getDay()));
 
@@ -96,7 +98,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
     if (selectedService) parts.push(selectedService.label);
     if (selectedMandate) parts.push(`Mandat: ${selectedMandate.title}`);
     if (subject) parts.push(subject);
-    return parts.join(" — ") || "Rendez-vous";
+    return parts.join(" — ") || t("rendez_vous");
   };
 
   const buildNotes = () => {
@@ -121,27 +123,27 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
           meetingType,
         }),
       });
-      if (!res.ok) throw new Error("Erreur");
-      toast.success("Rendez-vous confirme !");
+      if (!res.ok) throw new Error(t("erreur"));
+      toast.success(t("rendez_vous_confirme"));
       setSelectedSlot(null);
       setSelectedDate(null);
     } catch {
-      toast.error("Erreur lors de la reservation");
+      toast.error(t("erreur_lors_reservation"));
     } finally {
       setSending(false);
     }
   };
 
-  const dayNames = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"];
+  const dayNames = [t("dim"), t("lun"), t("mar"), t("mer"), t("jeu"), t("ven"), t("sam")];
   const today = new Date().toLocaleDateString("sv-SE");
 
   return (
     <div className="grid md:grid-cols-[1fr_340px] lg:grid-cols-[1fr_380px] gap-4 lg:gap-6">
-      {/* Left: Calendar */}
+
       <Card className="border-0 shadow-sm ring-1 ring-border/50">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-5">
-            <h2 className="font-semibold text-lg">Choisissez une date</h2>
+            <h2 className="font-semibold text-lg">{t("choisissez_date")}</h2>
             <span className="text-xs text-muted-foreground">
               {dates.length} jour{dates.length !== 1 ? "s" : ""} disponible{dates.length !== 1 ? "s" : ""}
             </span>
@@ -150,14 +152,14 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
           {dates.length === 0 ? (
             <div className="text-center py-12">
               <CalendarCheck className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Aucun creneau disponible</p>
-              <p className="text-xs text-muted-foreground/60 mt-1">Revenez plus tard ou contactez-nous</p>
+              <p className="text-sm text-muted-foreground">{t("aucun_creneau_disponible")}</p>
+              <p className="text-xs text-muted-foreground/60 mt-1">{t("revenez_plus_tard_contactez_nous")}</p>
             </div>
           ) : (
             <>
-              {/* Calendar grid */}
+
               <div className="border rounded-xl overflow-hidden">
-                {/* Day headers */}
+
                 <div className="grid grid-cols-7 bg-muted/50 border-b">
                   {dayNames.map((d) => (
                     <div key={d} className="text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground py-2">
@@ -166,7 +168,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
                   ))}
                 </div>
 
-                {/* Weeks */}
+
                 {calendarWeeks.map((week, wi) => (
                   <div key={wi} className="grid grid-cols-7 border-b last:border-b-0">
                     {week.map((day) => {
@@ -220,7 +222,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
                 ))}
               </div>
 
-              {/* Time slots for selected date */}
+
               {selectedDate && (
                 <div className="mt-6">
                   <div className="flex items-center gap-2 mb-3">
@@ -255,12 +257,12 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
         </CardContent>
       </Card>
 
-      {/* Right: Booking details */}
+
       <Card className={cn("border-0 shadow-sm ring-1 ring-border/50 h-fit sticky top-20", !selectedSlot && "opacity-60")}>
         <CardContent className="p-6 space-y-5">
-          <h2 className="font-semibold text-lg">Details du rendez-vous</h2>
+          <h2 className="font-semibold text-lg">{t("details_rendez_vous")}</h2>
 
-          {/* Selected slot summary */}
+
           {selectedSlot ? (
             <div className="rounded-xl bg-[#0F2D52]/5 p-4 border border-[#0F2D52]/10">
               <div className="flex items-center gap-2 mb-1">
@@ -280,13 +282,13 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
             </div>
           ) : (
             <div className="rounded-xl bg-muted/30 p-4 border border-dashed text-center">
-              <p className="text-sm text-muted-foreground">Selectionnez une date et un creneau</p>
+              <p className="text-sm text-muted-foreground">{t("selectionnez_date_creneau")}</p>
             </div>
           )}
 
-          {/* Meeting type */}
+
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Type de reunion</label>
+            <label className="text-sm font-semibold">{t("type_reunion")}</label>
             <div className="grid grid-cols-3 gap-2">
               {MEETING_TYPES.map((type) => {
                 const Icon = type.icon;
@@ -302,23 +304,23 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
                     )}
                   >
                     <Icon className={cn("h-5 w-5 mx-auto mb-1", meetingType === type.key ? "text-white" : "text-[#0F2D52]")} />
-                    <span className="text-xs font-medium">{type.label}</span>
+                    <span className="text-xs font-medium">{t(type.labelKey)}</span>
                   </button>
                 );
               })}
             </div>
           </div>
 
-          {/* Mandat lie */}
+
           {mandates.length > 0 && (
             <div className="space-y-2">
-              <label className="text-sm font-semibold">Mandat lie <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+              <label className="text-sm font-semibold">{t("mandat_lie")} <span className="text-muted-foreground font-normal">{t("optionnel")}</span></label>
               <select
                 value={mandateId}
                 onChange={(e) => setMandateId(e.target.value)}
                 className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
               >
-                <option value="">Aucun mandat</option>
+                <option value="">{t("aucun_mandat")}</option>
                 {mandates.map((m) => (
                   <option key={m.id} value={m.id}>{m.title}</option>
                 ))}
@@ -326,52 +328,52 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
             </div>
           )}
 
-          {/* Service */}
+
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Service concerne</label>
+            <label className="text-sm font-semibold">{t("service_concerne")}</label>
             <select
               value={service}
               onChange={(e) => setService(e.target.value)}
               className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
             >
-              <option value="">Selectionnez un service</option>
+              <option value="">{t("selectionnez_service")}</option>
               {SERVICES.map((s) => (
                 <option key={s.value} value={s.value}>{s.label}</option>
               ))}
             </select>
           </div>
 
-          {/* Subject */}
+
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Sujet</label>
+            <label className="text-sm font-semibold">{t("sujet")}</label>
             <input
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              placeholder="Ex. Discussion projet PLC"
+              placeholder={t("ex_discussion_projet_plc")}
               className="w-full h-11 px-3 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all"
             />
           </div>
 
-          {/* Notes */}
+
           <div className="space-y-2">
-            <label className="text-sm font-semibold">Notes <span className="text-muted-foreground font-normal">(optionnel)</span></label>
+            <label className="text-sm font-semibold">{t("notes")} <span className="text-muted-foreground font-normal">{t("optionnel")}</span></label>
             <textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
-              placeholder="Decrivez brievement votre besoin ou les points a discuter..."
+              placeholder={t("decrivez_brievement_besoin_points_discuter")}
               rows={3}
               className="w-full px-3 py-2 rounded-lg border bg-background text-sm focus:ring-2 focus:ring-[#0F2D52]/30 focus:border-[#0F2D52] outline-none transition-all resize-none"
             />
           </div>
 
-          {/* Book button */}
+
           <Button
             className="w-full h-11 bg-[#0F2D52] hover:bg-[#1a3a66] shadow-sm"
             disabled={!selectedSlot || sending}
             onClick={handleBook}
           >
             <CalendarCheck className="h-4 w-4 mr-2" />
-            {sending ? "Reservation..." : "Confirmer le rendez-vous"}
+            {sending ? t("reservation") : t("confirmer_rendez_vous")}
           </Button>
         </CardContent>
       </Card>

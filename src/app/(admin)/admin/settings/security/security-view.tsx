@@ -38,11 +38,11 @@ type AdminRow = {
 
 type Tab = "policy" | "events" | "accounts";
 
-const SEVERITY_META: Record<string, { color: string; label: string }> = {
-  critical: { color: "bg-red-600", label: "Critique" },
-  warning: { color: "bg-amber-500", label: "Avertissement" },
-  info: { color: "bg-blue-500", label: "Info" },
-  success: { color: "bg-emerald-500", label: "Succès" },
+const SEVERITY_META: Record<string, { color: string; labelKey: string }> = {
+  critical: { color: "bg-red-600", labelKey: "sev_critical" },
+  warning: { color: "bg-amber-500", labelKey: "sev_warning" },
+  info: { color: "bg-blue-500", labelKey: "sev_info" },
+  success: { color: "bg-emerald-500", labelKey: "sev_success" },
 };
 
 export function SecurityView({
@@ -55,12 +55,13 @@ export function SecurityView({
   currentAdminId: number;
   isSuperAdmin: boolean;
 }) {
+  const t = useTranslations("admin.security");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("policy");
   const [pending, startTransition] = useTransition();
 
-  // Politique
+
   const [minPasswordLength, setMinPasswordLength] = useState(policy.minPasswordLength || "12");
   const [requireUppercase, setRequireUppercase] = useState(policy.requireUppercase !== "false");
   const [requireDigits, setRequireDigits] = useState(policy.requireDigits !== "false");
@@ -100,8 +101,8 @@ export function SecurityView({
         alertOnNewDevice, alertOnFailedLogin, alertOnPasswordChange, alertOnRoleChange,
         ipWhitelistEnabled, ipWhitelist,
       });
-      if (r.success) { toast.success("Politique enregistrée"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("politique_enregistree")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
     });
   };
 
@@ -121,8 +122,8 @@ export function SecurityView({
   const handleLock = (id: number, minutes: number) => {
     startTransition(async () => {
       const r = await lockAdminAction({ id, minutes });
-      if (r.success) { toast.success("Compte bloqué"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("compte_bloque")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
       setConfirmLock(null);
     });
   };
@@ -130,15 +131,15 @@ export function SecurityView({
   const handleUnlock = (id: number) => {
     startTransition(async () => {
       const r = await unlockAdminAction({ id });
-      if (r.success) { toast.success("Compte débloqué"); router.refresh(); }
-      else toast.error(r.error || "Erreur");
+      if (r.success) { toast.success(t("compte_debloque")); router.refresh(); }
+      else toast.error(r.error || t("erreur"));
     });
   };
 
   const TABS: { key: Tab; label: string; icon: React.ComponentType<{ className?: string }>; count?: number }[] = [
-    { key: "policy", label: "Politique", icon: Shield },
-    { key: "events", label: "Événements", icon: AlertTriangle, count: recentEvents.length },
-    { key: "accounts", label: "Comptes", icon: Lock, count: allAdmins.length },
+    { key: "policy", label: t("politique"), icon: Shield },
+    { key: "events", label: t("evenements"), icon: AlertTriangle, count: recentEvents.length },
+    { key: "accounts", label: t("comptes"), icon: Lock, count: allAdmins.length },
   ];
 
   return (
@@ -149,13 +150,13 @@ export function SecurityView({
           <Shield className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Sécurité</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("securite")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Politique globale, événements critiques et gestion des comptes
+            {t("politique_globale_evenements_critiques_gestion")}
           </p>
         </div>
         {!isSuperAdmin && (
-          <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">Lecture seule</Badge>
+          <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">{t("lecture_seule")}</Badge>
         )}
       </div>
 
@@ -181,39 +182,39 @@ export function SecurityView({
         </div>
       </div>
 
-      {/* POLITIQUE */}
+
       {tab === "policy" && (
         <div className="space-y-4">
           <Card>
             <CardContent className="p-5 space-y-4">
-              <H icon={KeyRound} title="Politique des mots de passe" />
+              <H icon={KeyRound} title={t("politique_mots_passe")} />
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <F label="Longueur minimale">
+                <F label={t("longueur_minimale")}>
                   <Input type="number" min="8" max="128" value={minPasswordLength} onChange={(e) => setMinPasswordLength(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
-                <F label="Historique (nb derniers)">
+                <F label={t("historique_nb_derniers")}>
                   <Input type="number" min="0" max="20" value={passwordHistorySize} onChange={(e) => setPasswordHistorySize(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
-                <F label="Expiration (jours, 0=jamais)">
+                <F label={t("expiration_jours_0_jamais")}>
                   <Input type="number" min="0" max="730" value={passwordExpiryDays} onChange={(e) => setPasswordExpiryDays(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
               </div>
               <div className="space-y-2">
-                <Toggle label="Exiger une majuscule" checked={requireUppercase} onChange={setRequireUppercase} disabled={!isSuperAdmin} />
-                <Toggle label="Exiger un chiffre" checked={requireDigits} onChange={setRequireDigits} disabled={!isSuperAdmin} />
-                <Toggle label="Exiger un caractère spécial" checked={requireSymbols} onChange={setRequireSymbols} disabled={!isSuperAdmin} />
+                <Toggle label={t("exiger_majuscule")} checked={requireUppercase} onChange={setRequireUppercase} disabled={!isSuperAdmin} />
+                <Toggle label={t("exiger_chiffre")} checked={requireDigits} onChange={setRequireDigits} disabled={!isSuperAdmin} />
+                <Toggle label={t("exiger_caractere_special")} checked={requireSymbols} onChange={setRequireSymbols} disabled={!isSuperAdmin} />
               </div>
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-5 space-y-4">
-              <H icon={Shield} title="Authentification à 2 facteurs (2FA)" />
+              <H icon={Shield} title={t("authentification_2_facteurs_2fa")} />
               <div className="space-y-2">
-                <Toggle label="Exiger 2FA pour tous les administrateurs" checked={require2FAForAdmins} onChange={setRequire2FAForAdmins} disabled={!isSuperAdmin} description="Les admins sans 2FA seront forcés de l'activer à la prochaine connexion" />
-                <Toggle label="Exiger 2FA pour les super-administrateurs" checked={require2FAForSuperAdmins} onChange={setRequire2FAForSuperAdmins} disabled={!isSuperAdmin} description="Recommandé : toujours activer" />
+                <Toggle label={t("exiger_2fa_tous_administrateurs")} checked={require2FAForAdmins} onChange={setRequire2FAForAdmins} disabled={!isSuperAdmin} description={t("admins_sans_2fa_seront_forces")} />
+                <Toggle label={t("exiger_2fa_super_administrateurs")} checked={require2FAForSuperAdmins} onChange={setRequire2FAForSuperAdmins} disabled={!isSuperAdmin} description={t("recommande_toujours_activer")} />
               </div>
-              <F label="Durée de confiance des appareils (jours)">
+              <F label={t("duree_confiance_appareils_jours")}>
                 <Input type="number" min="1" max="365" value={trustedDeviceDays} onChange={(e) => setTrustedDeviceDays(e.target.value)} disabled={!isSuperAdmin} />
               </F>
             </CardContent>
@@ -223,27 +224,27 @@ export function SecurityView({
 
           <Card>
             <CardContent className="p-5 space-y-4">
-              <H icon={Lock} title="Sessions & verrouillage" />
+              <H icon={Lock} title={t("sessions_verrouillage")} />
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <F label="Durée session max (heures)">
+                <F label={t("duree_session_max_heures")}>
                   <Input type="number" min="1" max="720" value={sessionMaxAgeHours} onChange={(e) => setSessionMaxAgeHours(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
-                <F label="Sessions concurrentes max">
+                <F label={t("sessions_concurrentes_max")}>
                   <Input type="number" min="1" max="50" value={maxConcurrentSessions} onChange={(e) => setMaxConcurrentSessions(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
-                <F label="Tentatives échouées avant blocage">
+                <F label={t("tentatives_echouees_avant_blocage")}>
                   <Input type="number" min="3" max="20" value={maxFailedAttempts} onChange={(e) => setMaxFailedAttempts(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
-                <F label="Durée du blocage (minutes)">
+                <F label={t("duree_blocage_minutes")}>
                   <Input type="number" min="1" max="1440" value={lockoutMinutes} onChange={(e) => setLockoutMinutes(e.target.value)} disabled={!isSuperAdmin} />
                 </F>
               </div>
               {isSuperAdmin && (
                 <div className="rounded-md border border-red-200 bg-red-50 p-3">
-                  <p className="text-sm font-semibold text-red-900 mb-2">Action immédiate</p>
+                  <p className="text-sm font-semibold text-red-900 mb-2">{t("action_immediate")}</p>
                   <Button variant="destructive" size="sm" onClick={() => setConfirmForceLogout(true)}>
                     <LogOut className="h-3.5 w-3.5 mr-1.5" />
-                    Déconnecter tous les autres admins
+                    {t("deconnecter_tous_autres_admins")}
                   </Button>
                 </div>
               )}
@@ -252,22 +253,22 @@ export function SecurityView({
 
           <Card>
             <CardContent className="p-5 space-y-3">
-              <H icon={AlertTriangle} title="Alertes par courriel" />
-              <Toggle label="Connexion depuis un nouvel appareil" checked={alertOnNewDevice} onChange={setAlertOnNewDevice} disabled={!isSuperAdmin} />
-              <Toggle label="Tentative de connexion échouée" checked={alertOnFailedLogin} onChange={setAlertOnFailedLogin} disabled={!isSuperAdmin} />
-              <Toggle label="Changement de mot de passe" checked={alertOnPasswordChange} onChange={setAlertOnPasswordChange} disabled={!isSuperAdmin} />
-              <Toggle label="Changement de rôle" checked={alertOnRoleChange} onChange={setAlertOnRoleChange} disabled={!isSuperAdmin} />
+              <H icon={AlertTriangle} title={t("alertes_courriel")} />
+              <Toggle label={t("connexion_depuis_nouvel_appareil")} checked={alertOnNewDevice} onChange={setAlertOnNewDevice} disabled={!isSuperAdmin} />
+              <Toggle label={t("tentative_connexion_echouee")} checked={alertOnFailedLogin} onChange={setAlertOnFailedLogin} disabled={!isSuperAdmin} />
+              <Toggle label={t("changement_mot_passe")} checked={alertOnPasswordChange} onChange={setAlertOnPasswordChange} disabled={!isSuperAdmin} />
+              <Toggle label={t("changement_role")} checked={alertOnRoleChange} onChange={setAlertOnRoleChange} disabled={!isSuperAdmin} />
             </CardContent>
           </Card>
 
           <Card>
             <CardContent className="p-5 space-y-3">
-              <H icon={Globe} title="Liste blanche d'adresses IP" />
-              <Toggle label="Activer la liste blanche IP" checked={ipWhitelistEnabled} onChange={setIpWhitelistEnabled} disabled={!isSuperAdmin} description="Bloque toute connexion admin depuis une IP non listée" />
+              <H icon={Globe} title={t("liste_blanche_adresses_ip")} />
+              <Toggle label={t("activer_liste_blanche_ip")} checked={ipWhitelistEnabled} onChange={setIpWhitelistEnabled} disabled={!isSuperAdmin} description={t("bloque_toute_connexion_admin_depuis")} />
               {ipWhitelistEnabled && (
                 <div>
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
-                    Adresses autorisées (une par ligne, IPv4 ou CIDR)
+                    {t("adresses_autorisees_ligne_ipv4_cidr")}
                   </Label>
                   <Textarea
                     value={ipWhitelist}
@@ -278,7 +279,7 @@ export function SecurityView({
                     disabled={!isSuperAdmin}
                   />
                   <p className="text-[10px] text-amber-700 mt-1">
-                    ⚠ Si vous activez ceci sans ajouter votre IP, vous perdrez l&apos;accès. Ajoutez votre IP en premier.
+                    {t("si_vous_activez_ceci_sans")}
                   </p>
                 </div>
               )}
@@ -289,20 +290,20 @@ export function SecurityView({
             <div className="sticky bottom-4 z-30">
               <Button onClick={savePolicy} disabled={pending} className="w-full bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-lg">
                 <Save className="h-4 w-4 mr-1.5" />
-                {pending ? "Enregistrement..." : "Enregistrer la politique"}
+                {pending ? t("enregistrement") : t("enregistrer_politique")}
               </Button>
             </div>
           )}
         </div>
       )}
 
-      {/* ÉVÉNEMENTS */}
+
       {tab === "events" && (
         <Card>
           <div className="divide-y">
             {recentEvents.length === 0 ? (
               <p className="p-8 text-center text-sm text-muted-foreground">
-                Aucun événement critique récent. ✓
+                {t("aucun_evenement_critique_recent")}
               </p>
             ) : (
               recentEvents.map((e) => {
@@ -314,7 +315,7 @@ export function SecurityView({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge className={cn("text-[10px] text-white", sev.color)}>{sev.label}</Badge>
+                        <Badge className={cn("text-[10px] text-white", sev.color)}>{t(sev.labelKey)}</Badge>
                         <code className="text-[10px] font-mono text-muted-foreground">{e.type}</code>
                         {e.admin && <span className="text-xs text-muted-foreground">· {e.admin.fullName || e.admin.email}</span>}
                       </div>
@@ -333,7 +334,7 @@ export function SecurityView({
         </Card>
       )}
 
-      {/* COMPTES */}
+
       {tab === "accounts" && (
         <Card>
           <div className="divide-y">
@@ -348,7 +349,7 @@ export function SecurityView({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <p className="font-medium text-sm">{a.fullName || a.email}</p>
-                      {isMe && <Badge variant="secondary" className="text-[10px]">Vous</Badge>}
+                      {isMe && <Badge variant="secondary" className="text-[10px]">{t("vous")}</Badge>}
                       {a.customRole && (
                         <Badge variant="outline" className="text-[10px]" style={{ borderColor: a.customRole.color ?? undefined, color: a.customRole.color ?? undefined }}>
                           {a.customRole.name}
@@ -357,13 +358,13 @@ export function SecurityView({
                       {a.twoFactorEnabled ? (
                         <Badge className="text-[10px] bg-emerald-600 hover:bg-emerald-600">2FA</Badge>
                       ) : (
-                        <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">Sans 2FA</Badge>
+                        <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">{t("sans_2fa")}</Badge>
                       )}
-                      {isLocked && <Badge className="text-[10px] bg-red-600 hover:bg-red-600">Bloqué</Badge>}
+                      {isLocked && <Badge className="text-[10px] bg-red-600 hover:bg-red-600">{t("bloque")}</Badge>}
                       {a.failedLoginAttempts >= 3 && <Badge variant="outline" className="text-[10px] text-amber-700">{a.failedLoginAttempts} tentatives</Badge>}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {a.email} · {a.lastLogin ? `Dernière connexion ${new Date(a.lastLogin).toLocaleDateString("fr-CA")}` : "Jamais connecté"}
+                      {a.email} · {a.lastLogin ? `Dernière connexion ${new Date(a.lastLogin).toLocaleDateString("fr-CA")}` : t("jamais_connecte")}
                       {isLocked && a.lockedUntil && ` · Bloqué jusqu'au ${new Date(a.lockedUntil).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}`}
                     </p>
                   </div>
@@ -371,8 +372,7 @@ export function SecurityView({
                     <div className="flex gap-1">
                       {isLocked ? (
                         <Button size="sm" variant="outline" onClick={() => handleUnlock(a.id)} disabled={pending}>
-                          <Unlock className="h-3.5 w-3.5 mr-1.5" />Débloquer
-                        </Button>
+                          <Unlock className="h-3.5 w-3.5 mr-1.5" />{t("security_view_debloquer")}</Button>
                       ) : (
                         <Button size="sm" variant="outline" onClick={() => setConfirmLock({ id: a.id, email: a.email })}>
                           <UserX className="h-3.5 w-3.5 mr-1.5" />Bloquer
@@ -390,9 +390,9 @@ export function SecurityView({
       <ConfirmDialog
         open={confirmForceLogout}
         onOpenChange={setConfirmForceLogout}
-        title="Déconnecter tous les autres admins ?"
-        description="Tous les autres administrateurs seront déconnectés immédiatement et devront se reconnecter. Votre propre session reste active."
-        confirmLabel="Déconnecter tout le monde"
+        title={t("deconnecter_tous_autres_admins_2")}
+        description={t("tous_autres_administrateurs_seront_deconnectes")}
+        confirmLabel={t("deconnecter_tout_monde")}
         variant="destructive"
         onConfirm={handleForceLogout}
       />
@@ -400,8 +400,8 @@ export function SecurityView({
         open={!!confirmLock}
         onOpenChange={(open) => !open && setConfirmLock(null)}
         title={`Bloquer ${confirmLock?.email} ?`}
-        description="Le compte sera bloqué pendant 60 minutes (durée par défaut). Toutes ses sessions seront fermées."
-        confirmLabel="Bloquer 60 min"
+        description={t("compte_sera_bloque_pendant_60")}
+        confirmLabel={t("bloquer_60_min")}
         variant="destructive"
         onConfirm={() => confirmLock && handleLock(confirmLock.id, 60)}
       />
@@ -448,6 +448,7 @@ type Passkey = {
 };
 
 function PasskeysSection() {
+  const t = useTranslations("admin.security");
   const tc = useTranslations("common");
   const [passkeys, setPasskeys] = React.useState<Passkey[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -481,16 +482,16 @@ function PasskeysSection() {
 
   const register = async () => {
     if (!("credentials" in navigator)) {
-      toast.error("Votre navigateur ne supporte pas les passkeys");
+      toast.error(t("navigateur_ne_supporte_pas_passkeys"));
       return;
     }
     setRegistering(true);
     try {
-      const label = prompt("Nom de l'appareil (ex: « iPhone Yan », « YubiKey 5 ») :");
+      const label = prompt(t("nom_de_l_appareil_prompt"));
       if (!label) { setRegistering(false); return; }
 
       const begin = await fetch("/api/auth/passkey/register-begin", { method: "POST" });
-      if (!begin.ok) throw new Error("Init impossible");
+      if (!begin.ok) throw new Error(t("init_impossible"));
       const { publicKey } = await begin.json();
 
       const cred = await navigator.credentials.create({
@@ -501,7 +502,7 @@ function PasskeysSection() {
           excludeCredentials: (publicKey.excludeCredentials || []).map((c: { id: string; type: "public-key" }) => ({ ...c, id: b64uToBuf(c.id) })),
         },
       }) as PublicKeyCredential | null;
-      if (!cred) throw new Error("Annulé");
+      if (!cred) throw new Error(t("annule"));
 
       const resp = cred.response as AuthenticatorAttestationResponse;
       const finish = await fetch("/api/auth/passkey/register-finish", {
@@ -518,44 +519,41 @@ function PasskeysSection() {
         }),
       });
       const data = await finish.json();
-      if (!finish.ok || !data.success) throw new Error(data.error || "Échec");
-      toast.success("Passkey ajoutée");
+      if (!finish.ok || !data.success) throw new Error(data.error || t("echec"));
+      toast.success(t("passkey_ajoutee"));
       load();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur passkey");
+      toast.error(e instanceof Error ? e.message : t("erreur_passkey"));
     } finally { setRegistering(false); }
   };
 
   const remove = async (id: number) => {
-    if (!confirm("Supprimer cette passkey ?")) return;
+    if (!confirm(t("supprimer_passkey"))) return;
     const r = await fetch(`/api/auth/passkey/list?id=${id}`, { method: "DELETE" });
-    if (r.ok) { toast.success("Supprimée"); load(); }
-    else toast.error("Erreur");
+    if (r.ok) { toast.success(t("supprimee")); load(); }
+    else toast.error(t("erreur"));
   };
 
   return (
     <Card>
       <CardContent className="p-5 space-y-4">
-        <H icon={Shield} title="Passkeys (sans mot de passe)" />
-        <p className="text-xs text-muted-foreground">
-          Connectez-vous sans mot de passe via Touch ID, Face ID, Windows Hello, ou une clé physique (YubiKey).
-          Plus sûr et plus rapide que 2FA OTP.
-        </p>
+        <H icon={Shield} title={t("passkeys_sans_mot_passe")} />
+        <p className="text-xs text-muted-foreground">{t("security_view_connectez_vous_sans_mot_de_passe_via")}</p>
         <Button onClick={register} disabled={registering} size="sm">
           <Shield className="h-3.5 w-3.5 mr-1.5" />
-          {registering ? "Configuration…" : "Ajouter une passkey"}
+          {registering ? t("configuration") : t("ajouter_passkey")}
         </Button>
         {loading ? (
           <p className="text-sm text-muted-foreground">{tc("loading")}</p>
         ) : passkeys.length === 0 ? (
-          <p className="text-sm text-muted-foreground italic">Aucune passkey enregistrée.</p>
+          <p className="text-sm text-muted-foreground italic">{t("aucune_passkey_enregistree")}</p>
         ) : (
           <div className="space-y-2">
             {passkeys.map((p) => (
               <div key={p.id} className="flex items-center gap-3 p-2.5 rounded-md border">
                 <Shield className="h-4 w-4 text-[#0F2D52] shrink-0" />
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{p.deviceLabel || "Appareil sans nom"}</p>
+                  <p className="text-sm font-medium">{p.deviceLabel || t("appareil_sans_nom")}</p>
                   <p className="text-[11px] text-muted-foreground">
                     Ajoutée le {new Date(p.createdAt).toLocaleDateString("fr-CA")}
                     {p.lastUsedAt && ` · Dernière utilisation ${new Date(p.lastUsedAt).toLocaleDateString("fr-CA")}`}
@@ -563,10 +561,10 @@ function PasskeysSection() {
                   </p>
                 </div>
                 {p.backupEligible && (
-                  <Badge variant="outline" className="text-[10px]">Synchronisée</Badge>
+                  <Badge variant="outline" className="text-[10px]">{t("synchronisee")}</Badge>
                 )}
                 <Button variant="ghost" size="sm" className="h-7 text-xs hover:text-destructive" onClick={() => remove(p.id)}>
-                  Retirer
+                  {t("retirer")}
                 </Button>
               </div>
             ))}

@@ -106,29 +106,29 @@ type Props = {
 
 // ─── Helpers UI ───────────────────────────────────────────
 
-const DOC_TYPE_OPTIONS: { value: Exclude<ImportDocumentType, "unknown">; label: string }[] = [
-  { value: "contract", label: "Contrat" },
-  { value: "legal", label: "Document légal" },
-  { value: "policy", label: "Politique" },
-  { value: "letter", label: "Lettre" },
-  { value: "onboarding", label: "Accusé de réception / onboarding" },
+const DOC_TYPE_OPTIONS: { value: Exclude<ImportDocumentType, "unknown">; labelKey: string }[] = [
+  { value: "contract", labelKey: "doc_contract" },
+  { value: "legal", labelKey: "doc_legal" },
+  { value: "policy", labelKey: "doc_policy" },
+  { value: "letter", labelKey: "doc_letter" },
+  { value: "onboarding", labelKey: "doc_onboarding" },
 ];
 
-const CATEGORY_LABEL: Record<DetectedCategory, string> = {
-  name: "Noms",
-  email: "Courriels",
-  phone: "Téléphones",
-  address: "Adresses",
-  salary: "Salaires",
-  rate: "Taux horaires",
-  date: "Dates",
-  duration: "Durées",
-  percent: "Pourcentages",
-  company: "Entreprises",
-  neq: "Numéros NEQ",
-  position: "Postes",
-  hours: "Heures / semaine",
-  other: "Autres",
+const CATEGORY_KEY: Record<DetectedCategory, string> = {
+  name: "cat_name",
+  email: "cat_email",
+  phone: "cat_phone",
+  address: "cat_address",
+  salary: "cat_salary",
+  rate: "cat_rate",
+  date: "cat_date",
+  duration: "cat_duration",
+  percent: "cat_percent",
+  company: "cat_company",
+  neq: "cat_neq",
+  position: "cat_position",
+  hours: "cat_hours",
+  other: "cat_other",
 };
 
 const CATEGORY_ICON: Record<DetectedCategory, React.ComponentType<{ className?: string }>> = {
@@ -152,13 +152,14 @@ const ACCEPTED_EXTENSIONS = ".txt,.pdf,.docx";
 
 // Variables connues -> label pour les dropdowns d'alternatives
 function variableLabel(key: string): string {
-  // Map minimaliste : on prend juste la cle sans accolades
+
   return key.replace(/[{}]/g, "");
 }
 
 // ─── Composant principal ──────────────────────────────────
 
 export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
+  const t = useTranslations("admin.library");
   const tc = useTranslations("common");
   const [tab, setTab] = useState<"paste" | "upload">("paste");
   const [pasted, setPasted] = useState("");
@@ -167,19 +168,19 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Edition post-analyse
+
   const [editedTitle, setEditedTitle] = useState("");
   const [editedType, setEditedType] = useState<Exclude<ImportDocumentType, "unknown">>(
     "contract"
   );
-  // Map index -> { accepted, chosenVariable }
+
   const [decisions, setDecisions] = useState<
     Record<number, { accepted: boolean; chosenVariable: string }>
   >({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Reset complet quand le modal s'ouvre/ferme
+
   useEffect(() => {
     if (!open) return;
     setTab("paste");
@@ -193,7 +194,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
     setDecisions({});
   }, [open]);
 
-  // Quand un resultat arrive, pre-remplit decisions + titre + type
+
   useEffect(() => {
     if (!result) return;
     setEditedTitle(result.suggestedTitle);
@@ -212,7 +213,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
     setDecisions(next);
   }, [result]);
 
-  // ─── Actions ────────────────────────────────────────────
+
 
   const handleAnalyze = async () => {
     setError(null);
@@ -221,7 +222,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
       let res: Response;
       if (tab === "paste") {
         if (!pasted.trim() || pasted.trim().length < 20) {
-          throw new Error("Collez au moins 20 caractères de texte avant d'analyser.");
+          throw new Error(t("collez_moins_20_caracteres_texte"));
         }
         res = await fetch("/api/admin/document-templates/import", {
           method: "POST",
@@ -231,7 +232,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
         });
       } else {
         if (!file) {
-          throw new Error("Choisissez un fichier à téléverser.");
+          throw new Error(t("choisissez_fichier_televerser"));
         }
         const fd = new FormData();
         fd.append("file", file);
@@ -248,7 +249,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
       const data = (await res.json()) as ImportResult;
       setResult(data);
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Erreur lors de l'analyse";
+      const msg = e instanceof Error ? e.message : t("erreur_lors_analyse");
       setError(msg);
       toast.error(msg);
     } finally {
@@ -259,12 +260,12 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
   const handleFilePicked = (f: File | undefined) => {
     if (!f) return;
     if (f.size > 10 * 1024 * 1024) {
-      toast.error("Fichier trop volumineux (max 10 Mo).");
+      toast.error(t("fichier_trop_volumineux_max_10"));
       return;
     }
     const ext = f.name.toLowerCase().split(".").pop();
     if (!["txt", "pdf", "docx"].includes(ext ?? "")) {
-      toast.error("Format non supporté. Utilisez .txt, .pdf ou .docx.");
+      toast.error(t("format_non_supporte_txt_pdf_docx"));
       return;
     }
     setFile(f);
@@ -276,7 +277,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
     handleFilePicked(f);
   };
 
-  // ─── Substitutions appliquees ──────────────────────────
+
 
   const acceptedSubstitutions = useMemo(() => {
     if (!result) return [];
@@ -292,18 +293,18 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
   const finalMarkdown = useMemo(() => {
     if (!result) return "";
     if (acceptedSubstitutions.length === 0) return result.markdown;
-    // Applique sur le texte cleane (rawText) puis re-structure
+
     const substituted = applySubstitutions(result.rawText, acceptedSubstitutions);
-    // On essaie de garder la structure markdown de result.markdown :
-    // pour ca on applique aussi sur le markdown si les positions correspondent
-    // mais comme markdown peut differer du rawText (ex: "# titre"),
-    // l'approche la plus sure : on substitue dans markdown ET dans rawText
-    // pour les detections dont le match exact apparait encore.
+
+
+
+
+
     return applyByMatchString(result.markdown, acceptedSubstitutions) || substituted;
   }, [result, acceptedSubstitutions]);
 
   const previewHighlighted = useMemo(() => {
-    // Surligne les variables {{...}} en bleu pour le preview
+
     return finalMarkdown.replace(
       /\{\{\s*([\w.]+)\s*\}\}/g,
       (m) =>
@@ -316,7 +317,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
   const handleImport = () => {
     if (!result) return;
     if (!editedTitle.trim()) {
-      toast.error("Le titre est requis.");
+      toast.error(t("titre_requis"));
       return;
     }
     onImported({
@@ -328,7 +329,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
     onClose();
   };
 
-  // ─── Groupement par categorie pour l'UI ─────────────────
+
 
   const groupedDetections = useMemo(() => {
     if (!result) return [];
@@ -347,21 +348,18 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !analyzing && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-5xl sm:h-auto sm:max-h-[95vh] sm:rounded-lg">
-        {/* Header navy gradient */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
               <Wand2 className="h-4 w-4 shrink-0" />
-              <span className="truncate">Importer un document</span>
+              <span className="truncate">{t("importer_document")}</span>
             </DialogTitle>
-            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
-              Collez un document existant ou téléversez-le. Le système détecte
-              automatiquement les valeurs à transformer en variables dynamiques.
-            </DialogDescription>
+            <DialogDescription className="text-white/80 text-[11px] sm:text-xs">{t("import_template_dialog_collez_un_document_existant_ou_televersez_le")}</DialogDescription>
           </DialogHeader>
         </div>
 
-        {/* Body */}
+
         <div className="flex-1 overflow-y-auto min-h-0">
           {!hasResult ? (
             <div className="p-4 sm:p-5">
@@ -369,30 +367,30 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                 <TabsList className="grid grid-cols-2 w-full max-w-md">
                   <TabsTrigger value="paste" className="gap-1.5">
                     <ClipboardPaste className="h-3.5 w-3.5" />
-                    Coller du texte
+                    {t("coller_texte")}
                   </TabsTrigger>
                   <TabsTrigger value="upload" className="gap-1.5">
                     <Upload className="h-3.5 w-3.5" />
-                    Téléverser un fichier
+                    {t("televerser_fichier")}
                   </TabsTrigger>
                 </TabsList>
 
                 <TabsContent value="paste" className="space-y-3">
                   <FormSection
                     icon={ClipboardPaste}
-                    title="Coller le contenu"
-                    description="Copiez le texte d'un contrat, d'une lettre ou d'une politique existante."
+                    title={t("coller_contenu")}
+                    description={t("copiez_texte_contrat_lettre_politique")}
                   >
                     <Textarea
                       value={pasted}
                       onChange={(e) => setPasted(e.target.value)}
                       rows={14}
-                      placeholder="Collez ici le texte du document à importer…"
+                      placeholder={t("collez_ici_texte_document_importer")}
                       className="font-mono text-xs"
                     />
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
                       <span>{pasted.length.toLocaleString("fr-CA")} caractères</span>
-                      <span>Minimum 20 caractères</span>
+                      <span>{t("minimum_20_caracteres")}</span>
                     </div>
                   </FormSection>
                 </TabsContent>
@@ -400,8 +398,8 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                 <TabsContent value="upload" className="space-y-3">
                   <FormSection
                     icon={Upload}
-                    title="Téléverser un fichier"
-                    description="Formats acceptés : .txt, .pdf ou .docx — 10 Mo maximum."
+                    title={t("televerser_fichier")}
+                    description={t("formats_acceptes_txt_pdf_docx")}
                   >
                     <input
                       ref={fileInputRef}
@@ -419,7 +417,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                       >
                         <Upload className="h-7 w-7 text-muted-foreground" />
                         <p className="text-sm font-medium">
-                          Cliquez ou déposez un fichier ici
+                          {t("cliquez_deposez_fichier_ici")}
                         </p>
                         <p className="text-[11px] text-muted-foreground">
                           .txt · .pdf · .docx — max 10 Mo
@@ -434,7 +432,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                             {(file.size / 1024).toFixed(1)} ko
                           </p>
                         </div>
-                        <ActionTooltip label="Retirer le fichier">
+                        <ActionTooltip label={t("retirer_fichier")}>
                           <Button
                             type="button"
                             variant="ghost"
@@ -460,14 +458,14 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
             </div>
           ) : (
             <div className="p-4 sm:p-5 grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
-              {/* Colonne 1 : metadonnees + variables */}
+
               <div className="space-y-5 min-w-0">
-                <FormSection icon={Sparkles} title="Détection automatique">
+                <FormSection icon={Sparkles} title={t("detection_automatique")}>
                   <Field
-                    label="Type de document détecté"
+                    label={t("type_document_detecte")}
                     hint={
                       result?.suggestedDocumentType === "unknown"
-                        ? "Aucun type évident détecté — choisissez manuellement."
+                        ? t("aucun_type_evident_detecte_choisissez")
                         : undefined
                     }
                   >
@@ -483,33 +481,33 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                       <SelectContent>
                         {DOC_TYPE_OPTIONS.map((o) => (
                           <SelectItem key={o.value} value={o.value}>
-                            {o.label}
+                            {t(o.labelKey)}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </Field>
-                  <Field label="Titre suggéré" required>
+                  <Field label={t("titre_suggere")} required>
                     <Input
                       value={editedTitle}
                       onChange={(e) => setEditedTitle(e.target.value)}
-                      placeholder="Titre du modèle"
+                      placeholder={t("titre_modele")}
                     />
                   </Field>
                   <div className="grid grid-cols-3 gap-2 text-[11px]">
                     <Stat
                       icon={FileText}
-                      label="Mots"
+                      label={t("mots")}
                       value={result?.metadata.wordCount.toLocaleString("fr-CA") ?? "0"}
                     />
                     <Stat
                       icon={Sparkles}
-                      label="Variables"
+                      label={t("variables")}
                       value={String(totalDetected)}
                     />
                     <Stat
                       icon={CheckCircle2}
-                      label="Acceptées"
+                      label={t("acceptees")}
                       value={`${totalAccepted}/${totalDetected}`}
                     />
                   </div>
@@ -520,13 +518,13 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                   title={`Variables détectées (${totalDetected})`}
                   description={
                     totalDetected === 0
-                      ? "Aucune valeur remplaçable détectée — le contenu sera importé tel quel."
-                      : "Décochez les substitutions que vous ne souhaitez pas appliquer."
+                      ? t("aucune_valeur_remplacable_detectee_contenu")
+                      : t("decochez_substitutions_vous_ne_souhaitez")
                   }
                 >
                   {groupedDetections.length === 0 ? (
                     <div className="rounded-md border border-dashed border-input bg-muted/20 p-4 text-center text-xs text-muted-foreground">
-                      Aucune détection.
+                      {t("aucune_detection")}
                     </div>
                   ) : (
                     <div className="space-y-3 max-h-[42vh] overflow-y-auto pr-1">
@@ -537,7 +535,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                             <div className="flex items-center gap-2 border-b bg-muted/30 px-2.5 py-1.5">
                               <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />
                               <span className="text-[11px] font-semibold uppercase tracking-wider text-[#0F2D52]">
-                                {CATEGORY_LABEL[cat]} ({items.length})
+                                {t(CATEGORY_KEY[cat])} ({items.length})
                               </span>
                             </div>
                             <ul className="divide-y">
@@ -579,12 +577,12 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                 </FormSection>
               </div>
 
-              {/* Colonne 2 : preview markdown final */}
+
               <div className="space-y-3 min-w-0">
                 <FormSection
                   icon={Eye}
-                  title="Aperçu Markdown final"
-                  description="Le contenu importé avec les variables appliquées. Les substitutions sont surlignées en bleu."
+                  title={t("apercu_markdown_final")}
+                  description={t("contenu_importe_variables_appliquees_substitutions")}
                 >
                   <div className="rounded-md border bg-card max-h-[60vh] overflow-y-auto p-4">
                     {finalMarkdown.trim() ? (
@@ -602,7 +600,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
           )}
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap sm:justify-between">
           <Button
             type="button"
@@ -625,7 +623,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                   setDecisions({});
                 }}
               >
-                Recommencer
+                {t("recommencer")}
               </Button>
             )}
             {!hasResult ? (
@@ -642,12 +640,12 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                 {analyzing ? (
                   <>
                     <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
-                    Analyse en cours…
+                    {t("analyse_cours")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="h-3.5 w-3.5 mr-1.5" />
-                    Analyser
+                    {t("analyser")}
                   </>
                 )}
               </Button>
@@ -659,7 +657,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                 className="bg-[#0F2D52] hover:bg-[#0F2D52]/90"
               >
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                Importer dans le modèle
+                {t("importer_modele")}
               </Button>
             )}
           </div>
@@ -706,6 +704,7 @@ function DetectionRow({
   onToggle: (accepted: boolean) => void;
   onChangeVariable: (value: string) => void;
 }) {
+  const t = useTranslations("admin.library");
   const alternatives =
     detection.alternatives && detection.alternatives.length > 0
       ? Array.from(new Set([detection.suggestedVariable, ...detection.alternatives]))
@@ -718,7 +717,7 @@ function DetectionRow({
         checked={accepted}
         onChange={(e) => onToggle(e.target.checked)}
         className="h-4 w-4 rounded border-input accent-[#0F2D52] mt-0.5 shrink-0"
-        aria-label="Appliquer cette substitution"
+        aria-label={t("appliquer_substitution")}
       />
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-center gap-2 flex-wrap">
@@ -797,8 +796,8 @@ function applyByMatchString(
 ): string {
   if (!accepted.length) return markdown;
   let out = markdown;
-  // On ordonne par longueur de match desc pour eviter qu'un sous-match
-  // (ex: "Tremblay") n'avale le superset ("Jean Tremblay")
+
+
   const sorted = [...accepted].sort((a, b) => b.match.length - a.match.length);
   for (const a of sorted) {
     if (!a.match) continue;
@@ -816,24 +815,24 @@ function applyByMatchString(
  */
 function renderHighlightedMarkdown(md: string): string {
   if (!md) return "";
-  // Escape d'abord
+
   let s = escapeHtml(md);
-  // Highlight variables (apres escape pour qu'elles ne soient pas reechappees)
+
   s = s.replace(
     /\{\{\s*([\w.]+)\s*\}\}/g,
     (_m, key: string) =>
       `<span class="bg-blue-100 text-blue-800 px-1 rounded font-mono text-[0.85em]">{{${key}}}</span>`
   );
-  // Headings
+
   s = s.replace(/^### (.+)$/gm, "<h3>$1</h3>");
   s = s.replace(/^## (.+)$/gm, "<h2>$1</h2>");
   s = s.replace(/^# (.+)$/gm, "<h1>$1</h1>");
-  // Bold / italic / inline code
+
   s = s.replace(/`([^`\n]+)`/g, "<code>$1</code>");
   s = s.replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
   s = s.replace(/_([^_\n]+)_/g, "<em>$1</em>");
-  // Listes + paragraphes
+
   const lines = s.split("\n");
   const out: string[] = [];
   let inUl = false;

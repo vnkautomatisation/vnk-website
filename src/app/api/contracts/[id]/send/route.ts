@@ -1,6 +1,7 @@
 // POST /api/contracts/[id]/send — envoie le contrat au client (admin)
 // → cree Document portail + Message chat + Notification client + workflow event
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -68,7 +70,7 @@ export async function POST(
       recipientType: "client",
       recipientId: contract.clientId,
       type: "info",
-      title: "Nouveau contrat à signer",
+      title: t("nouveau_contrat_a_signer"),
       body: `${contract.contractNumber}${contract.amountTtc ? ` — ${Number(contract.amountTtc).toFixed(2)} $ TTC` : ""}`,
       link: `/portail/contrats`,
     },

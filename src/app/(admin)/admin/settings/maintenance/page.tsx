@@ -1,14 +1,19 @@
 // Settings · Maintenance — fenêtres planifiées, incidents, bandeau d'annonce.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { MaintenanceView } from "./maintenance-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Maintenance — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("maintenance_vnk") };
+}
 
 export default async function MaintenancePage() {
+  const t = await getTranslations("admin.maintenance");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   // Acces reglages : settings.write requis.

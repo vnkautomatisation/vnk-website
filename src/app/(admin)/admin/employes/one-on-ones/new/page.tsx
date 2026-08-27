@@ -12,13 +12,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { upsertOneOnOneAction } from "@/app/actions/hr-performance";
 
 export default function NewOneOnOnePage() {
+  const t = useTranslations("admin.hr_nav");
   const tc = useTranslations("common");
   const router = useRouter();
   const [employees, setEmployees] = useState<Array<{ id: number; fullName: string | null; email: string }>>([]);
   const [adminId, setAdminId] = useState("");
   const [managerId, setManagerId] = useState("");
   const [scheduledAt, setScheduledAt] = useState(() => {
-    // Par défaut : demain à 10h
+
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     tomorrow.setHours(10, 0, 0, 0);
@@ -33,13 +34,13 @@ export default function NewOneOnOnePage() {
     fetch("/api/admin/list")
       .then((r) => r.ok ? r.json() : Promise.reject())
       .then((d) => setEmployees(d.admins ?? []))
-      .catch(() => toast.error("Impossible de charger la liste des employés"))
+      .catch(() => toast.error(t("impossible_charger_liste_employes")))
       .finally(() => setLoadingEmployees(false));
   }, []);
 
   const submit = async () => {
-    if (!adminId || !managerId) { toast.error("Employé + manager requis"); return; }
-    if (adminId === managerId) { toast.error("L'employé et le manager doivent être différents"); return; }
+    if (!adminId || !managerId) { toast.error(t("employe_manager_requis")); return; }
+    if (adminId === managerId) { toast.error(t("employe_manager_doivent_etre_differents")); return; }
     setPending(true);
     const r = await upsertOneOnOneAction({
       adminId: Number(adminId),
@@ -51,22 +52,21 @@ export default function NewOneOnOnePage() {
     });
     setPending(false);
     if (r.success && "data" in r) {
-      toast.success("Réunion planifiée");
+      toast.success(t("reunion_planifiee"));
       router.push(`/admin/employes/one-on-ones/${r.data.id}`);
-    } else if (!r.success) toast.error(r.error || "Erreur");
+    } else if (!r.success) toast.error(r.error || t("erreur"));
   };
 
   return (
     <div className="space-y-4 max-w-xl">
       <h1 className="text-xl font-bold flex items-center gap-2">
-        <MessageSquare className="h-5 w-5 text-[#0F2D52]" />Planifier une réunion 1-on-1
-      </h1>
+        <MessageSquare className="h-5 w-5 text-[#0F2D52]" />{t("page_planifier_une_reunion_1_on_1")}</h1>
       <Card className="p-5 space-y-3">
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Employé *</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("employe")}</Label>
           <Select value={adminId} onValueChange={setAdminId} disabled={loadingEmployees}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={loadingEmployees ? "Chargement…" : "Choisir un employé"} />
+              <SelectValue placeholder={loadingEmployees ? t("chargement") : t("choisir_employe")} />
             </SelectTrigger>
             <SelectContent>
               {employees.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.fullName || e.email}</SelectItem>)}
@@ -74,10 +74,10 @@ export default function NewOneOnOnePage() {
           </Select>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Manager (qui mène) *</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("manager_mene")}</Label>
           <Select value={managerId} onValueChange={setManagerId} disabled={loadingEmployees}>
             <SelectTrigger className="h-9 text-sm">
-              <SelectValue placeholder={loadingEmployees ? "Chargement…" : "Choisir le manager"} />
+              <SelectValue placeholder={loadingEmployees ? t("chargement") : t("choisir_manager")} />
             </SelectTrigger>
             <SelectContent>
               {employees.filter((e) => String(e.id) !== adminId).map((e) => (
@@ -88,38 +88,38 @@ export default function NewOneOnOnePage() {
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Date & heure *</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("date_heure")}</Label>
             <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Durée (min)</Label>
+            <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("duree_min")}</Label>
             <Select value={durationMin} onValueChange={setDurationMin}>
               <SelectTrigger className="h-9 text-sm"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="15">15 minutes</SelectItem>
-                <SelectItem value="30">30 minutes</SelectItem>
-                <SelectItem value="45">45 minutes</SelectItem>
-                <SelectItem value="60">1 heure</SelectItem>
+                <SelectItem value="15">{t("15_minutes")}</SelectItem>
+                <SelectItem value="30">{t("30_minutes")}</SelectItem>
+                <SelectItem value="45">{t("45_minutes")}</SelectItem>
+                <SelectItem value="60">{t("1_heure")}</SelectItem>
                 <SelectItem value="90">1h30</SelectItem>
-                <SelectItem value="120">2 heures</SelectItem>
+                <SelectItem value="120">{t("2_heures")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Ordre du jour (optionnel)</Label>
+          <Label className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("ordre_jour_optionnel")}</Label>
           <textarea
             value={agenda}
             onChange={(e) => setAgenda(e.target.value)}
             rows={4}
             className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y"
-            placeholder="Sujets à aborder : objectifs, blocages, projets en cours…"
+            placeholder={t("sujets_aborder_objectifs_blocages_projets")}
           />
         </div>
         <div className="flex justify-end gap-2 pt-3 border-t">
           <Button variant="outline" onClick={() => router.back()} disabled={pending}>{tc("cancel")}</Button>
           <Button onClick={submit} disabled={pending || loadingEmployees || !adminId || !managerId}>
-            {pending ? "..." : "Planifier"}
+            {pending ? "..." : t("planifier")}
           </Button>
         </div>
       </Card>

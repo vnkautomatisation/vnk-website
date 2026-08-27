@@ -1,9 +1,13 @@
 // Admin · Audit trail — timeline globale tous evenements
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { AuditTrailView } from "./audit-trail-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Audit trail" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("audit_trail") };
+}
 
 export default async function AuditTrailPage() {
   const [clients, admins, loginCount, orderCount, sigCount, consentCount, emailCount, auditCount, workflowCount] = await Promise.all([

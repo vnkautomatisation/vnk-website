@@ -38,10 +38,10 @@ type AppointmentFull = {
   client: { id: number; fullName: string; companyName: string | null; email: string; phone: string | null } | null;
 };
 
-const MEETING_LABELS: Record<string, string> = {
-  video: "Réunion vidéo",
-  phone: "Appel téléphonique",
-  onsite: "Présentiel",
+const MEETING_KEYS: Record<string, string> = {
+  video: "reunion_video",
+  phone: "appel_telephonique",
+  onsite: "presentiel",
 };
 
 const MEETING_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -59,6 +59,7 @@ export function AppointmentDetailPanel({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
+  const t = useTranslations("admin.calendar");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -96,7 +97,7 @@ export function AppointmentDetailPanel({
       });
       if (res.ok) { if (msg) toast.success(msg); await refresh(); return true; }
       const d = await res.json();
-      toast.error(d.error || "Erreur");
+      toast.error(d.error || t("erreur"));
       return false;
     } finally { setBusy(false); }
   };
@@ -104,32 +105,32 @@ export function AppointmentDetailPanel({
   const handleCancel = async () => {
     if (!appt) return;
     const ok = await confirm({
-      title: "Annuler ce rendez-vous ?",
+      title: t("annuler_rendez_vous"),
       description: `${appt.clientName} sera prévenu et le créneau sera libéré.`,
-      confirmLabel: "Annuler le RDV",
+      confirmLabel: t("annuler_rdv"),
       variant: "destructive",
     });
     if (!ok) return;
-    await patch({ status: "cancelled" }, "Rendez-vous annulé");
+    await patch({ status: "cancelled" }, t("rendez_vous_annule"));
   };
 
   const handleComplete = async () => {
     if (!appt) return;
     const ok = await confirm({
-      title: "Marquer comme complété ?",
+      title: t("marquer_comme_complete"),
       description: `Le rendez-vous avec ${appt.clientName} sera marqué comme complété.`,
-      confirmLabel: "Marquer complété",
+      confirmLabel: t("marquer_complete"),
     });
     if (!ok) return;
-    await patch({ status: "completed" }, "Rendez-vous complété");
+    await patch({ status: "completed" }, t("rendez_vous_complete"));
   };
 
   const handleDelete = async () => {
     if (!appt) return;
     const ok = await confirm({
-      title: "Supprimer ce rendez-vous ?",
-      description: "Le rendez-vous sera supprimé définitivement et le créneau libéré.",
-      confirmLabel: "Supprimer",
+      title: t("supprimer_rendez_vous"),
+      description: t("rendez_vous_sera_supprime_definitivement"),
+      confirmLabel: t("supprimer"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -137,17 +138,17 @@ export function AppointmentDetailPanel({
     try {
       const res = await fetch(`/api/appointments/${appt.id}`, { method: "DELETE" });
       if (res.ok) {
-        toast.success("Rendez-vous supprimé");
+        toast.success(t("rendez_vous_supprime"));
         onOpenChange(false);
         router.refresh();
-      } else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setBusy(false); }
   };
 
   const isLocked = appt?.status === "cancelled" || appt?.status === "completed";
   const MeetIcon = appt ? (MEETING_ICONS[appt.meetingType] ?? Video) : Video;
 
-  // Calcule l'heure de fin a afficher : si endTime <= startTime, utilise startTime + 30min
+
   const displayEndTime = (() => {
     if (!appt) return "";
     if (appt.endTime > appt.startTime) return appt.endTime;
@@ -161,15 +162,15 @@ export function AppointmentDetailPanel({
       open={open}
       onOpenChange={onOpenChange}
       loading={loading || !appt}
-      title={appt?.subject || (appt ? `RDV ${appt.startTime}` : "Rendez-vous")}
+      title={appt?.subject || (appt ? `RDV ${appt.startTime}` : t("rendez_vous"))}
       subtitle={appt?.clientName ? `${appt.clientName}${appt.client?.companyName ? ` · ${appt.client.companyName}` : ""}` : undefined}
       icon={<Calendar className="h-7 w-7 text-white" />}
       headerStats={
         appt ? (
           <div className="grid grid-cols-3 gap-2">
             <PanelStatBox icon={Calendar} label={tc("date")} value={formatDate(new Date(appt.appointmentDate))} />
-            <PanelStatBox icon={Clock} label="Heure" value={`${appt.startTime} - ${displayEndTime}`} />
-            <PanelStatBox icon={MeetIcon} label="Type" value={MEETING_LABELS[appt.meetingType] ?? appt.meetingType} />
+            <PanelStatBox icon={Clock} label={t("heure")} value={`${appt.startTime} - ${displayEndTime}`} />
+            <PanelStatBox icon={MeetIcon} label={t("type")} value={MEETING_KEYS[appt.meetingType] ? t(MEETING_KEYS[appt.meetingType]) : appt.meetingType} />
           </div>
         ) : undefined
       }
@@ -188,8 +189,7 @@ export function AppointmentDetailPanel({
                 <Button size="sm" variant="secondary" disabled={busy}
                   className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                   onClick={handleComplete}>
-                  <Check className="h-3 w-3" />Compléter
-                </Button>
+                  <Check className="h-3 w-3" />{t("appointment_detail_panel_completer")}</Button>
                 <Button size="sm" variant="secondary" disabled={busy}
                   className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur"
                   onClick={handleCancel}>
@@ -203,25 +203,27 @@ export function AppointmentDetailPanel({
     >
       {appt && (
         <div className="space-y-4">
-          {/* Bandeau si annule */}
+
           {appt.status === "cancelled" && (
             <div className="rounded-xl border-2 border-red-200 bg-red-50 p-3 flex items-center gap-2">
               <Lock className="h-4 w-4 text-red-600" />
               <div className="text-sm text-red-700">
-                Annulé{appt.cancelledBy ? ` par ${appt.cancelledBy === "admin" ? "l'administrateur" : "le client"}` : ""}
-                {appt.cancelledAt ? ` le ${formatDate(new Date(appt.cancelledAt))}` : ""}
+                {appt.cancelledBy
+                  ? t("annule_par", { who: appt.cancelledBy === "admin" ? t("administrateur") : t("client") })
+                  : t("annule")}
+                {appt.cancelledAt ? t("le_date", { date: formatDate(new Date(appt.cancelledAt)) }) : ""}
               </div>
             </div>
           )}
           {appt.status === "completed" && (
             <div className="rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 flex items-center gap-2">
               <Check className="h-4 w-4 text-emerald-600" />
-              <span className="text-sm text-emerald-700 font-medium">Rendez-vous complété</span>
+              <span className="text-sm text-emerald-700 font-medium">{t("rendez_vous_complete")}</span>
             </div>
           )}
 
-          {/* Section Statut */}
-          <PanelSection icon={Calendar} title="Statut & timing">
+
+          <PanelSection icon={Calendar} title={t("statut_timing")}>
             <EditableField
               label={tc("status")}
               display={<StatusBadge status={appt.status} />}
@@ -229,15 +231,15 @@ export function AppointmentDetailPanel({
                 <Select value={v} onValueChange={setV}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="confirmed">Confirmé</SelectItem>
-                    <SelectItem value="completed">Complété</SelectItem>
-                    <SelectItem value="cancelled">Annulé</SelectItem>
-                    <SelectItem value="no_show">Absent</SelectItem>
+                    <SelectItem value="confirmed">{t("confirme")}</SelectItem>
+                    <SelectItem value="completed">{t("complete")}</SelectItem>
+                    <SelectItem value="cancelled">{t("annule")}</SelectItem>
+                    <SelectItem value="no_show">{t("absent")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
               initialValue={appt.status}
-              onSave={(v) => patch({ status: v }, "Statut modifié")}
+              onSave={(v) => patch({ status: v }, t("statut_modifie"))}
               disabled={busy}
             />
             <EditableField
@@ -245,70 +247,70 @@ export function AppointmentDetailPanel({
               display={<span className="text-sm">{formatDate(new Date(appt.appointmentDate))}</span>}
               renderEdit={(v, setV) => <Input type="date" value={v} onChange={(e) => setV(e.target.value)} />}
               initialValue={appt.appointmentDate.slice(0, 10)}
-              onSave={(v) => v ? patch({ appointmentDate: v }, "Date modifiée") : false}
+              onSave={(v) => v ? patch({ appointmentDate: v }, t("date_modifiee")) : false}
               disabled={busy || isLocked}
             />
             <div className="grid grid-cols-2 gap-2">
               <EditableField
-                label="Début"
+                label={t("debut")}
                 display={<span className="text-sm font-mono">{appt.startTime}</span>}
                 renderEdit={(v, setV) => <Input type="time" value={v} onChange={(e) => setV(e.target.value)} />}
                 initialValue={appt.startTime}
-                onSave={(v) => v ? patch({ startTime: v }, "Heure de début modifiée") : false}
+                onSave={(v) => v ? patch({ startTime: v }, t("heure_debut_modifiee")) : false}
                 disabled={busy || isLocked}
               />
               <EditableField
-                label="Fin"
+                label={t("fin")}
                 display={<span className="text-sm font-mono">{displayEndTime}</span>}
                 renderEdit={(v, setV) => <Input type="time" value={v} onChange={(e) => setV(e.target.value)} />}
                 initialValue={displayEndTime}
                 onSave={(v) => {
                   if (!v) return false;
                   if (v <= appt.startTime) {
-                    toast.error("L'heure de fin doit être après l'heure de début");
+                    toast.error(t("heure_fin_doit_etre_apres"));
                     return false;
                   }
-                  return patch({ endTime: v }, "Heure de fin modifiée");
+                  return patch({ endTime: v }, t("heure_fin_modifiee"));
                 }}
                 disabled={busy || isLocked}
               />
             </div>
           </PanelSection>
 
-          {/* Section Détails */}
-          <PanelSection icon={FileText} title="Détails">
+
+          <PanelSection icon={FileText} title={t("details")}>
             <EditableField
-              label="Sujet"
+              label={t("sujet")}
               display={<span className="text-sm">{appt.subject || "—"}</span>}
-              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder="Objet du RDV" />}
+              renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder={t("objet_rdv")} />}
               initialValue={appt.subject ?? ""}
-              onSave={(v) => patch({ subject: v.trim() || null }, "Sujet modifié")}
+              onSave={(v) => patch({ subject: v.trim() || null }, t("sujet_modifie"))}
               disabled={busy || isLocked}
             />
             <EditableField
-              label="Type de réunion"
+              label={t("type_reunion")}
               display={
                 <span className="text-sm flex items-center gap-1.5 justify-end">
                   <MeetIcon className="h-3.5 w-3.5" />
-                  {MEETING_LABELS[appt.meetingType] ?? appt.meetingType}
+                  {MEETING_KEYS[appt.meetingType] ? t(MEETING_KEYS[appt.meetingType]) : appt.meetingType}
                 </span>
               }
               renderEdit={(v, setV) => (
                 <Select value={v} onValueChange={setV}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="video">Réunion vidéo</SelectItem>
-                    <SelectItem value="phone">Appel téléphonique</SelectItem>
-                    <SelectItem value="onsite">Présentiel</SelectItem>
+                    <SelectItem value="video">{t("reunion_video")}</SelectItem>
+                    <SelectItem value="phone">{t("appel_telephonique")}</SelectItem>
+                    <SelectItem value="onsite">{t("presentiel")}</SelectItem>
                   </SelectContent>
                 </Select>
               )}
               initialValue={appt.meetingType}
-              onSave={(v) => patch({ meetingType: v }, "Type modifié")}
+              onSave={(v) => patch({ meetingType: v }, t("type_modifie"))}
               disabled={busy || isLocked}
             />
             <EditableField
-              label="Lien (vidéo/présentiel)"
+              label={t("lien_video_presentiel")}
               display={
                 appt.meetingLink ? (
                   <a href={appt.meetingLink} target="_blank" rel="noopener noreferrer" className="text-sm text-[#0F2D52] hover:underline flex items-center gap-1">
@@ -318,38 +320,37 @@ export function AppointmentDetailPanel({
               }
               renderEdit={(v, setV) => <Input value={v} onChange={(e) => setV(e.target.value)} placeholder="https://meet.google.com/…" />}
               initialValue={appt.meetingLink ?? ""}
-              onSave={(v) => patch({ meetingLink: v.trim() || null }, "Lien modifié")}
+              onSave={(v) => patch({ meetingLink: v.trim() || null }, t("lien_modifie"))}
               disabled={busy || isLocked}
             />
           </PanelSection>
 
-          {/* Section Notes admin */}
-          <PanelSection icon={ClipboardList} title="Notes (privées)">
+
+          <PanelSection icon={ClipboardList} title={t("notes_privees")}>
             <EditableTextarea
               display={appt.notesAdmin}
               initialValue={appt.notesAdmin ?? ""}
-              onSave={(v) => patch({ notesAdmin: v.trim() || null }, "Notes modifiées")}
+              onSave={(v) => patch({ notesAdmin: v.trim() || null }, t("notes_modifiees"))}
               disabled={busy}
               rows={3}
             />
           </PanelSection>
 
-          {/* Section Contact */}
+
           {appt.client && (
-            <PanelSection icon={User} title="Contact client">
-              <InfoRow label="Nom" value={appt.client.fullName} />
-              {appt.client.companyName && <InfoRow label="Entreprise" value={appt.client.companyName} />}
-              <InfoRow label="Courriel" value={appt.client.email} />
-              {appt.client.phone && <InfoRow label="Téléphone" value={appt.client.phone} />}
+            <PanelSection icon={User} title={t("contact_client")}>
+              <InfoRow label={t("nom")} value={appt.client.fullName} />
+              {appt.client.companyName && <InfoRow label={t("entreprise")} value={appt.client.companyName} />}
+              <InfoRow label={t("courriel")} value={appt.client.email} />
+              {appt.client.phone && <InfoRow label={t("telephone")} value={appt.client.phone} />}
             </PanelSection>
           )}
 
-          {/* Zone danger */}
-          <PanelSection icon={Trash2} title="Actions avancées">
+
+          <PanelSection icon={Trash2} title={t("actions_avancees")}>
             <Button variant="outline" className="w-full text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
               disabled={busy} onClick={handleDelete}>
-              <Trash2 className="h-4 w-4 mr-1.5" />Supprimer le rendez-vous
-            </Button>
+              <Trash2 className="h-4 w-4 mr-1.5" />{t("appointment_detail_panel_supprimer_le_rendez_vous")}</Button>
           </PanelSection>
         </div>
       )}
@@ -446,6 +447,7 @@ function EditableTextarea({
   disabled?: boolean;
   rows?: number;
 }) {
+  const t = useTranslations("admin.calendar");
   const tc = useTranslations("common");
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialValue);
@@ -480,7 +482,7 @@ function EditableTextarea({
     >
       <div className="flex items-start justify-between gap-2">
         <p className="text-sm whitespace-pre-wrap leading-relaxed flex-1 min-w-0">
-          {display || "Aucune note — clique pour ajouter"}
+          {display || t("aucune_note_clique_ajouter")}
         </p>
         <Pencil className="h-3 w-3 text-muted-foreground shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
       </div>

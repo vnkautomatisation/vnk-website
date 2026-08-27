@@ -2,6 +2,7 @@
 // Utilise l'abstraction storage (R2/S3/local). Validation type + taille.
 // Requiert permissions admin.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
 import { logAudit } from "@/lib/audit";
@@ -32,6 +33,7 @@ function magicByteCheck(buf: Buffer, mime: string): boolean {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -44,7 +46,7 @@ export async function POST(req: NextRequest) {
     const folder = String(form.get("folder") ?? "uploads").replace(/[^a-z0-9_-]/gi, "");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
       return NextResponse.json({ error: `Type non autorisé (${file.type})` }, { status: 415 });
@@ -55,7 +57,7 @@ export async function POST(req: NextRequest) {
 
     const buf = Buffer.from(await file.arrayBuffer());
     if (!magicByteCheck(buf, file.type)) {
-      return NextResponse.json({ error: "Magic bytes invalides — fichier corrompu ou type erroné" }, { status: 415 });
+      return NextResponse.json({ error: t("magic_bytes_invalides_fichier_corrompu_ou_type") }, { status: 415 });
     }
 
     // Réutilise uploadAvatar (qui gère R2/S3/local data URL fallback)

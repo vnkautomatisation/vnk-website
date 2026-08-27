@@ -1,5 +1,7 @@
 "use client";
 import Link from "next/link";
+import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useTranslations } from "next-intl";
 import { CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home as HomeIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -12,16 +14,14 @@ type Leave = {
 };
 type Holiday = { id: number; date: string; name: string; isPaid: boolean };
 
-const MONTHS_FR = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
-const DAYS_FR = ["Dim", "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam"]; // dimanche-first (convention projet)
 
-const TYPE_META: Record<string, { label: string; color: string; icon: typeof Sun }> = {
-  vacation: { label: "Vacances", color: "bg-cyan-500", icon: Sun },
-  sick: { label: "Maladie", color: "bg-red-500", icon: Bandage },
-  parental: { label: "Parental", color: "bg-violet-500", icon: Baby },
-  unpaid: { label: "Sans solde", color: "bg-slate-500", icon: HomeIcon },
-  bereavement: { label: "Décès", color: "bg-gray-500", icon: HomeIcon },
-  other: { label: "Autre", color: "bg-amber-500", icon: CalendarDays },
+const TYPE_META: Record<string, { labelKey: string; color: string; icon: typeof Sun }> = {
+  vacation: { labelKey: "vacances", color: "bg-cyan-500", icon: Sun },
+  sick: { labelKey: "maladie", color: "bg-red-500", icon: Bandage },
+  parental: { labelKey: "parental", color: "bg-violet-500", icon: Baby },
+  unpaid: { labelKey: "sans_solde", color: "bg-slate-500", icon: HomeIcon },
+  bereavement: { labelKey: "deces", color: "bg-gray-500", icon: HomeIcon },
+  other: { labelKey: "autre", color: "bg-amber-500", icon: CalendarDays },
 };
 
 function isSameDay(a: Date, b: Date): boolean {
@@ -41,7 +41,10 @@ export function CalendarMonthView({
   gridStart: string; gridEnd: string;
   leaves: Leave[]; holidays: Holiday[];
 }) {
-  // Construire la grille de jours
+  const DAYS_FR = useWeekdayNames();
+  const MONTHS_FR = useMonthNames();
+  const t = useTranslations("admin.hr_nav");
+
   const days: Date[] = [];
   const start = new Date(gridStart);
   const end = new Date(gridEnd);
@@ -51,7 +54,7 @@ export function CalendarMonthView({
     cursor.setDate(cursor.getDate() + 1);
   }
 
-  // Previous / next month
+
   const prev = new Date(year, month - 1, 1);
   const next = new Date(year, month + 1, 1);
 
@@ -60,7 +63,7 @@ export function CalendarMonthView({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
@@ -69,17 +72,17 @@ export function CalendarMonthView({
           <p className="text-sm text-muted-foreground">{MONTHS_FR[month]} {year} · congés approuvés + jours fériés.</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" aria-label="Mois précédent" asChild>
+          <Button variant="outline" size="icon" aria-label={t("mois_precedent")} asChild>
             <Link href={`/admin/employes/calendrier?year=${prev.getFullYear()}&month=${prev.getMonth()}`}>
               <ChevronLeft className="h-4 w-4" />
             </Link>
           </Button>
           <Button variant="outline" size="sm" asChild>
             <Link href={`/admin/employes/calendrier?year=${today.getFullYear()}&month=${today.getMonth()}`}>
-              Aujourd&apos;hui
+              {t("aujourd_apos_hui")}
             </Link>
           </Button>
-          <Button variant="outline" size="icon" aria-label="Mois suivant" asChild>
+          <Button variant="outline" size="icon" aria-label={t("mois_suivant")} asChild>
             <Link href={`/admin/employes/calendrier?year=${next.getFullYear()}&month=${next.getMonth()}`}>
               <ChevronRight className="h-4 w-4" />
             </Link>
@@ -87,21 +90,21 @@ export function CalendarMonthView({
         </div>
       </div>
 
-      {/* Legend */}
+
       <div className="flex flex-wrap gap-2">
         {Object.entries(TYPE_META).map(([k, m]) => (
           <span key={k} className="inline-flex items-center gap-1.5 text-xs">
             <span className={`h-2.5 w-2.5 rounded-full ${m.color}`} />
-            {m.label}
+            {t(m.labelKey)}
           </span>
         ))}
         <span className="inline-flex items-center gap-1.5 text-xs">
           <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
-          Férié
+          {t("ferie")}
         </span>
       </div>
 
-      {/* Grille calendrier */}
+
       <Card className="overflow-hidden">
         <div className="grid grid-cols-7 border-b bg-muted/30">
           {DAYS_FR.map((d) => (
@@ -114,7 +117,7 @@ export function CalendarMonthView({
           {days.map((d, idx) => {
             const isCurrentMonth = d.getMonth() === month;
             const isToday = isSameDay(d, today);
-            // Holiday.date is a @db.Date: its calendar day is the UTC one.
+
             const dayHolidays = holidays.filter((h) => {
               const hd = new Date(h.date);
               return hd.getUTCFullYear() === d.getFullYear()
@@ -132,7 +135,7 @@ export function CalendarMonthView({
                   <span className={`text-xs font-medium ${isCurrentMonth ? "text-foreground" : "text-muted-foreground/60"} ${isToday ? "bg-[#0F2D52] text-white rounded-full h-5 w-5 inline-flex items-center justify-center" : ""}`}>
                     {d.getDate()}
                   </span>
-                  {dayHolidays.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label="Jour férié" />}
+                  {dayHolidays.length > 0 && <span className="h-1.5 w-1.5 rounded-full bg-amber-400" aria-label={t("jour_ferie")} />}
                 </div>
                 {dayHolidays.map((h) => (
                   <ActionTooltip key={h.id} label={h.name}>
@@ -144,7 +147,7 @@ export function CalendarMonthView({
                 {dayLeaves.slice(0, 3).map((l) => {
                   const meta = TYPE_META[l.type] ?? TYPE_META.other;
                   return (
-                    <ActionTooltip key={l.id} label={`${l.admin.fullName || l.admin.email} · ${meta.label}`}>
+                    <ActionTooltip key={l.id} label={`${l.admin.fullName || l.admin.email} · ${t(meta.labelKey)}`}>
                       <div
                         className={`mt-1 px-1.5 py-0.5 rounded text-[9px] text-white truncate cursor-default ${meta.color}`}
                       >
@@ -162,13 +165,13 @@ export function CalendarMonthView({
         </div>
       </Card>
 
-      {/* Detailed list for the month */}
+
       <section>
         <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider text-muted-foreground">
           Détails du mois ({leaves.length} congé{leaves.length !== 1 ? "s" : ""})
         </h2>
         {leaves.length === 0 ? (
-          <Card className="p-6 text-center text-sm text-muted-foreground">Aucun congé approuvé sur ce mois.</Card>
+          <Card className="p-6 text-center text-sm text-muted-foreground">{t("aucun_conge_approuve_mois")}</Card>
         ) : (
           <Card>
             <div className="divide-y">
@@ -186,7 +189,7 @@ export function CalendarMonthView({
                     <div className="flex-1 min-w-0">
                       <p className="font-medium truncate">{l.admin.fullName || l.admin.email}</p>
                       <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
-                        <Icon className="h-3 w-3" />{meta.label}
+                        <Icon className="h-3 w-3" />{t(meta.labelKey)}
                         <span>·</span>
                         <span>{new Date(l.startDate).toLocaleDateString("fr-CA")} → {new Date(l.endDate).toLocaleDateString("fr-CA")}</span>
                       </p>

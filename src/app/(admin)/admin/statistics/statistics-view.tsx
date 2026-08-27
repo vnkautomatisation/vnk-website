@@ -1,6 +1,7 @@
 "use client";
 // Vue Statistiques — KPIs + graphiques Recharts.
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
   BarChart3, TrendingUp, TrendingDown, DollarSign, FileText,
@@ -28,24 +29,24 @@ const STATUS_COLORS: Record<string, string> = {
   refunded: "#613583",
   draft: "#9ca3af",
 };
-const STATUS_LABELS: Record<string, string> = {
-  paid: "Payée",
-  unpaid: "Impayée",
-  partially_paid: "Partielle",
-  overdue: "En retard",
-  cancelled: "Annulée",
-  refunded: "Remboursée",
-  draft: "Brouillon",
+const STATUS_KEYS: Record<string, string> = {
+  paid: "payee",
+  unpaid: "impayee",
+  partially_paid: "partielle",
+  overdue: "retard",
+  cancelled: "annulee",
+  refunded: "remboursee",
+  draft: "brouillon",
 };
 const PIE_COLORS = ["#0F2D52", "#1A5FB4", "#26A269", "#E5A50A", "#613583", "#C01C28", "#6b7280", "#9333ea", "#0891b2", "#db2777"];
 
 const RANGES = [
-  { key: "30d", label: "30 jours" },
-  { key: "90d", label: "90 jours" },
-  { key: "6m", label: "6 mois" },
-  { key: "12m", label: "12 mois" },
-  { key: "ytd", label: "Cette année" },
-  { key: "all", label: "Tout" },
+  { key: "30d", labelKey: "30_jours" },
+  { key: "90d", labelKey: "90_jours" },
+  { key: "6m", labelKey: "6_mois" },
+  { key: "12m", labelKey: "12_mois" },
+  { key: "ytd", labelKey: "annee" },
+  { key: "all", labelKey: "tout" },
 ];
 
 function fmtMoney(n: number, compact = false): string {
@@ -80,20 +81,21 @@ export function StatisticsView({
   statusBreakdown: StatusRow[];
   serviceBreakdown: ServiceRow[];
 }) {
+  const t = useTranslations("admin.statistics");
   const router = useRouter();
 
   return (
     <div className="space-y-6">
-      {/* Header + sélecteur période */}
+
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
         <div className="flex items-start gap-4">
           <div className="h-12 w-12 rounded-lg flex items-center justify-center text-white bg-cyan-500 shrink-0">
             <BarChart3 className="h-6 w-6" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Statistiques</h1>
+            <h1 className="text-2xl font-bold tracking-tight">{t("statistiques")}</h1>
             <p className="text-muted-foreground text-sm mt-0.5">
-              Performance commerciale et financière en temps réel
+              {t("performance_commerciale_financiere_temps_reel")}
             </p>
           </div>
         </div>
@@ -107,31 +109,31 @@ export function StatisticsView({
                 range === r.key ? "bg-[#0F2D52] text-white" : "text-muted-foreground hover:bg-muted"
               )}
             >
-              {r.label}
+              {t(r.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi icon={DollarSign} label="Revenus encaissés" value={fmtMoney(kpis.revenue)} accent="text-emerald-600" subline={`${kpis.paidInvoices} factures payées`} />
-        <Kpi icon={AlertCircle} label="Créances clients" value={fmtMoney(kpis.outstanding)} accent="text-amber-600" subline="Non payées + retards" />
-        <Kpi icon={Receipt} label="Taux de paiement" value={`${kpis.paymentRate}%`} accent={kpis.paymentRate >= 80 ? "text-emerald-600" : kpis.paymentRate >= 50 ? "text-amber-600" : "text-red-600"} subline={`${kpis.paidInvoices}/${kpis.totalInvoices} factures`} trend={kpis.paymentRate >= 70 ? "up" : "down"} />
-        <Kpi icon={FileText} label="Conversion devis" value={`${kpis.conversionRate}%`} accent={kpis.conversionRate >= 60 ? "text-emerald-600" : kpis.conversionRate >= 30 ? "text-amber-600" : "text-red-600"} subline={`${kpis.acceptedQuotes}/${kpis.totalQuotes} acceptés`} trend={kpis.conversionRate >= 50 ? "up" : "down"} />
-        <Kpi icon={Users} label="Nouveaux clients" value={kpis.totalClients.toString()} accent="text-blue-600" subline="Sur la période" />
-        <Kpi icon={Briefcase} label="Mandats actifs" value={kpis.activeMandates.toString()} accent="text-violet-600" subline="En cours d'exécution" />
-        <Kpi icon={Receipt} label="Factures émises" value={kpis.totalInvoices.toString()} accent="text-cyan-600" subline="Sur la période" />
-        <Kpi icon={FileText} label="Devis envoyés" value={kpis.totalQuotes.toString()} accent="text-pink-600" subline="Sur la période" />
+        <Kpi icon={DollarSign} label={t("revenus_encaisses")} value={fmtMoney(kpis.revenue)} accent="text-emerald-600" subline={`${kpis.paidInvoices} factures payées`} />
+        <Kpi icon={AlertCircle} label={t("creances_clients")} value={fmtMoney(kpis.outstanding)} accent="text-amber-600" subline={t("non_payees_retards")} />
+        <Kpi icon={Receipt} label={t("taux_paiement")} value={`${kpis.paymentRate}%`} accent={kpis.paymentRate >= 80 ? "text-emerald-600" : kpis.paymentRate >= 50 ? "text-amber-600" : "text-red-600"} subline={`${kpis.paidInvoices}/${kpis.totalInvoices} factures`} trend={kpis.paymentRate >= 70 ? "up" : "down"} />
+        <Kpi icon={FileText} label={t("conversion_devis")} value={`${kpis.conversionRate}%`} accent={kpis.conversionRate >= 60 ? "text-emerald-600" : kpis.conversionRate >= 30 ? "text-amber-600" : "text-red-600"} subline={`${kpis.acceptedQuotes}/${kpis.totalQuotes} acceptés`} trend={kpis.conversionRate >= 50 ? "up" : "down"} />
+        <Kpi icon={Users} label={t("nouveaux_clients")} value={kpis.totalClients.toString()} accent="text-blue-600" subline={t("sur_periode")} />
+        <Kpi icon={Briefcase} label={t("mandats_actifs")} value={kpis.activeMandates.toString()} accent="text-violet-600" subline={t("cours_execution")} />
+        <Kpi icon={Receipt} label={t("factures_emises")} value={kpis.totalInvoices.toString()} accent="text-cyan-600" subline={t("sur_periode")} />
+        <Kpi icon={FileText} label={t("devis_envoyes")} value={kpis.totalQuotes.toString()} accent="text-pink-600" subline={t("sur_periode")} />
       </div>
 
-      {/* Graphique revenus mensuels */}
+
       <Card>
         <CardContent className="p-5">
           <div className="flex items-center justify-between mb-3">
             <div>
-              <h2 className="text-base font-semibold">Revenus mensuels</h2>
-              <p className="text-xs text-muted-foreground">Factures payées par mois</p>
+              <h2 className="text-base font-semibold">{t("revenus_mensuels")}</h2>
+              <p className="text-xs text-muted-foreground">{t("factures_payees_mois")}</p>
             </div>
             <Badge variant="outline" className="text-[10px]">{seriesInvoices.length} mois</Badge>
           </div>
@@ -156,16 +158,16 @@ export function StatisticsView({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart label="Aucune facture payée sur cette période" />
+            <EmptyChart label={t("aucune_facture_payee_periode")} />
           )}
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Nouveaux clients par mois */}
+
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-base font-semibold mb-3">Nouveaux clients</h2>
+            <h2 className="text-base font-semibold mb-3">{t("nouveaux_clients")}</h2>
             {seriesClients.length > 0 ? (
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={seriesClients} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
@@ -180,15 +182,15 @@ export function StatisticsView({
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyChart label="Aucun nouveau client sur cette période" />
+              <EmptyChart label={t("aucun_nouveau_client_periode")} />
             )}
           </CardContent>
         </Card>
 
-        {/* Répartition statuts factures */}
+
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-base font-semibold mb-3">Statuts de factures</h2>
+            <h2 className="text-base font-semibold mb-3">{t("statuts_factures")}</h2>
             {statusBreakdown.length > 0 ? (
               <div className="flex items-center gap-4">
                 <ResponsiveContainer width={180} height={200}>
@@ -208,7 +210,7 @@ export function StatisticsView({
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(v: unknown, name: unknown) => [String(v), STATUS_LABELS[String(name)] ?? String(name)]}
+                      formatter={(v: unknown, name: unknown) => [String(v), STATUS_KEYS[String(name)] ?? String(name)]}
                       contentStyle={{ fontSize: 12, borderRadius: 8 }}
                     />
                   </PieChart>
@@ -217,7 +219,7 @@ export function StatisticsView({
                   {statusBreakdown.map((s) => (
                     <div key={s.status} className="flex items-center gap-2 text-xs">
                       <div className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: STATUS_COLORS[s.status] ?? "#6b7280" }} />
-                      <span className="flex-1">{STATUS_LABELS[s.status] ?? s.status}</span>
+                      <span className="flex-1">{STATUS_KEYS[s.status] ?? s.status}</span>
                       <span className="font-semibold tabular-nums">{s.count}</span>
                       <span className="text-muted-foreground tabular-nums text-[10px]">{fmtMoney(s.total, true)}</span>
                     </div>
@@ -225,19 +227,19 @@ export function StatisticsView({
                 </div>
               </div>
             ) : (
-              <EmptyChart label="Aucune facture sur cette période" />
+              <EmptyChart label={t("aucune_facture_periode")} />
             )}
           </CardContent>
         </Card>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* Top clients */}
+
         <Card>
           <CardContent className="p-5">
             <div className="flex items-center gap-2 mb-3">
               <Crown className="h-4 w-4 text-amber-500" />
-              <h2 className="text-base font-semibold">Top clients par CA</h2>
+              <h2 className="text-base font-semibold">{t("top_clients_ca")}</h2>
             </div>
             {topClients.length > 0 ? (
               <div className="space-y-2">
@@ -260,15 +262,15 @@ export function StatisticsView({
                 })}
               </div>
             ) : (
-              <EmptyChart label="Aucun client payeur sur cette période" />
+              <EmptyChart label={t("aucun_client_payeur_periode")} />
             )}
           </CardContent>
         </Card>
 
-        {/* Répartition par service */}
+
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-base font-semibold mb-3">Revenus par type de service</h2>
+            <h2 className="text-base font-semibold mb-3">{t("revenus_type_service")}</h2>
             {serviceBreakdown.length > 0 ? (
               <ResponsiveContainer width="100%" height={250}>
                 <BarChart data={serviceBreakdown} layout="vertical" margin={{ top: 5, right: 10, left: 60, bottom: 0 }}>
@@ -287,17 +289,17 @@ export function StatisticsView({
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyChart label="Aucun service catégorisé sur cette période" />
+              <EmptyChart label={t("aucun_service_categorise_periode")} />
             )}
           </CardContent>
         </Card>
       </div>
 
-      {/* Courbe combinée revenus + factures */}
+
       {seriesInvoices.length > 0 && (
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-base font-semibold mb-3">Volume vs Revenus</h2>
+            <h2 className="text-base font-semibold mb-3">{t("volume_vs_revenus")}</h2>
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={seriesInvoices} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
@@ -309,7 +311,7 @@ export function StatisticsView({
                   labelFormatter={monthLabelFormatter}
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
                 />
-                <Legend wrapperStyle={{ fontSize: 11 }} formatter={(v: unknown) => String(v) === "revenue" ? "Revenus" : "Nombre"} />
+                <Legend wrapperStyle={{ fontSize: 11 }} formatter={(v: unknown) => String(v) === "revenue" ? t("revenus") : t("nombre")} />
                 <Line yAxisId="left" type="monotone" dataKey="revenue" stroke="#26A269" strokeWidth={2} dot={{ r: 4 }} />
                 <Line yAxisId="right" type="monotone" dataKey="count" stroke="#1A5FB4" strokeWidth={2} dot={{ r: 4 }} />
               </LineChart>

@@ -6,43 +6,43 @@
 export const CONTRACT_TYPES = [
   {
     value: "permanent_full_time",
-    label: "Permanent temps plein",
-    description: "Poste régulier 35h+ / sem, durée indéterminée",
+    labelKey: "ct_permanent_full_time",
+    descriptionKey: "ctd_permanent_full_time",
   },
   {
     value: "permanent_part_time",
-    label: "Permanent temps partiel",
-    description: "Poste régulier moins de 35h / sem, durée indéterminée",
+    labelKey: "ct_permanent_part_time",
+    descriptionKey: "ctd_permanent_part_time",
   },
   {
     value: "temporary",
-    label: "Temporaire (durée déterminée)",
-    description: "Contrat avec date de fin précise",
+    labelKey: "ct_temporary",
+    descriptionKey: "ctd_temporary",
   },
   {
     value: "seasonal",
-    label: "Saisonnier",
-    description: "Travail récurrent selon saison ou cycle d'activité",
+    labelKey: "ct_seasonal",
+    descriptionKey: "ctd_seasonal",
   },
   {
     value: "on_call",
-    label: "Sur appel",
-    description: "Heures variables selon besoins opérationnels",
+    labelKey: "ct_on_call",
+    descriptionKey: "ctd_on_call",
   },
   {
     value: "student",
-    label: "Étudiant (temps partiel)",
-    description: "Étudiant aux études, horaire compatible session",
+    labelKey: "ct_student",
+    descriptionKey: "ctd_student",
   },
   {
     value: "internship",
-    label: "Stage rémunéré",
-    description: "Stage encadré dans le cadre d'un programme d'études",
+    labelKey: "ct_internship",
+    descriptionKey: "ctd_internship",
   },
   {
     value: "freelance",
-    label: "Pigiste / Travailleur autonome",
-    description: "Sous-traitant indépendant, hors LNT",
+    labelKey: "ct_freelance",
+    descriptionKey: "ctd_freelance",
   },
 ] as const;
 
@@ -66,15 +66,15 @@ export const LEGACY_CONTRACT_TYPE_MAP: Record<string, ContractTypeValue> = {
  * mappée vers la nouvelle valeur avant de retourner le label.
  * Si aucune correspondance, la valeur brute est retournée.
  */
-export function getContractTypeLabel(value: string | null | undefined): string {
-  if (!value) return "";
+export function getContractTypeKey(value: string | null | undefined): string | null {
+  if (!value) return null;
   const found = CONTRACT_TYPES.find((c) => c.value === value);
-  if (found) return found.label;
+  if (found) return found.labelKey;
   const mapped = LEGACY_CONTRACT_TYPE_MAP[value];
   if (mapped) {
-    return CONTRACT_TYPES.find((c) => c.value === mapped)?.label ?? value;
+    return CONTRACT_TYPES.find((c) => c.value === mapped)?.labelKey ?? null;
   }
-  return value;
+  return null;
 }
 
 /**

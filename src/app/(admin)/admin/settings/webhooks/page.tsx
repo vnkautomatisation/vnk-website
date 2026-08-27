@@ -1,12 +1,16 @@
 // Settings · Webhooks — sortants (vers partenaires) + entrants (debug & replay).
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { getCurrentAdminPermissions, canAct } from "@/lib/permissions";
 import { redirect } from "next/navigation";
 import { WebhooksView } from "./webhooks-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Webhooks — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("webhooks_vnk") };
+}
 
 export default async function WebhooksPage() {
   const session = await auth();

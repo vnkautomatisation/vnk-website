@@ -1,5 +1,6 @@
 "use server";
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -32,10 +33,11 @@ const profileSchema = z.object({
 });
 
 export async function updateProfileAction(input: z.infer<typeof profileSchema>): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = profileSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     const before = await prisma.admin.findUnique({
@@ -57,13 +59,13 @@ export async function updateProfileAction(input: z.infer<typeof profileSchema>):
     });
 
     await logAudit({ adminId, action: "update", entityType: "admin", entityId: adminId, changes: { before, after: parsed.data } });
-    await logSecurityEvent({ adminId, type: "profile_updated", message: "Profil mis à jour" });
+    await logSecurityEvent({ adminId, type: "profile_updated", message: t("profil_mis_a_jour") });
 
     revalidatePath("/admin/profile");
     revalidatePath("/admin");
     return { success: true };
   } catch {
-    return { success: false, error: "Erreur lors de la mise à jour" };
+    return { success: false, error: t("erreur_lors_de_la_mise_a_jour") };
   }
 }
 
@@ -74,10 +76,11 @@ const presenceSchema = z.object({
   until: z.string().datetime().optional().nullable(),
 });
 export async function updatePresenceAction(input: z.infer<typeof presenceSchema>): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = presenceSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     await prisma.admin.update({
@@ -108,10 +111,11 @@ const preferencesSchema = z.object({
 });
 
 export async function updatePreferencesAction(input: z.infer<typeof preferencesSchema>): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = preferencesSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     await prisma.admin.update({
@@ -125,7 +129,7 @@ export async function updatePreferencesAction(input: z.infer<typeof preferencesS
         shortcuts: parsed.data.shortcuts ?? undefined,
       },
     });
-    await logSecurityEvent({ adminId, type: "preferences_updated", message: "Préférences mises à jour" });
+    await logSecurityEvent({ adminId, type: "preferences_updated", message: t("preferences_mises_a_jour") });
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {
@@ -147,10 +151,11 @@ const notifPrefsSchema = z.object({
 });
 
 export async function updateNotificationPrefsAction(input: z.infer<typeof notifPrefsSchema>): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = notifPrefsSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     const current = await prisma.admin.findUnique({ where: { id: adminId }, select: { notificationPrefs: true } });
@@ -162,7 +167,7 @@ export async function updateNotificationPrefsAction(input: z.infer<typeof notifP
         loginAlertsEnabled: parsed.data.loginAlertsEnabled ?? undefined,
       },
     });
-    await logSecurityEvent({ adminId, type: "notification_prefs_updated", message: "Préférences de notification mises à jour" });
+    await logSecurityEvent({ adminId, type: "notification_prefs_updated", message: t("preferences_de_notification_mises_a_jour") });
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {
@@ -174,6 +179,7 @@ export async function updateNotificationPrefsAction(input: z.infer<typeof notifP
 // 4. SESSIONS — revoke individuel + revoke all OTHERS
 // ═════════════════════════════════════════════════════════════
 export async function revokeSessionAction(sessionId: string): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
@@ -188,7 +194,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {
-    return { success: false, error: "Erreur lors de la révocation" };
+    return { success: false, error: t("erreur_lors_de_la_revocation") };
   }
 }
 
@@ -199,6 +205,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
 // 3. La session courante émet un nouveau JWT au prochain rafraîchissement
 //    qui sera valide car iat est plus récent.
 export async function revokeAllOtherSessionsAction(currentSessionId?: string): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
@@ -218,12 +225,12 @@ export async function revokeAllOtherSessionsAction(currentSessionId?: string): P
       adminId,
       type: "all_sessions_revoked",
       severity: "warning",
-      message: `${result.count} session${result.count > 1 ? "s" : ""} révoquée${result.count > 1 ? "s" : ""} + tous les JWT externes invalidés`,
+      message: t("n_sessions_revoquees", { count: result.count }),
     });
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {
-    return { success: false, error: "Erreur lors de la révocation" };
+    return { success: false, error: t("erreur_lors_de_la_revocation") };
   }
 }
 
@@ -287,6 +294,7 @@ export async function trustSessionDeviceAction(sessionId: string): Promise<Actio
 
 // ── Signaler une session comme suspecte (déclenche alerte critique) ──
 export async function reportSuspiciousSessionAction(sessionId: string): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
@@ -301,7 +309,7 @@ export async function reportSuspiciousSessionAction(sessionId: string): Promise<
       adminId,
       type: "suspicious_login",
       severity: "critical",
-      message: `Session signalée comme suspecte et révoquée (${target.browser ?? "appareil inconnu"} · ${target.ipAddress ?? "IP masquée"})`,
+      message: t("session_signalee_suspecte", { appareil: target.browser ?? t("appareil_inconnu"), ip: target.ipAddress ?? t("ip_inconnue") }),
       metadata: {
         sessionId,
         userAgent: target.userAgent,
@@ -349,15 +357,16 @@ export async function removeTrustedDeviceAction(deviceId: number): Promise<Actio
 // ═════════════════════════════════════════════════════════════
 const apiTokenSchema = z.object({
   name: z.string().min(2).max(80),
-  scopes: z.array(z.string()).min(1, "Sélectionnez au moins une permission"),
+  scopes: z.array(z.string()).min(1, "selectionnez_au_moins_une_permission"),
   expiresInDays: z.number().int().min(1).max(365).optional().nullable(),
 });
 
 export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>): Promise<ActionResult<{ token: string; prefix: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = apiTokenSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   try {
     // Generer token: vnk_pa_<32 chars>
@@ -397,7 +406,7 @@ export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>
     revalidatePath("/admin/profile");
     return { success: true, data: { token, prefix } };
   } catch {
-    return { success: false, error: "Erreur lors de la création" };
+    return { success: false, error: t("erreur_lors_de_la_creation") };
   }
 }
 
@@ -420,12 +429,13 @@ export async function revokeApiTokenAction(tokenId: number): Promise<ActionResul
 // 7. BACKUP CODES — regen one-time
 // ═════════════════════════════════════════════════════════════
 export async function regenerateBackupCodesAction(): Promise<ActionResult<{ codes: string[] }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   try {
     const { regenerateBackupCodes } = await import("@/lib/security/backup-codes");
     const codes = await regenerateBackupCodes(adminId);
-    await logSecurityEvent({ adminId, type: "backup_codes_regenerated", message: "10 codes de récupération générés" });
+    await logSecurityEvent({ adminId, type: "backup_codes_regenerated", message: t("10_codes_de_recuperation_generes") });
     revalidatePath("/admin/profile");
     return { success: true, data: { codes } };
   } catch {
@@ -437,6 +447,7 @@ export async function regenerateBackupCodesAction(): Promise<ActionResult<{ code
 // 8. LOI 25 — Export + Demande suppression
 // ═════════════════════════════════════════════════════════════
 export async function requestDataExportAction(): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   try {
@@ -448,7 +459,7 @@ export async function requestDataExportAction(): Promise<ActionResult> {
       adminId,
       type: "data_export_requested",
       severity: "warning",
-      message: "Export de données personnelles demandé (Loi 25)",
+      message: t("export_de_donnees_personnelles_demande_loi_25"),
     });
     revalidatePath("/admin/profile");
     return { success: true };
@@ -458,18 +469,19 @@ export async function requestDataExportAction(): Promise<ActionResult> {
 }
 
 export async function requestAccountDeletionAction(confirmEmail: string): Promise<ActionResult> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   try {
     const admin = await prisma.admin.findUnique({ where: { id: adminId }, select: { email: true } });
     if (!admin || admin.email.toLowerCase() !== confirmEmail.toLowerCase()) {
-      return { success: false, error: "Le courriel ne correspond pas" };
+      return { success: false, error: t("le_courriel_ne_correspond_pas") };
     }
     await logSecurityEvent({
       adminId,
       type: "account_deletion_requested",
       severity: "critical",
-      message: "Demande de suppression de compte (Loi 25)",
+      message: t("demande_de_suppression_de_compte_loi_25"),
     });
     return { success: true };
   } catch {

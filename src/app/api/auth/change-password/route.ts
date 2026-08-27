@@ -1,5 +1,6 @@
 // API · Changement de mot de passe (client ou admin) — avec HIBP check
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -11,16 +12,17 @@ import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const schema = z.object({
-  currentPassword: z.string().min(1, "Mot de passe actuel requis"),
-  newPassword: z.string().min(8, "Minimum 8 caractères"),
+  currentPassword: z.string().min(1, "mot_de_passe_actuel_requis"),
+  newPassword: z.string().min(8, "minimum_8_caracteres"),
   confirmPassword: z.string(),
   bypassBreachCheck: z.boolean().optional(), // user a vu le warning et veut quand meme proceder
 }).refine(d => d.newPassword === d.confirmPassword, {
-  message: "Les mots de passe ne correspondent pas",
+  message: "les_mots_de_passe_ne_correspondent_pas",
   path: ["confirmPassword"],
 });
 
 export async function POST(request: NextRequest) {
+  const t = await getTranslations("api_errors");
   try {
     const session = await auth();
     if (!session?.user) {
@@ -31,7 +33,7 @@ export async function POST(request: NextRequest) {
     const parsed = schema.safeParse(body);
     if (!parsed.success) {
       return NextResponse.json(
-        { error: parsed.error.errors[0].message },
+        { error: t(parsed.error.errors[0].message) },
         { status: 400 }
       );
     }
@@ -67,7 +69,7 @@ export async function POST(request: NextRequest) {
     const isValid = await bcrypt.compare(currentPassword, currentHash);
     if (!isValid) {
       return NextResponse.json(
-        { error: "Mot de passe actuel incorrect" },
+        { error: t("mot_de_passe_actuel_incorrect") },
         { status: 403 }
       );
     }
@@ -105,7 +107,7 @@ export async function POST(request: NextRequest) {
       for (const past of history.slice(0, 5)) {
         if (await bcrypt.compare(newPassword, past.hash)) {
           return NextResponse.json(
-            { error: "Vous avez deja utilise ce mot de passe recemment. Choisissez-en un nouveau." },
+            { error: t("vous_avez_deja_utilise_ce_mot_de") },
             { status: 422 }
           );
         }
@@ -126,13 +128,13 @@ export async function POST(request: NextRequest) {
           adminId: entityId,
           type: "password_breach_detected",
           severity: "critical",
-          message: "Mot de passe change malgre presence dans fuites publiques (HIBP)",
+          message: t("mot_de_passe_change_malgre_presence_dans"),
         });
       }
       await logSecurityEvent({
         adminId: entityId,
         type: "password_changed",
-        message: "Mot de passe change",
+        message: t("mot_de_passe_change"),
       });
     } else {
       await prisma.client.update({
@@ -151,7 +153,7 @@ export async function POST(request: NextRequest) {
       userAgent: ctx.userAgent,
     });
 
-    return NextResponse.json({ ok: true, message: "Mot de passe modifié" });
+    return NextResponse.json({ ok: true, message: t("mot_de_passe_modifie") });
   } catch {
     return NextResponse.json(
       { error: "Erreur serveur" },

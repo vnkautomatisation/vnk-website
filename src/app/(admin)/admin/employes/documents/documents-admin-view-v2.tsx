@@ -152,13 +152,13 @@ function formatDate(iso: string | null | undefined): string {
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
 }
 
-const CATEGORY_LABEL: Record<string, string> = {
-  policy: "Politique",
-  legal: "Légal",
-  lettre: "Lettre",
-  onboarding: "Onboarding",
-  nda: "NDA",
-  contract: "Contrat",
+const CATEGORY_KEY: Record<string, string> = {
+  policy: "politique",
+  legal: "legal",
+  lettre: "lettre",
+  onboarding: "onboarding",
+  nda: "nda",
+  contract: "contrat",
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
@@ -195,11 +195,12 @@ export function DocumentsAdminViewV2({
   templateIdsInActiveHandbooks?: number[];
   isSuper: boolean;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const router = useRouter();
   void isSuper;
 
-  // ─── Filtres & navigation ─────────────────────────────────
+
   const [section, setSection] = useState<SidebarSection>("library");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [search, setSearch] = useState("");
@@ -208,50 +209,50 @@ export function DocumentsAdminViewV2({
   const [drawerRow, setDrawerRow] = useState<RowItem | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false); // mobile
 
-  // ─── Dialogs ──────────────────────────────────────────────
+
   const [startDraftDialog, setStartDraftDialog] = useState<{
     open: boolean; template: Template | null;
   }>({ open: false, template: null });
   const [editorDraftId, setEditorDraftId] = useState<number | null>(null);
 
-  // ─── Construction des rows unifiees ───────────────────────
+
   const rows = useMemo<RowItem[]>(() => {
     const out: RowItem[] = [];
 
-    // Templates
-    templates.forEach((t) => {
-      const sigCount = t._count?.signatures ?? 0;
+
+    templates.forEach((tpl) => {
+      const sigCount = tpl._count?.signatures ?? 0;
       out.push({
-        id: `tpl-${t.id}`,
+        id: `tpl-${tpl.id}`,
         kind: "template",
-        title: t.title,
-        category: t.category,
+        title: tpl.title,
+        category: tpl.category,
         destinataire: null,
         status: "model",
-        statusLabel: sigCount > 0 ? `${sigCount} signatures` : "Modèle",
+        statusLabel: sigCount > 0 ? `${sigCount} signatures` : t("modele"),
         updatedAt: "",
-        templateId: t.id,
-        template: t,
+        templateId: tpl.id,
+        template: tpl,
       });
     });
 
-    // Pending signature requests
+
     pendingRequests.forEach((r) => {
       out.push({
         id: `req-${r.id}`,
         kind: "request",
         title: r.template.title,
         category: "legal",
-        destinataire: r.targetAdmin?.fullName ?? r.targetAdmin?.email ?? (r.targetAll ? "Tous" : "Équipe"),
+        destinataire: r.targetAdmin?.fullName ?? r.targetAdmin?.email ?? (r.targetAll ? t("tous") : t("equipe")),
         status: "pending",
-        statusLabel: r.dueDate ? `Échéance ${formatDate(r.dueDate)}` : "En attente",
+        statusLabel: r.dueDate ? t("echeance_date", { date: formatDate(r.dueDate) }) : t("attente_2"),
         updatedAt: r.requestedAt,
         templateId: r.templateId,
         pendingRequest: r,
       });
     });
 
-    // Upload requests (pending only)
+
     uploadRequests.filter((u) => u.status === "pending").forEach((u) => {
       out.push({
         id: `up-${u.id}`,
@@ -260,7 +261,7 @@ export function DocumentsAdminViewV2({
         category: u.category,
         destinataire: u.targetAdmin.fullName ?? u.targetAdmin.email,
         status: "pending",
-        statusLabel: u.dueDate ? `Échéance ${formatDate(u.dueDate)}` : "Upload demandé",
+        statusLabel: u.dueDate ? `Échéance ${formatDate(u.dueDate)}` : t("upload_demande"),
         updatedAt: u.createdAt,
         uploadRequest: u,
       });
@@ -269,7 +270,7 @@ export function DocumentsAdminViewV2({
     return out;
   }, [templates, pendingRequests, uploadRequests]);
 
-  // ─── Compteurs pour les chips ─────────────────────────────
+
   const counts = useMemo(() => {
     return {
       needs_action: rows.filter((r) => r.kind === "request" && r.status === "pending").length,
@@ -279,11 +280,11 @@ export function DocumentsAdminViewV2({
     };
   }, [rows, templates]);
 
-  // ─── Filtrage final ───────────────────────────────────────
+
   const filteredRows = useMemo(() => {
     let r = rows;
 
-    // Filtre section sidebar
+
     if (section === "actions") {
       r = r.filter((x) => x.status === "pending");
     } else if (section === "library") {
@@ -294,7 +295,7 @@ export function DocumentsAdminViewV2({
       r = r.filter((x) => x.status === "signed");
     }
 
-    // Filtre chips de statut
+
     if (statusFilter === "needs_action") {
       r = r.filter((x) => x.kind === "request" && x.status === "pending");
     } else if (statusFilter === "in_progress") {
@@ -305,12 +306,12 @@ export function DocumentsAdminViewV2({
       r = r.filter((x) => x.status === "draft");
     }
 
-    // Filtre catégorie
+
     if (categoryFilter) {
       r = r.filter((x) => x.category === categoryFilter);
     }
 
-    // Search
+
     if (search.trim()) {
       const q = search.toLowerCase();
       r = r.filter((x) => x.title.toLowerCase().includes(q)
@@ -321,25 +322,25 @@ export function DocumentsAdminViewV2({
     return r;
   }, [rows, section, statusFilter, categoryFilter, search]);
 
-  // ─── Categories pour sidebar bibliotheque ─────────────────
+
   const categories = useMemo(() => {
     const set = new Map<string, number>();
     templates.forEach((t) => set.set(t.category, (set.get(t.category) ?? 0) + 1));
     return Array.from(set.entries()).sort(([a], [b]) => a.localeCompare(b));
   }, [templates]);
 
-  // ─── Actions ──────────────────────────────────────────────
+
   const handleSendForSignature = useCallback((tpl: Template) => {
     const isLong = isLongFormTemplate(tpl.bodyMarkdown);
     const hasPlaceholders = detectPlaceholders(tpl.bodyMarkdown).length > 0;
     if (isLong) {
       setStartDraftDialog({ open: true, template: tpl });
     } else if (hasPlaceholders) {
-      toast.info("À implémenter v2 : Compléter champs + envoyer");
-      // TODO: re-implémenter avec TemplateFieldsDialog
+      toast.info(t("implementer_v2_completer_champs_envoyer"));
+
     } else {
-      toast.info("À implémenter v2 : Envoyer signature direct");
-      // TODO: SignatureRequestDialog
+      toast.info(t("implementer_v2_envoyer_signature_direct"));
+
     }
   }, []);
 
@@ -357,10 +358,10 @@ export function DocumentsAdminViewV2({
     setSelectedRowIds(next);
   };
 
-  // ─── Render ───────────────────────────────────────────────
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] bg-muted/20">
-      {/* Mini-bar chips + search + bouton + Nouveau */}
+
       <div className="sticky top-0 z-10 bg-card border-b border-border/60 shadow-sm">
         <div className="flex items-center gap-2 px-4 py-2 overflow-x-auto">
           <Button
@@ -373,34 +374,34 @@ export function DocumentsAdminViewV2({
           </Button>
 
           <Chip
-            label="Tout"
+            label={t("tout")}
             count={rows.length}
             active={statusFilter === "all"}
             onClick={() => setStatusFilter("all")}
           />
           <Chip
-            label="Action requise"
+            label={t("action_requise")}
             count={counts.needs_action}
             tone="amber"
             active={statusFilter === "needs_action"}
             onClick={() => setStatusFilter("needs_action")}
           />
           <Chip
-            label="En cours"
+            label={t("cours")}
             count={counts.in_progress}
             tone="blue"
             active={statusFilter === "in_progress"}
             onClick={() => setStatusFilter("in_progress")}
           />
           <Chip
-            label="Signés"
+            label={t("signes")}
             count={counts.signed}
             tone="green"
             active={statusFilter === "signed"}
             onClick={() => setStatusFilter("signed")}
           />
           <Chip
-            label="Brouillons"
+            label={t("brouillons")}
             count={counts.drafts}
             tone="amber"
             active={statusFilter === "drafts"}
@@ -413,7 +414,7 @@ export function DocumentsAdminViewV2({
               <Input
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Rechercher…"
+                placeholder={t("rechercher")}
                 className="pl-8 h-8 text-sm"
               />
             </div>
@@ -426,30 +427,30 @@ export function DocumentsAdminViewV2({
                 className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shrink-0"
               >
                 <Plus className="h-3.5 w-3.5 mr-1" />
-                Nouveau
+                {t("nouveau")}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuItem onClick={() => toast.info("À implémenter : nouveau template")}>
+              <DropdownMenuItem onClick={() => toast.info(t("implementer_nouveau_template"))}>
                 <FileText className="h-3.5 w-3.5 mr-2" />
-                Nouveau modèle
+                {t("nouveau_modele")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.info("À implémenter : demande signature")}>
+              <DropdownMenuItem onClick={() => toast.info(t("implementer_demande_signature"))}>
                 <FileSignature className="h-3.5 w-3.5 mr-2" />
-                Demander une signature
+                {t("demander_signature_2")}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => toast.info("À implémenter : demande upload")}>
+              <DropdownMenuItem onClick={() => toast.info(t("implementer_demande_upload"))}>
                 <Upload className="h-3.5 w-3.5 mr-2" />
-                Demander un document
+                {t("demander_document")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      {/* Layout principal : sidebar + main */}
+
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar desktop */}
+
         <aside className="hidden lg:flex w-[240px] flex-col bg-card border-r border-border/60 overflow-y-auto shrink-0">
           <SidebarContent
             section={section}
@@ -461,11 +462,11 @@ export function DocumentsAdminViewV2({
           />
         </aside>
 
-        {/* Sidebar mobile (sheet) */}
+
         <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
           <SheetContent side="left" className="w-[280px] p-0">
             <SheetHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 py-3">
-              <SheetTitle className="text-white text-sm">Navigation</SheetTitle>
+              <SheetTitle className="text-white text-sm">{t("navigation")}</SheetTitle>
             </SheetHeader>
             <div className="overflow-y-auto h-full">
               <SidebarContent
@@ -480,9 +481,9 @@ export function DocumentsAdminViewV2({
           </SheetContent>
         </Sheet>
 
-        {/* Main : table */}
+
         <main className="flex-1 overflow-auto">
-          {/* Bulk action bar */}
+
           {selectedRowIds.size > 0 && (
             <div className="sticky top-0 z-[5] bg-[#0F2D52] text-white px-4 py-2 flex items-center gap-3 shadow-md">
               <span className="text-sm">{selectedRowIds.size} sélectionné{selectedRowIds.size > 1 ? "s" : ""}</span>
@@ -491,7 +492,7 @@ export function DocumentsAdminViewV2({
                 size="sm"
                 variant="ghost"
                 className="text-white hover:bg-white/10"
-                onClick={() => toast.info("À implémenter : envoyer en masse")}
+                onClick={() => toast.info(t("implementer_envoyer_masse"))}
               >
                 <Send className="h-3.5 w-3.5 mr-1" /> {tc("send")}
               </Button>
@@ -520,9 +521,9 @@ export function DocumentsAdminViewV2({
                       className="rounded border-border"
                     />
                   </th>
-                  <th className="px-3 py-2">Nom</th>
-                  <th className="px-3 py-2 hidden md:table-cell">Catégorie</th>
-                  <th className="px-3 py-2 hidden lg:table-cell">Destinataire</th>
+                  <th className="px-3 py-2">{t("nom")}</th>
+                  <th className="px-3 py-2 hidden md:table-cell">{t("categorie")}</th>
+                  <th className="px-3 py-2 hidden lg:table-cell">{t("destinataire")}</th>
                   <th className="px-3 py-2">{tc("status")}</th>
                   <th className="px-3 py-2 w-12" />
                 </tr>
@@ -544,14 +545,14 @@ export function DocumentsAdminViewV2({
         </main>
       </div>
 
-      {/* Drawer detail */}
+
       <Sheet open={drawerRow !== null} onOpenChange={(o) => !o && setDrawerRow(null)}>
         <SheetContent side="right" className="w-full sm:max-w-[520px] p-0 overflow-hidden flex flex-col">
           {drawerRow && <DrawerContent row={drawerRow} onClose={() => setDrawerRow(null)} onSendForSignature={() => drawerRow.template && handleSendForSignature(drawerRow.template)} />}
         </SheetContent>
       </Sheet>
 
-      {/* Dialogs reutilises */}
+
       <StartDraftDialog
         open={startDraftDialog.open}
         templateId={startDraftDialog.template?.id ?? null}
@@ -584,13 +585,14 @@ function SidebarContent({
   categoryFilter: string | null;
   setCategoryFilter: (c: string | null) => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const [libraryOpen, setLibraryOpen] = useState(true);
 
   return (
     <nav className="py-3 px-2 space-y-1">
       <SidebarItem
         icon={<Inbox className="h-4 w-4" />}
-        label="Mes actions"
+        label={t("mes_actions")}
         count={counts.needs_action}
         active={section === "actions"}
         onClick={() => { setSection("actions"); setCategoryFilter(null); }}
@@ -605,7 +607,7 @@ function SidebarContent({
       >
         {libraryOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
         <BookOpen className="h-4 w-4" />
-        <span className="flex-1 text-left">Bibliothèque</span>
+        <span className="flex-1 text-left">{t("bibliotheque")}</span>
       </button>
       {libraryOpen && (
         <div className="ml-5 space-y-0.5 mb-1">
@@ -616,7 +618,7 @@ function SidebarContent({
               section === "library" && !categoryFilter ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
             }`}
           >
-            Tous les modèles
+            {t("tous_modeles")}
           </button>
           {categories.map(([cat, count]) => (
             <button
@@ -627,7 +629,7 @@ function SidebarContent({
                 categoryFilter === cat ? "bg-muted text-foreground font-medium" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <span className="flex-1 text-left truncate">{CATEGORY_LABEL[cat] ?? cat}</span>
+              <span className="flex-1 text-left truncate">{CATEGORY_KEY[cat] ? t(CATEGORY_KEY[cat]) : cat}</span>
               <span className="text-[10px] tabular-nums">{count}</span>
             </button>
           ))}
@@ -636,33 +638,31 @@ function SidebarContent({
 
       <SidebarItem
         icon={<ClipboardList className="h-4 w-4" />}
-        label="Suivi & conformité"
+        label={t("suivi_conformite")}
         count={counts.in_progress}
         active={section === "tracking"}
         onClick={() => { setSection("tracking"); setCategoryFilter(null); }}
       />
       <SidebarItem
         icon={<FolderOpen className="h-4 w-4" />}
-        label="Archives"
+        label={t("archives")}
         count={counts.signed}
         active={section === "archives"}
         onClick={() => { setSection("archives"); setCategoryFilter(null); }}
       />
 
       <div className="pt-3 mt-3 border-t border-border/40 px-3">
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-2">Raccourcis</div>
+        <div className="text-[10px] uppercase tracking-wide text-muted-foreground/70 mb-2">{t("raccourcis")}</div>
         <button
           type="button"
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-muted/60 text-muted-foreground hover:text-foreground"
         >
-          <Users className="h-3.5 w-3.5" /> Dossiers employés
-        </button>
+          <Users className="h-3.5 w-3.5" />{t("documents_admin_view_dossiers_employes")}</button>
         <button
           type="button"
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded text-[12px] hover:bg-muted/60 text-muted-foreground hover:text-foreground"
         >
-          <BookOpen className="h-3.5 w-3.5" /> Cahiers de l'employé
-        </button>
+          <BookOpen className="h-3.5 w-3.5" />{t("documents_admin_view_cahiers_de_l_employe")}</button>
       </div>
     </nav>
   );
@@ -744,6 +744,7 @@ function TableRow({
   onOpenDrawer: () => void;
   onSendForSignature: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   return (
     <tr
       className={`border-b hover:bg-muted/40 transition-colors cursor-pointer ${
@@ -764,7 +765,7 @@ function TableRow({
       </td>
       <td className="px-3 py-2.5 hidden md:table-cell">
         <span className={`inline-block text-[10px] px-1.5 py-0.5 rounded border ${CATEGORY_COLOR[row.category] ?? "bg-muted text-muted-foreground border-border"}`}>
-          {CATEGORY_LABEL[row.category] ?? row.category}
+          {CATEGORY_KEY[row.category] ? t(CATEGORY_KEY[row.category]) : row.category}
         </span>
       </td>
       <td className="px-3 py-2.5 hidden lg:table-cell text-muted-foreground">
@@ -784,12 +785,10 @@ function TableRow({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuItem onClick={onOpenDrawer}>
-              <Eye className="h-3.5 w-3.5 mr-2" /> Aperçu
-            </DropdownMenuItem>
+              <Eye className="h-3.5 w-3.5 mr-2" />{t("documents_admin_view_apercu")}</DropdownMenuItem>
             {row.kind === "template" && (
               <DropdownMenuItem onClick={onSendForSignature}>
-                <Send className="h-3.5 w-3.5 mr-2" /> Envoyer pour signature
-              </DropdownMenuItem>
+                <Send className="h-3.5 w-3.5 mr-2" />{t("documents_admin_view_envoyer_pour_signature")}</DropdownMenuItem>
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem className="text-rose-700">
@@ -807,6 +806,7 @@ function TableRow({
 function DrawerContent({ row, onClose, onSendForSignature }: {
   row: RowItem; onClose: () => void; onSendForSignature: () => void;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const pdfUrl = row.templateId
     ? `/api/admin/document-templates/preview-pdf?templateId=${row.templateId}`
@@ -828,7 +828,7 @@ function DrawerContent({ row, onClose, onSendForSignature }: {
           <iframe src={pdfUrl} title={row.title} className="w-full h-full border-0" />
         ) : (
           <div className="flex items-center justify-center h-full text-muted-foreground text-sm">
-            Aperçu PDF non disponible pour ce type
+            {t("apercu_pdf_non_disponible_type")}
           </div>
         )}
       </div>
@@ -847,12 +847,13 @@ function DrawerContent({ row, onClose, onSendForSignature }: {
 // ─── Empty state ──────────────────────────────────────────
 
 function EmptyState({ section, statusFilter }: { section: SidebarSection; statusFilter: StatusFilter }) {
+  const t = useTranslations("admin.hr_documents");
   void statusFilter;
   const config = {
-    actions: { icon: Inbox, title: "Aucune action en attente", text: "Tout est à jour. Reviens ici quand de nouveaux documents arrivent." },
-    library: { icon: BookOpen, title: "Aucun modèle", text: "Crée ton premier modèle ou importe depuis la bibliothèque starter." },
-    tracking: { icon: ClipboardList, title: "Aucun suivi en cours", text: "Les demandes de signature et upload apparaîtront ici." },
-    archives: { icon: FolderOpen, title: "Pas encore d'archives", text: "Les documents signés s'archivent automatiquement ici." },
+    actions: { icon: Inbox, title: t("aucune_action_attente"), text: t("tout_jour_reviens_ici_quand") },
+    library: { icon: BookOpen, title: t("aucun_modele"), text: t("cree_ton_premier_modele_importe") },
+    tracking: { icon: ClipboardList, title: t("aucun_suivi_cours"), text: t("demandes_signature_upload_apparaitront_ici") },
+    archives: { icon: FolderOpen, title: t("pas_encore_archives"), text: t("documents_signes_s_archivent_automatiquement") },
   }[section];
   const Icon = config.icon;
   return (

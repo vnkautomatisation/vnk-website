@@ -89,7 +89,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                   "flex flex-col items-center justify-center gap-0.5 w-14 relative",
                   moreActive ? "text-[#0F2D52]" : "text-muted-foreground"
                 )}
-                aria-label="Plus"
+                aria-label={t("portal_bottom_nav_plus")}
               >
                 {moreActive && (
                   <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#0F2D52]" />

@@ -1,5 +1,6 @@
 // POST /api/payments/bulk — actions en masse : reconcile / unreconcile / assign / categorize / export-flag
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -26,6 +27,7 @@ const bodySchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -37,7 +39,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = bodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const { paymentIds, action } = parsed.data;

@@ -7,6 +7,7 @@
 // Appel via Railway cron :
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/timeclock-reminders
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -25,6 +26,7 @@ function authorize(req: Request): boolean {
 const SUBMITTABLE = new Set(["work", "meeting", "training"]);
 
 async function sendReminderUnsubmitted(weekStart: Date, weekEnd: Date): Promise<number> {
+  const t = await getTranslations("api_errors");
   // Une seule requete : recupere les adminId distincts qui ont au moins une
   // entry eligible. Evite le N+1 (1 findFirst par admin).
   const candidates = await prisma.admin.findMany({
@@ -53,8 +55,8 @@ async function sendReminderUnsubmitted(weekStart: Date, weekEnd: Date): Promise<
       recipientType: "admin",
       recipientId: adminId,
       type: "warning",
-      title: "Soumettez votre semaine",
-      body: "Soumettez vos heures avant lundi pour la prochaine paie.",
+      title: t("soumettez_votre_semaine"),
+      body: t("soumettez_vos_heures_avant_lundi_pour_la"),
       link: "/admin/mon-espace/pointage",
       icon: "clock",
     })),
@@ -138,6 +140,7 @@ async function autoSubmitOpenWeeks(weekStart: Date, weekEnd: Date): Promise<numb
 }
 
 async function notifyPendingApprovals(): Promise<number> {
+  const t = await getTranslations("api_errors");
   const pendingCount = await prisma.timeClock.count({
     where: { submittedAt: { not: null }, approvedAt: null, clockOut: { not: null } },
   });
@@ -155,7 +158,7 @@ async function notifyPendingApprovals(): Promise<number> {
         recipientType: "admin",
         recipientId: r.id,
         type: "info",
-        title: "Timesheets à approuver",
+        title: t("timesheets_a_approuver"),
         body: `${pendingCount} pointage(s) en attente d'approbation.`,
         link: "/admin/employes/pointage",
         icon: "clock",
@@ -166,6 +169,7 @@ async function notifyPendingApprovals(): Promise<number> {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -239,7 +243,7 @@ export async function POST(req: Request) {
               recipientType: "admin",
               recipientId: rid,
               type: "warning",
-              title: "Heures soumises depuis plus de 48 h",
+              title: t("heures_soumises_depuis_plus_de_48_h"),
               body: `Les heures de ${name} attendent votre approbation depuis plus de 48 h.`,
               link: `/admin/employes/pointage?tab=to-approve&focus=${s.adminId}`,
               icon: "clock",

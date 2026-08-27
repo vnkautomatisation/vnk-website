@@ -2,12 +2,14 @@
 // GET /api/fx?refresh=1 — force le rafraichissement (vide cache memoire + Next fetch cache)
 // GET /api/fx — liste des devises supportées + taux courants
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { getRate, SUPPORTED_CURRENCIES, clearFxCache } from "@/lib/services/fx";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 export async function GET(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -27,7 +29,7 @@ export async function GET(req: Request) {
   if (currency) {
     const quote = await getRate(currency.toUpperCase(), date, force);
     if (!quote) {
-      return NextResponse.json({ error: "Devise non supportée ou taux indisponible" }, { status: 404 });
+      return NextResponse.json({ error: t("devise_non_supportee_ou_taux_indisponible") }, { status: 404 });
     }
     return NextResponse.json({ currency: currency.toUpperCase(), ...quote });
   }

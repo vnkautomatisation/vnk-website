@@ -1,5 +1,7 @@
 // HR · Rapports & people analytics.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
@@ -11,6 +13,7 @@ import { getHrReportData } from "@/lib/services/hr-reports";
 import { HrReportPdfButton } from "./hr-report-pdf-button";
 
 export default async function ReportsPage() {
+  const t = await getTranslations("admin.hr_nav");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
@@ -51,8 +54,8 @@ export default async function ReportsPage() {
     <div className="space-y-5">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-xl font-bold flex items-center gap-2"><FileBarChart className="h-5 w-5 text-[#0F2D52]" />Rapports RH</h1>
-          <p className="text-sm text-muted-foreground">Vue d&apos;ensemble des effectifs et indicateurs clés sur les 12 derniers mois.</p>
+          <h1 className="text-xl font-bold flex items-center gap-2"><FileBarChart className="h-5 w-5 text-[#0F2D52]" />{t("rapports_rh")}</h1>
+          <p className="text-sm text-muted-foreground">{t("vue_apos_ensemble_effectifs_indicateurs")}</p>
         </div>
         <div className="flex gap-2 shrink-0">
           <HrReportPdfButton />
@@ -64,27 +67,27 @@ export default async function ReportsPage() {
         </div>
       </div>
 
-      {/* KPIs principaux */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Effectif actif</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{t("effectif_actif")}</p>
           <p className="text-3xl font-bold">{totalActive}</p>
         </Card>
         <Card className="p-4 bg-emerald-50/30 border-emerald-200">
-          <p className="text-xs uppercase tracking-wider text-emerald-700 font-semibold">Embauches 12 mois</p>
+          <p className="text-xs uppercase tracking-wider text-emerald-700 font-semibold">{t("embauches_12_mois")}</p>
           <p className="text-3xl font-bold text-emerald-900">+{hiredThisYear}</p>
         </Card>
         <Card className="p-4 bg-red-50/30 border-red-200">
-          <p className="text-xs uppercase tracking-wider text-red-700 font-semibold">Départs 12 mois</p>
+          <p className="text-xs uppercase tracking-wider text-red-700 font-semibold">{t("departs_12_mois")}</p>
           <p className="text-3xl font-bold text-red-900">-{deactivatedThisYear}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">Taux turnover</p>
+          <p className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">{t("taux_turnover")}</p>
           <p className="text-3xl font-bold">{turnoverPct}%</p>
         </Card>
       </div>
 
-      {/* Alertes opérationnelles */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card className="p-3 flex items-center gap-2 bg-amber-50/50 border-amber-200">
           <Calendar className="h-4 w-4 text-amber-600" />
@@ -115,10 +118,9 @@ export default async function ReportsPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card className="p-5">
           <h2 className="font-bold text-sm flex items-center gap-2 mb-3">
-            <Users className="h-4 w-4 text-[#0F2D52]" />Par département
-          </h2>
+            <Users className="h-4 w-4 text-[#0F2D52]" />{t("page_par_departement")}</h2>
           {byDepartment.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Aucun département défini.</p>
+            <p className="text-xs text-muted-foreground">{t("aucun_departement_defini")}</p>
           ) : (
             <div className="space-y-1.5">
               {byDepartment.map((d) => {
@@ -141,10 +143,9 @@ export default async function ReportsPage() {
 
         <Card className="p-5">
           <h2 className="font-bold text-sm flex items-center gap-2 mb-3">
-            <TrendingUp className="h-4 w-4 text-[#0F2D52]" />Par poste
-          </h2>
+            <TrendingUp className="h-4 w-4 text-[#0F2D52]" />{t("page_par_poste")}</h2>
           {byPosition.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Aucun poste assigné.</p>
+            <p className="text-xs text-muted-foreground">{t("aucun_poste_assigne")}</p>
           ) : (
             <div className="space-y-1.5">
               {byPosition.sort((a, b) => b.count - a.count).map((p) => (
@@ -159,14 +160,14 @@ export default async function ReportsPage() {
       </div>
 
       <Card className="p-5">
-        <h2 className="font-bold text-sm mb-3">Volume opérationnel</h2>
+        <h2 className="font-bold text-sm mb-3">{t("volume_operationnel")}</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Bulletins émis (total)</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("bulletins_emis_total")}</p>
             <p className="text-2xl font-bold">{totalPayStubs}</p>
           </div>
           <div>
-            <p className="text-xs uppercase tracking-wider text-muted-foreground">Effectif inactif</p>
+            <p className="text-xs uppercase tracking-wider text-muted-foreground">{t("effectif_inactif")}</p>
             <p className="text-2xl font-bold text-muted-foreground">{totalInactive}</p>
           </div>
         </div>

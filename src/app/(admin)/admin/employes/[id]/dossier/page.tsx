@@ -2,12 +2,16 @@
 // Auth : super_admin OU permission users.write OU hr.write.
 // Charge en parallele toutes les donnees RH liees a l'employe cible.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { DossierView } from "./dossier-view";
 
-export const metadata: Metadata = { title: "Dossier employe" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("dossier_employe") };
+}
 
 export const dynamic = "force-dynamic";
 

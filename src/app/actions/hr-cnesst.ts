@@ -1,6 +1,7 @@
 "use server";
 // CNESST — déclaration d'accident du travail (Québec, obligatoire <24h).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -28,13 +29,14 @@ const incidentSchema = z.object({
 });
 
 export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
-  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: t("non_autorise_sst_rh_requis") };
   const actorId = session.user.adminId!;
 
   const parsed = incidentSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     adminId: parsed.data.adminId,
@@ -69,7 +71,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
           recipientType: "admin",
           recipientId: sa.id,
           type: "error",
-          title: "Nouvelle déclaration CNESST",
+          title: t("nouvelle_declaration_cnesst"),
           body: `Accident déclaré le ${data.incidentDate.toLocaleDateString("fr-CA")} · ${data.location}`,
           link: "/admin/employes/cnesst",
           icon: "alert-triangle",
@@ -97,12 +99,13 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
 }
 
 export async function deleteCnesstIncidentAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
-  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: t("non_autorise_sst_rh_requis") };
   const me = await prisma.admin.findUnique({ where: { id: session.user.adminId! }, include: { customRole: true } });
   if (me?.customRole?.name !== "super_admin") {
-    return { success: false, error: "Seul un super-admin peut supprimer une déclaration CNESST" };
+    return { success: false, error: t("seul_un_super_admin_peut_supprimer_une") };
   }
   await prisma.cnesstIncident.delete({ where: { id: input.id } });
   await logAudit({ adminId: me.id, action: "delete", entityType: "cnesst_incident", entityId: input.id });
@@ -111,9 +114,10 @@ export async function deleteCnesstIncidentAction(input: { id: number }): Promise
 }
 
 export async function markCnesstReportedAction(input: { id: number; date?: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
-  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: t("non_autorise_sst_rh_requis") };
   const actorId = session.user.adminId!;
   try {
     const reportedAt = input.date ? new Date(input.date) : new Date();
@@ -137,9 +141,10 @@ export async function markCnesstReportedAction(input: { id: number; date?: strin
 }
 
 export async function markCnesstReturnedAction(input: { id: number; date: string }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
-  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: "Non autorisé (SST/RH requis)" };
+  if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: t("non_autorise_sst_rh_requis") };
   const actorId = session.user.adminId!;
   try {
     const returnedAt = new Date(input.date);

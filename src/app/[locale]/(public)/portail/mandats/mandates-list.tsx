@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useTranslations } from "next-intl";
 import {
   Briefcase,
   X,
@@ -61,10 +62,10 @@ function getActiveStep(progress: number, status: string): number {
   return 0;
 }
 
-function getStepLabel(progress: number, status: string): string {
-  if (status === "completed") return "Termine";
+function getStepLabel(progress: number, status: string, t: (k: string) => string): string {
+  if (status === "completed") return t("termine");
   const step = getActiveStep(progress, status);
-  return STEPS[step]?.label ?? "Demarrage";
+  return STEPS[step]?.label ?? t("demarrage");
 }
 
 function isLate(m: { endDate: string | null; progress: number; status: string }): boolean {
@@ -73,6 +74,7 @@ function isLate(m: { endDate: string | null; progress: number; status: string })
 }
 
 function MandateTimeline({ progress, status, compact }: { progress: number; status: string; compact?: boolean }) {
+  const t = useTranslations("portal");
   const activeStep = getActiveStep(progress, status);
   const isCompleted = status === "completed";
   const isPaused = status === "paused";
@@ -87,7 +89,7 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
 
         return (
           <div key={step.key} className="flex items-center flex-1 min-w-0">
-            {/* Step circle */}
+
             <div className="flex flex-col items-center shrink-0">
               <div
                 className={cn(
@@ -128,7 +130,7 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
               )}
             </div>
 
-            {/* Connector line */}
+
             {i < STEPS.length - 1 && (
               <div
                 className={cn(
@@ -148,6 +150,7 @@ function MandateTimeline({ progress, status, compact }: { progress: number; stat
 // ── Barre de progression segmentee par etape ──
 // Suit exactement la logique de getActiveStep() pour rester coherent avec le timeline
 function SteppedProgressBar({ progress, status, late, compact }: { progress: number; status: string; late: boolean; compact?: boolean }) {
+  const t = useTranslations("portal");
   const activeStep = getActiveStep(progress, status);
   const isCompleted = status === "completed";
   const isPaused = status === "paused";
@@ -165,7 +168,7 @@ function SteppedProgressBar({ progress, status, late, compact }: { progress: num
       {STEPS.map((_, i) => {
         const done = isCompleted || i < activeStep;
         const current = !isCompleted && i === activeStep;
-        // Le segment actif se remplit proportionnellement (min 20% pour visibilite)
+
         const fill = done ? 100 : current ? Math.max(20, Math.round((progress % 20) * 5)) : 0;
 
         return (
@@ -202,18 +205,19 @@ function statusBorderColor(status: string, late: boolean): string {
   return "#1B4F8A";
 }
 
-const filterOptions: FilterOption[] = [
-  { value: "active", label: "Actif" },
-  { value: "in_progress", label: "En cours" },
-  { value: "completed", label: "Complete" },
-  { value: "paused", label: "En pause" },
-  { value: "pending", label: "En attente" },
+const filterOptions: { value: string; labelKey: string }[] = [
+  { value: "active", labelKey: "opt_actif" },
+  { value: "in_progress", labelKey: "opt_en_cours" },
+  { value: "completed", labelKey: "opt_complete" },
+  { value: "paused", labelKey: "opt_en_pause" },
+  { value: "pending", labelKey: "opt_en_attente" },
 ];
 
 export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
+  const t = useTranslations("portal");
   const [selected, setSelected] = useState<Mandate | null>(null);
 
-  // ── KPI stats ─────────────────────────────────────────
+
   const kpis = useMemo(() => {
     const total = mandates.length;
     const active = mandates.filter((m) => m.status === "active" || m.status === "in_progress").length;
@@ -235,7 +239,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     },
     {
       key: "title",
-      header: "Projet",
+      header: t("projet"),
       accessor: (r) => (
         <div>
           <span className="font-medium">{r.title}</span>
@@ -254,12 +258,12 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     },
     {
       key: "status",
-      header: "Statut",
+      header: t("statut"),
       accessor: (r) => <StatusBadge status={r.status} />,
     },
     {
       key: "progress",
-      header: "Progression",
+      header: t("progression"),
       accessor: (r) => (
         <div className="flex items-center gap-2 min-w-[120px]">
           <div className="flex-1">
@@ -276,9 +280,9 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     },
     {
       key: "step",
-      header: "Etape",
+      header: t("etape"),
       accessor: (r) => {
-        const label = getStepLabel(r.progress, r.status);
+        const label = getStepLabel(r.progress, r.status, t);
         return r.status === "completed" ? (
           <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
             <CheckCircle className="h-3 w-3" /> Termine
@@ -291,7 +295,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
     },
     {
       key: "hours",
-      header: "Heures",
+      header: t("heures"),
       accessor: (r) => {
         if (r.estimatedHours == null && r.actualHours == null) return <span className="text-muted-foreground">--</span>;
         return (
@@ -306,7 +310,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
 
   const renderCard = (m: Mandate) => {
     const late = isLate(m);
-    const stepLabel = getStepLabel(m.progress, m.status);
+    const stepLabel = getStepLabel(m.progress, m.status, t);
 
     return (
       <Card
@@ -317,7 +321,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
         style={{ borderLeftColor: statusBorderColor(m.status, late) }}
       >
         <CardContent className="p-4 space-y-3">
-          {/* Title + status + late flag */}
+
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0">
               <p className="font-semibold text-sm leading-tight">{m.title}</p>
@@ -335,10 +339,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
             </div>
           </div>
 
-          {/* Progress bar */}
+
           <div>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-muted-foreground">Progression</span>
+              <span className="text-xs text-muted-foreground">{t("progression")}</span>
               <span className={`text-xs font-bold tabular-nums text-[#0F2D52]`}>{m.progress}%</span>
             </div>
             <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -346,10 +350,10 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
             </div>
           </div>
 
-          {/* Mini timeline */}
+
           <MandateTimeline progress={m.progress} status={m.status} compact />
 
-          {/* Etape label — like old portal */}
+
           <div className="pt-2 border-t flex items-center justify-between">
             {m.status === "completed" ? (
               <span className="text-xs font-semibold text-emerald-600 flex items-center gap-1">
@@ -357,7 +361,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
               </span>
             ) : (
               <span className="text-xs">
-                <span className="text-muted-foreground">Etape : </span>
+                <span className="text-muted-foreground">{t("etape")} </span>
                 <span className="font-semibold text-[#0F2D52]">{stepLabel}</span>
               </span>
             )}
@@ -374,38 +378,38 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
 
   return (
     <div className="space-y-4">
-      {/* ── Header : titre + KPIs ─────────── */}
+
       <div>
         <div className="flex items-center gap-3 mb-4">
           <div className="portal-icon-lg rounded-xl vnk-gradient flex items-center justify-center shadow-lg">
             <Briefcase className="h-5 w-5 text-white" />
           </div>
           <div>
-            <h1 className="portal-title">Mandats</h1>
-            <p className="text-sm text-muted-foreground">Suivi de vos projets en cours</p>
+            <h1 className="portal-title">{t("mandats")}</h1>
+            <p className="text-sm text-muted-foreground">{t("suivi_projets_cours")}</p>
           </div>
         </div>
         <div className="grid grid-cols-3 lg:grid-cols-4 gap-3">
           <div className="rounded-xl border bg-emerald-50/60 portal-kpi-card">
             <p className="portal-kpi-number">{kpis.active}</p>
-            <p className="portal-kpi-label text-emerald-600">En cours</p>
+            <p className="portal-kpi-label text-emerald-600">{t("cours")}</p>
           </div>
           <div className="rounded-xl border bg-emerald-50/60 portal-kpi-card">
             <p className="portal-kpi-number">{kpis.completed}</p>
-            <p className="portal-kpi-label text-emerald-600">Completes</p>
+            <p className="portal-kpi-label text-emerald-600">{t("completes")}</p>
           </div>
           <div className="rounded-xl border bg-red-50/60 portal-kpi-card">
             <p className="portal-kpi-number">{kpis.total - kpis.active - kpis.completed}</p>
-            <p className="portal-kpi-label text-red-600">En retard</p>
+            <p className="portal-kpi-label text-red-600">{t("retard")}</p>
           </div>
           <div className="hidden lg:block rounded-xl border bg-[#0F2D52]/5 portal-kpi-card">
             <p className="portal-kpi-number">{kpis.avgProgress}%</p>
-            <p className="portal-kpi-label text-muted-foreground">Progression moy.</p>
+            <p className="portal-kpi-label text-muted-foreground">{t("progression_moy")}</p>
           </div>
         </div>
       </div>
 
-      {/* ── Layout : table + detail panel ─────────── */}
+
       <div className="flex gap-4 items-start">
         <div className={cn("flex-1 min-w-0 transition-all", selected && "lg:max-w-[calc(100%-380px)]")}>
           <DataTable
@@ -415,19 +419,19 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
             renderCard={renderCard}
             onRowClick={(m) => setSelected(m)}
             storageKey="portal-mandates"
-            searchPlaceholder="Rechercher un mandat..."
+            searchPlaceholder={t("rechercher_mandat")}
             searchFn={(r) => `${r.title} ${r.description ?? ""}`}
-            filterOptions={filterOptions}
+            filterOptions={filterOptions.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
             filterFn={(r) => r.status}
-            emptyMessage="Aucun mandat"
+            emptyMessage={t("aucun_mandat")}
           />
         </div>
 
-        {/* ── Detail panel — aligne avec les en-tetes du tableau ────── */}
+
         {selected && (
           <div className="hidden lg:block w-[370px] shrink-0 pt-[100px]">
             <Card className="sticky top-[100px] overflow-hidden border-0 shadow-lg ring-1 ring-border/50">
-              {/* Header */}
+
               <div className="bg-gradient-to-br from-[#0F2D52] to-[#1a4a7a] text-white px-5 py-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
@@ -445,18 +449,18 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                 </div>
               </div>
 
-              {/* Timeline stepper */}
+
               <div className="px-5 py-4 border-b bg-muted/30">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">
-                  Etapes du projet
+                  {t("etapes_projet")}
                 </p>
                 <MandateTimeline progress={selected.progress} status={selected.status} />
               </div>
 
-              {/* Progression */}
+
               <div className="px-5 py-4 border-b">
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Progression</span>
+                  <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t("progression")}</span>
                   <span className="text-lg font-bold text-[#0F2D52]">
                     {selected.progress}%
                   </span>
@@ -464,7 +468,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                 <SteppedProgressBar progress={selected.progress} status={selected.status} late={isLate(selected)} />
               </div>
 
-              {/* Info rows */}
+
               <div className="px-5 py-4 space-y-3">
                 {selected.description && (
                   <p className="text-sm text-muted-foreground leading-relaxed">
@@ -473,11 +477,11 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                 )}
 
                 <div className="space-y-2.5">
-                  <DetailRow icon={Calendar} label="Debut" value={selected.startDate ? formatDate(new Date(selected.startDate)) : "--"} />
-                  <DetailRow icon={Calendar} label="Fin" value={selected.endDate ? formatDate(new Date(selected.endDate)) : "--"} />
+                  <DetailRow icon={Calendar} label={t("debut")} value={selected.startDate ? formatDate(new Date(selected.startDate)) : "--"} />
+                  <DetailRow icon={Calendar} label={t("fin")} value={selected.endDate ? formatDate(new Date(selected.endDate)) : "--"} />
                   <DetailRow
                     icon={Clock}
-                    label="Heures"
+                    label={t("heures")}
                     value={
                       selected.estimatedHours != null
                         ? `${selected.actualHours ?? 0} / ${selected.estimatedHours} h`
@@ -485,16 +489,16 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                     }
                   />
                   {selected.hourlyRate != null && (
-                    <DetailRow icon={TrendingUp} label="Taux" value={`${selected.hourlyRate} $/h`} />
+                    <DetailRow icon={TrendingUp} label={t("taux")} value={`${selected.hourlyRate} $/h`} />
                   )}
-                  <DetailRow icon={FileText} label="Cree le" value={formatDate(new Date(selected.createdAt))} />
+                  <DetailRow icon={FileText} label={t("cree")} value={formatDate(new Date(selected.createdAt))} />
                 </div>
 
-                {/* Hours usage bar */}
+
                 {selected.estimatedHours != null && selected.actualHours != null && (
                   <div className="pt-3 border-t">
                     <div className="flex justify-between text-xs mb-1.5">
-                      <span className="text-muted-foreground font-medium">Heures utilisees</span>
+                      <span className="text-muted-foreground font-medium">{t("heures_utilisees")}</span>
                       <span className="font-bold">
                         {Math.round((selected.actualHours / selected.estimatedHours) * 100)}%
                       </span>
@@ -517,7 +521,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
         )}
       </div>
 
-      {/* ── Mobile: bottom sheet ──────────────────── */}
+
       {selected && (
         <div className="lg:hidden fixed inset-0 bottom-14 z-50">
           <div className="absolute inset-0 bg-black/40" onClick={() => setSelected(null)} />
@@ -536,16 +540,16 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
                 </button>
               </div>
 
-              {/* Timeline stepper mobile */}
+
               <div className="bg-muted/30 rounded-xl p-4">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">Etapes du projet</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground mb-3">{t("etapes_projet")}</p>
                 <MandateTimeline progress={selected.progress} status={selected.status} />
               </div>
 
-              {/* Progress */}
+
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-sm font-medium">Progression</span>
+                  <span className="text-sm font-medium">{t("progression")}</span>
                   <span className={`text-xl font-bold text-[#0F2D52]`}>{selected.progress}%</span>
                 </div>
                 <div className="h-3 rounded-full bg-muted overflow-hidden">
@@ -558,14 +562,14 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <DetailRow icon={Calendar} label="Debut" value={selected.startDate ? formatDate(new Date(selected.startDate)) : "--"} />
-                <DetailRow icon={Calendar} label="Fin" value={selected.endDate ? formatDate(new Date(selected.endDate)) : "--"} />
-                <DetailRow icon={Clock} label="Heures" value={selected.estimatedHours != null ? `${selected.actualHours ?? 0} / ${selected.estimatedHours} h` : "--"} />
-                {selected.hourlyRate != null && <DetailRow icon={TrendingUp} label="Taux" value={`${selected.hourlyRate} $/h`} />}
+                <DetailRow icon={Calendar} label={t("debut")} value={selected.startDate ? formatDate(new Date(selected.startDate)) : "--"} />
+                <DetailRow icon={Calendar} label={t("fin")} value={selected.endDate ? formatDate(new Date(selected.endDate)) : "--"} />
+                <DetailRow icon={Clock} label={t("heures")} value={selected.estimatedHours != null ? `${selected.actualHours ?? 0} / ${selected.estimatedHours} h` : "--"} />
+                {selected.hourlyRate != null && <DetailRow icon={TrendingUp} label={t("taux")} value={`${selected.hourlyRate} $/h`} />}
               </div>
 
               <Button variant="outline" className="w-full" onClick={() => setSelected(null)}>
-                Fermer
+                {t("fermer")}
               </Button>
             </div>
           </div>
@@ -576,6 +580,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
 }
 
 function DetailRow({ icon: Icon, label, value }: { icon: typeof Calendar; label: string; value: string }) {
+  const t = useTranslations("portal");
   return (
     <div className="flex items-center gap-2.5">
       <Icon className="h-3.5 w-3.5 text-muted-foreground shrink-0" />

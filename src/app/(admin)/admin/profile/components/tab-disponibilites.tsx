@@ -77,13 +77,13 @@ export function TabDisponibilites() {
   };
 
   const handleSave = () => {
-    // TODO: sauvegarder dans settings BD
+
     toast.success(t("saved_toast"));
   };
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Heures de travail */}
+
       <div className="lg:col-span-2 space-y-4">
         <Card>
           <CardHeader className="pb-3">
@@ -143,7 +143,7 @@ export function TabDisponibilites() {
         <Button onClick={handleSave}>{t("save_button")}</Button>
       </div>
 
-      {/* Options sidebar */}
+
       <div className="space-y-4">
         <Card>
           <CardContent className="p-4 space-y-4">
@@ -155,10 +155,10 @@ export function TabDisponibilites() {
               <Select value={timezone} onValueChange={setTimezone}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="America/Toronto">Eastern (Quebec)</SelectItem>
-                  <SelectItem value="America/Vancouver">Pacific</SelectItem>
-                  <SelectItem value="America/Winnipeg">Central</SelectItem>
-                  <SelectItem value="America/Halifax">Atlantic</SelectItem>
+                  <SelectItem value="America/Toronto">{t("eastern_quebec")}</SelectItem>
+                  <SelectItem value="America/Vancouver">{t("pacific")}</SelectItem>
+                  <SelectItem value="America/Winnipeg">{t("central")}</SelectItem>
+                  <SelectItem value="America/Halifax">{t("atlantic")}</SelectItem>
                   <SelectItem value="UTC">UTC</SelectItem>
                 </SelectContent>
               </Select>
@@ -191,41 +191,41 @@ export function TabDisponibilites() {
         <Card>
           <CardContent className="p-4 space-y-3">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Pause entre reunions</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t("pause_entre_reunions")}</Label>
               <Select value={buffer} onValueChange={setBuffer}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="0">Aucune</SelectItem>
-                  <SelectItem value="5">5 minutes</SelectItem>
-                  <SelectItem value="10">10 minutes</SelectItem>
-                  <SelectItem value="15">15 minutes</SelectItem>
-                  <SelectItem value="30">30 minutes</SelectItem>
+                  <SelectItem value="0">{t("aucune")}</SelectItem>
+                  <SelectItem value="5">{t("5_minutes")}</SelectItem>
+                  <SelectItem value="10">{t("10_minutes")}</SelectItem>
+                  <SelectItem value="15">{t("15_minutes")}</SelectItem>
+                  <SelectItem value="30">{t("30_minutes")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Preavis minimum</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t("preavis_minimum")}</Label>
               <Select value={notice} onValueChange={setNotice}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="0">{tc("none")}</SelectItem>
-                  <SelectItem value="60">1 heure</SelectItem>
-                  <SelectItem value="120">2 heures</SelectItem>
-                  <SelectItem value="1440">24 heures</SelectItem>
-                  <SelectItem value="2880">48 heures</SelectItem>
+                  <SelectItem value="60">{t("1_heure")}</SelectItem>
+                  <SelectItem value="120">{t("2_heures")}</SelectItem>
+                  <SelectItem value="1440">{t("24_heures")}</SelectItem>
+                  <SelectItem value="2880">{t("48_heures")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Horizon de reservation</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t("horizon_reservation")}</Label>
               <Select value={horizon} onValueChange={setHorizon}>
                 <SelectTrigger className="mt-1.5 h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="7">7 jours</SelectItem>
-                  <SelectItem value="14">14 jours</SelectItem>
-                  <SelectItem value="30">30 jours</SelectItem>
-                  <SelectItem value="60">60 jours</SelectItem>
-                  <SelectItem value="90">90 jours</SelectItem>
+                  <SelectItem value="7">{t("7_jours")}</SelectItem>
+                  <SelectItem value="14">{t("14_jours")}</SelectItem>
+                  <SelectItem value="30">{t("30_jours")}</SelectItem>
+                  <SelectItem value="60">{t("60_jours")}</SelectItem>
+                  <SelectItem value="90">{t("90_jours")}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -236,8 +236,8 @@ export function TabDisponibilites() {
           <CardContent className="p-4 space-y-3">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium">Approbation auto</p>
-                <p className="text-[10px] text-muted-foreground">Confirme toutes les demandes automatiquement</p>
+                <p className="text-sm font-medium">{t("approbation_auto")}</p>
+                <p className="text-[10px] text-muted-foreground">{t("confirme_toutes_demandes_automatiquement")}</p>
               </div>
               <Switch checked={autoApprove} onCheckedChange={setAutoApprove} />
             </div>
@@ -246,14 +246,14 @@ export function TabDisponibilites() {
 
         <Card>
           <CardContent className="p-4">
-            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Lien reunion par defaut</Label>
+            <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">{t("lien_reunion_defaut")}</Label>
             <Input
               value={meetingLink}
               onChange={(e) => setMeetingLink(e.target.value)}
               placeholder="https://teams.microsoft.com/..."
               className="mt-1.5 h-9 text-sm"
             />
-            <p className="text-[10px] text-muted-foreground mt-1">Teams, Zoom, Google Meet... Ajoute auto a chaque RDV</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{t("teams_zoom_google_meet_ajoute")}</p>
           </CardContent>
         </Card>
       </div>

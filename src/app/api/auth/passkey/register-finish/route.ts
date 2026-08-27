@@ -1,5 +1,6 @@
 // Valide la registration WebAuthn et stocke la passkey.
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { verifyRegistration, getRpId, getOrigin } from "@/lib/security/webauthn";
@@ -9,6 +10,7 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
     deviceLabel?: string;
   };
   if (!id || !response?.attestationObject || !response?.clientDataJSON) {
-    return NextResponse.json({ error: "Données WebAuthn manquantes" }, { status: 400 });
+    return NextResponse.json({ error: t("donnees_webauthn_manquantes") }, { status: 400 });
   }
 
   // Récupérer le challenge en attente
@@ -34,10 +36,10 @@ export async function POST(req: Request) {
     where: { challenge: clientData.challenge },
   });
   if (!challenge || challenge.adminId !== adminId || challenge.purpose !== "registration") {
-    return NextResponse.json({ error: "Challenge introuvable ou périmé" }, { status: 400 });
+    return NextResponse.json({ error: t("challenge_introuvable_ou_perime") }, { status: 400 });
   }
   if (challenge.expiresAt < new Date()) {
-    return NextResponse.json({ error: "Challenge expiré" }, { status: 400 });
+    return NextResponse.json({ error: t("challenge_expire") }, { status: 400 });
   }
 
   let verified;
@@ -51,7 +53,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     return NextResponse.json(
-      { error: err instanceof Error ? err.message : "Vérification échouée" },
+      { error: err instanceof Error ? err.message : t("verification_echouee") },
       { status: 400 }
     );
   }
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
     where: { credentialId: verified.credentialId },
   });
   if (exists) {
-    return NextResponse.json({ error: "Cette passkey est déjà enregistrée" }, { status: 409 });
+    return NextResponse.json({ error: t("cette_passkey_est_deja_enregistree") }, { status: 409 });
   }
 
   await prisma.adminPasskey.create({

@@ -240,7 +240,7 @@ export function ProfileView({
               {tBanner("security_score")} {securityScore}/100
             </span>
             <span className="ml-auto text-muted-foreground">
-              {activeSessionsCount} session{activeSessionsCount > 1 ? "s" : ""} active{activeSessionsCount > 1 ? "s" : ""}
+              {t("n_sessions_actives", { count: activeSessionsCount })}
             </span>
           </div>
         </div>

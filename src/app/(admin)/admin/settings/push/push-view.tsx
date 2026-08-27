@@ -28,10 +28,10 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
-function detectDevice(ua: string | null): { icon: typeof Smartphone; label: string } {
-  if (!ua) return { icon: Monitor, label: "Inconnu" };
-  if (/mobile|iphone|android/i.test(ua)) return { icon: Smartphone, label: "Mobile" };
-  return { icon: Monitor, label: "Ordinateur" };
+function detectDevice(ua: string | null): { icon: typeof Smartphone; labelKey: string } {
+  if (!ua) return { icon: Monitor, labelKey: "inconnu" };
+  if (/mobile|iphone|android/i.test(ua)) return { icon: Smartphone, labelKey: "mobile" };
+  return { icon: Monitor, labelKey: "ordinateur" };
 }
 
 export function PushView({
@@ -40,6 +40,7 @@ export function PushView({
   subscriptions: SubscriptionRow[];
   vapidConfigured: boolean;
 }) {
+  const t = useTranslations("admin.push");
   const tc = useTranslations("common");
   const router = useRouter();
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
@@ -48,7 +49,7 @@ export function PushView({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    if (!("Notification" in window) || !("serviceWorker" in navigator) || !("PushManager" in window)) {
+    if (!(t("notification") in window) || !("serviceWorker" in navigator) || !(t("pushmanager") in window)) {
       setPermission("unsupported");
       return;
     }
@@ -63,36 +64,36 @@ export function PushView({
 
   const subscribe = async () => {
     if (!vapidKey) {
-      toast.error("Clé VAPID non configurée côté serveur");
+      toast.error(t("cle_vapid_non_configuree_cote"));
       return;
     }
     setSubscribing(true);
     try {
-      // Demander permission
+
       const perm = await Notification.requestPermission();
       setPermission(perm);
       if (perm !== "granted") {
-        toast.warning("Permission refusée");
+        toast.warning(t("permission_refusee"));
         return;
       }
 
-      // Enregistrer le service worker
+
       const reg = await navigator.serviceWorker.register("/push-sw.js");
       await navigator.serviceWorker.ready;
 
-      // Souscrire au push (cast pour compat TS strict)
+
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
       });
 
-      // Détection du label
+
       const ua = navigator.userAgent;
-      let label = "Cet appareil";
-      if (/Chrome/i.test(ua) && !/Edge/i.test(ua)) label = "Chrome";
-      else if (/Firefox/i.test(ua)) label = "Firefox";
-      else if (/Safari/i.test(ua)) label = "Safari";
-      else if (/Edge/i.test(ua)) label = "Edge";
+      let label = t("cet_appareil");
+      if (/Chrome/i.test(ua) && !/Edge/i.test(ua)) label = t("chrome");
+      else if (/Firefox/i.test(ua)) label = t("firefox");
+      else if (/Safari/i.test(ua)) label = t("safari");
+      else if (/Edge/i.test(ua)) label = t("edge");
       if (/Mobile|Android|iPhone/i.test(ua)) label += " mobile";
 
       const subJSON = sub.toJSON();
@@ -106,13 +107,13 @@ export function PushView({
         }),
       });
       if (res.ok) {
-        toast.success("Notifications activées sur cet appareil");
+        toast.success(t("notifications_activees_cet_appareil"));
         router.refresh();
       } else {
-        toast.error("Erreur d'enregistrement");
+        toast.error(t("erreur_enregistrement"));
       }
     } catch (e) {
-      toast.error("Erreur : " + (e instanceof Error ? e.message : "inconnu"));
+      toast.error(t("erreur") + (e instanceof Error ? e.message : "inconnu"));
     } finally {
       setSubscribing(false);
     }
@@ -120,18 +121,18 @@ export function PushView({
 
   const unsubscribe = async (endpoint: string) => {
     try {
-      // Localement
+
       const reg = await navigator.serviceWorker.getRegistration("/push-sw.js");
       if (reg) {
         const sub = await reg.pushManager.getSubscription();
         if (sub?.endpoint === endpoint) await sub.unsubscribe();
       }
-      // Serveur
+
       await fetch(`/api/admin/push?endpoint=${encodeURIComponent(endpoint)}`, { method: "DELETE" });
-      toast.success("Désabonné");
+      toast.success(t("desabonne"));
       router.refresh();
     } catch {
-      toast.error("Erreur");
+      toast.error(t("erreur_2"));
     }
   };
 
@@ -143,9 +144,9 @@ export function PushView({
           <Bell className="h-6 w-6" />
         </div>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">Notifications push</h1>
+          <h1 className="text-2xl font-bold tracking-tight">{t("notifications_push")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Recevoir des alertes en temps réel sur vos appareils
+            {t("recevoir_alertes_temps_reel_appareils")}
           </p>
         </div>
       </div>
@@ -155,9 +156,8 @@ export function PushView({
           <CardContent className="p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
             <div className="text-xs">
-              <p className="font-semibold text-amber-900 mb-1">Configuration serveur requise</p>
-              <p className="text-amber-800">
-                Définissez <code className="bg-white px-1 rounded font-mono">VAPID_PUBLIC_KEY</code> et <code className="bg-white px-1 rounded font-mono">VAPID_PRIVATE_KEY</code> dans les variables d&apos;environnement. Générez-les avec <code className="bg-white px-1 rounded font-mono">npx web-push generate-vapid-keys</code>.
+              <p className="font-semibold text-amber-900 mb-1">{t("configuration_serveur_requise")}</p>
+              <p className="text-amber-800">{t("push_view_definissez")}<code className="bg-white px-1 rounded font-mono">VAPID_PUBLIC_KEY</code> et <code className="bg-white px-1 rounded font-mono">VAPID_PRIVATE_KEY</code> {t("variables_apos_environnement_generez")} <code className="bg-white px-1 rounded font-mono">npx web-push generate-vapid-keys</code>.
               </p>
             </div>
           </CardContent>
@@ -169,13 +169,13 @@ export function PushView({
           <CardContent className="p-4 flex items-start gap-3">
             <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
             <p className="text-xs text-red-800">
-              Ce navigateur ne supporte pas les notifications push (Web Push API + Service Workers requis).
+              {t("navigateur_ne_supporte_pas_notifications")}
             </p>
           </CardContent>
         </Card>
       )}
 
-      {/* Bouton d'abonnement */}
+
       <Card>
         <CardContent className="p-5">
           <div className="flex items-start gap-4">
@@ -184,14 +184,14 @@ export function PushView({
             </div>
             <div className="flex-1">
               <h2 className="text-base font-semibold">
-                {permission === "granted" ? "Notifications autorisées" : "Activer les notifications"}
+                {permission === "granted" ? t("notifications_autorisees") : t("activer_notifications")}
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
                 {permission === "granted"
-                  ? "Vous recevrez les alertes importantes sur cet appareil."
+                  ? t("vous_recevrez_alertes_importantes_cet")
                   : permission === "denied"
-                  ? "Les notifications sont bloquées. Modifiez les permissions du site dans votre navigateur."
-                  : "Activez les notifications pour recevoir les alertes en temps réel."}
+                  ? t("notifications_bloquees_modifiez_permissions_site")
+                  : t("activez_notifications_recevoir_alertes_temps")}
               </p>
               {permission !== "denied" && permission !== "unsupported" && (
                 <Button
@@ -200,7 +200,7 @@ export function PushView({
                   className="mt-3 bg-[#0F2D52] hover:bg-[#0F2D52]/90"
                 >
                   <Plus className="h-4 w-4 mr-1.5" />
-                  {subscribing ? "Activation..." : "Activer sur cet appareil"}
+                  {subscribing ? t("activation") : t("activer_cet_appareil")}
                 </Button>
               )}
             </div>
@@ -208,7 +208,7 @@ export function PushView({
         </CardContent>
       </Card>
 
-      {/* Liste appareils abonnés */}
+
       <div>
         <p className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-2">
           Appareils abonnés ({subscriptions.length})
@@ -217,7 +217,7 @@ export function PushView({
           <div className="divide-y">
             {subscriptions.length === 0 ? (
               <p className="p-8 text-center text-sm text-muted-foreground">
-                Aucun appareil abonné. Activez les notifications sur les appareils que vous utilisez.
+                {t("aucun_appareil_abonne_activez_notifications")}
               </p>
             ) : (
               subscriptions.map((s) => {
@@ -230,8 +230,8 @@ export function PushView({
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="font-medium text-sm">{s.label ?? "Appareil"}</p>
-                        <Badge variant="outline" className="text-[10px]">{dev.label}</Badge>
+                        <p className="font-medium text-sm">{s.label ?? t("appareil")}</p>
+                        <Badge variant="outline" className="text-[10px]">{t(dev.labelKey)}</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
                         Abonné {new Date(s.createdAt).toLocaleDateString("fr-CA", { dateStyle: "medium" })}

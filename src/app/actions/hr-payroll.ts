@@ -1,6 +1,7 @@
 "use server";
 // Pay periods and pay stub generation.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -36,15 +37,16 @@ const periodSchema = z.object({
 });
 
 export async function createPayPeriodAction(input: z.infer<typeof periodSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePayrollWrite();
   if (!adminId) return unauthorized();
   const parsed = periodSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const start = new Date(parsed.data.startDate);
   const end = new Date(parsed.data.endDate);
   const pay = new Date(parsed.data.payDate);
-  if (end < start) return { success: false, error: "Date de fin avant date de début" };
+  if (end < start) return { success: false, error: t("date_de_fin_avant_date_de_debut") };
 
   const p = await prisma.payPeriod.create({
     data: { startDate: start, endDate: end, payDate: pay, status: "open" },
@@ -61,12 +63,13 @@ export async function createPayPeriodAction(input: z.infer<typeof periodSchema>)
 export async function generatePayStubsAction(
   input: { periodId: number },
 ): Promise<Result<{ stubsCreated: number; provisionalRates: boolean }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
 
   const period = await prisma.payPeriod.findUnique({ where: { id: input.periodId } });
-  if (!period) return { success: false, error: "Période introuvable" };
-  if (period.status !== "open") return { success: false, error: "Période non ouverte" };
+  if (!period) return { success: false, error: t("periode_introuvable") };
+  if (period.status !== "open") return { success: false, error: t("periode_non_ouverte") };
 
   // The period bounds are @db.Date columns: their calendar days, read locally,
   // so punches are matched against the days the payroll actually covers.
@@ -94,7 +97,7 @@ export async function generatePayStubsAction(
   // A shutdown week with a holiday in it still owes the indemnity, so an empty
   // period is only truly empty when no holiday falls in it either.
   if (clocks.length === 0 && !hasPaidHoliday) {
-    return { success: false, error: "Aucun pointage approuvé à facturer" };
+    return { success: false, error: t("aucun_pointage_approuve_a_facturer") };
   }
   const isPaidHoliday = (d: Date) => holidays.get(localDayKey(d))?.isPaid === true;
   const weekKeyOf = (d: Date) => localDayKey(startOfWeek(d));
@@ -261,7 +264,7 @@ export async function generatePayStubsAction(
     stubsCreated++;
   }
 
-  if (stubsCreated === 0) return { success: false, error: "Aucun montant à verser sur cette période" };
+  if (stubsCreated === 0) return { success: false, error: t("aucun_montant_a_verser_sur_cette_periode") };
 
   await logAudit({ adminId: actorId, action: "create", entityType: "pay_stubs_bulk", entityId: period.id, changes: { stubsCreated } });
   revalidatePath("/admin/employes/paie");
@@ -281,6 +284,7 @@ export async function lockPayPeriodAction(input: { id: number }): Promise<Result
 }
 
 export async function markPayPeriodPaidAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requirePayrollWrite();
   if (!adminId) return unauthorized();
   await prisma.payPeriod.update({
@@ -304,7 +308,7 @@ export async function markPayPeriodPaidAction(input: { id: number }): Promise<Re
           recipientType: "admin",
           recipientId: s.adminId,
           type: "success",
-          title: "Nouveau bulletin de paie disponible",
+          title: t("nouveau_bulletin_de_paie_disponible"),
           body: `Net : ${Number(s.netPay).toFixed(2)} $`,
           link: "/admin/mon-espace/paie",
           icon: "wallet",

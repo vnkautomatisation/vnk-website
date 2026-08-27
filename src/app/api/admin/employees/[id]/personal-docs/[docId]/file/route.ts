@@ -11,6 +11,7 @@
 //   - kind=local : fileUrl est un data URL "data:mime;base64,..." → décodage
 //     et stream direct.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -31,6 +32,7 @@ export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string; docId: string }> },
 ) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -58,7 +60,7 @@ export async function GET(
     return NextResponse.json({ error: "Document hors scope" }, { status: 404 });
   }
   if (!doc.fileUrl) {
-    return NextResponse.json({ error: "Aucun fichier attaché" }, { status: 404 });
+    return NextResponse.json({ error: t("aucun_fichier_attache") }, { status: 404 });
   }
 
   const perms = (me.customRole?.permissions as Record<string, string[]> | undefined) ?? {};
@@ -75,7 +77,7 @@ export async function GET(
     return forbiddenJson();
   }
   if (doc.isPrivate && !isSelf && !isSuper) {
-    return NextResponse.json({ error: "Document privé" }, { status: 403 });
+    return NextResponse.json({ error: t("document_prive") }, { status: 403 });
   }
 
   await logAudit({

@@ -1,6 +1,7 @@
 // POST /api/message-templates/[id]/test-send — envoie un email test au admin courant
 // Body : { sampleClient?: { name?, company?, email? } } pour personnaliser les variables
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -19,6 +20,7 @@ const schema = z.object({
 });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin" || !session.user.email) {
     return unauthorizedJson();
@@ -30,7 +32,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
   const parsed = schema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t("donnees_invalides") }, { status: 400 });
 
   const tpl = await prisma.messageTemplate.findUnique({ where: { id: Number(id) } });
   if (!tpl) return NextResponse.json({ error: "Template introuvable" }, { status: 404 });
@@ -52,7 +54,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     : `[TEST] ${tpl.title}`;
 
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.AUTH_URL ?? "https://vnkautomatisation.ca";
-  const rendered = renderChatEmail({
+  const rendered = await renderChatEmail({
     clientName: sample.name ?? "Jean Tremblay",
     content: markdownToHtml(expanded),
     portalUrl: `${baseUrl}/portail`,
@@ -69,7 +71,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   });
 
   if (!result.ok) {
-    return NextResponse.json({ error: result.error || "Envoi SMTP échoué" }, { status: 500 });
+    return NextResponse.json({ error: result.error || t("envoi_smtp_echoue") }, { status: 500 });
   }
   return NextResponse.json({ success: true, sentTo: session.user.email });
 }

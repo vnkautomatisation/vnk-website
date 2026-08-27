@@ -38,7 +38,7 @@ function useAutoSave(callback: () => Promise<void>, deps: unknown[], delay = 800
     if (firstRun.current) { firstRun.current = false; return; }
     const t = setTimeout(() => { callback(); }, delay);
     return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, deps);
 }
 
@@ -79,14 +79,14 @@ export function TabNotifications({ admin }: { admin: AdminProfile }) {
           quietHoursEnd: quietEnd,
           loginAlertsEnabled: loginAlerts,
         });
-        if (r.success) toast.success("Fréquence enregistrée");
+        if (r.success) toast.success(t("frequence_enregistree"));
         else toast.error(r.error);
         resolve();
       });
     });
   };
 
-  // ── Auto-save matrice canaux (silent) ────────────────
+
   useAutoSave(() => {
     return new Promise<void>((resolve) => {
       startMatrix(async () => {
@@ -111,7 +111,7 @@ export function TabNotifications({ admin }: { admin: AdminProfile }) {
 
   return (
     <div className="space-y-4">
-      {/* ── Fréquence (édition contrôlée) ───────────── */}
+
       <EditableSection
         title={t("frequency_title")}
         icon={Bell}
@@ -161,7 +161,7 @@ export function TabNotifications({ admin }: { admin: AdminProfile }) {
         }
       />
 
-      {/* ── Matrice canaux x catégories (toujours éditable + auto-save) ─── */}
+
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-3">
@@ -180,7 +180,7 @@ export function TabNotifications({ admin }: { admin: AdminProfile }) {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b text-xs text-muted-foreground">
-                  <th className="text-left py-2 px-4 sm:px-2 font-medium">{tCommon("not_set") === "Not set" ? "Category" : "Catégorie"}</th>
+                  <th className="text-left py-2 px-4 sm:px-2 font-medium">{tCommon("not_set") === "Not set" ? t("category") : t("categorie")}</th>
                   <th className="text-center py-2 px-2 font-medium">
                     <div className="flex flex-col items-center gap-0.5">
                       <Mail className="h-3.5 w-3.5" />

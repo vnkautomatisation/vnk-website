@@ -9,8 +9,8 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
 const EXPENSE_CATEGORIES: Record<string, string> = {
   logiciels_licences: "Logiciels / Licences",
-  materiel_informatique: "Matériel informatique",
-  telecommunications: "Télécommunications",
+  materiel_informatique: "cat_materiel_informatique",
+  telecommunications: "cat_telecommunications",
   formation: "Formation",
   marketing: "Marketing",
   transport: "Transport",

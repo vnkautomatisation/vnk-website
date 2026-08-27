@@ -3,6 +3,7 @@
 // Couvre : client_tag, client_source, industry, expense_category,
 // workflow_status, currency, payment_method, contact_method.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -59,14 +60,15 @@ const createSchema = z.object({
 });
 
 export async function createCatalogItemAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireWrite(`${input.type}s`);
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const key = slugify(parsed.data.name);
   const existing = await prisma.catalogItem.findUnique({ where: { type_key: { type: parsed.data.type, key } } });
-  if (existing) return { success: false, error: "Un élément avec ce nom existe déjà" };
+  if (existing) return { success: false, error: t("un_element_avec_ce_nom_existe_deja") };
 
   // Max sortOrder existant pour placer à la fin
   const max = await prisma.catalogItem.aggregate({
@@ -109,14 +111,15 @@ const updateSchema = z.object({
 });
 
 export async function updateCatalogItemAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const before = await prisma.catalogItem.findUnique({ where: { id: parsed.data.id } });
-  if (!before) return { success: false, error: "Élément introuvable" };
+  if (!before) return { success: false, error: t("element_introuvable") };
 
   const authed = await requireWrite(`${before.type}s`);
   if (!authed) return unauthorized();
@@ -138,15 +141,16 @@ export async function updateCatalogItemAction(input: z.infer<typeof updateSchema
 // ── SUPPRIMER (pas système, non utilisé) ──────────────────
 const deleteSchema = z.object({ id: z.number().int() });
 export async function deleteCatalogItemAction(input: z.infer<typeof deleteSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = deleteSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   const item = await prisma.catalogItem.findUnique({ where: { id: parsed.data.id } });
-  if (!item) return { success: false, error: "Élément introuvable" };
-  if (item.isSystem) return { success: false, error: "Les éléments système ne peuvent être supprimés (vous pouvez les désactiver)" };
+  if (!item) return { success: false, error: t("element_introuvable") };
+  if (item.isSystem) return { success: false, error: t("les_elements_systeme_ne_peuvent_etre_supprimes") };
 
   const authed = await requireWrite(`${item.type}s`);
   if (!authed) return unauthorized();
@@ -163,10 +167,11 @@ const reorderSchema = z.object({
   orderedIds: z.array(z.number().int()).min(1),
 });
 export async function reorderCatalogItemsAction(input: z.infer<typeof reorderSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const authed = await requireWrite(`${input.type}s`);
   if (!authed) return unauthorized();
   const parsed = reorderSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: "Données invalides" };
+  if (!parsed.success) return { success: false, error: t("donnees_invalides") };
 
   await prisma.$transaction(
     parsed.data.orderedIds.map((id, idx) =>

@@ -1,5 +1,6 @@
 // POST /api/contracts/:id/sign — signer côté client OU côté admin
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +19,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) {
     return unauthorizedJson();
@@ -47,19 +49,19 @@ export async function POST(
 
   // Bloquer signature si statut non signable
   if (contract.status === "expired") {
-    return NextResponse.json({ error: "Ce contrat est expiré et ne peut plus être signé" }, { status: 409 });
+    return NextResponse.json({ error: t("ce_contrat_est_expire_et_ne_peut") }, { status: 409 });
   }
   if (contract.status === "cancelled") {
-    return NextResponse.json({ error: "Ce contrat a été annulé et ne peut plus être signé" }, { status: 409 });
+    return NextResponse.json({ error: t("ce_contrat_a_ete_annule_et_ne") }, { status: 409 });
   }
   if (contract.status === "signed" || (contract.adminSignatureData && contract.clientSignatureData)) {
-    return NextResponse.json({ error: "Ce contrat est déjà signé par les deux parties" }, { status: 409 });
+    return NextResponse.json({ error: t("ce_contrat_est_deja_signe_par_les") }, { status: 409 });
   }
 
   // Auto-expiration si dépassement de la date d'expiration
   if (contract.expiresAt && new Date(contract.expiresAt) < new Date()) {
     await prisma.contract.update({ where: { id: contractId }, data: { status: "expired" } });
-    return NextResponse.json({ error: "Ce contrat est expiré et ne peut plus être signé" }, { status: 409 });
+    return NextResponse.json({ error: t("ce_contrat_est_expire_et_ne_peut") }, { status: 409 });
   }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0] ?? "";

@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion des templates Email (transactionnels) et PDF.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -33,10 +34,11 @@ const emailSchema = z.object({
 });
 
 export async function upsertEmailTemplateAction(input: z.infer<typeof emailSchema> & { id?: number }): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = emailSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     subject: parsed.data.subject,
@@ -101,10 +103,11 @@ const pdfSchema = z.object({
 });
 
 export async function upsertPdfTemplateAction(input: z.infer<typeof pdfSchema> & { id?: number }): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = pdfSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const data = {
     content: parsed.data.content as never,

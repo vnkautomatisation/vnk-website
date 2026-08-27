@@ -3,6 +3,7 @@
 // Le titre/description/serviceType sont copies automatiquement.
 // La demande passe au statut "converted" et stocke convertedToMandateId / convertedToQuoteId.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -25,6 +26,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -41,13 +43,13 @@ export async function POST(
     return NextResponse.json({ error: "Demande introuvable" }, { status: 404 });
   }
   if (existing.status === "converted") {
-    return NextResponse.json({ error: "Demande déjà convertie" }, { status: 409 });
+    return NextResponse.json({ error: t("demande_deja_convertie") }, { status: 409 });
   }
 
   const body = await req.json();
   const parsed = schema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   if (parsed.data.target === "mandate") {
@@ -107,7 +109,7 @@ export async function POST(
 
   // target === "quote"
   if (!parsed.data.amountHt) {
-    return NextResponse.json({ error: "Montant HT requis pour conversion en devis" }, { status: 400 });
+    return NextResponse.json({ error: t("montant_ht_requis_pour_conversion_en_devis") }, { status: 400 });
   }
 
   const tpsRate = Number(await getSetting<number>("company", "tps_rate", 5));

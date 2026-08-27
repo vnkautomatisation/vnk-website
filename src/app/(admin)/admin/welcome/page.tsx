@@ -1,13 +1,18 @@
 // Onboarding nouvel utilisateur — affiché à la 1re connexion après acceptation d'invitation
 import { auth } from "@/lib/auth";
+import { getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import { WelcomeWizard } from "./welcome-wizard";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Bienvenue — VNK" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("bienvenue_vnk") };
+}
 
 export default async function WelcomePage() {
+  const t = await getTranslations("admin.welcome");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
 

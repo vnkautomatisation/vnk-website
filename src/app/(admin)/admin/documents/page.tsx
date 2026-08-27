@@ -1,9 +1,13 @@
 // Admin · Documents — KPIs + filtres + upload + bulk + envoi client
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { DocumentsView } from "./documents-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Documents" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("documents") };
+}
 
 export default async function DocumentsPage() {
   const now = new Date();

@@ -4,6 +4,7 @@
 // 4-6 digit PIN, sees their name and punches in/out. Auto-resets after a
 // few seconds so the next employee can punch.
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Clock, Delete, LogIn, LogOut, Loader2, CheckCircle2, AlertCircle,
   Coffee, Play, Maximize,
@@ -39,6 +40,7 @@ function fmtMin(min: number): string {
 }
 
 export default function KioskPage() {
+  const t = useTranslations("admin.timeclock");
   const [screen, setScreen] = useState<Screen>({ step: "pin" });
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -139,10 +141,10 @@ export default function KioskPage() {
       const data = await call({ pin: screen.pin, action, jobCodeId: jobCodeId ?? undefined });
       setScreen({
         step: "done",
-        title: action === "in" ? `Bonne journée, ${data.fullName} !` : `Merci, ${data.fullName} !`,
+        title: t(action === "in" ? "kiosk_bonne_journee" : "kiosk_merci", { name: data.fullName }),
         detail: action === "in"
-          ? "Votre pointage est démarré."
-          : `Journée fermée — ${fmtMin(data.durationMin ?? 0)} sur ce quart.`,
+          ? t("kiosk_pointage_demarre")
+          : t("kiosk_journee_fermee", { duree: fmtMin(data.durationMin ?? 0) }),
         todayMin: data.todayMin ?? 0,
       });
     } catch (e) {
@@ -161,13 +163,11 @@ export default function KioskPage() {
       setScreen({
         step: "done",
         title: action === "pause"
-          ? (kind === "paid" ? "Pause courte" : "Pause repas")
-          : `Bon retour, ${data.fullName} !`,
+          ? t(kind === "paid" ? "kiosk_pause_courte" : "kiosk_pause_repas")
+          : t("kiosk_bon_retour", { name: data.fullName }),
         detail: action === "pause"
-          ? (kind === "paid"
-            ? "Pause payée en cours — repointez pour reprendre."
-            : "Pause repas en cours — repointez pour reprendre.")
-          : `Pause de ${data.breakMin ?? 0} min enregistrée.`,
+          ? t(kind === "paid" ? "kiosk_pause_payee_en_cours" : "kiosk_pause_repas_en_cours")
+          : t("kiosk_pause_enregistree", { minutes: data.breakMin ?? 0 }),
         todayMin: 0,
       });
     } catch (e) {
@@ -229,7 +229,7 @@ export default function KioskPage() {
           type="button"
           onClick={toggleFullscreen}
           className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition shrink-0"
-          aria-label="Plein écran"
+          aria-label={t("kiosk_plein_ecran")}
         >
           <Maximize className="h-5 w-5" />
         </button>
@@ -243,15 +243,14 @@ export default function KioskPage() {
         <div className="shrink-0 min-w-0 text-center [@media(max-height:520px)_and_(orientation:landscape)]:hidden [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:text-left [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:max-w-[46rem]">
           <div className="inline-flex items-center gap-2 text-white/60 text-[10px] sm:text-xs uppercase tracking-[0.25em] mb-1 sm:mb-2">
             <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-            Borne de pointage
+            {t("kiosk_titre")}
           </div>
           <div className="font-mono font-bold tabular-nums leading-none text-white text-[clamp(3rem,15vw,8rem)] [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:text-[clamp(3rem,8vw,9rem)]">
             {timeStr}
           </div>
           <div className="text-white/70 text-sm sm:text-lg mt-2 sm:mt-3">{dateStr}</div>
           <p className="hidden [@media(min-width:768px)_and_(min-height:560px)_and_(orientation:landscape)]:block text-white/45 text-sm leading-relaxed mt-8 pt-6 border-t border-white/10 max-w-md">
-            Entrez votre NIP personnel pour commencer ou terminer votre journée.
-            Vos heures sont enregistrées automatiquement.
+            {t("kiosk_intro")}
           </p>
         </div>
 
@@ -261,7 +260,7 @@ export default function KioskPage() {
         {screen.step === "loading" && (
           <div className="p-12 flex flex-col items-center gap-3">
             <Loader2 className="h-8 w-8 animate-spin text-[#0F2D52]" />
-            <p className="text-sm text-slate-600">Identification…</p>
+            <p className="text-sm text-slate-600">{t("kiosk_identification")}</p>
           </div>
         )}
 
@@ -269,7 +268,7 @@ export default function KioskPage() {
           <div className="p-4 sm:p-6 lg:p-7 space-y-3 sm:space-y-5 [@media(max-height:520px)_and_(orientation:landscape)]:p-3 [@media(max-height:520px)_and_(orientation:landscape)]:space-y-2">
             <div className="text-center">
               <p className="text-base sm:text-lg font-bold text-[#0F2D52]">{greeting}</p>
-              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 [@media(max-height:520px)_and_(orientation:landscape)]:hidden">Entrez votre NIP pour poinçonner</p>
+              <p className="text-xs sm:text-sm text-slate-500 mt-0.5 [@media(max-height:520px)_and_(orientation:landscape)]:hidden">{t("kiosk_invite_nip")}</p>
             </div>
             {/* PIN dots */}
             <div className="flex justify-center gap-2.5 h-5">
@@ -301,7 +300,7 @@ export default function KioskPage() {
                 type="button"
                 onClick={pressErase}
                 className="h-14 sm:h-[70px] lg:h-20 [@media(max-height:520px)_and_(orientation:landscape)]:h-11 rounded-xl sm:rounded-2xl bg-slate-50 hover:bg-slate-100 active:bg-slate-200 border border-slate-200/70 flex items-center justify-center text-slate-500 transition active:scale-95"
-                aria-label="Effacer"
+                aria-label={t("kiosk_effacer")}
               >
                 <Delete className="h-6 w-6 sm:h-7 sm:w-7" />
               </button>
@@ -317,7 +316,7 @@ export default function KioskPage() {
                 disabled={pin.length < 4}
                 onClick={() => submitPin(pin)}
                 className="h-14 sm:h-[70px] lg:h-20 [@media(max-height:520px)_and_(orientation:landscape)]:h-11 rounded-xl sm:rounded-2xl bg-[#0F2D52] hover:bg-[#1a3a66] disabled:opacity-25 flex items-center justify-center text-white transition active:scale-95 shadow-md shadow-[#0F2D52]/20"
-                aria-label="Valider"
+                aria-label={t("kiosk_valider")}
               >
                 <LogIn className="h-6 w-6 sm:h-7 sm:w-7" />
               </button>
@@ -370,7 +369,7 @@ export default function KioskPage() {
             {!screen.status.open && screen.status.jobCodes.length > 0 && (
               <div className="space-y-1.5">
                 <p className="text-[11px] uppercase tracking-wider font-semibold text-slate-500 text-center">
-                  Code de tâche
+                  {t("kiosk_code_de_tache")}
                 </p>
                 <div className="grid grid-cols-1 gap-1.5 max-h-48 overflow-y-auto">
                   {screen.status.jobCodes.map((c) => (
@@ -403,7 +402,7 @@ export default function KioskPage() {
                     className="w-full h-14 rounded-xl bg-[#0F2D52] hover:bg-[#1a3a66] disabled:opacity-50 text-white font-bold flex items-center justify-center gap-2 transition"
                   >
                     {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <Play className="h-5 w-5" />}
-                    Reprendre le travail
+                    {t("kiosk_reprendre_travail")}
                   </button>
                 ) : (
                   <div className="grid grid-cols-2 gap-2">
@@ -413,8 +412,8 @@ export default function KioskPage() {
                       onClick={() => doBreak("pause", "meal")}
                       className="h-14 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-semibold text-sm flex flex-col items-center justify-center transition"
                     >
-                      <span className="flex items-center gap-1.5"><Coffee className="h-4 w-4" />Repas</span>
-                      <span className="text-[10px] text-slate-500 font-normal">non payée</span>
+                      <span className="flex items-center gap-1.5"><Coffee className="h-4 w-4" />{t("kiosk_repas")}</span>
+                      <span className="text-[10px] text-slate-500 font-normal">{t("kiosk_non_payee")}</span>
                     </button>
                     <button
                       type="button"
@@ -422,8 +421,8 @@ export default function KioskPage() {
                       onClick={() => doBreak("pause", "paid")}
                       className="h-14 rounded-xl bg-slate-100 hover:bg-slate-200 disabled:opacity-50 text-slate-700 font-semibold text-sm flex flex-col items-center justify-center transition"
                     >
-                      <span className="flex items-center gap-1.5"><Coffee className="h-4 w-4" />Pause courte</span>
-                      <span className="text-[10px] text-slate-500 font-normal">payée</span>
+                      <span className="flex items-center gap-1.5"><Coffee className="h-4 w-4" />{t("kiosk_pause_courte")}</span>
+                      <span className="text-[10px] text-slate-500 font-normal">{t("kiosk_payee")}</span>
                     </button>
                   </div>
                 )}
@@ -434,7 +433,7 @@ export default function KioskPage() {
                   className="w-full h-16 rounded-xl bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-lg font-bold flex items-center justify-center gap-2 transition"
                 >
                   {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogOut className="h-5 w-5" />}
-                  Terminer ma journée
+                  {t("kiosk_terminer_journee")}
                 </button>
               </div>
             ) : (
@@ -445,7 +444,7 @@ export default function KioskPage() {
                 className="w-full h-16 rounded-xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-40 text-white text-lg font-bold flex items-center justify-center gap-2 transition"
               >
                 {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <LogIn className="h-5 w-5" />}
-                Commencer ma journée
+                {t("kiosk_commencer_journee")}
               </button>
             )}
 
@@ -453,7 +452,7 @@ export default function KioskPage() {
             {screen.status.onSite.length > 0 && (
               <div className="border-t pt-3">
                 <p className="text-[10px] uppercase tracking-wider font-semibold text-slate-400 mb-1.5">
-                  Sur place ({screen.status.onSite.length})
+                  {t("kiosk_sur_place", { count: screen.status.onSite.length })}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {screen.status.onSite.map((p, i) => (
@@ -476,7 +475,7 @@ export default function KioskPage() {
               onClick={reset}
               className="w-full text-center text-xs text-slate-400 hover:text-slate-600 py-1"
             >
-              Annuler
+              {t("kiosk_annuler")}
             </button>
           </div>
         )}
@@ -488,11 +487,11 @@ export default function KioskPage() {
             <p className="text-sm text-slate-600">{screen.detail}</p>
             {screen.todayMin > 0 && (
               <div className="mt-2 px-4 py-2 rounded-lg bg-[#0F2D52]/5 border border-[#0F2D52]/15">
-                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">Total aujourd&apos;hui</p>
+                <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52]">{t("kiosk_total_aujourdhui")}</p>
                 <p className="font-mono text-2xl font-bold text-[#0F2D52] tabular-nums">{fmtMin(screen.todayMin)}</p>
               </div>
             )}
-            <p className="text-[11px] text-slate-400 mt-2">Retour à l&apos;accueil dans quelques secondes…</p>
+            <p className="text-[11px] text-slate-400 mt-2">{t("kiosk_retour_accueil")}</p>
           </div>
         )}
           </div>

@@ -23,7 +23,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
   const tCommon = useTranslations("admin.profile.common");
   const router = useRouter();
 
-  // ── Identité (form) ────────────────────────────────
+
   const [fullName, setFullName] = useState(admin.fullName ?? "");
   const [title, setTitle] = useState(admin.title ?? "");
   const [phone, setPhone] = useState(admin.phone ?? "");
@@ -32,7 +32,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
   const [recoveryEmail, setRecoveryEmail] = useState(admin.recoveryEmail ?? "");
   const [savingIdentity, startIdentity] = useTransition();
 
-  // ── Avatar upload ──────────────────────────────────
+
   const fileRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(admin.avatarUrl ?? "");
@@ -40,11 +40,11 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
   const handleAvatarChange = async (file: File) => {
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
-      toast.error("Image > 2 MB");
+      toast.error(t("image_2_mb"));
       return;
     }
     if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(file.type)) {
-      toast.error("Format non supporté");
+      toast.error(t("format_non_supporte"));
       return;
     }
     setUploading(true);
@@ -110,7 +110,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
     });
   };
 
-  // ── Présence ──────────────────────────────────────
+
   const [presenceStatus, setPresenceStatus] = useState<string | null>(admin.presenceStatus);
   const [presenceMessage, setPresenceMessage] = useState(admin.presenceMessage ?? "");
   const [savingPresence, startPresence] = useTransition();
@@ -130,7 +130,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
     });
   };
 
-  // ── Affichage info compte (toujours lecture seule) ─
+
   const createdDate = new Date(admin.createdAt).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric" });
   const lastLoginDate = admin.lastLogin
     ? new Date(admin.lastLogin).toLocaleDateString(undefined, { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -138,7 +138,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      {/* ─── Photo de profil ─── */}
+
       <Card className="lg:col-span-2">
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">
@@ -185,7 +185,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
         </CardContent>
       </Card>
 
-      {/* ─── Identité ─── */}
+
       <EditableSection
         title={t("identity.title")}
         icon={User}
@@ -202,7 +202,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
             <ReadField label={t("identity.primary_email")} value={admin.email} mono />
             <ReadField label={t("identity.recovery_email")} value={recoveryEmail ? <span className="font-mono">{recoveryEmail}</span> : ""} />
             <ReadField label={t("identity.phone")} value={phone} />
-            <ReadField label={t("identity.bio")} value={bio} />
+            <ReadField label={t("identity.bio_label")} value={bio} />
             <ReadField label={t("identity.signature")} value={emailSignature ? "✓" : ""} />
           </div>
         }
@@ -277,7 +277,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
         }
       />
 
-      {/* ─── Statut de présence ─── */}
+
       <Card>
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-3">
@@ -316,7 +316,7 @@ export function TabCompte({ admin }: { admin: AdminProfile }) {
         </CardContent>
       </Card>
 
-      {/* ─── Informations du compte ─── */}
+
       <Card className="lg:col-span-2">
         <CardHeader className="pb-4">
           <CardTitle className="text-base flex items-center gap-2">

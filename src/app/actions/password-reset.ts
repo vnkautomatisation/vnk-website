@@ -7,6 +7,7 @@
 // Sécurité : token 256 bits, code 6 chiffres, expiration 30 min, max 5 essais.
 // On retourne TOUJOURS success: true au step 1 même si email inconnu (anti enum).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { headers } from "next/headers";
@@ -38,8 +39,9 @@ const requestSchema = z.object({
 export async function requestPasswordResetAction(
   input: z.infer<typeof requestSchema>
 ): Promise<Result<{ tokenHint: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = requestSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const email = parsed.data.email.toLowerCase().trim();
 
@@ -48,10 +50,11 @@ export async function requestPasswordResetAction(
     where: { email, createdAt: { gt: new Date(Date.now() - 15 * 60 * 1000) } },
   });
   if (recent >= 3) {
-    return { success: false, error: "Trop de demandes récentes. Veuillez patienter quelques minutes." };
+    return { success: false, error: t("trop_de_demandes_recentes_veuillez_patienter_quelques") };
   }
 
   // Trouve l'utilisateur (sans révéler s'il existe)
+  let recipientLocale = "fr";
   let adminId: number | null = null;
   let clientId: number | null = null;
   let fullName: string | null = null;
@@ -59,11 +62,12 @@ export async function requestPasswordResetAction(
   if (parsed.data.audience === "admin") {
     const admin = await prisma.admin.findUnique({
       where: { email },
-      select: { id: true, fullName: true, isActive: true },
+      select: { id: true, fullName: true, isActive: true, locale: true },
     });
     if (admin && admin.isActive) {
       adminId = admin.id;
       fullName = admin.fullName;
+      recipientLocale = admin.locale?.split("-")[0] ?? recipientLocale;
     }
   } else {
     const client = await prisma.client.findUnique({
@@ -94,7 +98,7 @@ export async function requestPasswordResetAction(
       where: { ipAddress, createdAt: { gt: new Date(Date.now() - 15 * 60 * 1000) } },
     });
     if (recentByIp >= 10) {
-      return { success: false, error: "Trop de tentatives depuis votre adresse. Patientez quelques minutes." };
+      return { success: false, error: t("trop_de_tentatives_depuis_votre_adresse_patientez") };
     }
   }
 
@@ -121,37 +125,37 @@ export async function requestPasswordResetAction(
     const safeUrl = escapeUrlForEmail(resetUrl);
     const safeIp = escapeHtml(ipAddress ?? "");
     try {
+      // Le courriel suit la langue de son destinataire.
+      const te = await getTranslations({ locale: recipientLocale, namespace: "admin.emails" });
       await sendEmail({
         to: email,
-        subject: "Réinitialisation de votre mot de passe — VNK Automatisation",
+        subject: te("sujet_reinitialisation"),
         html: `
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="${recipientLocale}">
 <head><meta charset="UTF-8" /></head>
 <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px">
   <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)">
     <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center">
-      <h1 style="margin:0;font-size:20px;font-weight:700">Réinitialisation de mot de passe</h1>
+      <h1 style="margin:0;font-size:20px;font-weight:700">${te("titre_reinitialisation")}</h1>
       <p style="margin:6px 0 0;opacity:0.85;font-size:14px">VNK Automatisation</p>
     </div>
     <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6">
-      ${safeName ? `<p>Bonjour <strong>${safeName}</strong>,</p>` : "<p>Bonjour,</p>"}
-      <p>Vous avez demandé à réinitialiser votre mot de passe. Voici votre code de sécurité :</p>
+      ${safeName ? `<p>${te("bonjour_nom", { nom: `<strong>${safeName}</strong>` })}</p>` : `<p>${te("bonjour")}</p>`}
+      <p>${te("vous_avez_demande_reinitialiser")}</p>
       <div style="text-align:center;margin:24px 0">
         <div style="display:inline-block;background:#f3f4f6;border:2px dashed #0F2D52;padding:18px 32px;border-radius:8px">
           <span style="font-size:32px;font-weight:700;letter-spacing:8px;color:#0F2D52;font-family:monospace">${code}</span>
         </div>
       </div>
-      <p>Ou cliquez sur ce bouton pour ouvrir la page directement :</p>
+      <p>${te("ou_cliquez_bouton")}</p>
       <p style="text-align:center;margin:20px 0">
-        <a href="${safeUrl}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Réinitialiser mon mot de passe</a>
+        <a href="${safeUrl}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">${te("bouton_reinitialiser")}</a>
       </p>
-      <p style="color:#6b7280;font-size:12px">Ce code expire dans <strong>${RESET_TTL_MIN} minutes</strong>. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.</p>
-      ${ipAddress ? `<p style="color:#9ca3af;font-size:11px">Demande effectuée depuis l'adresse IP <code>${safeIp}</code></p>` : ""}
+      <p style="color:#6b7280;font-size:12px">${te("code_expire_dans", { minutes: `<strong>${RESET_TTL_MIN}</strong>` })}</p>
+      ${ipAddress ? `<p style="color:#9ca3af;font-size:11px">${te("demande_depuis_ip", { ip: `<code>${safeIp}</code>` })}</p>` : ""}
     </div>
-    <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">
-      VNK Automatisation Inc. · Sécurité du compte
-    </div>
+    <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">{te("password_reset_vnk_automatisation_inc_securite_du_compte")}</div>
   </div>
 </body>
 </html>`.trim(),
@@ -165,7 +169,7 @@ export async function requestPasswordResetAction(
         adminId,
         type: "password_changed",
         severity: "info",
-        message: "Réinitialisation de mot de passe demandée",
+        message: t("reinitialisation_de_mot_de_passe_demandee"),
         metadata: { ip: ipAddress },
       });
     }
@@ -190,17 +194,18 @@ const verifySchema = z.object({
 export async function verifyResetCodeAction(
   input: z.infer<typeof verifySchema>
 ): Promise<Result<{ verified: true }>> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = verifySchema.safeParse(input);
   if (!parsed.success) return { success: false, error: "Code invalide" };
 
   const tokenHash = crypto.createHash("sha256").update(parsed.data.token).digest("hex");
   const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
 
-  if (!record) return { success: false, error: "Lien invalide ou expiré" };
-  if (record.usedAt) return { success: false, error: "Ce lien a déjà été utilisé" };
-  if (record.expiresAt < new Date()) return { success: false, error: "Lien expiré" };
+  if (!record) return { success: false, error: t("lien_invalide_ou_expire") };
+  if (record.usedAt) return { success: false, error: t("ce_lien_a_deja_ete_utilise") };
+  if (record.expiresAt < new Date()) return { success: false, error: t("lien_expire") };
   if (record.attempts >= MAX_ATTEMPTS) {
-    return { success: false, error: "Trop de tentatives. Demandez un nouveau lien." };
+    return { success: false, error: t("trop_de_tentatives_demandez_un_nouveau_lien") };
   }
 
   const codeHash = crypto.createHash("sha256").update(parsed.data.code).digest("hex");
@@ -221,26 +226,27 @@ const completeSchema = z.object({
   code: z.string().length(6).regex(/^\d{6}$/),
   newPassword: z
     .string()
-    .min(12, "Au moins 12 caractères")
-    .regex(/[A-Z]/, "Au moins une majuscule")
-    .regex(/[a-z]/, "Au moins une minuscule")
-    .regex(/\d/, "Au moins un chiffre"),
+    .min(12, "au_moins_12_caracteres")
+    .regex(/[A-Z]/, "au_moins_une_majuscule")
+    .regex(/[a-z]/, "au_moins_une_minuscule")
+    .regex(/\d/, "au_moins_un_chiffre"),
 });
 
 export async function completePasswordResetAction(
   input: z.infer<typeof completeSchema>
 ): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const parsed = completeSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const tokenHash = crypto.createHash("sha256").update(parsed.data.token).digest("hex");
   const record = await prisma.passwordResetToken.findUnique({ where: { tokenHash } });
 
-  if (!record) return { success: false, error: "Lien invalide ou expiré" };
-  if (record.usedAt) return { success: false, error: "Ce lien a déjà été utilisé" };
-  if (record.expiresAt < new Date()) return { success: false, error: "Lien expiré" };
+  if (!record) return { success: false, error: t("lien_invalide_ou_expire") };
+  if (record.usedAt) return { success: false, error: t("ce_lien_a_deja_ete_utilise") };
+  if (record.expiresAt < new Date()) return { success: false, error: t("lien_expire") };
   if (record.attempts >= MAX_ATTEMPTS) {
-    return { success: false, error: "Trop de tentatives. Demandez un nouveau lien." };
+    return { success: false, error: t("trop_de_tentatives_demandez_un_nouveau_lien") };
   }
 
   const codeHash = crypto.createHash("sha256").update(parsed.data.code).digest("hex");
@@ -292,7 +298,7 @@ export async function completePasswordResetAction(
       adminId: record.adminId,
       type: "password_changed",
       severity: "success",
-      message: "Mot de passe réinitialisé via courriel",
+      message: t("mot_de_passe_reinitialise_via_courriel"),
       metadata: { ip: record.ipAddress },
     });
   }

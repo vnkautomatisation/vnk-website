@@ -46,18 +46,18 @@ type Request = {
 type StatusFilter = "all" | "new" | "in_progress" | "converted" | "closed";
 type UrgencyFilter = "all" | "normal" | "urgent" | "critical";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Toutes" },
-  { key: "new", label: "Nouvelles" },
-  { key: "in_progress", label: "En traitement" },
-  { key: "converted", label: "Converties" },
-  { key: "closed", label: "Fermées" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "toutes" },
+  { key: "new", labelKey: "nouvelles" },
+  { key: "in_progress", labelKey: "traitement" },
+  { key: "converted", labelKey: "converties" },
+  { key: "closed", labelKey: "fermees" },
 ];
 
-const URGENCY_LABELS: Record<string, string> = {
-  normal: "Normal",
-  urgent: "Urgent",
-  critical: "Critique",
+const URGENCY_KEYS: Record<string, string> = {
+  normal: "normal",
+  urgent: "urgent",
+  critical: "critique",
 };
 
 const URGENCY_COLORS: Record<string, string> = {
@@ -66,15 +66,15 @@ const URGENCY_COLORS: Record<string, string> = {
   critical: "bg-red-100 text-red-700 border-red-200",
 };
 
-const SERVICE_LABELS: Record<string, string> = {
-  "plc-support": "Support PLC",
-  "plc-programming": "Programmation PLC",
-  "scada": "SCADA",
-  "hmi": "Interface HMI",
-  "web-development": "Développement web",
-  "automation": "Automatisation",
-  "consulting": "Consultation",
-  "maintenance": "Maintenance",
+const SERVICE_KEYS: Record<string, string> = {
+  "plc-support": "support_plc",
+  "plc-programming": "programmation_plc",
+  "scada": "scada",
+  "hmi": "interface_hmi",
+  "web-development": "developpement_web",
+  "automation": "automatisation",
+  "consulting": "consultation",
+  "maintenance": "maintenance",
 };
 
 export function RequestsView({
@@ -84,6 +84,7 @@ export function RequestsView({
   requests: Request[];
   kpis: { total: number; newCount: number; inProgress: number; converted: number; criticalCount: number };
 }) {
+  const t = useTranslations("admin.requests");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -92,16 +93,16 @@ export function RequestsView({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Filtres avances
+
   const [filterUrgencies, setFilterUrgencies] = useState<Set<string>>(new Set());
   const [filterServices, setFilterServices] = useState<Set<string>>(new Set());
   const [filterDateFrom, setFilterDateFrom] = useState("");
   const [filterDateTo, setFilterDateTo] = useState("");
 
-  // Bulk select
+
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
 
-  // Sticky scroll detection (pattern dashboard finance)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -112,7 +113,7 @@ export function RequestsView({
     return () => obs.disconnect();
   }, []);
 
-  // Listes distinctes
+
   const availableServices = useMemo(() => {
     const set = new Set<string>();
     for (const r of requests) if (r.serviceType) set.add(r.serviceType);
@@ -158,11 +159,11 @@ export function RequestsView({
     setFilterDateTo("");
   };
 
-  // ── Actions API ──────────────────────────────────────
+
   const updateStatus = async (r: Request, newStatus: string, label: string) => {
     const ok = await confirm({
       title: `${label} cette demande ?`,
-      description: `"${r.title}" passera au statut « ${newStatus === "in_progress" ? "En traitement" : newStatus === "closed" ? "Fermée" : newStatus} ».`,
+      description: t("passera_statut", { title: r.title, status: newStatus === "in_progress" ? t("traitement") : newStatus === "closed" ? t("fermee") : newStatus }),
       confirmLabel: label,
       variant: newStatus === "closed" ? "destructive" : "default",
     });
@@ -173,29 +174,29 @@ export function RequestsView({
       body: JSON.stringify({ status: newStatus }),
     });
     if (res.ok) { toast.success(`Demande ${label.toLowerCase()}`); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleDelete = async (r: Request) => {
     const ok = await confirm({
-      title: "Supprimer cette demande ?",
+      title: t("supprimer_demande"),
       description: `"${r.title}" sera supprimée définitivement.`,
-      confirmLabel: "Supprimer",
+      confirmLabel: t("supprimer"),
       variant: "destructive",
     });
     if (!ok) return;
     const res = await fetch(`/api/project-requests/${r.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Demande supprimée"); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("demande_supprimee")); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
-  // ── Bulk actions ─────────────────────────────────────
+
   const handleBulkClose = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Fermer ${selectedIds.size} demande(s) ?`,
-      description: "Les demandes sélectionnées passeront au statut « Fermée ».",
-      confirmLabel: "Fermer tous",
+      description: t("demandes_selectionnees_passeront_statut_fermee"),
+      confirmLabel: t("fermer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -218,8 +219,8 @@ export function RequestsView({
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} demande(s) ?`,
-      description: "Cette action est irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("action_irreversible"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -244,40 +245,40 @@ export function RequestsView({
     else setSelectedIds(new Set(allIds));
   };
 
-  // Quick actions menu
+
   const getActions = useCallback((r: Request) => {
     const actions: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir le détail", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("request", r.id) },
-      { label: "Voir client", icon: <Cpu className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
+      { label: t("voir_detail"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("request", r.id) },
+      { label: t("voir_client"), icon: <Cpu className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
     ];
     if (r.status === "new") {
-      actions.push({ label: "Mettre en traitement", icon: <Play className="h-3.5 w-3.5" />, onClick: () => updateStatus(r, "in_progress", "Mettre en traitement") });
+      actions.push({ label: t("mettre_traitement"), icon: <Play className="h-3.5 w-3.5" />, onClick: () => updateStatus(r, "in_progress", t("mettre_traitement")) });
     }
     if (r.status === "in_progress" || r.status === "new") {
-      actions.push({ label: "Convertir", icon: <Briefcase className="h-3.5 w-3.5" />, onClick: () => openEntity("request", r.id) });
+      actions.push({ label: t("convertir"), icon: <Briefcase className="h-3.5 w-3.5" />, onClick: () => openEntity("request", r.id) });
     }
     if (r.status !== "closed" && r.status !== "converted") {
-      actions.push({ label: "Fermer", icon: <Lock className="h-3.5 w-3.5" />, onClick: () => updateStatus(r, "closed", "Fermer"), separator: true });
+      actions.push({ label: t("fermer"), icon: <Lock className="h-3.5 w-3.5" />, onClick: () => updateStatus(r, "closed", t("fermer")), separator: true });
     }
-    actions.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => handleDelete(r), variant: "destructive" });
+    actions.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => handleDelete(r), variant: "destructive" });
     return actions;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [openEntity]);
 
-  // ── Colonnes table ───────────────────────────────────
+
   const allFilteredIds = filtered.map((r) => r.id);
   const allSelected = allFilteredIds.length > 0 && allFilteredIds.every((id) => selectedIds.has(id));
 
   const columns: Column<Request>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.title}`} />
       ),
     },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -287,7 +288,7 @@ export function RequestsView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "title", header: "Demande",
+      key: "title", header: t("demande"),
       accessor: (r) => (
         <div>
           <p className="font-medium text-sm">{r.title}</p>
@@ -297,23 +298,23 @@ export function RequestsView({
       sortable: true, sortBy: (r) => r.title,
     },
     {
-      key: "service", header: "Service",
-      accessor: (r) => <span className="text-xs">{r.serviceType ? (SERVICE_LABELS[r.serviceType] ?? r.serviceType) : "—"}</span>,
+      key: "service", header: t("service"),
+      accessor: (r) => <span className="text-xs">{r.serviceType ? (SERVICE_KEYS[r.serviceType] ?? r.serviceType) : "—"}</span>,
       hiddenOnMobile: true,
     },
     {
-      key: "urgency", header: "Urgence",
+      key: "urgency", header: t("urgence"),
       accessor: (r) => (
         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border inline-flex items-center gap-1", URGENCY_COLORS[r.urgency] ?? "bg-gray-100")}>
           {r.urgency === "critical" && <AlertTriangle className="h-3 w-3" />}
-          {URGENCY_LABELS[r.urgency] ?? r.urgency}
+          {URGENCY_KEYS[r.urgency] ?? r.urgency}
         </span>
       ),
       sortable: true,
       sortBy: (r) => r.urgency === "critical" ? 0 : r.urgency === "urgent" ? 1 : 2,
     },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
-    { key: "date", header: "Reçue", accessor: (r) => formatDate(new Date(r.createdAt)), sortable: true, sortBy: (r) => r.createdAt, hiddenOnMobile: true },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "date", header: t("recue_2"), accessor: (r) => formatDate(new Date(r.createdAt)), sortable: true, sortBy: (r) => r.createdAt, hiddenOnMobile: true },
     {
       key: "actions",
       header: "",
@@ -344,7 +345,7 @@ export function RequestsView({
 
   return (
     <div className="space-y-6">
-      {/* Hero header navy VNK */}
+
       <div className="rounded-2xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] p-5 sm:p-6 text-white shadow-md relative overflow-hidden">
         <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32" />
         <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-24 -translate-x-24" />
@@ -354,8 +355,8 @@ export function RequestsView({
               <Inbox className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Demandes de projet</h1>
-              <p className="text-white/70 text-sm mt-0.5">Demandes soumises via le portail client — traiter et convertir</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("demandes_projet")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("demandes_soumises_via_portail_client")}</p>
             </div>
           </div>
           {kpis.criticalCount > 0 && (
@@ -367,27 +368,27 @@ export function RequestsView({
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total" value={kpis.total} icon={Inbox} accent="bg-blue-500" />
-        <StatCard label="Nouvelles" value={kpis.newCount} icon={Sparkles} accent="bg-indigo-500" />
-        <StatCard label="En traitement" value={kpis.inProgress} icon={Loader2} accent="bg-amber-500" />
-        <StatCard label="Converties" value={kpis.converted} icon={CheckCircle2} accent="bg-emerald-500" />
+        <StatCard label={t("total")} value={kpis.total} icon={Inbox} accent="bg-blue-500" />
+        <StatCard label={t("nouvelles")} value={kpis.newCount} icon={Sparkles} accent="bg-indigo-500" />
+        <StatCard label={t("traitement_2")} value={kpis.inProgress} icon={Loader2} accent="bg-amber-500" />
+        <StatCard label={t("converties")} value={kpis.converted} icon={CheckCircle2} accent="bg-emerald-500" />
       </div>
 
-      {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Inbox className="h-4 w-4" />
-              Demandes
+              {t("demandes")}
             </span>
             <span className="font-semibold">{filtered.length} affichées</span>
-            <span className="text-muted-foreground">Nouvelles <span className="font-semibold text-indigo-600">{kpis.newCount}</span></span>
-            <span className="text-muted-foreground">En traitement <span className="font-semibold text-amber-600">{kpis.inProgress}</span></span>
-            <span className="text-muted-foreground">Converties <span className="font-semibold text-emerald-600">{kpis.converted}</span></span>
+            <span className="text-muted-foreground">{t("nouvelles")} <span className="font-semibold text-indigo-600">{kpis.newCount}</span></span>
+            <span className="text-muted-foreground">{t("traitement")} <span className="font-semibold text-amber-600">{kpis.inProgress}</span></span>
+            <span className="text-muted-foreground">{t("converties")} <span className="font-semibold text-emerald-600">{kpis.converted}</span></span>
             {kpis.criticalCount > 0 && (
               <span className="ml-auto inline-flex items-center gap-1 text-red-600 font-semibold">
                 <AlertTriangle className="h-3 w-3" />
@@ -398,34 +399,34 @@ export function RequestsView({
         </div>
       )}
 
-      {/* Toolbar */}
+
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Titre, client, service, description..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("titre_client_service_description")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
 
-        {/* Filtres avances */}
+
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[320px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Urgence</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("urgence")}</p>
               <div className="flex flex-wrap gap-1">
                 {(["normal", "urgent", "critical"] as const).map((u) => {
                   const isOn = filterUrgencies.has(u);
@@ -438,7 +439,7 @@ export function RequestsView({
                       }}
                       className={cn("px-2 py-0.5 rounded-full border text-[10px] transition-colors",
                         isOn ? "border-[#0F2D52] bg-[#0F2D52] text-white" : "border-input hover:bg-muted")}>
-                      {URGENCY_LABELS[u]}
+                      {URGENCY_KEYS[u]}
                     </button>
                   );
                 })}
@@ -446,7 +447,7 @@ export function RequestsView({
             </div>
             {availableServices.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Service</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("service")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {availableServices.map((s) => {
                     const isOn = filterServices.has(s);
@@ -459,7 +460,7 @@ export function RequestsView({
                         }}
                         className={cn("px-2 py-0.5 rounded-full border text-[10px] transition-colors",
                           isOn ? "border-[#0F2D52] bg-[#0F2D52] text-white" : "border-input hover:bg-muted")}>
-                        {SERVICE_LABELS[s] ?? s}
+                        {SERVICE_KEYS[s] ?? s}
                       </button>
                     );
                   })}
@@ -467,7 +468,7 @@ export function RequestsView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période de réception</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode_reception")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -475,8 +476,7 @@ export function RequestsView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("requests_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -484,7 +484,7 @@ export function RequestsView({
         <ViewToggle storageKey="requests" defaultView="list" onChange={setView} />
       </div>
 
-      {/* Bulk actions bar */}
+
       {selectedIds.size > 0 && (
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
@@ -505,7 +505,7 @@ export function RequestsView({
         </div>
       )}
 
-      {/* Vue grille */}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((r) => (
@@ -516,21 +516,21 @@ export function RequestsView({
               avatarName={r.clientName}
               alert={r.urgency === "critical" && r.status !== "converted" && r.status !== "closed"}
               badges={[
-                { label: r.status === "new" ? "Nouvelle" : r.status === "in_progress" ? "En traitement" : r.status === "converted" ? "Convertie" : r.status === "closed" ? "Fermée" : r.status, variant: r.status === "new" ? "secondary" : r.status === "converted" ? "secondary" : "outline" },
-                { label: URGENCY_LABELS[r.urgency] ?? r.urgency, variant: r.urgency === "critical" ? "destructive" : r.urgency === "urgent" ? "destructive" : "outline" },
+                { label: r.status === "new" ? t("nouvelle") : r.status === "in_progress" ? t("traitement") : r.status === "converted" ? t("convertie") : r.status === "closed" ? t("fermee") : r.status, variant: r.status === "new" ? "secondary" : r.status === "converted" ? "secondary" : "outline" },
+                { label: URGENCY_KEYS[r.urgency] ?? r.urgency, variant: r.urgency === "critical" ? "destructive" : r.urgency === "urgent" ? "destructive" : "outline" },
               ]}
               actions={getActions(r)}
               onClick={() => openEntity("request", r.id)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{r.serviceType ? (SERVICE_LABELS[r.serviceType] ?? r.serviceType) : "Aucun service"}</span>
+                  <span>{r.serviceType ? (SERVICE_KEYS[r.serviceType] ?? r.serviceType) : t("aucun_service")}</span>
                   <span>{formatDate(new Date(r.createdAt))}</span>
                 </div>
               }
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucune demande trouvée</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucune_demande_trouvee")}</div>
           )}
         </div>
       ) : (
@@ -539,7 +539,7 @@ export function RequestsView({
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={(r) => openEntity("request", r.id)}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           exportFilename="demandes"
           storageKey="admin-requests"
         />

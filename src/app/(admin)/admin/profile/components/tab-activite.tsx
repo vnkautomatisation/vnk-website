@@ -215,7 +215,7 @@ export function TabActivite({
                             Connexion {e.type}
                             {e.reason && <span className="text-muted-foreground font-normal"> — {e.reason}</span>}
                           </p>
-                          <Badge className={`text-[10px] ${style.bg} ${style.text} border-0`}>{isSuccess ? "OK" : isFailed ? "Échec" : "Info"}</Badge>
+                          <Badge className={`text-[10px] ${style.bg} ${style.text} border-0`}>{isSuccess ? "OK" : isFailed ? t("echec") : t("info")}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-muted-foreground">
                           <span>{new Date(e.createdAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}</span>

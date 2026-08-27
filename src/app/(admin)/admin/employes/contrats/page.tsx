@@ -1,11 +1,15 @@
 // Page Contrats — templates + contrats individuels + double signature.
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { ContractsView } from "./contracts-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Employés — Contrats" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("employes_contrats") };
+}
 
 export default async function ContratsPage() {
   const session = await auth();

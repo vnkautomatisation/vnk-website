@@ -7,6 +7,7 @@
 //   - allocated  : afficher granted/denied par rang
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { CalendarRange, Plus, Trash2, Clock, CheckCircle2, XCircle, Lock, Eye, Users, ChevronLeft, ChevronRight, Megaphone, Undo2 } from "lucide-react";
@@ -82,33 +83,34 @@ export function VacationWindowBanner({ windows }: { windows: OpenWindow[] }) {
 
 // ─── Card adaptative selon state ─────────────────────────────────
 function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: OpenWindow; onOpenSubmit: () => void; onOpenPeek: () => void }) {
+  const t = useTranslations("admin.leave_windows");
   const status = w.status;
   const submitted = w.myPreferences.length > 0;
 
-  // Countdown si "open"
+
   const [remaining, setRemaining] = useState<string | null>(null);
   useEffect(() => {
     if (status !== "open") { setRemaining(null); return; }
     const update = () => {
       const target = new Date(w.closingDate).getTime();
       const diff = target - Date.now();
-      if (diff <= 0) { setRemaining("Periode fermee"); return; }
+      if (diff <= 0) { setRemaining(t("periode_fermee")); return; }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
       if (days > 0) setRemaining(`${days} jour${days > 1 ? "s" : ""} restant${days > 1 ? "s" : ""}`);
       else setRemaining(`${hours}h restantes`);
     };
     update();
-    const t = setInterval(update, 60_000);
-    return () => clearInterval(t);
+    const timer = setInterval(update, 60_000);
+    return () => clearInterval(timer);
   }, [status, w.closingDate]);
 
-  // Couleur du bandeau selon state
+
   const stateMeta = {
-    open:      { borderCls: "border-l-emerald-500", iconBg: "bg-emerald-50 text-emerald-700", icon: CalendarRange, label: "Ouverte" },
-    closed:    { borderCls: "border-l-amber-500",   iconBg: "bg-amber-50 text-amber-700",     icon: Lock,          label: "Fermee" },
-    in_review: { borderCls: "border-l-[#0F2D52]",   iconBg: "bg-[#0F2D52]/10 text-[#0F2D52]", icon: Eye,           label: "En revue" },
-    allocated: { borderCls: "border-l-emerald-600", iconBg: "bg-emerald-50 text-emerald-700", icon: CheckCircle2,  label: "Attribuee" },
+    open:      { borderCls: "border-l-emerald-500", iconBg: "bg-emerald-50 text-emerald-700", icon: CalendarRange, label: t("ouverte") },
+    closed:    { borderCls: "border-l-amber-500",   iconBg: "bg-amber-50 text-amber-700",     icon: Lock,          label: t("fermee") },
+    in_review: { borderCls: "border-l-[#0F2D52]",   iconBg: "bg-[#0F2D52]/10 text-[#0F2D52]", icon: Eye,           label: t("revue") },
+    allocated: { borderCls: "border-l-emerald-600", iconBg: "bg-emerald-50 text-emerald-700", icon: CheckCircle2,  label: t("attribuee") },
   }[status as "open" | "closed" | "in_review" | "allocated"] ?? { borderCls: "border-l-slate-300", iconBg: "bg-slate-100 text-slate-700", icon: CalendarRange, label: status };
 
   const IconCmp = stateMeta.icon;
@@ -128,13 +130,13 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
               </span>
             </div>
             <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
-              <span className="hidden sm:inline">Periode couverte : </span>
+              <span className="hidden sm:inline">{t("periode_couverte")} </span>
               {new Date(w.coversFrom).toLocaleDateString("fr-CA")} → {new Date(w.coversTo).toLocaleDateString("fr-CA")}
               {" · "}max {w.maxDaysPerEmployee} j
             </p>
             {status === "open" && (
               <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-x-2 gap-y-1 flex-wrap">
-                <span>Avant le <strong>{new Date(w.closingDate).toLocaleDateString("fr-CA")}</strong></span>
+                <span>{t("avant")} <strong>{new Date(w.closingDate).toLocaleDateString("fr-CA")}</strong></span>
                 {remaining && (
                   <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                     <Clock className="h-3 w-3" />
@@ -152,11 +154,10 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
             {(status === "closed" || status === "in_review") && (
               <p className="text-[11px] text-muted-foreground mt-1">
                 {status === "closed"
-                  ? "Periode de soumission fermee. RH va lancer l'attribution prochainement."
-                  : "RH revise les preferences avant attribution finale."}
+                  ? t("periode_soumission_fermee_rh_va")
+                  : t("rh_revise_preferences_avant_attribution")}
                 {submitted && (
-                  <span className="ml-1">
-                    Vous avez soumis <strong>{w.myPreferences.length}</strong> choix.
+                  <span className="ml-1">{t("vacation_window_banner_vous_avez_soumis")}<strong>{w.myPreferences.length}</strong> choix.
                   </span>
                 )}
               </p>
@@ -170,14 +171,14 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
             )}
             {status === "allocated" && !submitted && (
               <p className="text-[11px] text-muted-foreground mt-1 italic">
-                Vous n&apos;avez pas soumis de preferences pour cette fenetre.
+                {t("vous_n_apos_avez_pas")}
               </p>
             )}
           </div>
         </div>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full lg:w-auto lg:shrink-0">
           {(status === "open" || status === "closed" || status === "in_review") && (
-            <ActionTooltip label="Voir qui prend congé sur cette période (noms + anonyme)">
+            <ActionTooltip label={t("voir_prend_conge_periode_noms")}>
               <Button
                 variant="outline"
                 size="sm"
@@ -185,7 +186,7 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
                 className="h-8 text-xs w-full sm:w-auto"
               >
                 <Users className="h-3.5 w-3.5 mr-1.5" />
-                Voir mes collègues
+                {t("voir_mes_collegues")}
               </Button>
             </ActionTooltip>
           )}
@@ -196,7 +197,7 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
               className="h-8 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white w-full sm:w-auto"
             >
               <CalendarRange className="h-3.5 w-3.5 mr-1.5" />
-              {submitted ? "Modifier mes preferences" : "Soumettre mes preferences"}
+              {submitted ? t("modifier_mes_preferences") : t("soumettre_mes_preferences")}
             </Button>
           )}
         </div>
@@ -213,10 +214,11 @@ function PreferenceAllocatedRow({
   pref: OpenWindow["myPreferences"][number];
   windowName: string;
 }) {
+  const t = useTranslations("admin.leave_windows");
   const router = useRouter();
   const [appealOpen, setAppealOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  // Conditions d'eligibilite : preferenceId connu + statut granted/denied (non pending)
+
   const canAppeal = pref.id != null
     && (pref.status === "denied" || (pref.status === "granted" && pref.rank > 1))
     && !pref.appealStatus;
@@ -228,9 +230,9 @@ function PreferenceAllocatedRow({
     const r = await withdrawAppealAction({ preferenceId: pref.id });
     setBusy(false);
     if (r.success) {
-      toast.success("Appel retiré");
+      toast.success(t("appel_retire"));
       router.refresh();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   return (
@@ -242,18 +244,16 @@ function PreferenceAllocatedRow({
         </span>
         {pref.status === "granted" ? (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="h-2.5 w-2.5" />Accordée
-          </span>
+            <CheckCircle2 className="h-2.5 w-2.5" />{t("vacation_window_banner_accordee")}</span>
         ) : pref.status === "denied" ? (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200">
-            <XCircle className="h-2.5 w-2.5" />Refusée
-          </span>
+            <XCircle className="h-2.5 w-2.5" />{t("vacation_window_banner_refusee")}</span>
         ) : (
           <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
-            En attente
+            {t("attente_2")}
           </span>
         )}
-        {/* Badge appel selon statut */}
+
         {pref.appealStatus === "pending" && (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200">
             <Megaphone className="h-2.5 w-2.5" />Appel en attente
@@ -261,16 +261,14 @@ function PreferenceAllocatedRow({
         )}
         {pref.appealStatus === "approved" && (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
-            <CheckCircle2 className="h-2.5 w-2.5" />Appel accordé
-          </span>
+            <CheckCircle2 className="h-2.5 w-2.5" />{t("vacation_window_banner_appel_accorde")}</span>
         )}
         {pref.appealStatus === "rejected" && (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-red-50 text-red-800 border border-red-200">
-            <XCircle className="h-2.5 w-2.5" />Appel refusé
-          </span>
+            <XCircle className="h-2.5 w-2.5" />{t("vacation_window_banner_appel_refuse")}</span>
         )}
         {canAppeal && (
-          <ActionTooltip label="Contester cette attribution (motif requis)">
+          <ActionTooltip label={t("contester_attribution_motif_requis")}>
             <Button
               size="sm"
               variant="outline"
@@ -282,7 +280,7 @@ function PreferenceAllocatedRow({
           </ActionTooltip>
         )}
         {canWithdraw && (
-          <ActionTooltip label="Retirer mon appel en cours">
+          <ActionTooltip label={t("retirer_mon_appel_cours")}>
             <Button
               size="sm"
               variant="outline"
@@ -347,12 +345,13 @@ const ABS_TYPE_COLORS: Record<string, { bg: string; text: string; border: string
   bereavement: { bg: "bg-gray-200", text: "text-gray-900", border: "border-gray-400" },
   other: { bg: "bg-amber-200", text: "text-amber-900", border: "border-amber-400" },
 };
-const ABS_TYPE_LABELS: Record<string, string> = {
-  vacation: "Vacances", sick: "Maladie", parental: "Parental",
-  unpaid: "Sans solde", bereavement: "Décès", other: "Autre congé",
+const ABS_TYPE_KEYS: Record<string, string> = {
+  vacation: "vacances", sick: "maladie", parental: "parental",
+  unpaid: "sans_solde", bereavement: "deces", other: "autre_conge",
 };
 
 function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onClose: () => void }) {
+  const t = useTranslations("admin.leave_windows");
   const tc = useTranslations("common");
   type AnonHeat = { date: string; count: number };
   const [prefByDate, setPrefByDate] = useState<Map<string, number>>(new Map());
@@ -361,7 +360,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
   const [holidays, setHolidays] = useState<HolidayInfo[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Mois affiché : démarre au premier mois couvert par la fenêtre
+
   const coversFrom = useMemo(() => new Date(w.coversFrom.slice(0, 10) + "T00:00:00"), [w.coversFrom]);
   const coversTo = useMemo(() => new Date(w.coversTo.slice(0, 10) + "T00:00:00"), [w.coversTo]);
   const [viewMonth, setViewMonth] = useState<Date>(() => {
@@ -379,7 +378,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
     let cancelled = false;
     setLoading(true);
 
-    // 1) Préférences anonymes : compteurs par jour sur la couverture complète
+
     const prefPromise = fetch(`/api/admin/vacation-windows/${w.id}/anonymous-prefs`)
       .then((r) => r.ok ? r.json() : null)
       .then((data: { heatmap?: AnonHeat[]; submittedCount?: number } | null) => {
@@ -391,7 +390,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
       })
       .catch(() => null);
 
-    // 2) Absences approuvées + miennes pending, chunkées par 180j max (limite endpoint)
+
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
     const chunks: Array<[string, string]> = [];
     const cur = new Date(coversFrom);
@@ -436,7 +435,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
     return () => { cancelled = true; };
   }, [w.id, coversFrom, coversTo]);
 
-  // Index absences par date YYYY-MM-DD
+
   const absByDate = useMemo(() => {
     const map = new Map<string, CalendarAbsence[]>();
     for (const a of absences) {
@@ -459,8 +458,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Users className="h-4 w-4" />Mes collègues sur cette fenêtre
-            </DialogTitle>
+              <Users className="h-4 w-4" />{t("vacation_window_banner_mes_collegues_sur_cette_fenetre")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               {w.name} · {coversFrom.toLocaleDateString("fr-CA")} → {coversTo.toLocaleDateString("fr-CA")}
               {submittedCount !== null && (
@@ -470,39 +468,39 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3 flex-1 overflow-y-auto">
-          {/* Légende */}
+
           <div className="flex items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground flex-wrap">
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-cyan-200 border border-cyan-400" />
-              Vacances
+              {t("vacances")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-red-200 border border-red-400" />
-              Maladie
+              {t("maladie")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-pink-200 border border-pink-400" />
-              Parental
+              {t("parental")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-amber-100 border border-amber-300 border-dashed" />
-              Préférence anonyme
+              {t("preference_anonyme")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-purple-100 border border-purple-300" />
-              Férié
+              {t("ferie")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm bg-slate-200 border border-slate-300" />
-              Weekend
+              {t("weekend")}
             </span>
             <span className="inline-flex items-center gap-1">
               <span className="inline-block w-3 h-3 rounded-sm ring-2 ring-[#0F2D52] bg-white" />
-              Aujourd&apos;hui
+              {t("aujourd_apos_hui")}
             </span>
           </div>
 
-          {/* Navigation mensuelle */}
+
           <div className="flex items-center justify-between gap-2 border-b pb-2">
             <Button
               variant="outline"
@@ -536,7 +534,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
           </div>
 
           {loading ? (
-            <p className="text-center text-xs text-muted-foreground py-8">Chargement du calendrier...</p>
+            <p className="text-center text-xs text-muted-foreground py-8">{t("chargement_calendrier")}</p>
           ) : (
             <ColleaguesMonthTable
               month={viewMonth}
@@ -550,10 +548,10 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
           )}
 
           {!loading && (() => {
-            // Discrimination de l'empty state :
-            //  (a) Personne n'a soumis ET aucune absence sur toute la fenêtre
-            //  (b) Des collègues ont soumis (donc prefByDate non vide ailleurs) mais 0 congé approuvé
-            //  (c) Le mois affiché est vide mais des données existent ailleurs sur la fenêtre
+
+
+
+
             const monthStart = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1);
             const monthEnd = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0);
             const monthEndISO = monthEnd.toISOString().slice(0, 10);
@@ -571,37 +569,37 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
             const nothingInMonth = !absInMonth && !prefInMonth;
             if (!nothingInMonth) return null;
 
-            // (a) Rien nulle part + personne n'a soumis
+
             if (nothingAnywhere && (submittedCount === null || submittedCount === 0)) {
               return (
                 <div className="rounded-md border bg-muted/10 p-6 text-center">
                   <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium">0 collègue n&apos;a encore soumis</p>
+                  <p className="text-sm font-medium">{t("0_collegue_n_apos_encore")}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Vous êtes parmi les premiers à consulter cette fenêtre.
+                    {t("vous_etes_parmi_premiers_consulter")}
                   </p>
                 </div>
               );
             }
-            // (b) Aucune absence approuvée mais des préférences existent
+
             if (absences.length === 0 && submittedCount !== null && submittedCount > 0) {
               return (
                 <div className="rounded-md border bg-muted/10 p-6 text-center">
                   <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                  <p className="text-sm font-medium">Aucun congé approuvé pour ce mois</p>
+                  <p className="text-sm font-medium">{t("aucun_conge_approuve_mois")}</p>
                   <p className="text-xs text-muted-foreground mt-1">
-                    {submittedCount} collègue{submittedCount > 1 ? "s ont" : " a"} soumis des préférences pour la fenêtre.
+                    {submittedCount} collègue{submittedCount > 1 ? t("s_ont") : " a"} soumis des préférences pour la fenêtre.
                   </p>
                 </div>
               );
             }
-            // (c) Vide ce mois-ci mais des données existent ailleurs sur la fenêtre
+
             return (
               <div className="rounded-md border bg-muted/10 p-6 text-center">
                 <Users className="h-8 w-8 text-muted-foreground/40 mx-auto mb-2" />
-                <p className="text-sm font-medium">Aucune absence ni préférence sur ce mois</p>
+                <p className="text-sm font-medium">{t("aucune_absence_ni_preference_mois")}</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Utilisez les flèches pour naviguer vers les autres mois de la fenêtre.
+                  {t("utilisez_fleches_naviguer_vers_autres")}
                 </p>
               </div>
             );
@@ -627,10 +625,11 @@ function ColleaguesMonthTable({
   prefByDate: Map<string, number>;
   holidays: HolidayInfo[];
 }) {
+  const t = useTranslations("admin.leave_windows");
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayISO = today.toISOString().slice(0, 10);
 
-  // Jours du mois affiché
+
   const lastDay = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
   const days = useMemo(() => {
     const out: { date: Date; iso: string }[] = [];
@@ -641,14 +640,14 @@ function ColleaguesMonthTable({
     return out;
   }, [month, lastDay]);
 
-  // Index fériés
+
   const holidayByDate = useMemo(() => {
     const m = new Map<string, HolidayInfo>();
     for (const h of holidays) m.set(h.date, h);
     return m;
   }, [holidays]);
 
-  // Liste des employés qui ont au moins 1 absence dans le mois affiché (triée alpha)
+
   const employeesInMonth = useMemo(() => {
     const map = new Map<number, { id: number; fullName: string; isMine: boolean }>();
     for (const a of absences) {
@@ -668,14 +667,14 @@ function ColleaguesMonthTable({
     });
   }, [absences, month]);
 
-  // Max pref count pour intensité de la ligne agrégée
+
   const maxPref = useMemo(() => {
     let m = 0;
     for (const c of prefByDate.values()) if (c > m) m = c;
     return m;
   }, [prefByDate]);
 
-  // Helper : récupère l'absence d'un employé sur un jour donné
+
   const absForEmpDay = (empId: number, iso: string): CalendarAbsence | undefined => {
     return (absByDate.get(iso) ?? []).find((a) => a.adminId === empId && a.status === "approved");
   };
@@ -694,9 +693,9 @@ function ColleaguesMonthTable({
             minWidth,
           }}
         >
-          {/* En-tête : "Employé" + chaque jour */}
+
           <div className="sticky left-0 z-20 bg-muted/40 border-r border-b px-2 py-1.5 text-[10px] uppercase font-bold tracking-wider text-muted-foreground">
-            Employé
+            {t("employe")}
           </div>
           {days.map(({ date, iso }, i) => {
             const isWeekend = date.getDay() === 0 || date.getDay() === 6;
@@ -719,13 +718,13 @@ function ColleaguesMonthTable({
             );
           })}
 
-          {/* Lignes employés */}
+
           {employeesInMonth.length === 0 && (
             <div
               className="border-b col-span-full p-6 text-center text-xs text-muted-foreground italic"
               style={{ gridColumn: `1 / span ${totalCols}` }}
             >
-              Aucun collègue n&apos;a de congé approuvé sur ce mois.
+              {t("aucun_collegue_n_apos_conge")}
             </div>
           )}
           {employeesInMonth.map((emp) => (
@@ -741,12 +740,11 @@ function ColleaguesMonthTable({
             />
           ))}
 
-          {/* Ligne agrégée : préférences anonymes */}
+
           {maxPref > 0 && (
             <>
               <div className="sticky left-0 z-10 bg-amber-50/60 border-r border-b border-t-2 border-t-amber-300 px-2 py-1.5 text-[10px] font-semibold text-amber-900 flex items-center gap-1 italic">
-                <Clock className="h-3 w-3" />Préférences anonymes
-              </div>
+                <Clock className="h-3 w-3" />{t("vacation_window_banner_preferences_anonymes")}</div>
               {days.map(({ date, iso }, i) => {
                 const isWeekend = date.getDay() === 0 || date.getDay() === 6;
                 const holiday = holidayByDate.get(iso);
@@ -774,7 +772,7 @@ function ColleaguesMonthTable({
         </div>
       </div>
       <div className="px-2 py-1.5 text-[10px] text-muted-foreground bg-muted/10 border-t">
-        Survolez une cellule pour voir le détail. Faites défiler horizontalement si nécessaire.
+        {t("survolez_cellule_voir_detail_faites")}
       </div>
     </div>
   );
@@ -792,6 +790,8 @@ function EmployeeRow({
   holidayByDate: Map<string, HolidayInfo>;
   absForEmpDay: (empId: number, iso: string) => CalendarAbsence | undefined;
 }) {
+  const t = useTranslations("admin.leave_windows");
+  const dateTag = useDateLocale();
   return (
     <>
       <ActionTooltip label={emp.fullName} side="right">
@@ -800,7 +800,7 @@ function EmployeeRow({
         >
           {emp.isMine && (
             <span className="text-[8px] uppercase tracking-wider font-bold text-[#0F2D52] bg-[#0F2D52]/10 px-1 rounded shrink-0">
-              Moi
+              {t("moi")}
             </span>
           )}
           <span className="truncate">{emp.fullName}</span>
@@ -824,17 +824,18 @@ function EmployeeRow({
           const c = ABS_TYPE_COLORS[abs.type] ?? ABS_TYPE_COLORS.other;
           bg = c.bg;
           border = c.border;
-          label = ABS_TYPE_LABELS[abs.type] ?? abs.type;
+          label = ABS_TYPE_KEYS[abs.type] ? t(ABS_TYPE_KEYS[abs.type]) : abs.type;
         }
 
+        const longDate = date.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long" });
         const tooltip = abs
-          ? `${emp.fullName} — ${label}${abs.halfDay ? ` (½ ${abs.halfDay})` : ""} · ${date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })}`
+          ? `${emp.fullName} — ${label}${abs.halfDay ? ` (½ ${abs.halfDay})` : ""} · ${longDate}`
           : holiday
-            ? `${date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })} — Férié : ${holiday.name}`
-            : `${date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })}${!inWindow ? " (hors période)" : ""}`;
+            ? t("date_ferie_nom", { date: longDate, name: holiday.name })
+            : `${longDate}${!inWindow ? t("hors_periode_suffixe") : ""}`;
 
-        // Aujourd'hui : ring navy classique, MAIS si une absence approuvée colore la cellule,
-        // le navy disparaît dans le fond coloré → utiliser un ring contrasté amber.
+
+
         const todayRing = isToday
           ? abs
             ? "ring-2 ring-amber-400 ring-inset"
@@ -853,6 +854,7 @@ function EmployeeRow({
 }
 
 function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose: () => void }) {
+  const t = useTranslations("admin.leave_windows");
   const tc = useTranslations("common");
   const router = useRouter();
   type Choice = { rank: number; startDate: string; endDate: string };
@@ -864,8 +866,8 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
     : [{ rank: 1, startDate: "", endDate: "" }];
   const [choices, setChoices] = useState<Choice[]>(initialChoices);
   const [pending, setPending] = useState(false);
-  // Permet d'ouvrir le calendrier détaillé "Voir mes collègues" depuis ce modal
-  // (au lieu d'un mini-heatmap inline cassé quand 0 collègue a soumis).
+
+
   const [peekOpen, setPeekOpen] = useState(false);
 
   const addChoice = () => {
@@ -882,7 +884,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
   };
 
   const submit = async () => {
-    // Verifie que chaque choix a start + end
+
     for (const c of choices) {
       if (!c.startDate || !c.endDate) {
         toast.error(`Choix #${c.rank} : dates obligatoires.`);
@@ -909,7 +911,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
               <CalendarRange className="h-4 w-4" />Vos preferences — {w.name}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Jusqu&apos;a 3 choix. Le rang 1 est votre prefere. L&apos;attribution se fait par anciennete.
+              {t("jusqu_apos_3_choix_rang")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -917,29 +919,26 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
           <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-2">
             Periode autorisee : <strong>{new Date(w.coversFrom).toLocaleDateString("fr-CA")}</strong>
             {" → "}<strong>{new Date(w.coversTo).toLocaleDateString("fr-CA")}</strong>
-            {" · "}max <strong>{w.maxDaysPerEmployee} jours</strong> par choix.
-          </div>
+            {" · "}max <strong>{w.maxDaysPerEmployee} jours</strong>{t("vacation_window_banner_par_choix")}</div>
 
-          {/* Raccourci vers le calendrier détaillé des collègues (Excel-style) */}
+
           <div className="rounded-md border bg-muted/20 p-3 flex items-center justify-between gap-3 flex-wrap">
             <div className="flex-1 min-w-0">
               <p className="text-[11px] font-semibold text-[#0F2D52] flex items-center gap-1.5">
-                <Users className="h-3.5 w-3.5" />Voir les congés de vos collègues
-              </p>
+                <Users className="h-3.5 w-3.5" />{t("vacation_window_banner_voir_les_conges_de_vos_collegues")}</p>
               <p className="text-[10px] text-muted-foreground mt-0.5">
-                Visualisez qui prend déjà des vacances et les préférences déjà soumises pour éviter les conflits.
+                {t("visualisez_prend_deja_vacances_preferences")}
               </p>
             </div>
             <Button variant="outline" size="sm" onClick={() => setPeekOpen(true)} className="h-8 text-xs shrink-0">
-              <CalendarRange className="h-3.5 w-3.5 mr-1.5" />Ouvrir le calendrier
-            </Button>
+              <CalendarRange className="h-3.5 w-3.5 mr-1.5" />{t("vacation_window_banner_ouvrir_le_calendrier")}</Button>
           </div>
 
           {choices.map((c) => (
             <FormSection
               key={c.rank}
               icon={CalendarRange}
-              title={`Choix #${c.rank}${c.rank === 1 ? " (prefere)" : ""}`}
+              title={`Choix #${c.rank}${c.rank === 1 ? t("prefere") : ""}`}
               action={
                 choices.length > 1 ? (
                   <button
@@ -954,7 +953,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
               }
             >
               <div className="grid grid-cols-2 gap-3">
-                <Field label="Debut" required>
+                <Field label={t("debut")} required>
                   <DatePopover
                     value={c.startDate}
                     onChange={(v) => updateChoice(c.rank, { startDate: v, endDate: c.endDate && c.endDate < v ? v : c.endDate })}
@@ -962,7 +961,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
                     max={w.coversTo.slice(0, 10)}
                   />
                 </Field>
-                <Field label="Fin" required>
+                <Field label={t("fin")} required>
                   <DatePopover
                     value={c.endDate}
                     onChange={(v) => updateChoice(c.rank, { endDate: v })}
@@ -976,8 +975,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
 
           {choices.length < 3 && (
             <Button variant="outline" onClick={addChoice} className="w-full">
-              <Plus className="h-3.5 w-3.5 mr-1" />Ajouter un choix
-            </Button>
+              <Plus className="h-3.5 w-3.5 mr-1" />{t("vacation_window_banner_ajouter_un_choix")}</Button>
           )}
         </div>
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
@@ -987,7 +985,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
             disabled={pending}
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
-            {pending ? "Soumission..." : "Soumettre"}
+            {pending ? t("soumission_cours") : t("soumettre")}
           </Button>
         </DialogFooter>
       </DialogContent>

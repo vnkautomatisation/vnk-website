@@ -2,6 +2,7 @@
 // CRUD des sous-équipes (Team) — gestion hiérarchique.
 // Requiert permission users:write (même garde que les rôles/postes).
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -34,15 +35,16 @@ const createSchema = z.object({
 });
 
 export async function createTeamAction(input: z.infer<typeof createSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireWrite();
   if (!adminId) return unauthorized();
   const parsed = createSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Empêcher cycle si parentTeamId pointe vers une équipe qui est descendante
   if (parsed.data.parentTeamId) {
     const parent = await prisma.team.findUnique({ where: { id: parsed.data.parentTeamId } });
-    if (!parent) return { success: false, error: "Équipe parente introuvable" };
+    if (!parent) return { success: false, error: t("equipe_parente_introuvable") };
   }
 
   const team = await prisma.team.create({
@@ -68,22 +70,23 @@ export async function createTeamAction(input: z.infer<typeof createSchema>): Pro
 const updateSchema = createSchema.extend({ id: z.number().int() });
 
 export async function updateTeamAction(input: z.infer<typeof updateSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireWrite();
   if (!adminId) return unauthorized();
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Anti-cycle : la team ne peut pas se choisir elle-même OU un de ses descendants comme parent.
   if (parsed.data.parentTeamId) {
     if (parsed.data.parentTeamId === parsed.data.id) {
-      return { success: false, error: "Une équipe ne peut pas être son propre parent" };
+      return { success: false, error: t("une_equipe_ne_peut_pas_etre_son") };
     }
     // Vérifier qu'on ne crée pas de boucle (parent → ... → cette team)
     let cursor: number | null = parsed.data.parentTeamId;
     const visited = new Set<number>();
     while (cursor != null) {
       if (cursor === parsed.data.id) {
-        return { success: false, error: "Cycle détecté dans la hiérarchie des équipes" };
+        return { success: false, error: t("cycle_detecte_dans_la_hierarchie_des_equipes") };
       }
       if (visited.has(cursor)) break;
       visited.add(cursor);
@@ -136,14 +139,15 @@ const assignSchema = z.object({
 });
 
 export async function assignAdminToTeamAction(input: z.infer<typeof assignSchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireWrite();
   if (!actorId) return unauthorized();
   const parsed = assignSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Anti-cycle manager : on ne peut pas être son propre manager
   if (parsed.data.managerId && parsed.data.managerId === parsed.data.adminId) {
-    return { success: false, error: "Un utilisateur ne peut pas être son propre manager" };
+    return { success: false, error: t("un_utilisateur_ne_peut_pas_etre_son") };
   }
 
   // Anti-cycle hiérarchique (manager → ... → moi)
@@ -152,7 +156,7 @@ export async function assignAdminToTeamAction(input: z.infer<typeof assignSchema
     const visited = new Set<number>();
     while (cursor != null) {
       if (cursor === parsed.data.adminId) {
-        return { success: false, error: "Cycle détecté dans la hiérarchie managériale" };
+        return { success: false, error: t("cycle_detecte_dans_la_hierarchie_manageriale") };
       }
       if (visited.has(cursor)) break;
       visited.add(cursor);

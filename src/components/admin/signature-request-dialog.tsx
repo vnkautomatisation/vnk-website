@@ -106,23 +106,24 @@ export function SignatureRequestDialog({
 }: {
   open: boolean;
   onClose: () => void;
-  /** Appelé après création réussie (router.refresh côté parent). */
+
   onCreated: () => void;
-  /** Template pré-sélectionné (sinon on offre la liste). */
+
   template?: SignatureRequestTemplate | null;
-  /** Templates disponibles si pas de pré-sélection. */
+
   availableTemplates?: SignatureRequestTemplate[];
-  /** Équipes disponibles pour le ciblage par équipe. */
+
   availableTeams?: SignatureRequestTeam[];
-  /** Employés disponibles pour le ciblage individuel. */
+
   availableEmployees?: SignatureRequestEmployee[];
-  /**
-   * Valeurs deja saisies pour les `[CHAMP]` libres du template, capturees
-   * en amont via `TemplateFieldsDialog`. Si fourni, transmis tel quel a
-   * `createSignatureRequestAction` (colonne JsonB).
-   */
+
+
+
+
+
   customFieldValues?: Record<string, string> | null;
 }) {
+  const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [templateId, setTemplateId] = useState<number | null>(
     template?.id ?? null
@@ -134,13 +135,13 @@ export function SignatureRequestDialog({
   const [dueDate, setDueDate] = useState("");
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  // Valeurs saisies INLINE pour les placeholders, quand le user choisit le
-  // template via le Select interne (pas via TemplateFieldsDialog en amont).
+
+
   const [inlineFieldValues, setInlineFieldValues] = useState<Record<string, string>>(
     {},
   );
 
-  // Reset à chaque (ré)ouverture
+
   useEffect(() => {
     if (open) {
       setTemplateId(template?.id ?? null);
@@ -155,7 +156,7 @@ export function SignatureRequestDialog({
     }
   }, [open, template?.id]);
 
-  // Reset les valeurs inline a chaque changement de templateId (Select interne).
+
   useEffect(() => {
     if (!open) return;
     setInlineFieldValues({});
@@ -191,7 +192,7 @@ export function SignatureRequestDialog({
     });
   };
 
-  // Template effectivement selectionne (prop pre-rempli OU choix Select interne)
+
   const selectedTemplate: SignatureRequestTemplate | null = useMemo(() => {
     if (template) return template;
     if (templateId == null) return null;
@@ -200,35 +201,35 @@ export function SignatureRequestDialog({
     );
   }, [template, templateId, availableTemplates]);
 
-  // Mode d'engagement effectif (defaut "reading_only" si non specifie).
-  // La majorite des templates sont des politiques / accuses de lecture ;
-  // signature manuscrite reservee aux contrats / NDA / ententes formelles.
+
+
+
   const acknowledgmentMode: "reading_only" | "signature" =
     selectedTemplate?.acknowledgmentMode ?? "reading_only";
 
-  // Copy adapte au mode
+
   const copy = useMemo(() => {
     if (acknowledgmentMode === "reading_only") {
       return {
-        title: "Demander un accusé de lecture",
+        title: t("demander_accuse_lecture"),
         description:
-          "Les employés concernés devront confirmer avoir lu le document.",
-        button: "Envoyer pour lecture",
+          t("employes_concernes_devront_confirmer_avoir"),
+        button: t("envoyer_lecture"),
         Icon: BookOpen,
       };
     }
     return {
-      title: "Demander une signature",
+      title: t("demander_signature_3"),
       description:
-        "Les employés concernés devront signer le document.",
-      button: "Envoyer pour signature",
+        t("employes_concernes_devront_signer_document"),
+      button: t("envoyer_signature"),
       Icon: FileSignature,
     };
   }, [acknowledgmentMode]);
 
-  // Detection des placeholders inline. Si le parent a deja rempli les
-  // valeurs via TemplateFieldsDialog (customFieldValues fourni), on
-  // n'affiche PAS la section inline (deja rempli en amont).
+
+
+
   const inlinePlaceholders = useMemo(() => {
     if (customFieldValues) return []; // deja rempli en amont
     const md = selectedTemplate?.bodyMarkdown;
@@ -255,7 +256,7 @@ export function SignatureRequestDialog({
 
   const submit = async () => {
     if (!templateId) {
-      toast.error("Sélectionnez un document");
+      toast.error(t("selectionnez_document"));
       return;
     }
     if (!allInlineFilled) {
@@ -271,21 +272,21 @@ export function SignatureRequestDialog({
     if (targetKind === "all") targets = { all: true };
     else if (targetKind === "team") {
       if (!teamId) {
-        toast.error("Sélectionnez une équipe");
+        toast.error(t("selectionnez_equipe"));
         return;
       }
       targets = { teamId };
     } else {
       if (selectedEmpIds.size === 0) {
-        toast.error("Sélectionnez au moins un employé");
+        toast.error(t("selectionnez_moins_employe"));
         return;
       }
       targets = { adminIds: Array.from(selectedEmpIds) };
     }
 
-    // Construit le payload customFieldValues final :
-    //  - priorite a ce que le parent a passe (cas TemplateFieldsDialog)
-    //  - sinon, on prend les valeurs saisies inline (apres trim)
+
+
+
     let finalCustomValues: Record<string, string> | undefined;
     if (customFieldValues && Object.keys(customFieldValues).length > 0) {
       finalCustomValues = customFieldValues;
@@ -309,16 +310,16 @@ export function SignatureRequestDialog({
       if (r.success) {
         const { createdCount, skipped } = r.data;
         toast.success(
-          `${createdCount} demande${createdCount > 1 ? "s" : ""} créée${createdCount > 1 ? "s" : ""}` +
+          t("demandes_creees", { count: createdCount }) +
             (skipped > 0 ? ` · ${skipped} ignorée${skipped > 1 ? "s" : ""}` : "")
         );
         onCreated();
         onClose();
       } else {
-        toast.error(r.error || "Erreur lors de la création");
+        toast.error(r.error || t("erreur_lors_creation"));
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      const msg = err instanceof Error ? err.message : t("erreur_inconnue");
       toast.error(msg);
     } finally {
       setSubmitting(false);
@@ -330,7 +331,7 @@ export function SignatureRequestDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && !submitting && onClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-2xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-4 sm:px-5 py-3 sm:py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-sm sm:text-base text-white flex items-center gap-2 pr-8">
@@ -343,9 +344,9 @@ export function SignatureRequestDialog({
           </DialogHeader>
         </div>
 
-        {/* Body */}
+
         <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {/* Banniere rouge : champs manquants */}
+
           {inlinePlaceholders.length > 0 && missingInlineFields.length > 0 && (
             <div className="rounded-md border border-red-200 bg-red-50 text-red-700 px-3 py-2 flex items-start gap-2">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
@@ -358,16 +359,16 @@ export function SignatureRequestDialog({
             </div>
           )}
 
-          {/* Choix du document (si pas pré-sélectionné) */}
+
           {!template && (
-            <FormSection icon={FileSignature} title="Document à envoyer">
-              <Field label="Document" required>
+            <FormSection icon={FileSignature} title={t("document_envoyer")}>
+              <Field label={t("document")} required>
                 <Select
                   value={templateId ? String(templateId) : ""}
                   onValueChange={(v) => setTemplateId(Number(v))}
                 >
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Choisir un document…" />
+                    <SelectValue placeholder={t("choisir_document")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableTemplates.map((t) => (
@@ -396,7 +397,7 @@ export function SignatureRequestDialog({
             </div>
           )}
 
-          {/* Section "Compléter les champs" — affichee uniquement si :
+          {/* Section t("completer_champs") — affichee uniquement si :
               - le template a ete choisi via le Select interne (pas template prop)
               - le template a des placeholders detectes
               - le parent n'a PAS fourni customFieldValues (sinon deja rempli) */}
@@ -404,7 +405,7 @@ export function SignatureRequestDialog({
             <FormSection
               icon={ListChecks}
               title={`Compléter les champs du document (${inlinePlaceholders.length})`}
-              description="Ces champs apparaissent comme [NOM] dans le modèle. Ils seront substitués automatiquement dans le PDF final."
+              description={t("champs_apparaissent_comme_nom_modele")}
             >
               <div className="grid grid-cols-1 gap-3">
                 {inlinePlaceholders.map((key) => (
@@ -426,43 +427,43 @@ export function SignatureRequestDialog({
             </FormSection>
           )}
 
-          {/* Choix de la cible */}
-          <FormSection icon={Users} title="Destinataires">
+
+          <FormSection icon={Users} title={t("destinataires")}>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <TargetCard
                 active={targetKind === "all"}
                 onClick={() => setTargetKind("all")}
                 icon={Users}
-                label="Tout le monde"
-                hint="Tous les employés actifs qui n'ont pas signé la version courante."
+                label={t("tout_monde")}
+                hint={t("tous_employes_actifs_n_ont")}
               />
               <TargetCard
                 active={targetKind === "team"}
                 onClick={() => setTargetKind("team")}
                 icon={UserCheck}
-                label="Une équipe"
-                hint="Tous les membres actifs d'une équipe."
+                label={t("equipe_3")}
+                hint={t("tous_membres_actifs_equipe")}
                 disabled={availableTeams.length === 0}
               />
               <TargetCard
                 active={targetKind === "individuals"}
                 onClick={() => setTargetKind("individuals")}
                 icon={User}
-                label="Employés précis"
-                hint="Sélection manuelle dans la liste."
+                label={t("employes_precis")}
+                hint={t("selection_manuelle_liste")}
                 disabled={availableEmployees.length === 0}
               />
             </div>
 
-            {/* Détail selon le mode */}
+
             {targetKind === "team" && (
-              <Field label="Équipe" required>
+              <Field label={t("equipe_2")} required>
                 <Select
                   value={teamId ? String(teamId) : ""}
                   onValueChange={(v) => setTeamId(Number(v))}
                 >
                   <SelectTrigger className="h-9 text-sm">
-                    <SelectValue placeholder="Choisir une équipe…" />
+                    <SelectValue placeholder={t("choisir_equipe")} />
                   </SelectTrigger>
                   <SelectContent>
                     {availableTeams.map((t) => (
@@ -482,7 +483,7 @@ export function SignatureRequestDialog({
                   <Input
                     value={empSearch}
                     onChange={(e) => setEmpSearch(e.target.value)}
-                    placeholder="Rechercher un employé…"
+                    placeholder={t("rechercher_employe")}
                     className="pl-8 h-9 text-sm"
                   />
                 </div>
@@ -499,8 +500,8 @@ export function SignatureRequestDialog({
                     onClick={toggleAllVisible}
                   >
                     {filteredEmps.every((e) => selectedEmpIds.has(e.id))
-                      ? "Tout désélectionner"
-                      : "Tout sélectionner"}
+                      ? t("tout_deselectionner")
+                      : t("tout_selectionner")}
                   </button>
                 </div>
                 <div className="rounded-md border max-h-64 overflow-y-auto divide-y">
@@ -534,7 +535,7 @@ export function SignatureRequestDialog({
                   })}
                   {filteredEmps.length === 0 && (
                     <p className="px-3 py-6 text-center text-xs text-muted-foreground">
-                      Aucun employé trouvé.
+                      {t("aucun_employe_trouve")}
                     </p>
                   )}
                 </div>
@@ -555,18 +556,18 @@ export function SignatureRequestDialog({
             )}
           </FormSection>
 
-          {/* Échéance + raison */}
-          <FormSection icon={Send} title="Options">
+
+          <FormSection icon={Send} title={t("options")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Échéance" hint="Optionnel — utilisé pour l'urgence">
+              <Field label={t("echeance")} hint={t("optionnel_utilise_urgence")}>
                 <DatePopover value={dueDate} onChange={setDueDate} />
               </Field>
             </div>
-            <Field label="Motif / message (optionnel)">
+            <Field label={t("motif_message_optionnel")}>
               <Textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder="Ex : Mise à jour annuelle de la politique de confidentialité."
+                placeholder={t("ex_mise_jour_annuelle_politique")}
                 rows={3}
                 maxLength={500}
                 className="text-sm"
@@ -575,7 +576,7 @@ export function SignatureRequestDialog({
           </FormSection>
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"
@@ -601,10 +602,7 @@ export function SignatureRequestDialog({
         </DialogFooter>
 
         {selectedTemplate === null && !template && availableTemplates.length === 0 && (
-          <p className="px-5 pb-3 text-[11px] text-amber-700 bg-amber-50 border-t border-amber-200">
-            Aucun document légal disponible. Créez-en un avant de pouvoir envoyer
-            une demande.
-          </p>
+          <p className="px-5 pb-3 text-[11px] text-amber-700 bg-amber-50 border-t border-amber-200">{t("signature_request_dialog_aucun_document_legal_disponible_creez_en_un")}</p>
         )}
       </DialogContent>
     </Dialog>

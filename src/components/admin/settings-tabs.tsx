@@ -69,7 +69,7 @@ export function SettingsTabs<T extends string>({
   }, [active]);
 
   return (
-    <div className={cn("relative", dense ? "" : segmented ? "sm:border-b" : "border-b", className)}>
+    <div className={cn("relative", dense ? "sm:border-b" : "border-b", className)}>
       {/* Left fade */}
       {showLeftFade && !segmented && (
         <div

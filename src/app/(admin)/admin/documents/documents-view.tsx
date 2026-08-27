@@ -59,12 +59,12 @@ type ClientOption = { id: number; fullName: string; companyName: string | null }
 type MandateOption = { id: number; title: string; clientId: number };
 type StatusFilter = "all" | "unread" | "read" | "system" | "manual";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "unread", label: "Non lus" },
-  { key: "read", label: "Lus" },
-  { key: "system", label: "Auto-générés" },
-  { key: "manual", label: "Manuels" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "unread", labelKey: "non_lus_onglet" },
+  { key: "read", labelKey: "lus" },
+  { key: "system", labelKey: "auto_generes" },
+  { key: "manual", labelKey: "manuels" },
 ];
 
 const CATEGORY_OPTIONS = [
@@ -86,27 +86,27 @@ function fmtBytes(n: number | null | undefined): string {
   return `${(n / (1024 * 1024)).toFixed(2)} Mo`;
 }
 
-type SourceEntity = { type: "quote" | "invoice" | "contract"; id: number; label: string; icon: typeof FileText };
+type SourceEntity = { type: "quote" | "invoice" | "contract"; id: number; labelKey: string; icon: typeof FileText };
 
 function getSourceEntity(fileUrl: string | null | undefined): SourceEntity | null {
   if (!fileUrl) return null;
   const m = fileUrl.match(/^\/api\/(quotes|invoices|contracts)\/(\d+)\/pdf/);
   if (!m) return null;
   const id = Number(m[2]);
-  if (m[1] === "quotes") return { type: "quote", id, label: "Devis", icon: FileText };
-  if (m[1] === "invoices") return { type: "invoice", id, label: "Facture", icon: ReceiptIcon };
-  return { type: "contract", id, label: "Contrat", icon: FileSignature };
+  if (m[1] === "quotes") return { type: "quote", id, labelKey: "devis", icon: FileText };
+  if (m[1] === "invoices") return { type: "invoice", id, labelKey: "facture", icon: ReceiptIcon };
+  return { type: "contract", id, labelKey: "contrat", icon: FileSignature };
 }
 
 function fileIconFor(fileType: string | null | undefined): { Icon: typeof FileText; color: string; bg: string } {
-  const t = (fileType ?? "").toLowerCase();
-  if (t.includes("pdf")) return { Icon: FileText, color: "text-red-600", bg: "bg-red-50" };
-  if (t.startsWith("image/")) return { Icon: ImageIcon, color: "text-emerald-600", bg: "bg-emerald-50" };
-  if (t.startsWith("audio/")) return { Icon: Music, color: "text-violet-600", bg: "bg-violet-50" };
-  if (t.startsWith("video/")) return { Icon: Video, color: "text-pink-600", bg: "bg-pink-50" };
-  if (t.includes("zip") || t.includes("compressed") || t.includes("rar")) return { Icon: Archive, color: "text-amber-600", bg: "bg-amber-50" };
-  if (t.includes("sheet") || t.includes("excel") || t.includes("csv")) return { Icon: FileSpreadsheet, color: "text-green-700", bg: "bg-green-50" };
-  if (t.includes("word") || t.includes("document")) return { Icon: FileType, color: "text-blue-600", bg: "bg-blue-50" };
+  const ft = (fileType ?? "").toLowerCase();
+  if (ft.includes("pdf")) return { Icon: FileText, color: "text-red-600", bg: "bg-red-50" };
+  if (ft.startsWith("image")) return { Icon: ImageIcon, color: "text-emerald-600", bg: "bg-emerald-50" };
+  if (ft.startsWith("audio")) return { Icon: Music, color: "text-violet-600", bg: "bg-violet-50" };
+  if (ft.startsWith("video")) return { Icon: Video, color: "text-pink-600", bg: "bg-pink-50" };
+  if (ft.includes("zip") || ft.includes("compressed") || ft.includes("rar")) return { Icon: Archive, color: "text-amber-600", bg: "bg-amber-50" };
+  if (ft.includes("sheet") || ft.includes("excel") || ft.includes("csv")) return { Icon: FileSpreadsheet, color: "text-green-700", bg: "bg-green-50" };
+  if (ft.includes("word") || ft.includes("document")) return { Icon: FileType, color: "text-blue-600", bg: "bg-blue-50" };
   return { Icon: FileText, color: "text-muted-foreground", bg: "bg-muted/40" };
 }
 
@@ -121,6 +121,7 @@ export function DocumentsView({
   mandates: MandateOption[];
   kpis: { total: number; thisMonth: number; unread: number; uniqueClients: number; totalStorageBytes: number };
 }) {
+  const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -184,7 +185,7 @@ export function DocumentsView({
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = () => reject(new Error("Lecture impossible"));
+      reader.onerror = () => reject(new Error(t("lecture_impossible")));
       reader.readAsDataURL(file);
     });
   }, []);
@@ -204,8 +205,8 @@ export function DocumentsView({
 
   const handleCreate = async () => {
     if (submitting) return;
-    if (!fClientId) { toast.error("Client requis"); return; }
-    if (fFiles.length === 0 && !fTitle.trim()) { toast.error("Au moins un fichier ou un titre"); return; }
+    if (!fClientId) { toast.error(t("client_requis")); return; }
+    if (fFiles.length === 0 && !fTitle.trim()) { toast.error(t("moins_fichier_titre")); return; }
     setSubmitting(true);
     try {
       let success = 0, errors = 0;
@@ -246,7 +247,7 @@ export function DocumentsView({
         }
       }
       if (success > 0) toast.success(`${success} document(s) déposé(s)${errors > 0 ? ` · ${errors} erreur(s)` : ""}`);
-      else toast.error("Aucun document n'a pu être déposé");
+      else toast.error(t("aucun_document_n_pu_etre"));
       setCreateOpen(false);
       resetForm();
       router.refresh();
@@ -265,23 +266,23 @@ export function DocumentsView({
           description: fDesc.trim() || null,
         }),
       });
-      if (res.ok) { toast.success("Document modifié"); setEditDoc(null); router.refresh(); }
-      else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+      if (res.ok) { toast.success(t("document_modifie")); setEditDoc(null); router.refresh(); }
+      else { const d = await res.json(); toast.error(d.error || t("erreur")); }
     } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleteDoc) return;
     const res = await fetch(`/api/documents/${deleteDoc.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Document supprimé"); setDeleteDoc(null); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(t("document_supprime")); setDeleteDoc(null); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
   const handleSendToClient = async (d: Doc) => {
     const ok = await confirm({
-      title: "Envoyer ce document au client ?",
+      title: t("envoyer_document_client"),
       description: `Un message chat + une notification seront créés pour ${d.clientName}.`,
-      confirmLabel: "Envoyer",
+      confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/documents/${d.id}/send`, { method: "POST" });
@@ -289,7 +290,7 @@ export function DocumentsView({
       const data = await res.json();
       toast.success(`Document envoyé à ${data.clientName}`);
       router.refresh();
-    } else { toast.error("Erreur"); }
+    } else { toast.error(t("erreur")); }
   };
 
   const handleToggleRead = async (d: Doc) => {
@@ -297,12 +298,12 @@ export function DocumentsView({
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ isRead: !d.isRead }),
     });
-    if (res.ok) { toast.success(d.isRead ? "Marqué non lu" : "Marqué lu"); router.refresh(); }
-    else { toast.error("Erreur"); }
+    if (res.ok) { toast.success(d.isRead ? t("marque_non_lu") : t("marque_lu")); router.refresh(); }
+    else { toast.error(t("erreur")); }
   };
 
   const handleDownload = (d: Doc) => {
-    if (!d.fileUrl) { toast.error("Aucun fichier"); return; }
+    if (!d.fileUrl) { toast.error(t("aucun_fichier")); return; }
     const a = document.createElement("a");
     a.href = `/api/documents/${d.id}`;
     a.download = d.fileName ?? d.title;
@@ -310,9 +311,9 @@ export function DocumentsView({
   };
 
   const handleOpenPreview = (d: Doc) => {
-    const t = (d.fileType ?? "").toLowerCase();
-    if (t.includes("pdf")) setPdfDoc(d);
-    else if (t.startsWith("image/")) setImgDoc(d);
+    const ft = (d.fileType ?? "").toLowerCase();
+    if (ft.includes("pdf")) setPdfDoc(d);
+    else if (ft.startsWith("image")) setImgDoc(d);
     else handleDownload(d);
   };
 
@@ -321,8 +322,8 @@ export function DocumentsView({
     if (selectedIds.size === 0) return;
     const ok = await confirm({
       title: `Supprimer ${selectedIds.size} document(s) ?`,
-      description: "Action irréversible.",
-      confirmLabel: "Supprimer tous",
+      description: t("action_irreversible"),
+      confirmLabel: t("supprimer_tous"),
       variant: "destructive",
     });
     if (!ok) return;
@@ -346,7 +347,7 @@ export function DocumentsView({
       });
       if (r.ok) success++;
     }
-    toast.success(`${success}/${selectedIds.size} marqué(s) ${next ? "lus" : "non lus"}`);
+    toast.success(`${success}/${selectedIds.size} marqué(s) ${next ? "lus" : t("non_lus")}`);
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -421,24 +422,24 @@ export function DocumentsView({
 
   // Actions
   const getActions = useCallback((d: Doc) => {
-    const t = (d.fileType ?? "").toLowerCase();
-    const isPreviewable = !!d.fileUrl && (t.includes("pdf") || t.startsWith("image/"));
+    const ft = (d.fileType ?? "").toLowerCase();
+    const isPreviewable = !!d.fileUrl && (ft.includes("pdf") || ft.startsWith("image"));
     const source = getSourceEntity(d.fileUrl);
     const a: Array<{ label: string; icon: React.ReactNode; onClick: () => void; separator?: boolean; variant?: "destructive" }> = [
-      { label: "Voir détail", icon: <Info className="h-3.5 w-3.5" />, onClick: () => setDetailDoc(d) },
+      { label: t("voir_detail"), icon: <Info className="h-3.5 w-3.5" />, onClick: () => setDetailDoc(d) },
     ];
     if (isPreviewable) {
-      a.push({ label: t.includes("pdf") ? "Voir le PDF" : "Voir l'image", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => handleOpenPreview(d) });
+      a.push({ label: ft.includes("pdf") ? t("voir_pdf") : t("voir_image"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => handleOpenPreview(d) });
     }
     if (d.fileUrl) {
-      a.push({ label: "Télécharger", icon: <Download className="h-3.5 w-3.5" />, onClick: () => handleDownload(d) });
+      a.push({ label: t("telecharger"), icon: <Download className="h-3.5 w-3.5" />, onClick: () => handleDownload(d) });
     }
-    a.push({ label: "Envoyer au client", icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(d) });
+    a.push({ label: t("envoyer_client"), icon: <Send className="h-3.5 w-3.5" />, onClick: () => handleSendToClient(d) });
     a.push({ label: d.isRead ? "Marquer non lu" : "Marquer lu", icon: d.isRead ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />, onClick: () => handleToggleRead(d) });
-    a.push({ label: "Voir le client", icon: <Users className="h-3.5 w-3.5" />, onClick: () => openEntity("client", d.clientId), separator: true });
+    a.push({ label: t("voir_client"), icon: <Users className="h-3.5 w-3.5" />, onClick: () => openEntity("client", d.clientId), separator: true });
     if (source) {
       a.push({
-        label: `Modifier ${source.label.toLowerCase()}`,
+        label: `Modifier ${t(source.labelKey).toLowerCase()}`,
         icon: <ExternalLink className="h-3.5 w-3.5" />,
         onClick: () => {
           const path = source.type === "quote" ? "quotes" : source.type === "invoice" ? "invoices" : "contracts";
@@ -446,9 +447,9 @@ export function DocumentsView({
         },
       });
     } else {
-      a.push({ label: "Modifier (métadonnées)", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) });
+      a.push({ label: t("modifier_metadonnees"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(d) });
     }
-    a.push({ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDoc(d), variant: "destructive", separator: true });
+    a.push({ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteDoc(d), variant: "destructive", separator: true });
     return a;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openEntity]);
@@ -460,7 +461,7 @@ export function DocumentsView({
   const columns: Column<Doc>[] = [
     {
       key: "select",
-      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label="Tout sélectionner" />,
+      header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
         <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.title}`} />
       ),
@@ -477,7 +478,7 @@ export function DocumentsView({
       },
     },
     {
-      key: "title", header: "Titre",
+      key: "title", header: t("titre"),
       accessor: (r) => (
         <div>
           <p className="text-sm font-medium">{r.title}</p>
@@ -487,7 +488,7 @@ export function DocumentsView({
       sortable: true, sortBy: (r) => r.title,
     },
     {
-      key: "client", header: "Client",
+      key: "client", header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -497,7 +498,7 @@ export function DocumentsView({
       sortable: true, sortBy: (r) => r.clientName,
     },
     {
-      key: "category", header: "Catégorie",
+      key: "category", header: t("categorie"),
       accessor: (r) => {
         const cat = CATEGORY_OPTIONS.find((c) => c.value === r.category);
         return cat ? (
@@ -507,13 +508,13 @@ export function DocumentsView({
       hiddenOnMobile: true,
     },
     {
-      key: "size", header: "Taille",
+      key: "size", header: t("taille"),
       accessor: (r) => <span className="text-xs tabular-nums">{fmtBytes(r.fileSize)}</span>,
       sortable: true, sortBy: (r) => r.fileSize ?? 0,
       hiddenOnMobile: true,
     },
     {
-      key: "source", header: "Source",
+      key: "source", header: t("source"),
       accessor: (r) => r.isSystemGenerated ? (
         <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
           <Server className="h-2.5 w-2.5" />Auto
@@ -530,16 +531,16 @@ export function DocumentsView({
       hiddenOnMobile: true,
     },
     {
-      key: "isRead", header: "Statut",
+      key: "isRead", header: t("statut"),
       accessor: (r) =>
         r.isRead ? (
-          <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><Eye className="h-3 w-3" />Lu</span>
+          <span className="inline-flex items-center gap-1 text-xs text-emerald-600"><Eye className="h-3 w-3" />{t("lu")}</span>
         ) : (
-          <span className="inline-flex items-center gap-1 text-xs text-amber-600"><EyeOff className="h-3 w-3" />Non lu</span>
+          <span className="inline-flex items-center gap-1 text-xs text-amber-600"><EyeOff className="h-3 w-3" />{t("non_lu")}</span>
         ),
     },
     {
-      key: "createdAt", header: "Déposé le",
+      key: "createdAt", header: t("depose"),
       accessor: (r) => formatDate(new Date(r.createdAt)),
       sortable: true, sortBy: (r) => r.createdAt,
       hiddenOnMobile: true,
@@ -582,8 +583,8 @@ export function DocumentsView({
               <FolderOpen className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold">Documents</h1>
-              <p className="text-white/70 text-sm mt-0.5">Upload · partage portail client · auto-générés (devis/factures/contrats)</p>
+              <h1 className="text-xl sm:text-2xl font-bold">{t("documents")}</h1>
+              <p className="text-white/70 text-sm mt-0.5">{t("upload_partage_portail_client_auto")}</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -602,10 +603,10 @@ export function DocumentsView({
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label="Total documents" value={kpis.total} icon={FileText} accent="bg-blue-500" />
-        <StatCard label="Ce mois" value={kpis.thisMonth} icon={Calendar} accent="bg-indigo-500" />
-        <StatCard label="Non lus" value={kpis.unread} icon={EyeOff} accent="bg-amber-500" />
-        <StatCard label="Espace utilisé" value={fmtBytes(kpis.totalStorageBytes)} icon={HardDrive} accent="bg-emerald-500" deltaLabel={`${kpis.uniqueClients} client${kpis.uniqueClients > 1 ? "s" : ""}`} />
+        <StatCard label={t("total_documents")} value={kpis.total} icon={FileText} accent="bg-blue-500" />
+        <StatCard label={t("mois")} value={kpis.thisMonth} icon={Calendar} accent="bg-indigo-500" />
+        <StatCard label={t("non_lus")} value={kpis.unread} icon={EyeOff} accent="bg-amber-500" />
+        <StatCard label={t("espace_utilise")} value={fmtBytes(kpis.totalStorageBytes)} icon={HardDrive} accent="bg-emerald-500" deltaLabel={`${kpis.uniqueClients} client${kpis.uniqueClients > 1 ? "s" : ""}`} />
       </div>
 
       {/* Sentinel + Sticky compact bar (pattern dashboard finance) */}
@@ -615,12 +616,12 @@ export function DocumentsView({
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <FileText className="h-4 w-4" />
-              Documents
+              {t("documents")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">Total <span className="font-semibold text-blue-600">{kpis.total}</span></span>
-            <span className="text-muted-foreground">Ce mois <span className="font-semibold text-indigo-600">{kpis.thisMonth}</span></span>
-            {kpis.unread > 0 && <span className="text-muted-foreground">Non lus <span className="font-semibold text-amber-600">{kpis.unread}</span></span>}
+            <span className="text-muted-foreground">{t("total")} <span className="font-semibold text-blue-600">{kpis.total}</span></span>
+            <span className="text-muted-foreground">{t("mois")} <span className="font-semibold text-indigo-600">{kpis.thisMonth}</span></span>
+            {kpis.unread > 0 && <span className="text-muted-foreground">{t("non_lus")} <span className="font-semibold text-amber-600">{kpis.unread}</span></span>}
             <span className="ml-auto text-muted-foreground">{fmtBytes(kpis.totalStorageBytes)} · {kpis.uniqueClients} client{kpis.uniqueClients > 1 ? "s" : ""}</span>
           </div>
         </div>
@@ -630,14 +631,14 @@ export function DocumentsView({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="Titre, client, fichier..." className="pl-9" />
+          <Input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder={t("titre_client_fichier")} className="pl-9" />
         </div>
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto">
           {STATUS_TABS.map((tab) => (
             <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
               className={cn("px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground")}>
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -645,14 +646,14 @@ export function DocumentsView({
           <PopoverTrigger asChild>
             <Button variant="outline" size="sm" className="gap-1.5">
               <SlidersHorizontal className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Filtres</span>
+              <span className="hidden sm:inline">{t("filtres")}</span>
               {totalActiveFilters > 0 && <Badge variant="secondary" className="text-[9px] h-4 min-w-4 px-1">{totalActiveFilters}</Badge>}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[340px] max-w-[calc(100vw-2rem)] p-3 space-y-3" align="end">
             {clients.length > 0 && (
               <div className="space-y-1.5">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Client</p>
+                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("client")}</p>
                 <div className="flex flex-wrap gap-1 max-h-32 overflow-y-auto">
                   {clients.map((c) => {
                     const isOn = filterClients.has(c.id);
@@ -673,7 +674,7 @@ export function DocumentsView({
               </div>
             )}
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Catégories</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("categories")}</p>
               <div className="flex flex-wrap gap-1">
                 {CATEGORY_OPTIONS.map((c) => {
                   const isOn = filterCategories.has(c.value);
@@ -693,7 +694,7 @@ export function DocumentsView({
               </div>
             </div>
             <div className="space-y-1.5">
-              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Période</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("periode")}</p>
               <div className="grid grid-cols-2 gap-2">
                 <Input type="date" value={filterDateFrom} onChange={(e) => setFilterDateFrom(e.target.value)} className="h-8 text-xs" />
                 <Input type="date" value={filterDateTo} onChange={(e) => setFilterDateTo(e.target.value)} className="h-8 text-xs" />
@@ -701,8 +702,7 @@ export function DocumentsView({
             </div>
             {totalActiveFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearAllFilters} className="w-full text-xs">
-                <X className="h-3 w-3 mr-1" />Effacer les filtres
-              </Button>
+                <X className="h-3 w-3 mr-1" />{t("documents_view_effacer_les_filtres")}</Button>
             )}
           </PopoverContent>
         </Popover>
@@ -745,7 +745,7 @@ export function DocumentsView({
                 icon={<Icon className="h-5 w-5 text-muted-foreground" />}
                 badges={[
                   ...(d.category ? [{ label: (CATEGORY_OPTIONS.find((c) => c.value === d.category)?.label ?? d.category), variant: "outline" as const }] : []),
-                  ...(!d.isRead ? [{ label: "Non lu", variant: "destructive" as const }] : []),
+                  ...(!d.isRead ? [{ label: t("non_lu"), variant: "destructive" as const }] : []),
                 ]}
                 actions={getActions(d)}
                 onClick={() => setDetailDoc(d)}
@@ -759,7 +759,7 @@ export function DocumentsView({
             );
           })}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun document trouvé</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucun_document_trouve")}</div>
           )}
         </div>
       ) : (
@@ -768,7 +768,7 @@ export function DocumentsView({
           columns={columns}
           getRowId={(r) => r.id}
           onRowClick={(r) => setDetailDoc(r)}
-          searchPlaceholder="Rechercher..."
+          searchPlaceholder={t("rechercher")}
           exportFilename="documents"
           storageKey="admin-documents"
         />
@@ -813,7 +813,7 @@ export function DocumentsView({
                 <Upload className="h-6 w-6 text-white" />
               </div>
               <div>
-                <DialogTitle className="text-white text-lg">Téléverser un document</DialogTitle>
+                <DialogTitle className="text-white text-lg">{t("televerser_document")}</DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">
                   Glisser-déposer ou cliquer · Max {MAX_UPLOAD_MB} Mo par fichier · Multi-fichiers OK
                 </DialogDescription>
@@ -822,12 +822,12 @@ export function DocumentsView({
           </div>
 
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4 bg-muted/30">
-            <FormSection title="Destination" icon={<Users className="h-3.5 w-3.5" />}>
+            <FormSection title={t("destination")} icon={<Users className="h-3.5 w-3.5" />}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Client *</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("client_2")}</Label>
                   <Select value={fClientId} onValueChange={(v) => { setFClientId(v); setFMandateId(""); }}>
-                    <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+                    <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
                     <SelectContent>
                       {clients.map((c) => (
                         <SelectItem key={c.id} value={String(c.id)}>
@@ -838,11 +838,11 @@ export function DocumentsView({
                   </Select>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">Mandat (optionnel)</Label>
+                  <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("mandat_optionnel")}</Label>
                   <Select value={fMandateId || "none"} onValueChange={(v) => setFMandateId(v === "none" ? "" : v)}>
                     <SelectTrigger><SelectValue placeholder={tc("none")} /></SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="none">Aucun mandat</SelectItem>
+                      <SelectItem value="none">{t("aucun_mandat")}</SelectItem>
                       {availableMandates.map((m) => (
                         <SelectItem key={m.id} value={String(m.id)}>{m.title}</SelectItem>
                       ))}
@@ -852,7 +852,7 @@ export function DocumentsView({
               </div>
             </FormSection>
 
-            <FormSection title="Fichiers" icon={<Upload className="h-3.5 w-3.5" />}>
+            <FormSection title={t("fichiers")} icon={<Upload className="h-3.5 w-3.5" />}>
               <div
                 onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
                 onDragLeave={() => setDragOver(false)}
@@ -867,7 +867,7 @@ export function DocumentsView({
                 onClick={() => fileInputRef.current?.click()}
               >
                 <Upload className="h-8 w-8 mx-auto text-muted-foreground/60 mb-2" />
-                <p className="text-sm font-medium">Glissez vos fichiers ici</p>
+                <p className="text-sm font-medium">{t("glissez_fichiers_ici")}</p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">ou cliquez pour parcourir · max {MAX_UPLOAD_MB} Mo / fichier</p>
                 <input
                   ref={fileInputRef}
@@ -892,12 +892,12 @@ export function DocumentsView({
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="text-xs font-medium truncate">{f.name}</p>
-                          <p className="text-[10px] text-muted-foreground">{fmtBytes(f.size)} · {f.type || "type inconnu"}</p>
+                          <p className="text-[10px] text-muted-foreground">{fmtBytes(f.size)} · {f.type || t("type_inconnu")}</p>
                         </div>
                         {overSize && <AlertTriangle className="h-4 w-4 text-destructive shrink-0" />}
                         <button type="button" onClick={() => removeFile(i)}
                           className="h-7 w-7 flex items-center justify-center rounded text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          aria-label="Retirer">
+                          aria-label={t("retirer")}>
                           <X className="h-3.5 w-3.5" />
                         </button>
                       </li>
@@ -907,29 +907,29 @@ export function DocumentsView({
               )}
             </FormSection>
 
-            <FormSection title="Métadonnées" icon={<FileText className="h-3.5 w-3.5" />}>
+            <FormSection title={t("metadonnees")} icon={<FileText className="h-3.5 w-3.5" />}>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Titre {fFiles.length > 1 ? "(ignoré, le nom du fichier sera utilisé)" : "(facultatif si fichier joint)"}
+                  Titre {fFiles.length > 1 ? t("ignore_nom_fichier_sera_utilise") : t("facultatif_si_fichier_joint")}
                 </Label>
                 <Input value={fTitle} onChange={(e) => setFTitle(e.target.value)}
-                  placeholder={fFiles[0]?.name ?? "Manuel d'utilisation"}
+                  placeholder={fFiles[0]?.name ?? t("manuel_utilisation")}
                   disabled={fFiles.length > 1}
                 />
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Catégorie</Label>
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("categorie")}</Label>
                 <Select value={fCategory || "none"} onValueChange={(v) => setFCategory(v === "none" ? "" : v)}>
-                  <SelectTrigger><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">Aucune</SelectItem>
+                    <SelectItem value="none">{t("aucune")}</SelectItem>
                     {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description (optionnel)</Label>
-                <Textarea value={fDesc} onChange={(e) => setFDesc(e.target.value)} rows={3} placeholder="Notes pour le client…" />
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">{t("description_optionnel")}</Label>
+                <Textarea value={fDesc} onChange={(e) => setFDesc(e.target.value)} rows={3} placeholder={t("notes_client")} />
               </div>
             </FormSection>
           </div>
@@ -941,7 +941,7 @@ export function DocumentsView({
               disabled={submitting || !fClientId}
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
             >
-              {submitting ? "Téléversement…" : fFiles.length > 0 ? `Téléverser ${fFiles.length} fichier${fFiles.length > 1 ? "s" : ""}` : "Créer"}
+              {submitting ? t("televersement") : fFiles.length > 0 ? `Téléverser ${fFiles.length} fichier${fFiles.length > 1 ? "s" : ""}` : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -956,35 +956,35 @@ export function DocumentsView({
                 <Pencil className="h-5 w-5" />
               </div>
               <div>
-                <DialogTitle className="text-white">Modifier le document</DialogTitle>
+                <DialogTitle className="text-white">{t("modifier_document")}</DialogTitle>
                 <DialogDescription className="text-white/70 mt-0.5">{editDoc?.title}</DialogDescription>
               </div>
             </div>
           </div>
           <div className="px-6 py-5 space-y-3">
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Titre *</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre")}</Label>
               <Input value={fTitle} onChange={(e) => setFTitle(e.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Catégorie</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("categorie")}</Label>
               <Select value={fCategory || "none"} onValueChange={(v) => setFCategory(v === "none" ? "" : v)}>
-                <SelectTrigger><SelectValue placeholder="Choisir…" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Aucune</SelectItem>
+                  <SelectItem value="none">{t("aucune")}</SelectItem>
                   {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Description</Label>
+              <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description")}</Label>
               <Textarea value={fDesc} onChange={(e) => setFDesc(e.target.value)} rows={3} />
             </div>
           </div>
           <DialogFooter className="px-6 py-4 border-t bg-card sm:gap-2">
             <Button variant="outline" onClick={() => setEditDoc(null)} disabled={submitting}>{tc("cancel")}</Button>
             <Button onClick={handleEdit} disabled={submitting || !fTitle.trim()} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
-              {submitting ? "Enregistrement…" : "Enregistrer"}
+              {submitting ? t("enregistrement") : t("enregistrer")}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1014,7 +1014,7 @@ export function DocumentsView({
       <ConfirmDialog
         open={!!deleteDoc}
         onOpenChange={(o) => { if (!o) setDeleteDoc(null); }}
-        title="Supprimer ce document ?"
+        title={t("supprimer_document")}
         description={`Le document "${deleteDoc?.title}" sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -1043,9 +1043,10 @@ function DocumentDetailDialog({
   onOpenMandate: (d: Doc) => void;
 }) {
   const tc = useTranslations("common");
-  const t = (doc.fileType ?? "").toLowerCase();
-  const isPdf = t.includes("pdf");
-  const isImage = t.startsWith("image/");
+  const t = useTranslations("admin.documents");
+  const ft = (doc.fileType ?? "").toLowerCase();
+  const isPdf = ft.includes("pdf");
+  const isImage = ft.startsWith("image");
   const isPreviewable = !!doc.fileUrl && (isPdf || isImage);
   const source = getSourceEntity(doc.fileUrl);
   const cat = CATEGORY_OPTIONS.find((c) => c.value === doc.category);
@@ -1053,8 +1054,8 @@ function DocumentDetailDialog({
   const SourceIcon = source?.icon;
 
   // Derived fileName for system docs (no fileName stored)
-  const displayFileName = doc.fileName ?? (source ? `${source.label.toLowerCase()}-${doc.title.replace(/[^a-z0-9._-]/gi, "_")}.pdf` : doc.title);
-  const displayFileSize = doc.fileSize ? fmtBytes(doc.fileSize) : (source ? "Calculée à la génération" : "—");
+  const displayFileName = doc.fileName ?? (source ? `${t(source.labelKey).toLowerCase()}-${doc.title.replace(/[^a-z0-9._-]/gi, "_")}.pdf` : doc.title);
+  const displayFileSize = doc.fileSize ? fmtBytes(doc.fileSize) : (source ? t("calculee_generation") : "—");
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onClose(); }}>
@@ -1071,8 +1072,7 @@ function DocumentDetailDialog({
                 {cat && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/15">{cat.label}</span>}
                 {doc.isRead ? (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-100">
-                    <Eye className="h-3 w-3" />Lu par le client
-                  </span>
+                    <Eye className="h-3 w-3" />{t("documents_view_lu_par_le_client")}</span>
                 ) : (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-100">
                     <EyeOff className="h-3 w-3" />Non lu
@@ -1080,8 +1080,7 @@ function DocumentDetailDialog({
                 )}
                 {doc.isSystemGenerated && (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/15">
-                    <Server className="h-3 w-3" />Auto-généré
-                  </span>
+                    <Server className="h-3 w-3" />{t("documents_view_auto_genere")}</span>
                 )}
                 {doc.isUploaded && (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-white/15">
@@ -1102,16 +1101,16 @@ function DocumentDetailDialog({
                   <SourceIcon className="h-5 w-5 text-[#0F2D52]" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52]">Document généré depuis</p>
-                  <p className="text-sm font-medium">{source.label} #{source.id} — pour changer le contenu, modifier l&apos;entité source</p>
+                  <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52]">{t("document_genere_depuis")}</p>
+                  <p className="text-sm font-medium">{t(source.labelKey)} #{source.id} — pour changer le contenu, modifier l&apos;entité source</p>
                 </div>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" variant="outline" onClick={() => onOpenSourcePanel(source.type, source.id)}>
-                  <Eye className="h-3.5 w-3.5 mr-1" />Voir le {source.label.toLowerCase()}
+                  <Eye className="h-3.5 w-3.5 mr-1" />Voir le {t(source.labelKey).toLowerCase()}
                 </Button>
                 <Button size="sm" onClick={() => onEditSource(source.type, source.id)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-                  <Pencil className="h-3.5 w-3.5 mr-1" />Modifier {source.label.toLowerCase()}
+                  <Pencil className="h-3.5 w-3.5 mr-1" />Modifier {t(source.labelKey).toLowerCase()}
                 </Button>
               </div>
             </div>
@@ -1121,10 +1120,9 @@ function DocumentDetailDialog({
           {isPreviewable && (
             <div className="rounded-lg border bg-card overflow-hidden">
               <div className="px-3 py-2 border-b bg-muted/40 flex items-center justify-between">
-                <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Aperçu</p>
+                <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("apercu")}</p>
                 <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={() => onPreview(doc)}>
-                  <Eye className="h-3 w-3 mr-1" />Plein écran
-                </Button>
+                  <Eye className="h-3 w-3 mr-1" />{t("documents_view_plein_ecran")}</Button>
               </div>
               <div className="aspect-[16/10] bg-muted/40 flex items-center justify-center overflow-hidden">
                 {isImage ? (
@@ -1139,7 +1137,7 @@ function DocumentDetailDialog({
           {/* Description */}
           {doc.description && (
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Description</p>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">{t("description")}</p>
               <p className="text-sm whitespace-pre-wrap">{doc.description}</p>
             </div>
           )}
@@ -1147,21 +1145,21 @@ function DocumentDetailDialog({
           {/* Métadonnées */}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Fichier</p>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("fichier")}</p>
               <dl className="space-y-1.5 text-xs">
-                <Row label="Nom" value={displayFileName} />
-                <Row label="Type" value={doc.fileType ?? (source ? "PDF (généré)" : "—")} />
-                <Row label="Taille" value={displayFileSize} />
+                <Row label={t("nom")} value={displayFileName} />
+                <Row label={t("type")} value={doc.fileType ?? (source ? t("pdf_genere") : "—")} />
+                <Row label={t("taille")} value={displayFileSize} />
                 <Row label="ID" value={`#${doc.id}`} mono />
-                {source && <Row label="Source" value={`${source.label} #${source.id}`} mono />}
+                {source && <Row label={t("source")} value={`${t(source.labelKey)} #${source.id}`} mono />}
               </dl>
             </div>
             <div className="rounded-lg border bg-card p-3">
-              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Dépôt</p>
+              <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">{t("depot")}</p>
               <dl className="space-y-1.5 text-xs">
-                <Row label="Déposé le" value={formatDate(new Date(doc.createdAt))} />
-                <Row label="Mis à jour" value={formatDate(new Date(doc.updatedAt))} />
-                <Row label="Par" value={doc.uploadedBy ?? "système"} />
+                <Row label={t("depose")} value={formatDate(new Date(doc.createdAt))} />
+                <Row label={t("mis_jour")} value={formatDate(new Date(doc.updatedAt))} />
+                <Row label={t("par")} value={doc.uploadedBy ?? t("systeme")} />
                 <Row label={tc("status")} value={doc.status ?? "disponible"} />
               </dl>
             </div>
@@ -1169,7 +1167,7 @@ function DocumentDetailDialog({
 
           {/* Liens entites */}
           <div className="rounded-lg border bg-card p-3 space-y-2">
-            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">Entités liées</p>
+            <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">{t("entites_liees")}</p>
             <button type="button" onClick={() => onOpenClient(doc)}
               className="w-full flex items-center gap-2 rounded-md p-2 hover:bg-muted text-left transition-colors group">
               <div className="h-8 w-8 rounded bg-blue-50 flex items-center justify-center shrink-0">
@@ -1189,7 +1187,7 @@ function DocumentDetailDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{doc.mandateTitle ?? `Mandat #${doc.mandateId}`}</p>
-                  <p className="text-[10px] text-muted-foreground">Mandat associé</p>
+                  <p className="text-[10px] text-muted-foreground">{t("mandat_associe")}</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
               </button>
@@ -1206,14 +1204,14 @@ function DocumentDetailDialog({
               </Button>
             )}
             <Button variant="outline" size="sm" onClick={() => onToggleRead(doc)}>
-              {doc.isRead ? <><EyeOff className="h-3.5 w-3.5 mr-1" />Marquer non lu</> : <><Eye className="h-3.5 w-3.5 mr-1" />Marquer lu</>}
+              {doc.isRead ? <><EyeOff className="h-3.5 w-3.5 mr-1" />{t("marquer_non_lu")}</> : <><Eye className="h-3.5 w-3.5 mr-1" />{t("marquer_lu")}</>}
             </Button>
             <Button variant="outline" size="sm" onClick={() => onSendToClient(doc)}>
               <Send className="h-3.5 w-3.5 mr-1" />{tc("send")}
             </Button>
             {source ? (
               <Button size="sm" onClick={() => onEditSource(source.type, source.id)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">
-                <Pencil className="h-3.5 w-3.5 mr-1" />Modifier {source.label.toLowerCase()}
+                <Pencil className="h-3.5 w-3.5 mr-1" />Modifier {t(source.labelKey).toLowerCase()}
               </Button>
             ) : (
               <Button size="sm" onClick={() => onEditMeta(doc)} className="bg-[#0F2D52] hover:bg-[#1a3a66]">

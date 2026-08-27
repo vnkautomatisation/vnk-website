@@ -32,56 +32,56 @@ import { DOC_REQUEST_CATEGORIES, type DocRequestCategory } from "@/lib/document-
 // Méta par catégorie : icône + description de ce qui est attendu + types acceptés
 const CATEGORY_META: Record<DocRequestCategory, {
   icon: React.ComponentType<{ className?: string }>;
-  what: string;            // explication concrète
-  expected: string;        // format/contenu attendu
+  whatKey: string;            // explication concrète
+  expectedKey: string;     // format/contenu attendu
   preferredMime: string[]; // si on veut restreindre
 }> = {
   licence: {
     icon: IdCard,
-    what: "Téléversez la photo recto-verso de votre permis (conduire, professionnel, etc.) en cours de validité.",
-    expected: "PDF ou photo nette des deux côtés",
+    whatKey: "what_licence",
+    expectedKey: "expected_licence",
     preferredMime: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
   },
   diploma: {
     icon: GraduationCap,
-    what: "Téléversez la copie scannée de votre diplôme officiel délivré par l'établissement.",
-    expected: "PDF recommandé, scan lisible",
+    whatKey: "what_diploma",
+    expectedKey: "expected_diploma",
     preferredMime: ["application/pdf", "image/jpeg", "image/png"],
   },
   certification: {
     icon: Award,
-    what: "Téléversez votre certification professionnelle valide (CNESST, sécurité, SIMDUT, OIQ, etc.).",
-    expected: "PDF ou photo du certificat",
+    whatKey: "what_certification",
+    expectedKey: "expected_certification",
     preferredMime: ["application/pdf", "image/jpeg", "image/png"],
   },
   id_card: {
     icon: CreditCard,
-    what: "Téléversez votre carte d'identité (recto-verso) en cours de validité.",
-    expected: "PDF ou photos claires des deux côtés",
+    whatKey: "what_id_card",
+    expectedKey: "expected_id_card",
     preferredMime: ["application/pdf", "image/jpeg", "image/png"],
   },
   passport: {
     icon: Globe,
-    what: "Téléversez la page principale de votre passeport (photo + informations).",
-    expected: "PDF ou photo de la page identité",
+    whatKey: "what_passport",
+    expectedKey: "expected_passport",
     preferredMime: ["application/pdf", "image/jpeg", "image/png"],
   },
   medical: {
     icon: Stethoscope,
-    what: "Téléversez le document médical demandé (attestation, certificat d'aptitude, etc.).",
-    expected: "PDF de préférence (confidentialité)",
+    whatKey: "what_medical",
+    expectedKey: "expected_medical",
     preferredMime: ["application/pdf"],
   },
   other: {
     icon: FileQuestion,
-    what: "Téléversez le document tel que demandé par les RH.",
-    expected: "PDF, PNG, JPEG ou WebP",
+    whatKey: "what_other",
+    expectedKey: "expected_other",
     preferredMime: ["application/pdf", "image/jpeg", "image/png", "image/webp"],
   },
 };
 
-function getCategoryLabel(value: string): string {
-  return DOC_REQUEST_CATEGORIES.find((c) => c.value === value)?.label ?? value;
+function getCategoryKey(value: string): string | null {
+  return DOC_REQUEST_CATEGORIES.find((c) => c.value === value)?.labelKey ?? null;
 }
 import {
   Dialog,
@@ -131,6 +131,7 @@ export function UploadDocumentResponseDialog({
   onUploaded: () => void;
   request: UploadResponseRequest | null;
 }) {
+  const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -147,22 +148,22 @@ export function UploadDocumentResponseDialog({
       setUploading(false);
       setProgress(0);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+
   }, [open]);
 
   const validateAndSet = (f: File) => {
     if (!ACCEPTED_TYPES.includes(f.type)) {
-      toast.error("Type non supporté (PDF, PNG, JPEG, WebP uniquement)");
+      toast.error(t("type_non_supporte_pdf_png"));
       return;
     }
-    // ⚠️ Fichier vide : le serveur le rejette avec 400 "Fichier vide".
-    // On block ici pour message plus clair + eviter le round-trip inutile.
+
+
     if (f.size === 0) {
-      toast.error("Le fichier sélectionné est vide (0 octet). Choisissez un fichier non vide.");
+      toast.error(t("fichier_selectionne_vide_0_octet"));
       return;
     }
     if (f.size < 12) {
-      toast.error("Le fichier sélectionné est trop petit pour être valide.");
+      toast.error(t("fichier_selectionne_trop_petit_etre"));
       return;
     }
     if (f.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -178,7 +179,7 @@ export function UploadDocumentResponseDialog({
     }
   };
 
-  // Format pour affichage : Ko si < 0.01 Mo, sinon Mo.
+
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} octets`;
     if (bytes < 1024 * 100) return `${(bytes / 1024).toFixed(1)} Ko`;
@@ -207,7 +208,7 @@ export function UploadDocumentResponseDialog({
   const submit = async () => {
     if (!request) return;
     if (!file) {
-      toast.error("Sélectionnez un fichier");
+      toast.error(t("selectionnez_fichier"));
       return;
     }
     setUploading(true);
@@ -243,20 +244,20 @@ export function UploadDocumentResponseDialog({
               const data = JSON.parse(xhr.responseText || "{}");
               if (data?.error) errMsg = data.error;
             } catch {
-              /* ignore */
+
             }
             reject(new Error(errMsg));
           }
         };
-        xhr.onerror = () => reject(new Error("Erreur réseau"));
+        xhr.onerror = () => reject(new Error(t("erreur_reseau")));
         xhr.send(formData);
       });
 
-      toast.success("Document téléversé — en attente de validation RH");
+      toast.success(t("document_televerse_attente_validation_rh"));
       onUploaded();
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur inconnue");
+      toast.error(err instanceof Error ? err.message : t("erreur_inconnue"));
     } finally {
       setUploading(false);
       setProgress(0);
@@ -268,7 +269,7 @@ export function UploadDocumentResponseDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="p-0 overflow-hidden flex flex-col w-screen h-[100dvh] max-w-none max-h-none rounded-none sm:w-[95vw] sm:max-w-xl sm:h-auto sm:max-h-[92vh] sm:rounded-lg">
-        {/* Header navy avec icône catégorie + contexte enrichi */}
+
         {(() => {
           const meta = CATEGORY_META[request.category as DocRequestCategory] ?? CATEGORY_META.other;
           const CatIcon = meta.icon;
@@ -283,8 +284,7 @@ export function UploadDocumentResponseDialog({
                     <DialogTitle className="text-sm sm:text-base text-white truncate">
                       {request.title}
                     </DialogTitle>
-                    <DialogDescription className="text-white/80 text-[11px] sm:text-xs mt-0.5">
-                      Catégorie : <strong>{getCategoryLabel(request.category)}</strong>
+                    <DialogDescription className="text-white/80 text-[11px] sm:text-xs mt-0.5">{t("upload_document_response_categorie")}<strong>{getCategoryKey(request.category) ? t(getCategoryKey(request.category)!) : request.category}</strong>
                     </DialogDescription>
                   </div>
                 </div>
@@ -311,31 +311,31 @@ export function UploadDocumentResponseDialog({
           );
         })()}
 
-        {/* Body */}
+
         <div className="p-4 sm:p-5 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-          {/* Bandeau d'explication contextuel */}
+
           {(() => {
             const meta = CATEGORY_META[request.category as DocRequestCategory] ?? CATEGORY_META.other;
             return (
               <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 flex items-start gap-2.5">
                 <Info className="h-4 w-4 text-blue-700 shrink-0 mt-0.5" />
                 <div className="text-xs text-blue-900 space-y-1 flex-1">
-                  <p className="font-semibold">Ce qui est attendu :</p>
-                  <p>{meta.what}</p>
+                  <p className="font-semibold">{t("attendu")}</p>
+                  <p>{t(meta.whatKey)}</p>
                   {request.description && (
                     <p className="pt-1 mt-1 border-t border-blue-200 italic">
-                      <span className="font-medium not-italic">Note RH :</span> {request.description}
+                      <span className="font-medium not-italic">{t("note_rh")}</span> {request.description}
                     </p>
                   )}
                   <p className="text-[10px] text-blue-700/80 pt-1">
-                    Format accepté : {meta.expected} · max {MAX_SIZE_MB} Mo
+                    {t("format_accepte_max", { format: t(meta.expectedKey), max: MAX_SIZE_MB })}
                   </p>
                 </div>
               </div>
             );
           })()}
 
-          <FormSection icon={Upload} title="Fichier à téléverser">
+          <FormSection icon={Upload} title={t("fichier_televerser")}>
             <input
               ref={fileInputRef}
               type="file"
@@ -363,7 +363,7 @@ export function UploadDocumentResponseDialog({
               >
                 <Upload className="h-6 w-6 text-muted-foreground" />
                 <span className="text-sm font-medium">
-                  Glissez un fichier ici ou cliquez pour parcourir
+                  {t("glissez_fichier_ici_cliquez_parcourir")}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   PDF, PNG, JPEG, WebP — max {MAX_SIZE_MB} Mo
@@ -372,7 +372,7 @@ export function UploadDocumentResponseDialog({
             ) : (
               <div className="rounded-lg border bg-muted/20 p-3 flex items-start gap-3">
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img
                     src={previewUrl}
                     alt={file.name}
@@ -408,7 +408,7 @@ export function UploadDocumentResponseDialog({
                   className="h-7 w-7 hover:text-destructive shrink-0"
                   onClick={removeFile}
                   disabled={uploading}
-                  aria-label="Retirer le fichier"
+                  aria-label={t("retirer_fichier")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -416,13 +416,10 @@ export function UploadDocumentResponseDialog({
             )}
           </FormSection>
 
-          <p className="text-[11px] text-muted-foreground">
-            Une fois téléversé, le document sera vérifié par les RH avant d'être
-            ajouté à votre dossier officiel.
-          </p>
+          <p className="text-[11px] text-muted-foreground">{t("upload_document_response_une_fois_televerse_le_document_sera_verifie")}</p>
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-3 sm:px-5 py-2 sm:py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
           <Button
             type="button"

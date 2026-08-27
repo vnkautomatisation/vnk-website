@@ -36,20 +36,20 @@ type FxRate = {
 };
 
 // Couleur dominante adoucie par devise (SVG circle minimaliste)
-const CURRENCY_NAMES: Record<string, { name: string; color: string; region: string }> = {
-  CAD: { name: "Dollar canadien", color: "#DC2626", region: "Canada (devise base)" },
-  USD: { name: "Dollar américain", color: "#1E40AF", region: "États-Unis" },
-  EUR: { name: "Euro", color: "#1E40AF", region: "Union européenne" },
-  GBP: { name: "Livre sterling", color: "#1E40AF", region: "Royaume-Uni" },
-  CHF: { name: "Franc suisse", color: "#DC2626", region: "Suisse" },
-  AUD: { name: "Dollar australien", color: "#16A34A", region: "Australie" },
-  JPY: { name: "Yen japonais", color: "#DC2626", region: "Japon" },
-  CNY: { name: "Yuan chinois", color: "#DC2626", region: "Chine" },
-  MXN: { name: "Peso mexicain", color: "#16A34A", region: "Mexique" },
-  INR: { name: "Roupie indienne", color: "#F59E0B", region: "Inde" },
-  HKD: { name: "Dollar de Hong Kong", color: "#DC2626", region: "Hong Kong" },
-  XOF: { name: "Franc CFA UEMOA", color: "#16A34A", region: "Afrique de l'Ouest (parité fixe EUR)" },
-  XAF: { name: "Franc CFA CEMAC", color: "#16A34A", region: "Afrique centrale (parité fixe EUR)" },
+const CURRENCY_NAMES: Record<string, { nameKey: string; color: string; regionKey: string }> = {
+  CAD: { nameKey: "cur_CAD", color: "#DC2626", regionKey: "reg_CAD" },
+  USD: { nameKey: "cur_USD", color: "#1E40AF", regionKey: "reg_USD" },
+  EUR: { nameKey: "cur_EUR", color: "#1E40AF", regionKey: "reg_EUR" },
+  GBP: { nameKey: "cur_GBP", color: "#1E40AF", regionKey: "reg_GBP" },
+  CHF: { nameKey: "cur_CHF", color: "#DC2626", regionKey: "reg_CHF" },
+  AUD: { nameKey: "cur_AUD", color: "#16A34A", regionKey: "reg_AUD" },
+  JPY: { nameKey: "cur_JPY", color: "#DC2626", regionKey: "reg_JPY" },
+  CNY: { nameKey: "cur_CNY", color: "#DC2626", regionKey: "reg_CNY" },
+  MXN: { nameKey: "cur_MXN", color: "#16A34A", regionKey: "reg_MXN" },
+  INR: { nameKey: "cur_INR", color: "#F59E0B", regionKey: "reg_INR" },
+  HKD: { nameKey: "cur_HKD", color: "#DC2626", regionKey: "reg_HKD" },
+  XOF: { nameKey: "cur_XOF", color: "#16A34A", regionKey: "reg_XOF" },
+  XAF: { nameKey: "cur_XAF", color: "#16A34A", regionKey: "reg_XAF" },
 };
 
 const QUICK_AMOUNTS = [100, 500, 1000, 5000];
@@ -82,19 +82,20 @@ function formatDateFr(iso: string | null): string {
   return d.toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" });
 }
 
-function sourceLabel(s: string | null | undefined): string {
-  if (s === "BOC") return "Banque du Canada";
-  if (s === "ECB") return "Banque centrale européenne";
-  if (s === "fallback") return "Cache local";
-  return s ?? "—";
+function sourceKey(s: string | null | undefined): string | null {
+  if (s === "BOC") return "banque_canada";
+  if (s === "ECB") return "banque_centrale_europeenne";
+  if (s === "fallback") return "cache_local";
+  return null;
 }
 
 function decimalsFor(currency: string): number {
-  // Devises avec très faible valeur unitaire ou parité fixe → plus de décimales
+
   return ["JPY", "XOF", "XAF", "INR", "MXN"].includes(currency) ? 6 : 4;
 }
 
 export function FxView({ rates }: { rates: FxRate[] }) {
+  const t = useTranslations("admin.fx");
   const tc = useTranslations("common");
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
@@ -104,12 +105,12 @@ export function FxView({ rates }: { rates: FxRate[] }) {
   const [convResult, setConvResult] = useState<{ amount: number; rate: number; source: string; date: string } | null>(null);
   const [converting, setConverting] = useState(false);
 
-  // Reset le résultat dès qu'un input change (évite des résultats périmés affichés)
+
   useEffect(() => {
     setConvResult(null);
   }, [convAmount, convCurrency, convDirection]);
 
-  // Sticky scroll detection (Wix pattern)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -120,7 +121,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
     return () => obs.disconnect();
   }, []);
 
-  // Notes section collapsible
+
   const [notesOpen, setNotesOpen] = useState(false);
 
   const refresh = async () => {
@@ -133,11 +134,11 @@ export function FxView({ rates }: { rates: FxRate[] }) {
       if (failures > 0) {
         toast.warning(`Taux rafraîchis (${failures} indisponible${failures > 1 ? "s" : ""})`);
       } else {
-        toast.success("Taux rafraîchis");
+        toast.success(t("taux_rafraichis"));
       }
       router.refresh();
     } catch {
-      toast.error("Échec du rafraîchissement");
+      toast.error(t("echec_rafraichissement"));
     } finally {
       setRefreshing(false);
     }
@@ -150,7 +151,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
   const convert = async () => {
     const amt = parseFloat(convAmount);
     if (isNaN(amt) || amt <= 0) {
-      toast.error("Montant invalide");
+      toast.error(t("montant_invalide"));
       return;
     }
     setConverting(true);
@@ -158,9 +159,9 @@ export function FxView({ rates }: { rates: FxRate[] }) {
       const res = await fetch(`/api/fx?currency=${convCurrency}`);
       if (!res.ok) throw new Error();
       const data = await res.json();
-      // data.rate = 1 unité de convCurrency en CAD
-      // to-cad : amt convCurrency × rate = amt × rate CAD
-      // from-cad : amt CAD ÷ rate = amt / rate convCurrency
+
+
+
       const result = convDirection === "to-cad" ? amt * data.rate : amt / data.rate;
       setConvResult({
         amount: result,
@@ -169,7 +170,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         date: data.date,
       });
     } catch {
-      toast.error("Erreur de conversion");
+      toast.error(t("erreur_conversion"));
     } finally {
       setConverting(false);
     }
@@ -181,7 +182,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
     return dates.sort().reverse()[0];
   }, [rates]);
 
-  // KPIs : compteurs par source
+
   const kpis = useMemo(() => {
     const total = rates.length;
     const available = rates.filter((r) => r.rate !== null).length;
@@ -191,18 +192,18 @@ export function FxView({ rates }: { rates: FxRate[] }) {
     return { total, available, fromBoc, fromEcb, unavailable };
   }, [rates]);
 
-  // Export CSV des taux courants
+
   const exportCsv = () => {
-    const headers = ["Devise", "Nom", "Région", "Taux (vs CAD)", "Source", "Date"];
+    const headers = [t("devise"), t("nom"), t("region"), t("taux_vs_cad"), t("source"), t("date")];
     const lines = [headers.map(csvEscape).join(",")];
     rates.forEach((r) => {
       const meta = CURRENCY_NAMES[r.currency];
       lines.push([
         r.currency,
-        meta?.name ?? r.currency,
-        meta?.region ?? "",
+        meta ? t(meta.nameKey) : r.currency,
+        meta ? t(meta.regionKey) : "",
         r.rate !== null ? r.rate.toFixed(decimalsFor(r.currency)) : "indisponible",
-        sourceLabel(r.source),
+        sourceKey(r.source) ? t(sourceKey(r.source)!) : (r.source ?? "—"),
         r.date ?? "",
       ].map(csvEscape).join(","));
     });
@@ -221,21 +222,21 @@ export function FxView({ rates }: { rates: FxRate[] }) {
 
   return (
     <div className="space-y-5">
-      {/* Hero VNK */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <Banknote className="h-5 w-5" />
-              Taux de change (FX)
+              {t("taux_change_fx")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
               Source : Banque du Canada (officielle) + Banque centrale européenne (fallback)
-              {lastUpdated ? ` · Dernière mise à jour : ${formatDateFr(lastUpdated)}` : " · Chargement…"}
+              {lastUpdated ? ` · Dernière mise à jour : ${formatDateFr(lastUpdated)}` : t("chargement")}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
-            <ActionTooltip label="Exporter tous les taux courants en CSV">
+            <ActionTooltip label={t("exporter_tous_taux_courants_csv")}>
               <Button
                 size="sm"
                 variant="secondary"
@@ -243,10 +244,10 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                 onClick={exportCsv}
               >
                 <Download className="h-3.5 w-3.5 mr-1.5" />
-                Exporter CSV
+                {t("exporter_csv")}
               </Button>
             </ActionTooltip>
-            <ActionTooltip label="Forcer la mise à jour depuis la Banque du Canada (ignore le cache 24 h)">
+            <ActionTooltip label={t("forcer_mise_jour_depuis_banque")}>
               <Button
                 size="sm"
                 variant="secondary"
@@ -255,32 +256,32 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                 disabled={refreshing}
               >
                 <RefreshCw className={cn("h-3.5 w-3.5 mr-1.5", refreshing && "animate-spin")} />
-                {refreshing ? "Rafraîchissement…" : "Rafraîchir"}
+                {refreshing ? t("rafraichissement_cours") : t("rafraichir")}
               </Button>
             </ActionTooltip>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Devises suivies</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("devises_suivies")}</p>
           <p className="text-lg font-bold tabular-nums">{kpis.total}</p>
           <p className="text-[10px] text-muted-foreground">{kpis.available} disponible{kpis.available > 1 ? "s" : ""}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Banque du Canada</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("banque_canada")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{kpis.fromBoc}</p>
-          <p className="text-[10px] text-muted-foreground">source officielle</p>
+          <p className="text-[10px] text-muted-foreground">{t("source_officielle")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Banque centrale EU</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("banque_centrale_eu")}</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{kpis.fromEcb}</p>
           <p className="text-[10px] text-muted-foreground">fallback</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Dernière MAJ</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("derniere_maj")}</p>
           <p className="text-sm font-bold tabular-nums truncate" title={lastUpdated ?? "—"}>
             {lastUpdated ? formatDateFr(lastUpdated) : "—"}
           </p>
@@ -290,15 +291,15 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         </div>
       </div>
 
-      {/* Sentinel — détecte quand les KPI quittent le viewport */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
-      {/* Sticky bar : rendue uniquement quand scrollée pour éviter l'espace vide */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <Banknote className="h-4 w-4" />
-              Taux de change
+              {t("taux_change")}
             </span>
             <span className="text-muted-foreground">{kpis.available}/{kpis.total} devises</span>
             {lastUpdated && (
@@ -324,24 +325,24 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         </div>
       )}
 
-      {/* Convertisseur rapide */}
+
       <div className="rounded-lg border bg-card p-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold flex items-center gap-2">
             <ArrowRightLeft className="h-4 w-4 text-[#0F2D52]" />
-            Convertisseur rapide
+            {t("convertisseur_rapide")}
           </h2>
           {convResult && (
             <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-              Source : {sourceLabel(convResult.source)} · {formatDateFr(convResult.date)}
+              {t("source")} : {sourceKey(convResult.source) ? t(sourceKey(convResult.source)!) : (convResult.source ?? "—")} · {formatDateFr(convResult.date)}
             </span>
           )}
         </div>
 
-        {/* Montants rapides */}
+
         <div className="flex flex-wrap items-center gap-1 mb-3">
-          <span className="text-[10px] text-muted-foreground mr-1">Montant rapide :</span>
+          <span className="text-[10px] text-muted-foreground mr-1">{t("montant_rapide")}</span>
           {QUICK_AMOUNTS.map((amt) => (
             <button
               key={amt}
@@ -371,7 +372,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
             />
           </div>
           <div className="space-y-1">
-            <Label className="text-[10px]">De</Label>
+            <Label className="text-[10px]">{t("de")}</Label>
             {convDirection === "to-cad" ? (
               <Select value={convCurrency} onValueChange={setConvCurrency}>
                 <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
@@ -393,20 +394,20 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               </div>
             )}
           </div>
-          <ActionTooltip label="Inverser le sens de conversion">
+          <ActionTooltip label={t("inverser_sens_conversion")}>
             <Button
               type="button"
               variant="outline"
               size="icon"
               className="h-9 w-9 shrink-0"
               onClick={swap}
-              aria-label="Inverser"
+              aria-label={t("inverser")}
             >
               <ArrowRightLeft className="h-4 w-4" />
             </Button>
           </ActionTooltip>
           <div className="space-y-1">
-            <Label className="text-[10px]">Vers</Label>
+            <Label className="text-[10px]">{t("vers")}</Label>
             {convDirection === "from-cad" ? (
               <Select value={convCurrency} onValueChange={setConvCurrency}>
                 <SelectTrigger className="w-32 h-9"><SelectValue /></SelectTrigger>
@@ -434,7 +435,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
             size="sm"
             className="h-9 bg-[#0F2D52] hover:bg-[#1a3a66]"
           >
-            {converting ? "Conversion…" : "Convertir"}
+            {converting ? t("conversion") : t("convertir")}
           </Button>
         </div>
 
@@ -454,12 +455,12 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         )}
       </div>
 
-      {/* Table des taux */}
+
       <div className="rounded-lg border bg-card overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h2 className="text-sm font-semibold flex items-center gap-2">
             <Globe className="h-4 w-4 text-[#0F2D52]" />
-            Taux courants — 1 unité = X CAD
+            {t("taux_courants_1_unite_x")}
           </h2>
           <span className="text-[10px] text-muted-foreground">{rates.length} devise{rates.length > 1 ? "s" : ""} suivie{rates.length > 1 ? "s" : ""}</span>
         </div>
@@ -467,10 +468,10 @@ export function FxView({ rates }: { rates: FxRate[] }) {
           <table className="w-full text-sm">
             <thead className="bg-muted/50">
               <tr className="text-left">
-                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Devise</th>
-                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Description</th>
-                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold text-right">Taux (vs CAD)</th>
-                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">Source</th>
+                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">{t("devise")}</th>
+                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">{t("description")}</th>
+                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold text-right">{t("taux_vs_cad")}</th>
+                <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">{t("source")}</th>
                 <th className="p-2.5 text-xs uppercase tracking-wider text-muted-foreground font-semibold">{tc("date")}</th>
               </tr>
             </thead>
@@ -484,28 +485,28 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                       <span className="font-mono font-bold">{r.currency}</span>
                     </td>
                     <td className="p-2.5">
-                      <p className="font-medium">{meta?.name ?? r.currency}</p>
-                      <p className="text-[10px] text-muted-foreground">{meta?.region}</p>
+                      <p className="font-medium">{meta ? t(meta.nameKey) : r.currency}</p>
+                      <p className="text-[10px] text-muted-foreground">{meta ? t(meta.regionKey) : null}</p>
                     </td>
                     <td className="p-2.5 text-right font-mono whitespace-nowrap">
                       {r.rate !== null ? (
                         <span className="font-bold text-[#0F2D52]">{r.rate.toFixed(decimalsFor(r.currency))}</span>
                       ) : (
-                        <ActionTooltip label="Taux non disponible — réessayer le rafraîchissement">
+                        <ActionTooltip label={t("taux_non_disponible_reessayer_rafraichissement")}>
                           <span className="text-muted-foreground italic cursor-help">indisponible</span>
                         </ActionTooltip>
                       )}
                     </td>
                     <td className="p-2.5">
                       {r.source ? (
-                        <ActionTooltip label={r.source === "BOC" ? "Taux officiel de la Banque du Canada (série Valet)" : r.source === "ECB" ? "Conversion via la Banque centrale européenne puis EUR → CAD" : "Source de secours"}>
+                        <ActionTooltip label={r.source === "BOC" ? t("taux_officiel_banque_canada_serie") : r.source === "ECB" ? t("conversion_via_banque_centrale_europeenne") : t("source_secours")}>
                           <span className={cn(
                             "inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium cursor-help",
                             r.source === "BOC" && "bg-emerald-100 text-emerald-700",
                             r.source === "ECB" && "bg-blue-100 text-blue-700",
                             r.source !== "BOC" && r.source !== "ECB" && "bg-gray-100 text-gray-700",
                           )}>
-                            {r.source === "BOC" ? "Banque du Canada" : r.source === "ECB" ? "Banque centrale EU" : r.source}
+                            {r.source === "BOC" ? t("banque_canada") : r.source === "ECB" ? t("banque_centrale_eu") : r.source}
                           </span>
                         </ActionTooltip>
                       ) : (
@@ -521,7 +522,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         </div>
       </div>
 
-      {/* Notes pédagogiques (collapsible) */}
+
       <div className="rounded-lg border bg-blue-50 overflow-hidden">
         <button
           onClick={() => setNotesOpen((o) => !o)}
@@ -529,17 +530,17 @@ export function FxView({ rates }: { rates: FxRate[] }) {
           aria-expanded={notesOpen}
         >
           <Info className="h-4 w-4 shrink-0" />
-          <span className="font-semibold flex-1 text-left">Comment fonctionne la conversion FX dans le système</span>
+          <span className="font-semibold flex-1 text-left">{t("comment_fonctionne_conversion_fx_systeme")}</span>
           {notesOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
         </button>
         {notesOpen && (
           <div className="px-4 py-3 text-xs text-blue-900 space-y-2 border-t border-blue-200 bg-blue-50/50">
             <ul className="space-y-1 list-disc list-inside">
-              <li>Quand un client paie une facture en USD/EUR/etc., le taux du jour (Banque du Canada) est <strong>figé</strong> sur le paiement pour audit (conformité ARC règle 3300-2-r + IFRS IAS 21).</li>
-              <li>Les rapports financiers consolidés (Tableau de bord) convertissent toutes les devises en CAD au taux figé à la transaction.</li>
-              <li>L&apos;écart de change entre la facture (taux d&apos;émission) et le paiement (taux du jour) génère un gain/perte qui doit être comptabilisé séparément.</li>
-              <li>Les devises XOF/XAF (Afrique francophone) ont une parité fixe à l&apos;EUR (655,957) garantie par le Trésor français.</li>
-              <li>Le cache des taux a une durée de 24 h. Utiliser <strong>{tc("refresh")}</strong> pour forcer la mise à jour si nécessaire.</li>
+              <li>{t("quand_client_paie_facture_usd")} <strong>{t("fige")}</strong> {t("paiement_audit_conformite_arc_regle")}</li>
+              <li>{t("rapports_financiers_consolides_tableau_bord")}</li>
+              <li>{t("apos_ecart_change_entre_facture")}</li>
+              <li>{t("devises_xof_xaf_afrique_francophone")}</li>
+              <li>{t("cache_taux_duree_24_h")} <strong>{tc("refresh")}</strong> {t("forcer_mise_jour_si_necessaire")}</li>
             </ul>
           </div>
         )}

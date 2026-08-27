@@ -2,6 +2,7 @@
 // PATCH /api/quotes/[id] — mettre a jour (titre, description, statut, etc.) — interdit apres acceptation
 // DELETE /api/quotes/[id] — supprimer un devis non accepte
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -24,7 +25,7 @@ const updateSchema = z.object({
   paymentPct1: z.number().int().min(0).max(100).nullable().optional(),
   paymentPct2: z.number().int().min(0).max(100).nullable().optional(),
   paymentConditions: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnee a mettre a jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 export async function GET(
   _req: Request,
@@ -52,6 +53,7 @@ export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -73,7 +75,7 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const data: Record<string, unknown> = { ...parsed.data };
@@ -108,6 +110,7 @@ export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -127,7 +130,7 @@ export async function DELETE(
   }
   if (existing.status === "accepted" || existing._count.contracts > 0 || existing._count.invoices > 0) {
     return NextResponse.json(
-      { error: "Devis accepte ou lie a des contrats/factures — impossible de supprimer" },
+      { error: t("devis_accepte_ou_lie_a_des_contrats") },
       { status: 409 }
     );
   }

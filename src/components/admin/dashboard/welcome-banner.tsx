@@ -1,11 +1,12 @@
 "use client";
 import { Users, Briefcase } from "lucide-react";
+import { useTranslations } from "next-intl";
 
-function getGreeting(): string {
+function greetingKey(): string {
   const h = new Date().getHours();
-  if (h < 12) return "Bonjour";
-  if (h < 18) return "Bon apres-midi";
-  return "Bonsoir";
+  if (h < 12) return "bonjour";
+  if (h < 18) return "bon_apres_midi";
+  return "bonsoir";
 }
 
 export function WelcomeBanner({
@@ -19,6 +20,8 @@ export function WelcomeBanner({
   clientCount: number;
   mandateCount: number;
 }) {
+  const t = useTranslations("admin.dashboard");
+  const tu = useTranslations("admin.ui");
   return (
     <div className="relative rounded-2xl vnk-gradient text-white overflow-hidden">
       {/* Cercles decoratifs */}
@@ -28,18 +31,18 @@ export function WelcomeBanner({
 
       <div className="relative p-5 sm:p-7 lg:p-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight">
-          {getGreeting()}, {adminName.split(" ")[0]}
+          {tu(greetingKey())}, {adminName.split(" ")[0]}
         </h1>
         <p className="text-white/70 text-sm mt-1">{date}</p>
 
         <div className="flex flex-wrap gap-2 mt-4">
           <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white/10 rounded-full px-3 py-1.5">
             <Users className="h-3.5 w-3.5" />
-            {clientCount} clients actifs
+            {t("n_clients_actifs", { count: clientCount })}
           </span>
           <span className="inline-flex items-center gap-1.5 text-xs font-medium bg-white/10 rounded-full px-3 py-1.5">
             <Briefcase className="h-3.5 w-3.5" />
-            {mandateCount} mandats en cours
+            {t("n_mandats_cours", { count: mandateCount })}
           </span>
         </div>
       </div>

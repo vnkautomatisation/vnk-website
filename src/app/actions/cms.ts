@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — gestion du contenu CMS : BlogPost, FaqItem, Testimonial.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -47,14 +48,15 @@ const postSchema = z.object({
 });
 
 export async function createPostAction(input: z.infer<typeof postSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = postSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const slug = parsed.data.slug?.trim() || slugify(parsed.data.title);
   const existing = await prisma.blogPost.findUnique({ where: { slug_locale: { slug, locale: parsed.data.locale } } });
-  if (existing) return { success: false, error: "Un article avec ce slug existe déjà dans cette langue" };
+  if (existing) return { success: false, error: t("un_article_avec_ce_slug_existe_deja") };
 
   const created = await prisma.blogPost.create({
     data: {
@@ -82,11 +84,12 @@ export async function createPostAction(input: z.infer<typeof postSchema>): Promi
 }
 
 export async function updatePostAction(input: z.infer<typeof postSchema> & { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const { id, slug: inSlug, ...rest } = input;
   const parsed = postSchema.safeParse(rest);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const before = await prisma.blogPost.findUnique({ where: { id } });
   if (!before) return { success: false, error: "Article introuvable" };
@@ -136,10 +139,11 @@ const faqSchema = z.object({
 });
 
 export async function createFaqAction(input: z.infer<typeof faqSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = faqSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const max = await prisma.faqItem.aggregate({ _max: { sortOrder: true }, where: { locale: parsed.data.locale } });
   const created = await prisma.faqItem.create({
@@ -192,10 +196,11 @@ const testimonialSchema = z.object({
 });
 
 export async function createTestimonialAction(input: z.infer<typeof testimonialSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   const parsed = testimonialSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const created = await prisma.testimonial.create({
     data: {

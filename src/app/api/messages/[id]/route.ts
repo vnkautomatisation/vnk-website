@@ -1,6 +1,7 @@
 // PATCH /api/messages/[id] — modifier un message (admin ou auteur, ≤ 5 min)
 // DELETE /api/messages/[id] — soft-delete un message
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -21,6 +22,7 @@ function canMutate(msg: { sender: string; createdAt: Date; deletedAt: Date | nul
 }
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) return unauthorizedJson();
 
@@ -33,10 +35,10 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return unauthorizedJson(403);
   }
   if (!canMutate(msg, session.user.role as "admin" | "client", session.user.clientId)) {
-    return NextResponse.json({ error: "Modification refusée (auteur ou délai dépassé)" }, { status: 403 });
+    return NextResponse.json({ error: t("modification_refusee_auteur_ou_delai_depasse") }, { status: 403 });
   }
   if (Date.now() - msg.createdAt.getTime() > EDIT_WINDOW_MS && session.user.role !== "admin") {
-    return NextResponse.json({ error: "Délai de modification dépassé (5 min)" }, { status: 409 });
+    return NextResponse.json({ error: t("delai_de_modification_depasse_5_min") }, { status: 409 });
   }
   if (await adminApiForbidden("messages", "write")) {
     return forbiddenJson();
@@ -44,7 +46,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
   const body = await req.json();
   const parsed = patchSchema.safeParse(body);
-  if (!parsed.success) return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
 
   const updated = await prisma.message.update({
     where: { id: msgId },
@@ -59,6 +61,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user) return unauthorizedJson();
 
@@ -71,7 +74,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     return unauthorizedJson(403);
   }
   if (!canMutate(msg, session.user.role as "admin" | "client", session.user.clientId)) {
-    return NextResponse.json({ error: "Suppression refusée (auteur ou délai dépassé)" }, { status: 403 });
+    return NextResponse.json({ error: t("suppression_refusee_auteur_ou_delai_depasse") }, { status: 403 });
   }
 
   await prisma.message.update({

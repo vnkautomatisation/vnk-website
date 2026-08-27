@@ -1,6 +1,7 @@
 "use server";
 // Server Actions — politique de sécurité globale.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -50,10 +51,11 @@ const policySchema = z.object({
 });
 
 export async function updateSecurityPolicyAction(input: z.infer<typeof policySchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
   const parsed = policySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const entries = Object.entries(parsed.data).map(([key, value]) => ({
     key,
@@ -84,8 +86,9 @@ export async function updateSecurityPolicyAction(input: z.infer<typeof policySch
 
 // ── DÉCONNEXION GLOBALE FORCÉE ────────────────────────────
 export async function forceLogoutAllAction(): Promise<Result<{ count: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
 
   // Bumper sessionsInvalidatedAt de tous les admins SAUF moi
   const now = new Date();
@@ -101,9 +104,10 @@ export async function forceLogoutAllAction(): Promise<Result<{ count: number }>>
 
 // ── BLOQUER UN COMPTE ─────────────────────────────────────
 export async function lockAdminAction(input: { id: number; minutes: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
-  if (input.id === adminId) return { success: false, error: "Vous ne pouvez pas vous bloquer vous-même" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
+  if (input.id === adminId) return { success: false, error: t("vous_ne_pouvez_pas_vous_bloquer_vous") };
 
   const lockedUntil = new Date(Date.now() + input.minutes * 60_000);
   await prisma.admin.update({
@@ -118,8 +122,9 @@ export async function lockAdminAction(input: { id: number; minutes: number }): P
 }
 
 export async function unlockAdminAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const adminId = await requireSuperAdmin();
-  if (!adminId) return { success: false, error: "Action réservée au super-administrateur" };
+  if (!adminId) return { success: false, error: t("action_reservee_au_super_administrateur") };
 
   await prisma.admin.update({
     where: { id: input.id },

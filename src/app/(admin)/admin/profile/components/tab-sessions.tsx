@@ -23,17 +23,17 @@ import {
 import { parseUserAgent } from "@/lib/security/ua-parser";
 import type { SessionRow } from "../profile-view";
 
-function formatLocation(s: SessionRow): string {
+function formatLocation(s: SessionRow, t: (k: string) => string): string {
   if (s.ipAddress && /^(::1|127\.|10\.|192\.168\.|169\.254\.|172\.(1[6-9]|2\d|3[01])\.|::ffff:127\.|::ffff:10\.|::ffff:192\.168\.)/.test(s.ipAddress)) {
-    return "Réseau local (développement)";
+    return t("reseau_local_developpement");
   }
   const parts = [s.city, s.country].filter(Boolean);
-  if (parts.length === 0) return "Localisation non disponible";
+  if (parts.length === 0) return t("localisation_non_disponible");
   return parts.join(", ");
 }
 
-function formatIp(ip: string | null): string {
-  if (!ip) return "IP masquée";
+function formatIp(ip: string | null, t: (k: string) => string): string {
+  if (!ip) return t("ip_masquee");
   const mapped = ip.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return mapped[1];
   if (ip === "::1") return "::1 (localhost)";
@@ -57,7 +57,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
     startTransition(async () => {
       const r = await revokeSessionAction(id);
       if (r.success) {
-        toast.success("Session révoquée");
+        toast.success(t("session_revoquee"));
         router.refresh();
       } else toast.error(r.error);
     });
@@ -67,8 +67,8 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
     startTransition(async () => {
       const r = await revokeAllOtherSessionsAction();
       if (r.success) {
-        toast.success("Tous les autres appareils ont été déconnectés", {
-          description: "Les sessions actuelles sur d'autres appareils ont été invalidées. Ils seront déconnectés automatiquement.",
+        toast.success(t("tous_autres_appareils_ont_ete"), {
+          description: t("sessions_actuelles_autres_appareils_ont"),
           duration: 6000,
         });
         router.refresh();
@@ -81,7 +81,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
     startTransition(async () => {
       const r = await renameSessionAction(id, labelValue);
       if (r.success) {
-        toast.success("Renommé");
+        toast.success(t("renomme"));
         router.refresh();
       } else toast.error(r.error);
       setRenamingId(null);
@@ -93,8 +93,8 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
     startTransition(async () => {
       const r = await trustSessionDeviceAction(s.id);
       if (r.success) {
-        toast.success("Appareil ajouté à votre liste d'appareils de confiance", {
-          description: "Vous ne serez plus invité à entrer un code 2FA depuis cet appareil. Vous pouvez retirer la confiance à tout moment depuis l'onglet Sécurité.",
+        toast.success(t("appareil_ajoute_liste_appareils_confiance"), {
+          description: t("plus_invite_code_2fa_appareil"),
           duration: 5000,
         });
         router.refresh();
@@ -107,7 +107,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
     startTransition(async () => {
       const r = await reportSuspiciousSessionAction(reportOpen.id);
       if (r.success) {
-        toast.success("Session signalée et révoquée. Un évènement critique a été enregistré.");
+        toast.success(t("session_signalee_revoquee_evenement_critique"));
         router.refresh();
       } else toast.error(r.error);
       setReportOpen(null);
@@ -162,21 +162,21 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
             {orderedSessions.map((s) => {
               const isExpired = new Date(s.expiresAt) <= now;
               const parsed = s.browser
-                ? { browser: s.browser, os: s.os ?? "Inconnu", deviceType: (s.deviceType as "desktop" | "mobile" | "tablet") ?? "desktop", label: `${s.browser} sur ${s.os ?? "Inconnu"}` }
+                ? { browser: s.browser, os: s.os ?? t("inconnu"), deviceType: (s.deviceType as "desktop" | "mobile" | "tablet") ?? "desktop", label: `${s.browser} sur ${s.os ?? t("inconnu")}` }
                 : parseUserAgent(s.userAgent);
               const Icon = parsed.deviceType === "mobile" ? Smartphone : parsed.deviceType === "tablet" ? Tablet : Monitor;
               const lastActive = s.lastActiveAt ? new Date(s.lastActiveAt) : new Date(s.createdAt);
               const minutesAgo = Math.floor((Date.now() - lastActive.getTime()) / 60000);
-              // Pour les sessions actives : "actif maintenant" / "il y a X min/h/j"
-              // Pour les sessions hors ligne : date complète de la dernière utilisation
+
+
               const lastActiveLabel = isExpired
                 ? `dernier accès ${lastActive.toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}`
-                : minutesAgo < 2 ? "actif maintenant"
+                : minutesAgo < 2 ? t("actif_maintenant")
                 : minutesAgo < 60 ? `il y a ${minutesAgo} min`
                 : minutesAgo < 1440 ? `il y a ${Math.floor(minutesAgo / 60)} h`
                 : `il y a ${Math.floor(minutesAgo / 1440)} j`;
-              const location = formatLocation(s);
-              const ipDisplay = formatIp(s.ipAddress);
+              const location = formatLocation(s, t);
+              const ipDisplay = formatIp(s.ipAddress, t);
               const isRenaming = renamingId === s.id;
 
               return (
@@ -188,14 +188,14 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                     onKeyDown={(e) => { if (!isRenaming && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); setDetailsSession(s); } }}
                     className={`group flex items-center gap-3 px-3 py-3 rounded-lg transition cursor-pointer hover:bg-muted/50 ${isExpired ? "opacity-60" : ""}`}
                   >
-                    {/* Icône appareil */}
+
                     <div className="flex-shrink-0">
                       <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${s.isCurrent ? "bg-emerald-100 text-emerald-700" : isExpired ? "bg-zinc-100 text-zinc-400" : "bg-muted text-muted-foreground"}`}>
                         <Icon className="h-5 w-5" />
                       </div>
                     </div>
 
-                    {/* Contenu principal */}
+
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {isRenaming ? (
@@ -234,9 +234,9 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                       </p>
                     </div>
 
-                    {/* ─── Actions visibles à droite (stopPropagation) ─── */}
+
                     <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                      {/* Action principale selon l'état */}
+
                       {!isExpired && !s.isCurrent && (
                         <Button
                           variant="outline"
@@ -273,10 +273,10 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                         </Button>
                       )}
 
-                      {/* Menu secondaire compact (actions moins fréquentes) */}
+
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label="Autres actions">
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" aria-label={t("autres_actions")}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
@@ -319,7 +319,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                         </DropdownMenuContent>
                       </DropdownMenu>
 
-                      {/* Indicateur visuel que la ligne est cliquable */}
+
                       <ChevronRight className="h-4 w-4 text-muted-foreground/40 group-hover:text-muted-foreground transition hidden sm:block" />
                     </div>
                   </div>
@@ -330,7 +330,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
         )}
       </CardContent>
 
-      {/* ─── Dialog : confirmer révocation de toutes les autres ─── */}
+
       <Dialog open={confirmAllOpen} onOpenChange={setConfirmAllOpen}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="vnk-gradient text-white p-5">
@@ -351,7 +351,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog : signaler comme suspect ─── */}
+
       <Dialog open={!!reportOpen} onOpenChange={(o) => !o && setReportOpen(null)}>
         <DialogContent className="sm:max-w-md p-0 overflow-hidden">
           <div className="bg-red-600 text-white p-5">
@@ -380,7 +380,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
         </DialogContent>
       </Dialog>
 
-      {/* ─── Dialog : détails complets ─── */}
+
       <Dialog open={!!detailsSession} onOpenChange={(o) => !o && setDetailsSession(null)}>
         <DialogContent className="sm:max-w-lg p-0 overflow-hidden max-h-[90vh] overflow-y-auto">
           <div className="vnk-gradient text-white p-5">
@@ -395,8 +395,8 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
               <DetailRow icon={Monitor} label={t("details_browser")} value={detailsSession.browser ?? "—"} />
               <DetailRow icon={Server} label={t("details_os")} value={detailsSession.os ?? "—"} />
               <DetailRow icon={Smartphone} label={t("details_device_type")} value={(detailsSession.deviceType ?? "desktop").charAt(0).toUpperCase() + (detailsSession.deviceType ?? "desktop").slice(1)} />
-              <DetailRow icon={Wifi} label={t("details_ip")} value={<code className="font-mono">{formatIp(detailsSession.ipAddress)}</code>} />
-              <DetailRow icon={MapPin} label={t("details_location")} value={formatLocation(detailsSession)} />
+              <DetailRow icon={Wifi} label={t("details_ip")} value={<code className="font-mono">{formatIp(detailsSession.ipAddress, t)}</code>} />
+              <DetailRow icon={MapPin} label={t("details_location")} value={formatLocation(detailsSession, t)} />
               <DetailRow
                 icon={Activity}
                 label={t("details_last_active")}

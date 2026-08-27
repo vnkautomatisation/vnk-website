@@ -18,6 +18,7 @@
 //   />
 // =============================================================
 import { CheckCircle2, Clock, AlertCircle, Ban } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { ToneBadge } from "@/components/admin/tone-badge";
 
@@ -44,14 +45,15 @@ export function SignatureStatusBadge({
   variant = "compact",
   className,
 }: SignatureStatusBadgeProps) {
-  // Cas resilie : prioritaire
+  const t = useTranslations("admin.ui");
+
   if (terminatedAt) {
     const date = fmt(terminatedAt);
     return (
       <ActionTooltip label={`Resilie le ${date}`}>
         <span className="inline-flex">
           <ToneBadge tone="danger" icon={Ban} className={className}>
-            {variant === "full" ? `Resilie - ${date}` : "Resilie"}
+            {variant === "full" ? `Resilie - ${date}` : t("resilie")}
           </ToneBadge>
         </span>
       </ActionTooltip>
@@ -61,21 +63,21 @@ export function SignatureStatusBadge({
   const emp = !!employeeSignedAt;
   const emr = !!employerSignedAt;
 
-  // Cas 2/2 : actif
+
   if (emp && emr) {
     const tip = `Signe par employe le ${fmt(employeeSignedAt)} - employeur le ${fmt(employerSignedAt)}`;
     return (
       <ActionTooltip label={tip}>
         <span className="inline-flex">
           <ToneBadge tone="success" icon={CheckCircle2} className={className}>
-            {variant === "full" ? `Actif - ${fmt(employerSignedAt)}` : "Actif"}
+            {variant === "full" ? `Actif - ${fmt(employerSignedAt)}` : t("actif")}
           </ToneBadge>
         </span>
       </ActionTooltip>
     );
   }
 
-  // Cas 1/2 : en attente d'une des deux parties
+
   if (emp || emr) {
     const waitingFor = emp ? "employeur" : "employe";
     const signedDate = emp ? fmt(employeeSignedAt) : fmt(employerSignedAt);
@@ -96,12 +98,12 @@ export function SignatureStatusBadge({
     );
   }
 
-  // Cas 0/2 : non signe
+
   return (
-    <ActionTooltip label="Aucune signature pour le moment">
+    <ActionTooltip label={t("aucune_signature_moment")}>
       <span className="inline-flex">
         <ToneBadge tone="neutral" icon={AlertCircle} className={className}>
-          Non signe
+          {t("non_signe")}
         </ToneBadge>
       </span>
     </ActionTooltip>

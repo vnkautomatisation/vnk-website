@@ -57,20 +57,20 @@ type Request = {
   admin?: { id: number; fullName: string | null; email: string; avatarUrl?: string | null };
 };
 
-const TYPE_META: Record<string, { label: string; icon: typeof Sun; color: string }> = {
-  vacation: { label: "Vacances", icon: Sun, color: "bg-cyan-100 text-cyan-700" },
-  sick: { label: "Maladie", icon: Bandage, color: "bg-red-100 text-red-700" },
-  parental: { label: "Parental", icon: Baby, color: "bg-pink-100 text-pink-700" },
-  unpaid: { label: "Sans solde", icon: Home, color: "bg-slate-100 text-slate-700" },
-  bereavement: { label: "Décès", icon: Home, color: "bg-gray-100 text-gray-700" },
-  other: { label: "Autre", icon: CalendarDays, color: "bg-amber-100 text-amber-700" },
+const TYPE_META: Record<string, { labelKey: string; icon: typeof Sun; color: string }> = {
+  vacation: { labelKey: "type_vacation", icon: Sun, color: "bg-cyan-100 text-cyan-700" },
+  sick: { labelKey: "type_sick", icon: Bandage, color: "bg-red-100 text-red-700" },
+  parental: { labelKey: "type_parental", icon: Baby, color: "bg-pink-100 text-pink-700" },
+  unpaid: { labelKey: "type_unpaid", icon: Home, color: "bg-slate-100 text-slate-700" },
+  bereavement: { labelKey: "type_bereavement", icon: Home, color: "bg-gray-100 text-gray-700" },
+  other: { labelKey: "type_other", icon: CalendarDays, color: "bg-amber-100 text-amber-700" },
 };
 
-const STATUS_META: Record<string, { label: string; color: string }> = {
-  pending: { label: "En attente", color: "bg-amber-100 text-amber-700" },
-  approved: { label: "Approuvée", color: "bg-emerald-100 text-emerald-700" },
-  rejected: { label: "Refusée", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Annulée", color: "bg-gray-100 text-gray-600" },
+const STATUS_META: Record<string, { labelKey: string; color: string }> = {
+  pending: { labelKey: "status_pending", color: "bg-amber-100 text-amber-700" },
+  approved: { labelKey: "status_approved", color: "bg-emerald-100 text-emerald-700" },
+  rejected: { labelKey: "status_rejected", color: "bg-red-100 text-red-700" },
+  cancelled: { labelKey: "status_cancelled", color: "bg-gray-100 text-gray-600" },
 };
 
 type LeaveBalance = {
@@ -102,6 +102,7 @@ export function LeavesView({
   /** Fenêtres de vacances pertinentes (open ou contenant mes préférences). Mon espace uniquement. */
   openWindows?: OpenWindow[];
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -133,9 +134,9 @@ export function LeavesView({
   );
 
   const TABS: TabItem<"my" | "review" | "team">[] = [
-    { key: "my", label: "Mes demandes", icon: CalendarDays, count: myRequests.length },
-    ...(isReviewer ? [{ key: "review" as const, label: "À approuver", icon: CheckCircle2, count: pendingReviews.length }] : []),
-    { key: "team", label: "Équipe (4 sem.)", icon: Users, count: teamLeavesUpcoming?.length ?? 0 },
+    { key: "my", label: t("mes_demandes"), icon: CalendarDays, count: myRequests.length },
+    ...(isReviewer ? [{ key: "review" as const, label: t("approuver"), icon: CheckCircle2, count: pendingReviews.length }] : []),
+    { key: "team", label: t("equipe_4_sem"), icon: Users, count: teamLeavesUpcoming?.length ?? 0 },
   ];
 
   const toggleSelect = (id: number) => {
@@ -152,10 +153,10 @@ export function LeavesView({
     if (decision === "rejected") {
       const n = await promptDialog({
         title: `Refuser ${selectedIds.size} demande${selectedIds.size > 1 ? "s" : ""}`,
-        label: "Motif du refus (optionnel)",
+        label: t("motif_refus_optionnel"),
         multiline: true,
         variant: "destructive",
-        confirmLabel: "Refuser",
+        confirmLabel: t("refuser"),
       });
       if (n === null) return;
       notes = n.trim() || undefined;
@@ -164,7 +165,7 @@ export function LeavesView({
     const res = await bulkReviewLeavesAction({ ids: Array.from(selectedIds), decision, notes });
     setBulkBusy(false);
     if (res.success) {
-      toast.success(`${res.data.processed} traitée${res.data.processed > 1 ? "s" : ""}${res.data.skipped > 0 ? ` · ${res.data.skipped} ignorée${res.data.skipped > 1 ? "s" : ""}` : ""}`);
+      toast.success(t("traitees", { count: res.data.processed }) + (res.data.skipped > 0 ? t("ignorees_suffixe", { count: res.data.skipped }) : ""));
       // TÂCHE 21 : detail erreurs si présentes
       if (res.data.errors && res.data.errors.length > 0) {
         const sample = res.data.errors.slice(0, 3).map((e) => `#${e.id}: ${e.reason}`).join(" — ");
@@ -173,7 +174,7 @@ export function LeavesView({
       }
       setSelectedIds(new Set());
       router.refresh();
-    } else toast.error(res.error || "Erreur lors du traitement");
+    } else toast.error(res.error || t("erreur_lors_traitement"));
   };
 
   const isBlocked = !!myBlock;
@@ -192,20 +193,20 @@ export function LeavesView({
               <CalendarDays className="h-5 w-5 text-white" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold">Congés</h1>
+              <h1 className="text-lg font-bold">{t("conges")}</h1>
               <p className="text-xs text-white/80">
-                Demandez et gérez vos vacances, maladies et autres absences.
+                {t("demandez_gerez_vacances_maladies_autres")}
               </p>
             </div>
           </div>
-          <ActionTooltip label={isBlocked ? blockMsg : "Créer une nouvelle demande de congé"}>
+          <ActionTooltip label={isBlocked ? blockMsg : t("creer_nouvelle_demande_conge")}>
             <Button
               size="sm"
               onClick={() => setCreateOpen(true)}
               disabled={isBlocked}
               className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 shrink-0 font-semibold"
             >
-              <Plus className="h-3.5 w-3.5 mr-1.5" />Nouvelle demande
+              <Plus className="h-3.5 w-3.5 mr-1.5" />{t("nouvelle_demande")}
             </Button>
           </ActionTooltip>
         </div>
@@ -234,8 +235,7 @@ export function LeavesView({
         <div className="space-y-2">
           <div className="flex items-center justify-between flex-wrap gap-2 px-0.5">
             <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] flex items-center gap-1.5">
-              <Sun className="h-3.5 w-3.5" />Mon solde de congés
-            </h3>
+              <Sun className="h-3.5 w-3.5" />{t("leaves_view_mon_solde_de_conges")}</h3>
             {balance.policyName && (
               <span className="text-[10px] text-muted-foreground italic">
                 Politique : <strong className="text-foreground not-italic">{balance.policyName}</strong>
@@ -244,17 +244,16 @@ export function LeavesView({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
             <BalanceKpiCard
-              label="Jours dispo" value={balance.vacationDaysRemaining} icon={Sun}
+              label={t("jours_dispo")} value={balance.vacationDaysRemaining} icon={Sun}
               accent={balance.vacationDaysRemaining <= 2 ? "danger" : "success"}
             />
-            <BalanceKpiCard label="Jours pris" value={balance.vacationDaysTaken} icon={CheckCircle2} accent="muted" />
-            <BalanceKpiCard label="Jours planifiés" value={balance.vacationDaysPlanned} icon={CalendarDays} accent="info" />
-            <BalanceKpiCard label="Jours maladie" value={balance.sickDaysTaken} icon={Bandage} accent="warning" />
+            <BalanceKpiCard label={t("jours_pris")} value={balance.vacationDaysTaken} icon={CheckCircle2} accent="muted" />
+            <BalanceKpiCard label={t("jours_planifies")} value={balance.vacationDaysPlanned} icon={CalendarDays} accent="info" />
+            <BalanceKpiCard label={t("jours_maladie")} value={balance.sickDaysTaken} icon={Bandage} accent="warning" />
           </div>
           {balance.accruedDays !== undefined && (
-            <p className="text-[10px] text-muted-foreground px-0.5">
-              Accumulé : <strong className="text-foreground">{balance.accruedDays} j</strong>
-              {balance.carriedOverDays ? <> · Reporté : <strong className="text-foreground">{balance.carriedOverDays} j</strong></> : null}
+            <p className="text-[10px] text-muted-foreground px-0.5">{t("leaves_view_accumule")}<strong className="text-foreground">{balance.accruedDays} j</strong>
+              {balance.carriedOverDays ? <> {t("reporte")} <strong className="text-foreground">{balance.carriedOverDays} j</strong></> : null}
             </p>
           )}
         </div>
@@ -263,47 +262,43 @@ export function LeavesView({
       {/* Barre d'actions globales employé */}
       {myAdminId && (
         <div className="flex items-center gap-1.5 flex-wrap">
-          <ActionTooltip label="Voir le rapport annuel à l'écran">
+          <ActionTooltip label={t("voir_rapport_annuel_ecran")}>
             <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setAnnualOpen(true)}>
               <FileText className="h-3 w-3 mr-1" />Rapport annuel
             </Button>
           </ActionTooltip>
-          <ActionTooltip label="Aperçu de mon relevé annuel en PDF">
+          <ActionTooltip label={t("apercu_mon_releve_annuel_pdf")}>
             <Button
               size="sm"
               variant="outline"
               className="h-7 text-[11px]"
               onClick={() => setPdfPreview({
                 url: `/api/admin/leaves/employee/${myAdminId}/annual-report-pdf`,
-                title: "Relevé annuel de congés",
-                description: "Récapitulatif de votre période courante (1er mai → 30 avril)",
+                title: t("releve_annuel_conges"),
+                description: t("recapitulatif_periode_courante_1er_mai"),
                 filename: `releve-annuel-conges.pdf`,
               })}
             >
-              <Download className="h-3 w-3 mr-1" />Aperçu PDF
-            </Button>
+              <Download className="h-3 w-3 mr-1" />{t("leaves_view_apercu_pdf")}</Button>
           </ActionTooltip>
           {/* TÂCHE 7 : export CSV perso */}
-          <ActionTooltip label="Télécharger toutes mes demandes au format CSV">
+          <ActionTooltip label={t("telecharger_toutes_mes_demandes_format")}>
             <Button asChild size="sm" variant="outline" className="h-7 text-[11px]">
               <a href={`/api/admin/leaves/employee/${myAdminId}/export/csv`} download>
-                <Download className="h-3 w-3 mr-1" />Exporter mes congés (CSV)
-              </a>
+                <Download className="h-3 w-3 mr-1" />{t("leaves_view_exporter_mes_conges_csv")}</a>
             </Button>
           </ActionTooltip>
           {isReviewer && (
             <>
-              <ActionTooltip label="Déléguer mes approbations à un autre admin">
+              <ActionTooltip label={t("deleguer_mes_approbations_autre_admin")}>
                 <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setDelegateOpen(true)}>
-                  <Shield className="h-3 w-3 mr-1" />Configurer délégation
-                </Button>
+                  <Shield className="h-3 w-3 mr-1" />{t("leaves_view_configurer_delegation")}</Button>
               </ActionTooltip>
               {/* TÂCHE 18 : symetrique du lien admin-side */}
-              <ActionTooltip label="Aller à l'espace gestion des congés équipe">
+              <ActionTooltip label={t("aller_espace_gestion_conges_equipe")}>
                 <Button asChild size="sm" variant="outline" className="h-7 text-[11px]">
                   <Link href="/admin/employes/conges">
-                    <Users className="h-3 w-3 mr-1" />Voir gestion équipe
-                  </Link>
+                    <Users className="h-3 w-3 mr-1" />{t("leaves_view_voir_gestion_equipe")}</Link>
                 </Button>
               </ActionTooltip>
             </>
@@ -321,16 +316,15 @@ export function LeavesView({
               <div className="mx-auto h-12 w-12 rounded-full bg-[#0F2D52]/10 flex items-center justify-center mb-3">
                 <FileText className="h-6 w-6 text-[#0F2D52]" />
               </div>
-              <p className="text-sm font-medium text-foreground">Aucune demande pour le moment</p>
+              <p className="text-sm font-medium text-foreground">{t("aucune_demande_moment")}</p>
               <p className="text-xs text-muted-foreground mt-1">
-                Cliquez sur « Nouvelle demande » pour planifier vos prochaines vacances.
+                {t("cliquez_nouvelle_demande_planifier_prochaines")}
               </p>
               <Button
                 onClick={() => setCreateOpen(true)}
                 className="mt-4 bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
               >
-                <Plus className="h-4 w-4 mr-1.5" />Demander un conge
-              </Button>
+                <Plus className="h-4 w-4 mr-1.5" />{t("leaves_view_demander_un_conge")}</Button>
             </Card>
           ) : (
             myRequests.map((r) => (
@@ -342,28 +336,28 @@ export function LeavesView({
                   const isApproved = r.status === "approved";
                   if (isApproved) {
                     const ok = await confirm({
-                      title: "Annuler ce congé approuvé ?",
-                      description: "Cette action est irréversible et notifiera votre superviseur.",
+                      title: t("annuler_conge_approuve"),
+                      description: t("action_irreversible_notifiera_superviseur"),
                       variant: "destructive",
-                      confirmLabel: "Continuer",
-                      cancelLabel: "Garder",
+                      confirmLabel: t("continuer"),
+                      cancelLabel: t("garder"),
                     });
                     if (!ok) return;
                   }
                   const reason = await promptDialog({
-                    title: isApproved ? "Annuler le congé approuvé" : "Annuler la demande",
-                    label: isApproved ? "Raison de l'annulation (requise)" : "Raison de l'annulation (optionnelle)",
+                    title: isApproved ? t("annuler_conge_approuve") : t("annuler_demande"),
+                    label: isApproved ? t("raison_annulation_requise") : t("raison_annulation_optionnelle"),
                     multiline: true,
                     variant: "destructive",
-                    confirmLabel: "Annuler la demande",
+                    confirmLabel: t("annuler_demande"),
                     required: isApproved,
                   });
                   if (reason === null) return;
                   markBusy(r.id, true);
                   const res = await cancelLeaveRequestAction({ id: r.id, reason: reason.trim() || undefined });
                   markBusy(r.id, false);
-                  if (res.success) { toast.success("Demande annulée"); router.refresh(); }
-                  else toast.error(res.error || "Erreur lors de l'annulation");
+                  if (res.success) { toast.success(t("demande_annulee")); router.refresh(); }
+                  else toast.error(res.error || t("erreur_lors_annulation"));
                 }}
                 onEdit={() => setEditing(r)}
                 onHistory={() => setHistoryReq(r)}
@@ -373,7 +367,7 @@ export function LeavesView({
                 onPdfPreview={() => setPdfPreview({
                   url: `/api/admin/leaves/${r.id}/pdf-letter`,
                   title: `Lettre de confirmation — Demande #${r.id}`,
-                  description: `${TYPE_META[r.type]?.label ?? r.type} ${formatLeaveRange(r.startDate, r.endDate)}`,
+                  description: `${TYPE_META[r.type] ? t(TYPE_META[r.type].labelKey) : r.type} ${formatLeaveRange(r.startDate, r.endDate)}`,
                   filename: `lettre-conge-${r.id}.pdf`,
                 })}
               />
@@ -385,13 +379,13 @@ export function LeavesView({
       {tab === "review" && isReviewer && (
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Filtrer par type :</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("filtrer_type")}</Label>
             <Select value={filterType} onValueChange={setFilterType}>
               <SelectTrigger className="h-8 w-40 text-xs"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">{tc("all")}</SelectItem>
                 {Object.entries(TYPE_META).map(([k, v]) => (
-                  <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                  <SelectItem key={k} value={k}>{t(v.labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
@@ -401,11 +395,11 @@ export function LeavesView({
               <div className="mx-auto h-12 w-12 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
                 <CheckCircle2 className="h-6 w-6 text-emerald-700" />
               </div>
-              <p className="text-sm font-medium text-foreground">Tout est traite</p>
+              <p className="text-sm font-medium text-foreground">{t("tout_traite")}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {pendingReviews.length > 0
-                  ? "Aucune demande ne correspond a votre filtre."
-                  : "Aucune demande en attente d'approbation."}
+                  ? t("aucune_demande_ne_correspond_filtre")
+                  : t("aucune_demande_attente_approbation")}
               </p>
             </Card>
           ) : (
@@ -414,12 +408,12 @@ export function LeavesView({
                 <Card className="p-3 sticky top-[176px] lg:top-[140px] z-10 bg-[#0F2D52] text-white border-0 flex items-center justify-between gap-2 shadow-md flex-wrap">
                   <span className="text-sm font-medium">{selectedIds.size} selectionnee{selectedIds.size > 1 ? "s" : ""}</span>
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30" onClick={() => setSelectedIds(new Set())}>Deselectionner</Button>
+                    <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-white/10 hover:bg-white/20 text-white border-white/30" onClick={() => setSelectedIds(new Set())}>{t("deselectionner")}</Button>
                     <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90" onClick={() => bulkAction("approved")}>
-                      <CheckCircle2 className="h-3 w-3 mr-1" />{bulkBusy ? "..." : "Approuver selection"}
+                      <CheckCircle2 className="h-3 w-3 mr-1" />{bulkBusy ? "..." : t("approuver_selection")}
                     </Button>
                     <Button size="sm" variant="outline" disabled={bulkBusy} className="h-8 text-xs bg-red-600 hover:bg-red-700 text-white border-0" onClick={() => bulkAction("rejected")}>
-                      <XCircle className="h-3 w-3 mr-1" />{bulkBusy ? "..." : "Refuser selection"}
+                      <XCircle className="h-3 w-3 mr-1" />{bulkBusy ? "..." : t("refuser_selection")}
                     </Button>
                   </div>
                 </Card>
@@ -435,12 +429,12 @@ export function LeavesView({
                     let notes: string | undefined;
                     if (decision === "rejected") {
                       const n = await promptDialog({
-                        title: "Refuser la demande de conge",
-                        label: "Motif du refus (optionnel)",
-                        placeholder: "Ex : periode chargee, equipe sous-effectif...",
+                        title: t("refuser_demande_conge"),
+                        label: t("motif_refus_optionnel"),
+                        placeholder: t("ex_periode_chargee_equipe_sous"),
                         multiline: true,
                         variant: "destructive",
-                        confirmLabel: "Refuser",
+                        confirmLabel: t("refuser"),
                       });
                       if (n === null) return;
                       notes = n.trim() || undefined;
@@ -448,8 +442,8 @@ export function LeavesView({
                     markBusy(r.id, true);
                     const res = await reviewLeaveRequestAction({ id: r.id, decision, notes });
                     markBusy(r.id, false);
-                    if (res.success) { toast.success(decision === "approved" ? "Approuvee" : "Refusee"); router.refresh(); }
-                    else toast.error(res.error || "Erreur lors du traitement");
+                    if (res.success) { toast.success(decision === "approved" ? t("approuvee") : t("refusee")); router.refresh(); }
+                    else toast.error(res.error || t("erreur_lors_traitement"));
                   }}
                 />
               ))}
@@ -474,11 +468,11 @@ export function LeavesView({
         onSubmit={async (payload) => {
           const r = await createLeaveRequestAction(payload);
           if (r.success) {
-            toast.success(r.data?.warning ? `Demande envoyee. ${r.data.warning}` : "Demande envoyee");
+            toast.success(r.data?.warning ? `Demande envoyee. ${r.data.warning}` : t("demande_envoyee"));
             setCreateOpen(false);
             router.refresh();
           } else {
-            toast.error(r.error || "Erreur lors de la creation");
+            toast.error(r.error || t("erreur_lors_creation"));
             throw new Error(r.error || "");
           }
         }}
@@ -508,11 +502,11 @@ export function LeavesView({
               reason: payload.reason,
             });
             if (r.success) {
-              toast.success("Demande mise a jour");
+              toast.success(t("demande_mise_jour"));
               setEditing(null);
               router.refresh();
             } else {
-              toast.error(r.error || "Erreur lors de la mise a jour");
+              toast.error(r.error || t("erreur_lors_mise_jour"));
               throw new Error(r.error || "");
             }
           }}
@@ -529,8 +523,8 @@ export function LeavesView({
           myAdminId={myAdminId}
           onPdfPreview={() => setPdfPreview({
             url: `/api/admin/leaves/employee/${myAdminId}/annual-report-pdf`,
-            title: "Relevé annuel de congés",
-            description: "Récapitulatif de votre période courante (1er mai → 30 avril)",
+            title: t("releve_annuel_conges"),
+            description: t("recapitulatif_periode_courante_1er_mai"),
             filename: `releve-annuel-conges.pdf`,
           })}
         />
@@ -563,7 +557,7 @@ export function LeavesView({
         <RequestConflictsDialog
           open
           leaveId={conflictsLeave.id}
-          leaveLabel={`${TYPE_META[conflictsLeave.type]?.label ?? conflictsLeave.type} — ${formatLeaveRange(conflictsLeave.startDate, conflictsLeave.endDate)}`}
+          leaveLabel={`${TYPE_META[conflictsLeave.type] ? t(TYPE_META[conflictsLeave.type].labelKey) : conflictsLeave.type} — ${formatLeaveRange(conflictsLeave.startDate, conflictsLeave.endDate)}`}
           onClose={() => setConflictsLeave(null)}
         />
       )}
@@ -592,28 +586,29 @@ function RequestCard({
   onPdfPreview?: () => void;
   onConflicts?: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
-  const t = TYPE_META[request.type] ?? TYPE_META.other;
+  const meta = TYPE_META[request.type] ?? TYPE_META.other;
   const s = STATUS_META[request.status] ?? { label: request.status, color: "bg-gray-100 text-gray-700" };
-  const Icon = t.icon;
-  const halfLabel = request.halfDay === "AM" ? "½ matin" : request.halfDay === "PM" ? "½ après-midi" : null;
+  const Icon = meta.icon;
+  const halfLabel = request.halfDay === "AM" ? t("demi_matin") : request.halfDay === "PM" ? t("demi_apres_midi") : null;
   return (
     <Card className="p-4">
       <div className="flex items-start gap-3">
         {selectable && onToggleSelect && (
-          <ActionTooltip label={selected ? "Désélectionner" : "Sélectionner pour action groupée"}>
+          <ActionTooltip label={selected ? t("deselectionner") : t("selectionner_action_groupee")}>
             <div className="pt-1.5">
-              <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label="Sélectionner" />
+              <Checkbox checked={selected} onCheckedChange={onToggleSelect} aria-label={t("selectionner")} />
             </div>
           </ActionTooltip>
         )}
-        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${t.color}`}>
+        <div className={`h-10 w-10 rounded-lg flex items-center justify-center ${meta.color}`}>
           <Icon className="h-5 w-5" />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-sm">{t.label}</h3>
-            <Badge className={`text-[10px] ${s.color}`}>{s.label}</Badge>
+            <h3 className="font-semibold text-sm">{t(meta.labelKey)}</h3>
+            <Badge className={`text-[10px] ${s.color}`}>{t(s.labelKey)}</Badge>
             {halfLabel && <Badge variant="outline" className="text-[10px]">{halfLabel}</Badge>}
             {!mine && request.admin && (
               <span className="text-xs text-muted-foreground">· {request.admin.fullName || request.admin.email}</span>
@@ -636,13 +631,13 @@ function RequestCard({
           {mine && request.status === "pending" && (
             <>
               {onEdit && (
-                <ActionTooltip label="Modifier la demande (calendrier)">
+                <ActionTooltip label={t("modifier_demande_calendrier")}>
                   <Button size="sm" variant="outline" disabled={busy} className="h-7 text-xs" onClick={onEdit}>
                     <Edit2 className="h-3 w-3 mr-1" />{tc("edit")}
                   </Button>
                 </ActionTooltip>
               )}
-              <ActionTooltip label="Annuler cette demande">
+              <ActionTooltip label={t("annuler_demande")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -650,7 +645,7 @@ function RequestCard({
                   className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                   onClick={onCancel}
                 >
-                  <Ban className="h-3 w-3 mr-1" />{busy ? "..." : "Annuler"}
+                  <Ban className="h-3 w-3 mr-1" />{busy ? "..." : t("annuler")}
                 </Button>
               </ActionTooltip>
             </>
@@ -660,13 +655,13 @@ function RequestCard({
               <AddToCalendarMenu
                 event={{
                   leaveId: request.id,
-                  title: `Congé : ${TYPE_META[request.type]?.label ?? "Congé"}`,
+                  title: `Congé : ${TYPE_META[request.type] ? t(TYPE_META[request.type].labelKey) : t("conge")}`,
                   startDate: request.startDate,
                   endDate: request.endDate,
                   description: request.reason || undefined,
                 }}
               />
-              <ActionTooltip label="Aperçu de la lettre de confirmation PDF">
+              <ActionTooltip label={t("apercu_lettre_confirmation_pdf")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -677,7 +672,7 @@ function RequestCard({
                 </Button>
               </ActionTooltip>
               {/* TÂCHE 6 (P1-7) : annuler un congé approuvé (motif requis) */}
-              <ActionTooltip label="Annuler ce congé approuvé (motif requis)">
+              <ActionTooltip label={t("annuler_conge_approuve_motif_requis")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -685,7 +680,7 @@ function RequestCard({
                   className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                   onClick={onCancel}
                 >
-                  <Ban className="h-3 w-3 mr-1" />{busy ? "..." : "Annuler"}
+                  <Ban className="h-3 w-3 mr-1" />{busy ? "..." : t("annuler")}
                 </Button>
               </ActionTooltip>
             </>
@@ -708,7 +703,7 @@ function RequestCard({
                 className="h-7 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
                 onClick={() => onReview("approved")}
               >
-                <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : "Approuver"}
+                <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : t("approuver")}
               </Button>
               <Button
                 size="sm"
@@ -717,7 +712,7 @@ function RequestCard({
                 className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700"
                 onClick={() => onReview("rejected")}
               >
-                <XCircle className="h-3 w-3 mr-1" />{busy ? "..." : "Refuser"}
+                <XCircle className="h-3 w-3 mr-1" />{busy ? "..." : t("refuser")}
               </Button>
             </>
           )}
@@ -728,6 +723,7 @@ function RequestCard({
 }
 
 function TeamCalendar({ leaves, teamScopeCount }: { leaves: Request[]; teamScopeCount?: number }) {
+  const t = useTranslations("admin.leaves");
   // 28 jours rolling
   const days = useMemo(() => {
     const out: Date[] = [];
@@ -757,14 +753,14 @@ function TeamCalendar({ leaves, teamScopeCount }: { leaves: Request[]; teamScope
         </div>
         {noPeers ? (
           <>
-            <p className="text-sm font-medium text-foreground">Aucun collegue d&apos;equipe a afficher</p>
+            <p className="text-sm font-medium text-foreground">{t("aucun_collegue_apos_equipe_afficher")}</p>
             <p className="text-xs text-muted-foreground mt-1 max-w-md mx-auto">
-              Vous n&apos;avez pas d&apos;equipe ou de manager rattache. Contactez RH pour configurer votre rattachement hierarchique.
+              {t("vous_n_apos_avez_pas")}
             </p>
           </>
         ) : (
           <>
-            <p className="text-sm font-medium text-foreground">Aucune absence prevue chez vos collegues</p>
+            <p className="text-sm font-medium text-foreground">{t("aucune_absence_prevue_chez_collegues")}</p>
             <p className="text-xs text-muted-foreground mt-1">
               Periode ideale pour planifier vos vacances : aucun conflit d&apos;equipe sur les 4 prochaines semaines
               {typeof teamScopeCount === "number" && teamScopeCount > 0 ? ` (${teamScopeCount} collegue${teamScopeCount > 1 ? "s" : ""} visible${teamScopeCount > 1 ? "s" : ""}).` : "."}
@@ -780,7 +776,7 @@ function TeamCalendar({ leaves, teamScopeCount }: { leaves: Request[]; teamScope
       <Card className="overflow-x-auto">
         <div className="grid" style={{ gridTemplateColumns: `auto repeat(28, 1fr)`, minWidth: 800 }}>
           <div className="px-3 py-2 text-[10px] uppercase tracking-wider font-semibold text-muted-foreground bg-muted/30 border-b border-r sticky left-0 z-10">
-            Employé
+            {t("employe")}
           </div>
           {days.map((d, i) => {
             const isWeekend = d.getDay() === 0 || d.getDay() === 6;
@@ -803,7 +799,7 @@ function TeamCalendar({ leaves, teamScopeCount }: { leaves: Request[]; teamScope
             ))}
         </div>
       </Card>
-      <p className="text-[11px] text-muted-foreground">28 jours à partir d&apos;aujourd&apos;hui. Les jours en couleur indiquent un congé approuvé.</p>
+      <p className="text-[11px] text-muted-foreground">{t("28_jours_partir_apos_aujourd")}</p>
     </div>
   );
 }
@@ -813,6 +809,7 @@ function ContentRow({ group, days, inRange }: {
   days: Date[];
   inRange: (d: Date, s: string, e: string) => boolean;
 }) {
+  const t = useTranslations("admin.leaves");
   return (
     <>
       <div className="px-3 py-2 text-xs border-r bg-background sticky left-0 z-10 truncate">
@@ -825,7 +822,7 @@ function ContentRow({ group, days, inRange }: {
         // TÂCHE 2 (P0-2) : différencier pending visuellement (hachuré) sans révéler le motif
         const isPending = leaveOnDay?.status === "pending";
         const tooltip = leaveOnDay
-          ? `${meta?.label}${isPending ? " — En attente d'approbation" : ""} — ${formatLeaveRange(leaveOnDay.startDate, leaveOnDay.endDate)}`
+          ? `${meta ? t(meta.labelKey) : ""}${isPending ? t("attente_approbation") : ""} — ${formatLeaveRange(leaveOnDay.startDate, leaveOnDay.endDate)}`
           : "";
         const style: React.CSSProperties | undefined = isPending
           ? {
@@ -857,6 +854,7 @@ function RequestCardMineMenu({
   onAttachmentChange?: () => void;
   onConflicts?: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const handleFile = async (file: File | null) => {
@@ -867,11 +865,11 @@ function RequestCardMineMenu({
       fd.append("file", file);
       const res = await fetch(`/api/admin/leaves/${request.id}/attachment`, { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Échec de l'upload");
-      toast.success("Justificatif joint");
+      if (!res.ok) throw new Error(data.error || t("echec_upload"));
+      toast.success(t("justificatif_joint"));
       onAttachmentChange?.();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur upload");
+      toast.error(e instanceof Error ? e.message : t("erreur_upload"));
     } finally {
       setUploading(false);
     }
@@ -901,8 +899,7 @@ function RequestCardMineMenu({
           {/* TÂCHE 8 : voir conflits equipe */}
           {onConflicts && (request.status === "pending" || request.status === "approved") && (
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onConflicts(); }}>
-              <Users className="h-3.5 w-3.5 mr-2" />Voir conflits équipe
-            </DropdownMenuItem>
+              <Users className="h-3.5 w-3.5 mr-2" />{t("leaves_view_voir_conflits_equipe")}</DropdownMenuItem>
           )}
           {onDuplicate && (
             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onDuplicate(); }}>
@@ -923,7 +920,7 @@ function RequestCardMineMenu({
               onSelect={(e) => { e.preventDefault(); inputRef.current?.click(); }}
             >
               <Paperclip className="h-3.5 w-3.5 mr-2" />
-              {request.attachmentUrl ? "Remplacer le justificatif" : "Uploader un justificatif"}
+              {request.attachmentUrl ? t("remplacer_justificatif") : t("uploader_justificatif")}
             </DropdownMenuItem>
           )}
         </DropdownMenuContent>
@@ -940,6 +937,7 @@ function AnnualSelfDialog({
   requests: Request[]; balance?: LeaveBalance; myAdminId: number;
   onPdfPreview: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
@@ -962,7 +960,7 @@ function AnnualSelfDialog({
       <DialogContent className="p-0 overflow-hidden max-w-lg">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Mon rapport annuel</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("mon_rapport_annuel")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               Période {periodStart.toLocaleDateString("fr-CA")} → {periodEnd.toLocaleDateString("fr-CA")}
             </DialogDescription>
@@ -972,36 +970,36 @@ function AnnualSelfDialog({
           {balance && (
             <div className="grid grid-cols-4 gap-2">
               <div className="rounded-md border bg-background p-2">
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Restant</p>
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{t("restant")}</p>
                 <p className="text-base font-bold tabular-nums text-emerald-700">{balance.vacationDaysRemaining}<span className="text-[10px] text-muted-foreground ml-0.5">j</span></p>
               </div>
               <div className="rounded-md border bg-background p-2">
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Pris</p>
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{t("pris")}</p>
                 <p className="text-base font-bold tabular-nums">{balance.vacationDaysTaken}<span className="text-[10px] text-muted-foreground ml-0.5">j</span></p>
               </div>
               <div className="rounded-md border bg-background p-2">
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Planifiés</p>
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{t("planifies")}</p>
                 <p className="text-base font-bold tabular-nums">{balance.vacationDaysPlanned}<span className="text-[10px] text-muted-foreground ml-0.5">j</span></p>
               </div>
               <div className="rounded-md border bg-background p-2">
-                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">Accumulés</p>
+                <p className="text-[9px] uppercase tracking-wider text-muted-foreground font-semibold">{t("accumules")}</p>
                 <p className="text-base font-bold tabular-nums">{balance.accruedDays ?? 0}<span className="text-[10px] text-muted-foreground ml-0.5">j</span></p>
               </div>
             </div>
           )}
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] mb-2">Totaux par type (approuvés)</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] mb-2">{t("totaux_type_approuves")}</h4>
             {byType.size === 0 ? (
-              <p className="text-xs text-muted-foreground italic">Aucune demande approuvée sur la période.</p>
+              <p className="text-xs text-muted-foreground italic">{t("aucune_demande_approuvee_periode")}</p>
             ) : (
               <div className="space-y-1.5">
-                {Array.from(byType.entries()).map(([t, v]) => {
-                  const m = TYPE_META[t] ?? TYPE_META.other;
+                {Array.from(byType.entries()).map(([leaveType, v]) => {
+                  const m = TYPE_META[leaveType] ?? TYPE_META.other;
                   const Icon = m.icon;
                   return (
-                    <div key={t} className="flex items-center justify-between rounded-md border bg-background p-2">
+                    <div key={leaveType} className="flex items-center justify-between rounded-md border bg-background p-2">
                       <span className="inline-flex items-center gap-2 text-sm">
-                        <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />{m.label}
+                        <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />{t(m.labelKey)}
                       </span>
                       <span className="text-sm tabular-nums">
                         <strong>{v.days}</strong> j <span className="text-muted-foreground">({v.count} demande{v.count > 1 ? "s" : ""})</span>
@@ -1019,8 +1017,7 @@ function AnnualSelfDialog({
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             onClick={onPdfPreview}
           >
-            <FileText className="h-3.5 w-3.5 mr-1.5" />Aperçu PDF
-          </Button>
+            <FileText className="h-3.5 w-3.5 mr-1.5" />{t("leaves_view_apercu_pdf")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1030,6 +1027,7 @@ function AnnualSelfDialog({
 // ─── Dialog : déléguer mes approbations ──
 type DelegateAdmin = { id: number; fullName: string | null; email: string };
 function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [admins, setAdmins] = useState<DelegateAdmin[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -1049,21 +1047,21 @@ function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void 
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Déléguer mes approbations</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("deleguer_mes_approbations")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Choisissez un collègue qui pourra approuver les congés à votre place.
+              {t("choisissez_collegue_pourra_approuver_conges")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
-          <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Délégué</Label>
+          <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("delegue")}</Label>
           {loading ? (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <Loader2 className="h-3 w-3 animate-spin" />{tc("loading")}
             </div>
           ) : (
             <Select value={selected} onValueChange={setSelected}>
-              <SelectTrigger><SelectValue placeholder="Choisir un admin" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("choisir_admin")} /></SelectTrigger>
               <SelectContent>
                 {admins.map((a) => (
                   <SelectItem key={a.id} value={String(a.id)}>
@@ -1082,11 +1080,11 @@ function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void 
               setBusy(true);
               const res = await delegateLeaveApprovalAction({ delegateId: null });
               setBusy(false);
-              if (res.success) { toast.success("Délégation retirée"); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("delegation_retiree")); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            Retirer
+            {t("retirer")}
           </Button>
           <Button variant="outline" onClick={onClose}>{tc("cancel")}</Button>
           <Button
@@ -1096,11 +1094,11 @@ function DelegateDialog({ open, onClose }: { open: boolean; onClose: () => void 
               setBusy(true);
               const res = await delegateLeaveApprovalAction({ delegateId: Number(selected) });
               setBusy(false);
-              if (res.success) { toast.success("Délégation activée"); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("delegation_activee")); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Déléguer"}
+            {busy ? "..." : t("deleguer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1115,6 +1113,7 @@ type AuditEntry = {
   actor: { id: number; fullName: string | null; email: string } | null;
 };
 function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () => void }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1124,7 +1123,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
     fetch(`/api/admin/leaves/${req.id}/history`)
       .then((r) => r.ok ? r.json() : { logs: [] })
       .then((d) => setLogs(d.logs || []))
-      .catch(() => toast.error("Impossible de charger l'historique"))
+      .catch(() => toast.error(t("impossible_charger_historique")))
       .finally(() => setLoading(false));
   }, [req]);
   if (!req) return null;
@@ -1140,7 +1139,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
           {loading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : logs.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-4">Aucune entrée d&apos;audit.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-4">{t("aucune_entree_apos_audit")}</p>
           ) : (
             <ol className="space-y-2">
               {logs.map((l) => (
@@ -1151,8 +1150,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
                       {new Date(l.createdAt).toLocaleString("fr-CA")}
                     </span>
                   </div>
-                  <p className="text-xs text-foreground mt-1">
-                    Par <strong>{l.actor ? (l.actor.fullName || l.actor.email) : "Système"}</strong>
+                  <p className="text-xs text-foreground mt-1">{t("leaves_view_par")}<strong>{l.actor ? (l.actor.fullName || l.actor.email) : t("systeme")}</strong>
                   </p>
                   <AuditChangesDisplay changes={l.changes} />
                 </li>
@@ -1172,6 +1170,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
 function SelfDuplicateDialog({
   req, onClose, onDone,
 }: { req: Request | null; onClose: () => void; onDone: () => void }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
@@ -1191,20 +1190,20 @@ function SelfDuplicateDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Dupliquer cette demande</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("dupliquer_demande")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Crée une nouvelle demande {TYPE_META[req.type]?.label ?? req.type} sur de nouvelles dates (statut : en attente).
+              Crée une nouvelle demande {TYPE_META[req.type] ? t(TYPE_META[req.type].labelKey) : req.type} sur de nouvelles dates (statut : en attente).
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Début</Label>
+              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("debut")}</Label>
               <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Fin</Label>
+              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("fin")}</Label>
               <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
@@ -1218,11 +1217,11 @@ function SelfDuplicateDialog({
               setBusy(true);
               const res = await duplicateLeaveAction({ id: req.id, newStartDate: start, newEndDate: end });
               setBusy(false);
-              if (res.success) { toast.success("Demande dupliquée"); onDone(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("demande_dupliquee")); onDone(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Dupliquer"}
+            {busy ? "..." : t("dupliquer")}
           </Button>
         </DialogFooter>
       </DialogContent>

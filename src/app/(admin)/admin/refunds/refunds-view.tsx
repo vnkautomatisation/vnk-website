@@ -63,11 +63,11 @@ type ClientOption = { id: number; fullName: string; companyName: string | null }
 type InvoiceOption = { id: number; invoiceNumber: string };
 type StatusFilter = "all" | "pending" | "processed" | "confirmed";
 
-const STATUS_TABS: { key: StatusFilter; label: string }[] = [
-  { key: "all", label: "Tous" },
-  { key: "pending", label: "En attente" },
-  { key: "processed", label: "Traités" },
-  { key: "confirmed", label: "Confirmés" },
+const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
+  { key: "all", labelKey: "tous" },
+  { key: "pending", labelKey: "attente" },
+  { key: "processed", labelKey: "traites" },
+  { key: "confirmed", labelKey: "confirmes" },
 ];
 
 function csvEscape(v: string | number | null): string {
@@ -90,6 +90,7 @@ export function RefundsView({
   invoices: InvoiceOption[];
   kpis: { total: number; pending: number; processed: number };
 }) {
+  const t = useTranslations("admin.refunds");
   const tc = useTranslations("common");
   const router = useRouter();
   const { open: openEntity } = useEntityPanels();
@@ -106,7 +107,7 @@ export function RefundsView({
   const [newAmount, setNewAmount] = useState("");
   const [newNotes, setNewNotes] = useState("");
 
-  // Sticky scroll detection (Wix pattern)
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -120,7 +121,7 @@ export function RefundsView({
     return () => obs.disconnect();
   }, []);
 
-  // Edit/Delete
+
   const [editRefund, setEditRefund] = useState<Refund | null>(null);
   const [editReason, setEditReason] = useState("");
   const [editAmount, setEditAmount] = useState("");
@@ -128,7 +129,7 @@ export function RefundsView({
   const [editNotes, setEditNotes] = useState("");
   const [deleteRefund, setDeleteRefund] = useState<Refund | null>(null);
 
-  // Stripe processing
+
   const [stripeRefund, setStripeRefund] = useState<Refund | null>(null);
   const [processingStripe, setProcessingStripe] = useState(false);
 
@@ -143,14 +144,14 @@ export function RefundsView({
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success("Remboursement émis — délai bancaire 5 à 10 jours ouvrables");
+        toast.success(t("remboursement_emis_delai_bancaire_5"));
         setStripeRefund(null);
         router.refresh();
       } else {
-        toast.error(data.error ?? "Erreur lors de l'émission");
+        toast.error(data.error ?? t("erreur_lors_emission"));
       }
     } catch {
-      toast.error("Erreur réseau");
+      toast.error(t("erreur_reseau"));
     } finally {
       setProcessingStripe(false);
     }
@@ -173,7 +174,7 @@ export function RefundsView({
   };
 
   const handleEdit = async (): Promise<{ success: boolean; error?: string }> => {
-    if (!editRefund || !editReason.trim() || !editAmount) return { success: false, error: "Raison et montant requis" };
+    if (!editRefund || !editReason.trim() || !editAmount) return { success: false, error: t("raison_montant_requis") };
     try {
       const res = await fetch(`/api/refunds/${editRefund.id}`, {
         method: "PATCH",
@@ -187,20 +188,20 @@ export function RefundsView({
       });
       if (res.ok) { router.refresh(); return { success: true }; }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
-    } catch { return { success: false, error: "Erreur réseau" }; }
+      return { success: false, error: data.error || t("erreur") };
+    } catch { return { success: false, error: t("erreur_reseau") }; }
   };
 
   const handleDelete = async () => {
     if (!deleteRefund) return;
     const res = await fetch(`/api/refunds/${deleteRefund.id}`, { method: "DELETE" });
-    if (res.ok) { toast.success("Remboursement supprimé"); setDeleteRefund(null); router.refresh(); }
-    else { const d = await res.json(); toast.error(d.error || "Erreur"); }
+    if (res.ok) { toast.success(t("remboursement_supprime")); setDeleteRefund(null); router.refresh(); }
+    else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
 
   const handleCreate = async (): Promise<{ success: boolean; error?: string }> => {
     if (!newClientId || !newReason.trim() || !newAmount) {
-      return { success: false, error: "Client, raison et montant requis" };
+      return { success: false, error: t("client_raison_montant_requis") };
     }
     try {
       const res = await fetch("/api/refunds", {
@@ -220,9 +221,9 @@ export function RefundsView({
         return { success: true };
       }
       const data = await res.json();
-      return { success: false, error: data.error || "Erreur" };
+      return { success: false, error: data.error || t("erreur") };
     } catch {
-      return { success: false, error: "Erreur réseau" };
+      return { success: false, error: t("erreur_reseau") };
     }
   };
 
@@ -248,27 +249,27 @@ export function RefundsView({
     return result;
   }, [refunds, statusFilter, dateFrom, dateTo, searchQuery]);
 
-  // Export CSV des remboursements filtrés
+
   const exportCsv = () => {
     const headers = [
-      "Numéro",
-      "Client",
-      "Entreprise",
-      "Facture liée",
-      "Raison",
-      "Montant HT",
+      t("numero"),
+      t("client"),
+      t("entreprise"),
+      t("facture_liee"),
+      t("raison"),
+      t("montant_ht"),
       "TPS",
       "TVQ",
-      "Total TTC",
-      "Statut",
-      "ID Stripe",
-      "Date création",
-      "Date traitement",
-      "Notes",
+      t("total_ttc"),
+      t("statut"),
+      t("id_stripe"),
+      t("date_creation"),
+      t("date_traitement"),
+      t("notes"),
     ];
     const lines = [headers.map(csvEscape).join(",")];
     filtered.forEach((r) => {
-      const statusLabel = r.status === "pending" ? "En attente" : r.status === "processed" ? "Traité" : r.status === "confirmed" ? "Confirmé" : r.status;
+      const statusLabel = r.status === "pending" ? t("attente") : r.status === "processed" ? t("traite") : r.status === "confirmed" ? t("confirme") : r.status;
       lines.push([
         r.refundNumber,
         r.clientName,
@@ -296,32 +297,32 @@ export function RefundsView({
     URL.revokeObjectURL(url);
   };
 
-  // Actions menu pour EntityCard
+
   const getActions = useCallback((r: Refund) => {
     const editable = r.status !== "processed" && !r.processedAt;
     const stripeEligible = r.status === "pending"
       && !r.stripeRefundId
       && !!r.invoiceStripePaymentIntentId;
     return [
-      { label: "Voir client", icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
-      ...(stripeEligible ? [{ label: "Émettre via la plateforme", icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => setStripeRefund(r) }] : []),
-      ...(r.stripeRefundId ? [{ label: "Voir sur la plateforme", icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => window.open(`https://dashboard.stripe.com/refunds/${r.stripeRefundId}`, "_blank") }] : []),
-      ...(editable ? [{ label: "Modifier", icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(r) }] : []),
-      ...(editable ? [{ label: "Supprimer", icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteRefund(r), separator: true, variant: "destructive" as const }] : []),
+      { label: t("voir_client"), icon: <Eye className="h-3.5 w-3.5" />, onClick: () => openEntity("client", r.clientId) },
+      ...(stripeEligible ? [{ label: t("emettre_via_plateforme"), icon: <CreditCard className="h-3.5 w-3.5" />, onClick: () => setStripeRefund(r) }] : []),
+      ...(r.stripeRefundId ? [{ label: t("voir_plateforme"), icon: <ExternalLink className="h-3.5 w-3.5" />, onClick: () => window.open(`https://dashboard.stripe.com/refunds/${r.stripeRefundId}`, "_blank") }] : []),
+      ...(editable ? [{ label: t("modifier"), icon: <Pencil className="h-3.5 w-3.5" />, onClick: () => openEdit(r) }] : []),
+      ...(editable ? [{ label: t("supprimer"), icon: <Trash2 className="h-3.5 w-3.5" />, onClick: () => setDeleteRefund(r), separator: true, variant: "destructive" as const }] : []),
     ];
   }, [openEntity]);
 
   const columns: Column<Refund>[] = [
     {
       key: "number",
-      header: "Numéro",
+      header: t("numero"),
       accessor: (r) => <span className="font-mono text-xs">{r.refundNumber}</span>,
       sortable: true,
       sortBy: (r) => r.refundNumber,
     },
     {
       key: "client",
-      header: "Client",
+      header: t("client"),
       accessor: (r) => (
         <div>
           <div className="font-medium text-sm">{r.clientName}</div>
@@ -333,26 +334,26 @@ export function RefundsView({
     },
     {
       key: "invoice",
-      header: "Facture liée",
+      header: t("facture_liee"),
       accessor: (r) => r.invoiceNumber ? <span className="font-mono text-xs">{r.invoiceNumber}</span> : "—",
       hiddenOnMobile: true,
     },
-    { key: "reason", header: "Raison", accessor: (r) => <span className="text-sm">{r.reason}</span>, hiddenOnMobile: true },
+    { key: "reason", header: t("raison"), accessor: (r) => <span className="text-sm">{r.reason}</span>, hiddenOnMobile: true },
     {
       key: "amount",
-      header: "Montant",
+      header: t("montant"),
       accessor: (r) => <span className="font-semibold">{formatCurrency(r.totalAmount)}</span>,
       sortable: true,
       sortBy: (r) => r.totalAmount,
     },
-    { key: "status", header: "Statut", accessor: (r) => <StatusBadge status={r.status} /> },
+    { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     {
       key: "stripe",
-      header: "Paiement en ligne",
+      header: t("paiement_ligne"),
       accessor: (r) => {
         if (r.stripeRefundId) {
           return (
-            <ActionTooltip label="Ouvrir le remboursement sur la plateforme de paiement">
+            <ActionTooltip label={t("ouvrir_remboursement_plateforme_paiement")}>
               <a
                 href={`https://dashboard.stripe.com/refunds/${r.stripeRefundId}`}
                 target="_blank"
@@ -361,7 +362,7 @@ export function RefundsView({
                 onClick={(e) => e.stopPropagation()}
               >
                 <CheckCircle2 className="h-3 w-3" />
-                Émis
+                {t("emis")}
                 <ExternalLink className="h-2.5 w-2.5 opacity-60" />
               </a>
             </ActionTooltip>
@@ -369,21 +370,21 @@ export function RefundsView({
         }
         if (r.status === "pending" && r.invoiceStripePaymentIntentId) {
           return (
-            <ActionTooltip label="Émettre le remboursement automatiquement sur la carte du client">
+            <ActionTooltip label={t("emettre_remboursement_automatiquement_carte_client")}>
               <button
                 onClick={(e) => { e.stopPropagation(); setStripeRefund(r); }}
                 className="inline-flex items-center gap-1 text-[10px] text-white bg-[#0F2D52] hover:bg-[#15406d] px-2 py-1 rounded font-medium transition-colors"
               >
                 <CreditCard className="h-3 w-3" />
-                Émettre
+                {t("emettre")}
               </button>
             </ActionTooltip>
           );
         }
         if (r.status === "pending" && !r.invoiceStripePaymentIntentId) {
           return (
-            <ActionTooltip label="Pas de paiement en ligne lié — remboursement à traiter manuellement (chèque, virement…)">
-              <span className="text-[10px] text-muted-foreground italic cursor-help">Manuel</span>
+            <ActionTooltip label={t("pas_paiement_ligne_lie_remboursement")}>
+              <span className="text-[10px] text-muted-foreground italic cursor-help">{t("manuel")}</span>
             </ActionTooltip>
           );
         }
@@ -393,7 +394,7 @@ export function RefundsView({
     },
     {
       key: "date",
-      header: "Date",
+      header: t("date"),
       accessor: (r) => formatDate(new Date(r.createdAt)),
       sortable: true,
       sortBy: (r) => r.createdAt,
@@ -405,108 +406,108 @@ export function RefundsView({
 
   return (
     <div className="space-y-5">
-      {/* Hero VNK */}
+
       <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] rounded-xl px-5 py-4 text-white">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
               <RotateCcw className="h-5 w-5" />
-              Remboursements
+              {t("remboursements")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              {kpis.total} remboursement{kpis.total > 1 ? "s" : ""} · {kpis.pending} en attente · {kpis.processed} traité{kpis.processed > 1 ? "s" : ""}
+              {t("n_remboursements_resume", { total: kpis.total, pending: kpis.pending, processed: kpis.processed })}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             <Button onClick={exportCsv} size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 backdrop-blur">
               <Download className="h-3.5 w-3.5 mr-1.5" />
-              Exporter CSV
+              {t("exporter_csv")}
             </Button>
             <Button onClick={() => { resetForm(); setCreateOpen(true); }} size="sm" variant="secondary" className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold">
               <Plus className="h-3.5 w-3.5 mr-1" />
-              Nouveau remboursement
+              {t("nouveau_remboursement")}
             </Button>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Total</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("total")}</p>
           <p className="text-lg font-bold tabular-nums">{kpis.total}</p>
-          <p className="text-[10px] text-muted-foreground">remboursements émis</p>
+          <p className="text-[10px] text-muted-foreground">{t("remboursements_emis")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">En attente</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("attente")}</p>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{kpis.pending}</p>
-          <p className="text-[10px] text-muted-foreground">à traiter</p>
+          <p className="text-[10px] text-muted-foreground">{t("traiter")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Traités</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("traites")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{kpis.processed}</p>
-          <p className="text-[10px] text-muted-foreground">complétés</p>
+          <p className="text-[10px] text-muted-foreground">{t("completes")}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
-          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">Montant filtré</p>
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("montant_filtre")}</p>
           <p className="text-lg font-bold tabular-nums">{formatCurrency(totalAmount)}</p>
           <p className="text-[10px] text-muted-foreground">{filtered.length} affiché{filtered.length > 1 ? "s" : ""}</p>
         </div>
       </div>
 
-      {/* Sentinel — détecte fin des KPI */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Sticky compact bar — KPI seulement (pattern dashboard finance) */}
+
       {scrolled && (
         <div className="sticky top-[64px] z-20 -mx-4 sm:-mx-5 lg:-mx-6 px-4 sm:px-5 lg:px-6 py-2 bg-background/95 backdrop-blur shadow-sm border-b animate-overlay-fade-in">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r">
               <RotateCcw className="h-4 w-4" />
-              Remboursements
+              {t("remboursements")}
             </span>
             <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">En attente <span className="font-semibold text-amber-600">{kpis.pending}</span></span>
-            <span className="text-muted-foreground">Traités <span className="font-semibold text-emerald-600">{kpis.processed}</span></span>
+            <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{kpis.pending}</span></span>
+            <span className="text-muted-foreground">{t("traites")} <span className="font-semibold text-emerald-600">{kpis.processed}</span></span>
             <span className="ml-auto text-muted-foreground">{tc("amount")} <span className="font-semibold">{formatCurrency(totalAmount)}</span></span>
           </div>
         </div>
       )}
 
-      {/* Filtres en flow normal */}
+
       <div>
-        {/* Première ligne : recherche + dates + view toggle */}
+
         <div className="flex flex-wrap items-end gap-2">
           <div className="relative flex-1 min-w-[200px] max-w-md">
-            <Label className="text-[10px]">Recherche</Label>
+            <Label className="text-[10px]">{t("recherche")}</Label>
             <div className="relative">
               <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Numéro, client, facture, raison…"
+                placeholder={t("numero_client_facture_raison")}
                 className="h-9 pl-8 text-xs"
               />
             </div>
           </div>
           <div>
-            <Label className="text-[10px]">Du</Label>
+            <Label className="text-[10px]">{t("du")}</Label>
             <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-36" />
           </div>
           <div>
-            <Label className="text-[10px]">Au</Label>
+            <Label className="text-[10px]">{t("au")}</Label>
             <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-36" />
           </div>
           {(dateFrom || dateTo) && (
             <Button onClick={() => { setDateFrom(""); setDateTo(""); }} size="sm" variant="ghost" className="h-9">
               <X className="h-3.5 w-3.5 mr-1" />
-              Effacer
+              {t("effacer")}
             </Button>
           )}
           <ViewToggle storageKey="refunds" defaultView="list" onChange={setView} />
         </div>
 
-        {/* Deuxième ligne : tabs statut */}
+
         <div className="flex bg-muted rounded-lg p-0.5 overflow-x-auto mt-2 w-fit max-w-full">
           {STATUS_TABS.map((tab) => (
             <button
@@ -517,13 +518,13 @@ export function RefundsView({
                 statusFilter === tab.key ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
-              {tab.label}
+              {t(tab.labelKey)}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Vue grille */}
+
       {view === "grid" ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((r) => (
@@ -533,10 +534,10 @@ export function RefundsView({
               subtitle={r.clientName}
               avatarName={r.clientName}
               badges={[
-                { label: r.status === "pending" ? "En attente" : r.status === "processed" ? "Traité" : r.status === "confirmed" ? "Confirmé" : r.status, variant: r.status === "confirmed" ? "secondary" : r.status === "pending" ? "destructive" : "outline" },
+                { label: r.status === "pending" ? t("attente") : r.status === "processed" ? t("traite") : r.status === "confirmed" ? t("confirme") : r.status, variant: r.status === "confirmed" ? "secondary" : r.status === "pending" ? "destructive" : "outline" },
               ]}
               stats={[
-                { label: "Montant TTC", value: formatCurrency(r.totalAmount) },
+                { label: t("montant_ttc"), value: formatCurrency(r.totalAmount) },
               ]}
               actions={getActions(r)}
               footer={
@@ -548,35 +549,35 @@ export function RefundsView({
             />
           ))}
           {filtered.length === 0 && (
-            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">Aucun remboursement trouvé</div>
+            <div className="col-span-full text-center py-12 text-sm text-muted-foreground">{t("aucun_remboursement_trouve")}</div>
           )}
         </div>
       ) : (
-        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder="Rechercher..." exportFilename="remboursements" storageKey="admin-refunds" />
+        <DataTable data={filtered} columns={columns} getRowId={(r) => r.id} searchPlaceholder={t("rechercher")} exportFilename="remboursements" storageKey="admin-refunds" />
       )}
 
-      <EditModal open={!!editRefund} onOpenChange={(o) => { if (!o) setEditRefund(null); }} title="Modifier le remboursement" description={editRefund?.refundNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
+      <EditModal open={!!editRefund} onOpenChange={(o) => { if (!o) setEditRefund(null); }} title={t("modifier_remboursement")} description={editRefund?.refundNumber} icon={Pencil} accent="bg-amber-500" onSubmit={handleEdit}>
         <div className="space-y-4">
-          <div className="space-y-2"><Label>Raison *</Label><Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} rows={3} /></div>
-          <div className="space-y-2"><Label>Montant HT (CAD) *</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
+          <div className="space-y-2"><Label>{t("raison")}</Label><Textarea value={editReason} onChange={(e) => setEditReason(e.target.value)} rows={3} /></div>
+          <div className="space-y-2"><Label>{t("montant_ht_cad")}</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} /></div>
           <div className="space-y-2"><Label>{tc("status")}</Label>
             <Select value={editStatus} onValueChange={setEditStatus}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="pending">En attente</SelectItem>
-                <SelectItem value="processed">Traité</SelectItem>
-                <SelectItem value="confirmed">Confirmé</SelectItem>
+                <SelectItem value="pending">{t("attente")}</SelectItem>
+                <SelectItem value="processed">{t("traite")}</SelectItem>
+                <SelectItem value="confirmed">{t("confirme")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-2"><Label>Notes</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} /></div>
+          <div className="space-y-2"><Label>{t("notes")}</Label><Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} /></div>
         </div>
       </EditModal>
 
       <ConfirmDialog
         open={!!deleteRefund}
         onOpenChange={(o) => { if (!o) setDeleteRefund(null); }}
-        title="Supprimer ce remboursement ?"
+        title={t("supprimer_remboursement")}
         description={`Le remboursement "${deleteRefund?.refundNumber}" sera supprimé définitivement.`}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
@@ -585,22 +586,22 @@ export function RefundsView({
       <ConfirmDialog
         open={!!stripeRefund}
         onOpenChange={(o) => { if (!o) setStripeRefund(null); }}
-        title="Émettre le remboursement ?"
+        title={t("emettre_remboursement")}
         description={
           stripeRefund
             ? `${formatCurrency(stripeRefund.totalAmount)} sera remboursé sur la carte du client (facture ${stripeRefund.invoiceNumber ?? "—"}). Délai bancaire de 5 à 10 jours ouvrables avant que le client voie le crédit.`
             : ""
         }
-        confirmLabel={processingStripe ? "Émission en cours…" : "Émettre"}
+        confirmLabel={processingStripe ? t("emission_cours") : t("emettre")}
         onConfirm={handleProcessStripe}
       />
 
-      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title="Nouveau remboursement" icon={RotateCcw} accent="bg-amber-500" submitLabel="Créer le remboursement" onSubmit={handleCreate}>
+      <CreateModal open={createOpen} onOpenChange={setCreateOpen} title={t("nouveau_remboursement")} icon={RotateCcw} accent="bg-amber-500" submitLabel={t("creer_remboursement")} onSubmit={handleCreate}>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>Client *</Label>
+            <Label>{t("client")}</Label>
             <Select value={newClientId} onValueChange={setNewClientId}>
-              <SelectTrigger><SelectValue placeholder="Sélectionner" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("selectionner")} /></SelectTrigger>
               <SelectContent>
                 {clients.map((c) => (
                   <SelectItem key={c.id} value={String(c.id)}>
@@ -611,9 +612,9 @@ export function RefundsView({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label>Facture liée</Label>
+            <Label>{t("facture_liee")}</Label>
             <Select value={newInvoiceId} onValueChange={setNewInvoiceId}>
-              <SelectTrigger><SelectValue placeholder="Aucune" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("aucune")} /></SelectTrigger>
               <SelectContent>
                 {invoices.map((inv) => (
                   <SelectItem key={inv.id} value={String(inv.id)}>{inv.invoiceNumber}</SelectItem>
@@ -622,11 +623,11 @@ export function RefundsView({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rf-reason">Raison *</Label>
+            <Label htmlFor="rf-reason">{t("raison")}</Label>
             <Textarea id="rf-reason" value={newReason} onChange={(e) => setNewReason(e.target.value)} rows={3} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rf-amount">Montant HT (CAD) *</Label>
+            <Label htmlFor="rf-amount">{t("montant_ht_cad")}</Label>
             <Input id="rf-amount" type="number" step="0.01" value={newAmount} onChange={(e) => setNewAmount(e.target.value)} placeholder="0.00" />
             {newAmount && Number(newAmount) > 0 && (
               <div className="text-xs text-muted-foreground space-y-0.5 mt-1 p-2 bg-muted rounded-md">
@@ -638,7 +639,7 @@ export function RefundsView({
             )}
           </div>
           <div className="space-y-2">
-            <Label htmlFor="rf-notes">Notes</Label>
+            <Label htmlFor="rf-notes">{t("notes")}</Label>
             <Textarea id="rf-notes" value={newNotes} onChange={(e) => setNewNotes(e.target.value)} rows={2} />
           </div>
         </div>

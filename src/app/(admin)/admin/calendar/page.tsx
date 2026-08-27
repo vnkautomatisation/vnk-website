@@ -1,9 +1,13 @@
 // Admin · Calendrier — navigation semaine + slots + RDV + creation
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { CalendarView } from "./calendar-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Calendrier" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("calendrier") };
+}
 
 export default async function CalendarPage() {
   // Charger 4 semaines de donnees (semaine courante + 3)

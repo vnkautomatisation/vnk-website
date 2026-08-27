@@ -87,7 +87,7 @@ import {
 } from "@/app/actions/hr-contracts";
 import {
   CONTRACT_TYPES,
-  getContractTypeLabel,
+  getContractTypeKey,
   normalizeContractType,
 } from "@/lib/document-templates/contract-types";
 
@@ -142,22 +142,23 @@ export type Contract = {
   employer: { fullName: string | null; email: string } | null;
 };
 
-const STATUS_TONE: Record<string, { label: string; tone: "success" | "warning" | "danger" | "info" | "neutral" }> = {
-  draft: { label: "Brouillon", tone: "neutral" },
-  sent: { label: "Envoye", tone: "info" },
-  signed_employee: { label: "Signe employe", tone: "warning" },
-  signed_employer: { label: "Signe employeur", tone: "warning" },
-  active: { label: "Actif", tone: "success" },
-  terminated: { label: "Resilie", tone: "danger" },
-  expired: { label: "Expire", tone: "neutral" },
+const STATUS_TONE: Record<string, { labelKey: string; tone: "success" | "warning" | "danger" | "info" | "neutral" }> = {
+  draft: { labelKey: "brouillon", tone: "neutral" },
+  sent: { labelKey: "envoye", tone: "info" },
+  signed_employee: { labelKey: "signe_employe", tone: "warning" },
+  signed_employer: { labelKey: "signe_employeur", tone: "warning" },
+  active: { labelKey: "actif", tone: "success" },
+  terminated: { labelKey: "resilie", tone: "danger" },
+  expired: { labelKey: "expire", tone: "neutral" },
 };
 
 // Conserve un fallback legacy ; pour les nouvelles valeurs, on délègue à
 // getContractTypeLabel (terminologie QC + rétro-compat).
-function typeLabel(value: string | null | undefined): string {
+function typeLabel(value: string | null | undefined, autre: string, t: (k: string) => string): string {
   if (!value) return "-";
-  if (value === "autre") return "Autre";
-  return getContractTypeLabel(value) || value;
+  if (value === "autre") return autre;
+  const key = getContractTypeKey(value);
+  return key ? t(key) : value;
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -197,11 +198,12 @@ export function ContractsView({
   currentAdminId: number;
   isHr: boolean;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>(isHr ? "overview" : "contracts");
 
-  // --- Modals state ----------------------------------------------
+
   const [contractDialog, setContractDialog] = useState<{ open: boolean }>({ open: false });
   const [templateDialog, setTemplateDialog] = useState<{ open: boolean; existing: Template | null }>({
     open: false,
@@ -220,8 +222,8 @@ export function ContractsView({
     description?: string;
     filename?: string;
   } | null>(null);
-  // Apercu PDF template standalone : on choisit d'abord l'employe test,
-  // puis on rend le PDF via TemplatePdfPreviewButton (declenche programmaticly).
+
+
   const [templatePreviewPicker, setTemplatePreviewPicker] = useState<Template | null>(null);
   const [templatePreviewCtx, setTemplatePreviewCtx] = useState<{
     template: Template;
@@ -229,7 +231,7 @@ export function ContractsView({
     nonce: number;
   } | null>(null);
 
-  // Map id->template pour relooker depuis les contrats
+
   const templateById = useMemo(() => {
     const m = new Map<number, Template>();
     for (const t of templates) m.set(t.id, t);
@@ -247,7 +249,7 @@ export function ContractsView({
     [],
   );
 
-  // --- Sticky bar pattern STANDARD (ref my-documents-view.tsx) ----
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -261,13 +263,13 @@ export function ContractsView({
     return () => io.disconnect();
   }, []);
 
-  // Portal target KPIs dans module-nav mobile
+
   const [navExtraEl, setNavExtraEl] = useState<HTMLElement | null>(null);
   useEffect(() => {
     setNavExtraEl(document.getElementById("vnk-module-nav-extra"));
   }, []);
 
-  // --- KPI computations ------------------------------------------
+
   const kpis = useMemo(() => {
     const active = contracts.filter((c) => c.status === "active").length;
     const pendingSignature = contracts.filter(
@@ -282,20 +284,20 @@ export function ContractsView({
     return { active, pendingSignature, expiringSoon, templatesActive };
   }, [contracts, templates]);
 
-  // --- Tabs --------------------------------------------------------
+
   const TABS: TabItem<TabKey>[] = useMemo(() => {
     const items: TabItem<TabKey>[] = [];
-    if (isHr) items.push({ key: "overview", label: "Vue d'ensemble", icon: Sparkles });
+    if (isHr) items.push({ key: "overview", label: t("vue_ensemble"), icon: Sparkles });
     items.push({
       key: "contracts",
-      label: isHr ? "Contrats" : "Mes contrats",
+      label: isHr ? t("contrats") : t("mes_contrats"),
       icon: FileSignature,
       count: contracts.length,
     });
     if (isHr) {
       items.push({
         key: "templates",
-        label: "Templates",
+        label: t("templates"),
         icon: FileText,
         count: templates.length,
       });
@@ -303,21 +305,21 @@ export function ContractsView({
     return items;
   }, [isHr, contracts.length, templates.length]);
 
-  // --- Send / Sign / Terminate handlers (commun aux tabs) --------
+
   const onSendContract = useCallback(
     async (c: Contract) => {
       const r = await sendContractAction({ id: c.id });
       if (r.success) {
-        toast.success("Contrat envoye a l'employe");
+        toast.success(t("contrat_envoye_employe"));
         router.refresh();
-      } else toast.error(r.error || "Erreur");
+      } else toast.error(r.error || t("erreur"));
     },
     [router],
   );
 
   return (
     <div className="space-y-4">
-      {/* ====== Header navy gradient ====== */}
+
       <div className="rounded-xl bg-gradient-to-br from-[#0F2D52] via-[#15406d] to-[#0F2D52] px-4 sm:px-5 py-4 text-white relative overflow-hidden">
         <div
           className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-32 translate-x-32"
@@ -330,12 +332,12 @@ export function ContractsView({
             </div>
             <div className="min-w-0">
               <h1 className="text-lg font-bold">
-                {isHr ? "Contrats d'employes" : "Mes contrats"}
+                {isHr ? t("contrats_employes") : t("mes_contrats")}
               </h1>
               <p className="text-xs text-white/80">
                 {isHr
-                  ? "Templates standardises, generation et double signature des contrats."
-                  : "Consultez et signez electroniquement vos contrats d'emploi."}
+                  ? t("templates_standardises_generation_double_signature")
+                  : t("consultez_signez_electroniquement_contrats_emploi")}
               </p>
             </div>
           </div>
@@ -348,7 +350,7 @@ export function ContractsView({
                   className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Nouveau template
+                  {t("nouveau_template")}
                 </Button>
               ) : (
                 <Button
@@ -357,7 +359,7 @@ export function ContractsView({
                   className="h-8 text-xs bg-white text-[#0F2D52] hover:bg-white/90 font-semibold"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1.5" />
-                  Nouveau contrat
+                  {t("nouveau_contrat")}
                 </Button>
               )}
             </div>
@@ -365,10 +367,10 @@ export function ContractsView({
         </div>
       </div>
 
-      {/* ====== KPIs ====== */}
+
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <DocumentStatsCard
-          label="Contrats actifs"
+          label={t("contrats_actifs")}
           value={kpis.active}
           icon={CheckCircle2}
           accent="success"
@@ -376,49 +378,49 @@ export function ContractsView({
           onClick={() => setTab("contracts")}
         />
         <DocumentStatsCard
-          label="En attente signature"
+          label={t("attente_signature_2")}
           value={kpis.pendingSignature}
           icon={AlertCircle}
           accent={kpis.pendingSignature > 0 ? "warning" : "info"}
-          hint="Envoye ou partiellement signe"
+          hint={t("envoye_partiellement_signe")}
           onClick={() => setTab("contracts")}
         />
         <DocumentStatsCard
-          label="Echeance < 30j"
+          label={t("echeance_30j")}
           value={kpis.expiringSoon}
           icon={CalendarClock}
           accent={kpis.expiringSoon > 0 ? "danger" : "info"}
-          hint="Contrats actifs arrivant a echeance"
+          hint={t("contrats_actifs_arrivant_echeance")}
         />
         <DocumentStatsCard
-          label="Templates"
+          label={t("templates")}
           value={kpis.templatesActive}
           icon={FileText}
           accent="navy"
-          hint={isHr ? "Disponibles pour generation" : "Modeles RH"}
+          hint={isHr ? t("disponibles_generation") : t("modeles_rh")}
           onClick={() => isHr && setTab("templates")}
         />
       </div>
 
-      {/* Sentinel */}
+
       <div ref={sentinelRef} aria-hidden className="h-px" />
 
-      {/* Portal KPIs vers module-nav mobile */}
+
       {navExtraEl && scrolled
         ? createPortal(
             <div className="flex items-center gap-x-2 sm:gap-x-3 text-[11px] sm:text-xs whitespace-nowrap lg:hidden">
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Act :</span>
-                  <span className="hidden min-[480px]:inline">Actifs :</span>
+                  <span className="min-[480px]:hidden">{t("act")}</span>
+                  <span className="hidden min-[480px]:inline">{t("actifs")}</span>
                 </span>
                 <span className="font-semibold text-emerald-600">{kpis.active}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">À sig :</span>
-                  <span className="hidden min-[480px]:inline">A signer :</span>
+                  <span className="min-[480px]:hidden">{t("sig")}</span>
+                  <span className="hidden min-[480px]:inline">{t("signer")}</span>
                 </span>
                 <span className={kpis.pendingSignature > 0 ? "font-semibold text-amber-600" : "font-semibold"}>
                   {kpis.pendingSignature}
@@ -427,8 +429,8 @@ export function ContractsView({
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
                 <span className="text-muted-foreground">
-                  <span className="min-[480px]:hidden">Éch :</span>
-                  <span className="hidden min-[480px]:inline">Echeance :</span>
+                  <span className="min-[480px]:hidden">{t("ech")}</span>
+                  <span className="hidden min-[480px]:inline">{t("echeance")}</span>
                 </span>
                 <span className={kpis.expiringSoon > 0 ? "font-semibold text-red-600" : "font-semibold"}>
                   {kpis.expiringSoon}
@@ -439,7 +441,7 @@ export function ContractsView({
           )
         : null}
 
-      {/* Sticky container : mini-bar desktop + tabs (toujours) */}
+
       <div
         className={cn(
           "sticky top-[92px] pt-4 lg:top-[64px] lg:pt-0 z-20 bg-background",
@@ -453,20 +455,20 @@ export function ContractsView({
         )}>
           <span className="font-bold text-sm text-[#0F2D52] inline-flex items-center gap-1.5 pr-3 border-r shrink-0">
             <FileSignature className="h-4 w-4" />
-            Contrats
+            {t("contrats")}
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Actifs :</span>
+            <span className="text-muted-foreground">{t("actifs")}</span>
             <span className="font-semibold text-emerald-600">{kpis.active}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">A signer :</span>
+            <span className="text-muted-foreground">{t("signer")}</span>
             <span className={kpis.pendingSignature > 0 ? "font-semibold text-amber-600" : "font-semibold text-muted-foreground"}>
               {kpis.pendingSignature}
             </span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
-            <span className="text-muted-foreground">Echeance &lt; 30j :</span>
+            <span className="text-muted-foreground">{t("echeance_lt_30j")}</span>
             <span className={kpis.expiringSoon > 0 ? "font-semibold text-red-600" : "font-semibold text-muted-foreground"}>
               {kpis.expiringSoon}
             </span>
@@ -478,16 +480,16 @@ export function ContractsView({
               onClick={() => setContractDialog({ open: true })}
             >
               <Plus className="h-3 w-3 mr-1" />
-              Nouveau
+              {t("nouveau")}
             </Button>
           )}
         </div>
         <div className="px-4 sm:px-5 lg:px-4">
-          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel="Navigation contrats" />
+          <SettingsTabs tabs={TABS} active={tab} onChange={setTab} ariaLabel={t("navigation_contrats")} />
         </div>
       </div>
 
-      {/* ====== Tab content ====== */}
+
       {tab === "overview" && isHr && (
         <OverviewTab
           contracts={contracts}
@@ -524,7 +526,7 @@ export function ContractsView({
         />
       )}
 
-      {/* ============== Modals ============== */}
+
       <ContractWizard
         open={contractDialog.open}
         onClose={() => setContractDialog({ open: false })}
@@ -565,19 +567,19 @@ export function ContractsView({
             vacationPct: data.vacationPct ?? null,
           });
           if (!r.success) {
-            toast.error(r.error || "Erreur");
-            throw new Error(r.error || "Erreur");
+            toast.error(r.error || t("erreur"));
+            throw new Error(r.error || t("erreur"));
           }
           if (data.sendForSignature && r.data?.id) {
             const sendRes = await sendContractAction({ id: r.data.id });
             if (sendRes.success) {
-              toast.success("Contrat cree et envoye pour signature");
+              toast.success(t("contrat_cree_envoye_signature"));
             } else {
-              toast.success("Contrat cree en brouillon");
-              toast.error(sendRes.error || "Envoi pour signature impossible");
+              toast.success(t("contrat_cree_brouillon"));
+              toast.error(sendRes.error || t("envoi_signature_impossible"));
             }
           } else {
-            toast.success("Contrat cree en brouillon");
+            toast.success(t("contrat_cree_brouillon"));
           }
           router.refresh();
         }}
@@ -630,8 +632,8 @@ export function ContractsView({
               targetDepartments: data.targetDepartments,
             });
           }
-          if (!r.success) throw new Error(r.error || "Erreur");
-          toast.success(existing ? "Template modifie" : "Template cree");
+          if (!r.success) throw new Error(r.error || t("erreur"));
+          toast.success(existing ? t("template_modifie") : t("template_cree"));
           setTemplateDialog({ open: false, existing: null });
           router.refresh();
         }}
@@ -649,19 +651,19 @@ export function ContractsView({
         open={!!terminateDialog}
         onOpenChange={(o) => !o && setTerminateDialog(null)}
         title={`Resilier ${terminateDialog?.title ?? ""} ?`}
-        description="Cette action marquera le contrat comme termine. Conserve pour l'historique legal."
-        confirmLabel="Resilier"
+        description={t("action_marquera_contrat_comme_termine")}
+        confirmLabel={t("resilier")}
         variant="destructive"
         onConfirm={async () => {
           if (!terminateDialog) return;
           const reason = await promptDialog({
-            title: "Motif de resiliation",
-            description: "Decrivez precisement la raison de la resiliation (conserve pour l'historique legal).",
-            label: "Motif *",
+            title: t("motif_resiliation"),
+            description: t("decrivez_precisement_raison_resiliation"),
+            label: t("motif"),
             multiline: true,
             required: true,
             variant: "destructive",
-            confirmLabel: "Resilier",
+            confirmLabel: t("resilier"),
           });
           if (!reason) {
             setTerminateDialog(null);
@@ -669,7 +671,7 @@ export function ContractsView({
           }
           const r = await terminateContractAction({ id: terminateDialog.id, reason });
           if (r.success) {
-            toast.success("Contrat resilie");
+            toast.success(t("contrat_resilie"));
             router.refresh();
           } else toast.error(r.error || "");
           setTerminateDialog(null);
@@ -680,14 +682,14 @@ export function ContractsView({
         open={!!confirmDelTpl}
         onOpenChange={(o) => !o && setConfirmDelTpl(null)}
         title={`Supprimer ${confirmDelTpl?.name ?? ""} ?`}
-        description="Si le template est deja utilise, il sera desactive au lieu d'etre supprime."
+        description={t("si_template_deja_utilise_il")}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
           if (!confirmDelTpl) return;
           const r = await deleteContractTemplateAction({ id: confirmDelTpl.id });
           if (r.success) {
-            toast.success("Template supprime");
+            toast.success(t("template_supprime"));
             router.refresh();
           } else toast.error(r.error || "");
           setConfirmDelTpl(null);
@@ -703,7 +705,7 @@ export function ContractsView({
         onClose={() => setPdfPreview(null)}
       />
 
-      {/* Dialog : choisir un employe test pour l'apercu PDF d'un template */}
+
       <PickEmployeeForPreviewDialog
         open={!!templatePreviewPicker}
         onClose={() => setTemplatePreviewPicker(null)}
@@ -721,11 +723,11 @@ export function ContractsView({
           position: e.position?.name ?? null,
           avatarUrl: e.avatarUrl ?? null,
         }))}
-        title="Choisir un employe pour l'apercu du template"
-        description="Selectionnez un employe pour voir le contrat genere avec ses informations (poste, salaire, dates...)."
+        title={t("choisir_employe_apercu_template")}
+        description={t("selectionnez_employe_voir_contrat_genere")}
       />
 
-      {/* Auto-trigger TemplatePdfPreviewButton apres choix employe */}
+
       {templatePreviewCtx && (
         <TemplatePreviewAutoTrigger
           key={templatePreviewCtx.nonce}
@@ -751,13 +753,14 @@ function TemplatePreviewAutoTrigger({
   employeeId: number;
   onDone: () => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const triggerRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    // Au prochain frame, clic sur le bouton pour declencher l'apercu PDF
-    const t = window.setTimeout(() => {
+
+    const timer = window.setTimeout(() => {
       triggerRef.current?.click();
     }, 0);
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(timer);
   }, []);
 
   return (
@@ -768,10 +771,10 @@ function TemplatePreviewAutoTrigger({
         documentType="contract"
         employeeId={employeeId}
         onError={(err) => {
-          toast.error(err.message || "Apercu indisponible");
+          toast.error(err.message || t("apercu_indisponible"));
           onDone();
         }}
-        trigger={<button ref={triggerRef} type="button">Apercu</button>}
+        trigger={<button ref={triggerRef} type="button">{t("apercu")}</button>}
       />
     </div>
   );
@@ -797,6 +800,7 @@ function OverviewTab({
   onNewTemplate: () => void;
   onOpenPdf: (c: Contract) => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const pendingContracts = useMemo(
     () =>
       contracts
@@ -835,25 +839,25 @@ function OverviewTab({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-      {/* En attente signature */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <AlertCircle className="h-4 w-4 text-[#0F2D52]" />
-            En attente de signature
+            {t("attente_signature")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoContracts}>
-            Voir tout
+            {t("voir_tout")}
           </Button>
         </div>
         {pendingContracts.length === 0 ? (
           <p className="text-xs text-muted-foreground py-4 text-center">
-            Aucun contrat en attente.
+            {t("aucun_contrat_attente")}
           </p>
         ) : (
           <div className="space-y-1.5">
             {pendingContracts.map((c) => {
-              const status = STATUS_TONE[c.status] ?? { label: c.status, tone: "neutral" as const };
+              const status = STATUS_TONE[c.status];
               return (
                 <button
                   key={c.id}
@@ -867,7 +871,7 @@ function OverviewTab({
                       {c.admin.fullName ?? c.admin.email}
                     </span>
                   </span>
-                  <ToneBadge tone={status.tone}>{status.label}</ToneBadge>
+                  <ToneBadge tone={status?.tone ?? "neutral"}>{status ? t(status.labelKey) : c.status}</ToneBadge>
                 </button>
               );
             })}
@@ -879,21 +883,21 @@ function OverviewTab({
           onClick={onNewContract}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Nouveau contrat
+          {t("nouveau_contrat")}
         </Button>
       </Card>
 
-      {/* Echeances proches */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-[#0F2D52]" />
-            Echeances prochaines
+            {t("echeances_prochaines")}
           </h3>
         </div>
         {expiringContracts.length === 0 ? (
           <p className="text-xs text-muted-foreground py-4 text-center">
-            Aucun contrat n'arrive a echeance dans les 60 jours.
+            {t("aucun_contrat_echeance_60j")}
           </p>
         ) : (
           <div className="space-y-1.5">
@@ -921,24 +925,24 @@ function OverviewTab({
         )}
       </Card>
 
-      {/* Templates + repartition */}
+
       <Card className="p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-bold flex items-center gap-2">
             <FileText className="h-4 w-4 text-[#0F2D52]" />
-            Templates
+            {t("templates")}
           </h3>
           <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={onGoTemplates}>
-            Gerer
+            {t("gerer")}
           </Button>
         </div>
         <div className="rounded-md border bg-muted/20 p-3 space-y-2">
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Disponibles</span>
+            <span className="text-muted-foreground">{t("disponibles")}</span>
             <span className="font-semibold">{templates.filter((t) => t.isActive).length}</span>
           </div>
           <div className="flex items-baseline justify-between text-xs">
-            <span className="text-muted-foreground">Lies a un poste</span>
+            <span className="text-muted-foreground">{t("lies_poste")}</span>
             <span className="font-semibold">
               {templates.filter((t) => t.positionId !== null).length}
             </span>
@@ -947,11 +951,11 @@ function OverviewTab({
         {typeDistribution.length > 0 && (
           <div className="pt-2 border-t space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Repartition (contrats actifs)
+              {t("repartition_contrats_actifs")}
             </p>
             {typeDistribution.map(([type, count]) => (
               <div key={type} className="flex items-center justify-between text-xs gap-2">
-                <span className="truncate flex-1">{typeLabel(type)}</span>
+                <span className="truncate flex-1">{typeLabel(type, t("autre"), t)}</span>
                 <Badge variant="outline" className="text-[10px]">
                   {count}
                 </Badge>
@@ -966,7 +970,7 @@ function OverviewTab({
           onClick={onNewTemplate}
         >
           <Plus className="h-3 w-3 mr-1" />
-          Nouveau template
+          {t("nouveau_template")}
         </Button>
       </Card>
     </div>
@@ -997,8 +1001,9 @@ function ContractsTab({
   onNewContract: () => void;
   templateById: Map<number, Template>;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
-  // Mes contrats vs ceux des autres
+
   const myContracts = useMemo(
     () => contracts.filter((c) => c.adminId === currentAdminId),
     [contracts, currentAdminId],
@@ -1008,7 +1013,7 @@ function ContractsTab({
     [contracts, currentAdminId],
   );
 
-  // Filtres pour "Tous les employes"
+
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -1048,8 +1053,8 @@ function ContractsTab({
         <FileSignature className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
           {isHr
-            ? "Aucun contrat cree. Commencez par un template puis generez un contrat pour un employe."
-            : "Aucun contrat emis pour votre compte."}
+            ? t("aucun_contrat_cree_commencez_template")
+            : t("aucun_contrat_emis_compte")}
         </p>
         {isHr && (
           <Button
@@ -1058,7 +1063,7 @@ function ContractsTab({
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
           >
             <Plus className="h-3.5 w-3.5 mr-1.5" />
-            Nouveau contrat
+            {t("nouveau_contrat")}
           </Button>
         )}
       </Card>
@@ -1067,12 +1072,12 @@ function ContractsTab({
 
   return (
     <div className="space-y-4">
-      {/* Mes contrats */}
+
       {myContracts.length > 0 && (
         <section className="space-y-2">
           <h2 className="text-[11px] font-bold text-[#0F2D52] uppercase tracking-wider flex items-center gap-1.5">
             <Briefcase className="h-3.5 w-3.5" />
-            Mes contrats
+            {t("mes_contrats")}
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {myContracts.map((c) => (
@@ -1092,7 +1097,7 @@ function ContractsTab({
         </section>
       )}
 
-      {/* Autres employes (HR only) */}
+
       {isHr && othersContracts.length > 0 && (
         <section className="space-y-3">
           <h2 className="text-[11px] font-bold text-[#0F2D52] uppercase tracking-wider flex items-center gap-1.5">
@@ -1100,7 +1105,7 @@ function ContractsTab({
             Tous les employes ({othersContracts.length})
           </h2>
 
-          {/* Filtres */}
+
           <Card className="p-3">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
               <div className="relative">
@@ -1108,7 +1113,7 @@ function ContractsTab({
                 <Input
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Rechercher employe ou titre..."
+                  placeholder={t("rechercher_employe_titre")}
                   className="h-9 text-sm pl-7"
                 />
               </div>
@@ -1117,23 +1122,23 @@ function ContractsTab({
                   <SelectValue placeholder={tc("status")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les statuts</SelectItem>
+                  <SelectItem value="all">{t("tous_statuts")}</SelectItem>
                   {Object.entries(STATUS_TONE).map(([k, v]) => (
                     <SelectItem key={k} value={k}>
-                      {v.label}
+                      {t(v.labelKey)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
               <Select value={typeFilter} onValueChange={setTypeFilter}>
                 <SelectTrigger className="h-9 text-sm">
-                  <SelectValue placeholder="Type" />
+                  <SelectValue placeholder={t("type")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tous les types</SelectItem>
-                  {contractTypes.map((t) => (
-                    <SelectItem key={t} value={t}>
-                      {typeLabel(t)}
+                  <SelectItem value="all">{t("tous_types")}</SelectItem>
+                  {contractTypes.map((ct) => (
+                    <SelectItem key={ct} value={ct}>
+                      {typeLabel(ct, t("autre"), t)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -1143,7 +1148,7 @@ function ContractsTab({
 
           {filtered.length === 0 ? (
             <Card className="p-8 text-center text-sm text-muted-foreground">
-              Aucun resultat avec ces filtres.
+              {t("aucun_resultat_filtres")}
             </Card>
           ) : (
             <>
@@ -1170,26 +1175,26 @@ function ContractsTab({
                     {filtered.length > 1 ? "s" : ""}
                   </span>
                   <div className="flex items-center gap-1">
-                    <ActionTooltip label="Page precedente">
+                    <ActionTooltip label={t("page_precedente")}>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => setPage((p) => Math.max(0, p - 1))}
                         disabled={page === 0}
-                        aria-label="Page precedente"
+                        aria-label={t("page_precedente")}
                       >
                         <ChevronLeft className="h-3.5 w-3.5" />
                       </Button>
                     </ActionTooltip>
-                    <ActionTooltip label="Page suivante">
+                    <ActionTooltip label={t("page_suivante")}>
                       <Button
                         variant="outline"
                         size="icon"
                         className="h-7 w-7"
                         onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
                         disabled={page >= totalPages - 1}
-                        aria-label="Page suivante"
+                        aria-label={t("page_suivante")}
                       >
                         <ChevronRight className="h-3.5 w-3.5" />
                       </Button>
@@ -1225,12 +1230,13 @@ function ContractRichCard({
   onSign: (as: "employee" | "employer") => void;
   onTerminate: () => void;
   onSend: () => void;
-  /** Template source pour activer l'apercu PDF des contrats brouillons. */
+
   template: Template | null;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const c = contract;
-  const status = STATUS_TONE[c.status] ?? { label: c.status, tone: "neutral" as const };
+  const status = STATUS_TONE[c.status];
   const canSignEmployee = mine && c.status === "sent" && !c.employeeSignedAt;
   const canSignEmployer = isHr && c.employeeSignedAt && !c.employerSignedAt && c.status !== "terminated";
   const canSend = isHr && c.status === "draft";
@@ -1246,7 +1252,7 @@ function ContractRichCard({
   return (
     <Card className="vnk-card-hover overflow-hidden">
       <div className="p-4 space-y-3">
-        {/* Header */}
+
         <div className="flex items-start gap-3">
           <div className="h-10 w-10 rounded-lg bg-[#0F2D52]/8 ring-1 ring-[#0F2D52]/15 flex items-center justify-center shrink-0">
             <FileSignature className="h-5 w-5 text-[#0F2D52]" />
@@ -1257,8 +1263,8 @@ function ContractRichCard({
               {c.admin.fullName || c.admin.email}
             </p>
             <div className="flex flex-wrap gap-1 mt-1.5">
-              <ToneBadge tone={status.tone}>{status.label}</ToneBadge>
-              <ToneBadge tone="info">{typeLabel(c.contractType)}</ToneBadge>
+              <ToneBadge tone={status?.tone ?? "neutral"}>{status ? t(status.labelKey) : c.status}</ToneBadge>
+              <ToneBadge tone="info">{typeLabel(c.contractType, t("autre"), t)}</ToneBadge>
               {endingSoon && (
                 <ToneBadge tone="danger" icon={AlertTriangle}>
                   Fin {formatDate(c.endDate)}
@@ -1268,25 +1274,25 @@ function ContractRichCard({
           </div>
         </div>
 
-        {/* Infos cles */}
+
         <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2">
-          <InfoRow icon={CalendarIcon} label="Debut" value={formatDate(c.startDate)} />
-          {c.endDate && <InfoRow icon={CalendarIcon} label="Fin" value={formatDate(c.endDate)} />}
+          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate)} />
+          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate)} />}
           {c.salaryAnnual != null && (
-            <InfoRow icon={Coins} label="Salaire / an" value={fmtMoney(c.salaryAnnual) ?? "-"} />
+            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual) ?? "-"} />
           )}
           {c.hourlyRate != null && (
-            <InfoRow icon={Coins} label="Taux / h" value={`${Number(c.hourlyRate).toFixed(2)} $`} />
+            <InfoRow icon={Coins} label={t("taux_h")} value={`${Number(c.hourlyRate).toFixed(2)} $`} />
           )}
           {c.hoursPerWeek != null && (
-            <InfoRow icon={TrendingUp} label="Heures / sem" value={`${c.hoursPerWeek} h`} />
+            <InfoRow icon={TrendingUp} label={t("heures_sem")} value={`${c.hoursPerWeek} h`} />
           )}
           {c.vacationPct != null && (
-            <InfoRow icon={TrendingUp} label="Vacances" value={`${c.vacationPct} %`} />
+            <InfoRow icon={TrendingUp} label={t("vacances")} value={`${c.vacationPct} %`} />
           )}
         </div>
 
-        {/* Signatures status (dual party) */}
+
         <div className="flex flex-wrap gap-1.5 text-[10px]">
           <SignatureStatusBadge
             employeeSignedAt={c.employeeSignedAt}
@@ -1296,7 +1302,7 @@ function ContractRichCard({
           />
         </div>
 
-        {/* Actions */}
+
         <div className="flex flex-wrap gap-1.5 pt-1 border-t -mb-1">
           {canSend && (
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onSend}>
@@ -1311,7 +1317,7 @@ function ContractRichCard({
               onClick={() => onSign("employee")}
             >
               <FileSignature className="h-3 w-3 mr-1" />
-              Signer
+              {t("signer_2")}
             </Button>
           )}
           {canSignEmployer && (
@@ -1321,13 +1327,13 @@ function ContractRichCard({
               onClick={() => onSign("employer")}
             >
               <FileSignature className="h-3 w-3 mr-1" />
-              Contresigner
+              {t("contresigner")}
             </Button>
           )}
           {canDownloadPdf && (
             <Button size="sm" variant="outline" className="h-7 text-xs" onClick={onOpenPdf}>
               <FileText className="h-3 w-3 mr-1" />
-              Apercu PDF
+              {t("apercu_pdf")}
             </Button>
           )}
           {/* Brouillon ou en cours de signature : pas de PDF final stocke,
@@ -1339,11 +1345,11 @@ function ContractRichCard({
               documentType="contract"
               employeeId={c.adminId}
               contractId={c.id}
-              onError={(err) => toast.error(err.message || "Apercu indisponible")}
+              onError={(err) => toast.error(err.message || t("apercu_indisponible"))}
               trigger={
                 <Button size="sm" variant="outline" className="h-7 text-xs">
                   <FileText className="h-3 w-3 mr-1" />
-                  Apercu PDF
+                  {t("apercu_pdf")}
                 </Button>
               }
             />
@@ -1356,7 +1362,7 @@ function ContractRichCard({
               onClick={onTerminate}
             >
               <Ban className="h-3 w-3 mr-1" />
-              Resilier
+              {t("resilier")}
             </Button>
           )}
         </div>
@@ -1399,6 +1405,7 @@ function TemplatesTab({
   onDelete: (t: Template) => void;
   onPreviewTemplate: (t: Template) => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("all");
 
@@ -1416,11 +1423,11 @@ function TemplatesTab({
       <Card className="p-10 text-center space-y-3">
         <FileText className="h-10 w-10 mx-auto text-muted-foreground/40" />
         <p className="text-sm text-muted-foreground">
-          Aucun template. Creez-en un pour standardiser les contrats par poste.
+          {t("aucun_template_creez_standardiser_contrats")}
         </p>
         <Button size="sm" onClick={onCreate} className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white">
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Nouveau template
+          {t("nouveau_template")}
         </Button>
       </Card>
     );
@@ -1434,7 +1441,7 @@ function TemplatesTab({
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher un template..."
+            placeholder={t("rechercher_template")}
             className="h-9 text-sm pl-7"
           />
         </div>
@@ -1443,13 +1450,13 @@ function TemplatesTab({
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Tous les types</SelectItem>
-            {CONTRACT_TYPES.map((t) => (
-              <SelectItem key={t.value} value={t.value}>
-                {t.label}
+            <SelectItem value="all">{t("tous_types")}</SelectItem>
+            {CONTRACT_TYPES.map((ct) => (
+              <SelectItem key={ct.value} value={ct.value}>
+                {t(ct.labelKey)}
               </SelectItem>
             ))}
-            <SelectItem value="autre">Autre</SelectItem>
+            <SelectItem value="autre">{t("autre")}</SelectItem>
           </SelectContent>
         </Select>
         <Button
@@ -1458,13 +1465,13 @@ function TemplatesTab({
           className="h-9 text-xs bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
         >
           <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Nouveau
+          {t("nouveau")}
         </Button>
       </div>
 
       {filtered.length === 0 ? (
         <Card className="p-10 text-center text-sm text-muted-foreground">
-          Aucun template trouve.
+          {t("aucun_template_trouve")}
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1484,7 +1491,7 @@ function TemplatesTab({
 }
 
 function TemplateCard({
-  t,
+  t: tpl,
   onEdit,
   onDelete,
   onPreview,
@@ -1494,13 +1501,14 @@ function TemplateCard({
   onDelete: () => void;
   onPreview: () => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const meta: string[] = [];
-  if (t.defaultSalary != null) meta.push(`${Number(t.defaultSalary).toLocaleString("fr-CA")} $/an`);
-  if (t.defaultRate != null) meta.push(`${Number(t.defaultRate).toFixed(2)} $/h`);
-  if (t.defaultHoursPerWeek != null) meta.push(`${t.defaultHoursPerWeek} h/sem`);
-  if (t.defaultVacationPct != null) meta.push(`${t.defaultVacationPct}% vac.`);
-  if (t.probationDays != null) meta.push(`${t.probationDays}j probation`);
+  if (tpl.defaultSalary != null) meta.push(`${Number(tpl.defaultSalary).toLocaleString("fr-CA")} $/an`);
+  if (tpl.defaultRate != null) meta.push(`${Number(tpl.defaultRate).toFixed(2)} $/h`);
+  if (tpl.defaultHoursPerWeek != null) meta.push(`${tpl.defaultHoursPerWeek} h/sem`);
+  if (tpl.defaultVacationPct != null) meta.push(`${tpl.defaultVacationPct}% vac.`);
+  if (tpl.probationDays != null) meta.push(`${tpl.probationDays}j probation`);
 
   return (
     <Card className="vnk-card-hover overflow-hidden">
@@ -1510,26 +1518,26 @@ function TemplateCard({
             <FileText className="h-5 w-5 text-[#0F2D52]" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold truncate">{t.name}</p>
+            <p className="text-sm font-semibold truncate">{tpl.name}</p>
             <p className="text-xs text-muted-foreground truncate">
-              {typeLabel(t.contractType)}
-              {t.position ? ` - ${t.position.name}` : ""}
+              {typeLabel(tpl.contractType, t("autre"), t)}
+              {tpl.position ? ` - ${tpl.position.name}` : ""}
             </p>
             <div className="flex flex-wrap gap-1 mt-1.5">
-              <ToneBadge tone={t.isActive ? "success" : "neutral"}>
-                {t.isActive ? "Actif" : "Desactive"}
+              <ToneBadge tone={tpl.isActive ? "success" : "neutral"}>
+                {tpl.isActive ? t("actif") : t("desactive")}
               </ToneBadge>
             </div>
           </div>
           <div className="flex items-center gap-0.5 shrink-0">
-            <ActionTooltip label="Apercu PDF">
+            <ActionTooltip label={t("apercu_pdf")}>
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="h-8 w-8"
                 onClick={onPreview}
-                aria-label="Apercu PDF"
+                aria-label={t("apercu_pdf")}
               >
                 <Eye className="h-4 w-4" />
               </Button>
@@ -1593,11 +1601,12 @@ function SignDialog({
   onClose: () => void;
   onSigned: () => void;
 }) {
+  const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const [signatureData, setSignatureData] = useState<string | null>(null);
   const [acknowledged, setAcknowledged] = useState(false);
   const [pending, setPending] = useState(false);
-  // Force remount du SignaturePad apres clear
+
   const [padKey, setPadKey] = useState(0);
 
   useEffect(() => {
@@ -1615,7 +1624,7 @@ function SignDialog({
 
   const submit = async () => {
     if (!signatureData) {
-      toast.error("Signez avant de soumettre");
+      toast.error(t("signez_avant_soumettre"));
       return;
     }
     setPending(true);
@@ -1625,10 +1634,10 @@ function SignDialog({
         : await signContractAsEmployerAction({ id: contract.id, signatureData });
     setPending(false);
     if (r.success) {
-      toast.success(as === "employee" ? "Signe !" : "Contresigne - contrat actif");
+      toast.success(as === "employee" ? t("signe") : t("contresigne_contrat_actif"));
       onSigned();
       onClose();
-    } else toast.error(r.error || "Erreur");
+    } else toast.error(r.error || t("erreur"));
   };
 
   const clear = () => {
@@ -1644,14 +1653,14 @@ function SignDialog({
             <DialogTitle className="text-white text-sm sm:text-base flex items-center gap-2">
               <FileSignature className="h-4 w-4 shrink-0" />
               <span className="truncate">
-                {as === "employee" ? "Signer mon contrat" : "Contresigner (employeur)"}
+                {as === "employee" ? t("signer_mon_contrat") : t("contresigner_employeur")}
               </span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs truncate">
               {contract.title} -{" "}
               {as === "employee"
-                ? "Votre signature confirme votre engagement."
-                : "Validation finale de l'employeur."}
+                ? t("signature_confirme_engagement")
+                : t("validation_finale_employeur")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -1659,12 +1668,12 @@ function SignDialog({
         <div className="p-4 sm:p-5 space-y-3 overflow-y-auto flex-1">
           <div className="rounded-lg border bg-muted/20 p-3">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-1">
-              Resume du contrat
+              {t("resume_contrat")}
             </p>
             <p className="text-sm font-semibold">{contract.title}</p>
             <p className="text-xs text-muted-foreground">
               {contract.admin.fullName || contract.admin.email} -{" "}
-              {typeLabel(contract.contractType)}
+              {typeLabel(contract.contractType, t("autre"), t)}
             </p>
             <p className="text-xs text-muted-foreground">
               Debut : {formatDate(contract.startDate)}
@@ -1681,22 +1690,19 @@ function SignDialog({
             />
             <span>
               {as === "employee"
-                ? "J'ai lu l'integralite du contrat et j'accepte ses termes en toute connaissance de cause."
-                : "J'atteste avoir verifie le contrat et je le contresigne au nom de l'employeur."}
+                ? t("j_ai_lu_integralite_contrat")
+                : t("j_atteste_avoir_verifie_contrat")}
             </span>
           </label>
 
           <div className="space-y-1.5">
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">
-              Votre signature
+              {t("signature")}
             </p>
             <SignaturePad key={padKey} onChange={setSignatureData} />
           </div>
 
-          <p className="text-[10px] text-muted-foreground">
-            En signant, vous certifiez avoir lu et accepte l'integralite des termes du contrat.
-            Votre signature est horodatee et archivee pour conformite legale.
-          </p>
+          <p className="text-[10px] text-muted-foreground">{t("contracts_view_en_signant_vous_certifiez_avoir_lu_et")}</p>
         </div>
 
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0 gap-2 flex-wrap [&>button]:flex-1 sm:[&>button]:flex-initial">
@@ -1708,7 +1714,7 @@ function SignDialog({
             disabled={pending || !signatureData}
           >
             <Eraser className="h-3.5 w-3.5 mr-1.5" />
-            Effacer
+            {t("effacer")}
           </Button>
           <Button variant="outline" onClick={onClose} disabled={pending}>
             {tc("cancel")}

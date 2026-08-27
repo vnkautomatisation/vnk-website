@@ -27,6 +27,7 @@ export function PositionDialog({
   roles: RoleRow[];
   onSaved: () => void;
 }) {
+  const t = useTranslations("admin.team");
   const tc = useTranslations("common");
   const mode = position ? "edit" : "create";
   const [pending, startTransition] = useTransition();
@@ -69,7 +70,7 @@ export function PositionDialog({
           ? await createPositionAction(payload)
           : await updatePositionAction({ id: position!.id, ...payload });
       if (result.success) {
-        toast.success(mode === "create" ? "Poste créé" : "Poste mis à jour");
+        toast.success(mode === "create" ? t("poste_cree") : t("poste_mis_jour"));
         onSaved();
         onOpenChange(false);
       } else {
@@ -81,7 +82,7 @@ export function PositionDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="p-0 gap-0 max-w-xl overflow-hidden flex flex-col">
-        {/* Header VNK navy avec gradient */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#1A5FB4] text-white px-6 py-5 flex items-center gap-3.5 shrink-0">
           <div
             className="h-11 w-11 rounded-lg flex items-center justify-center shadow-sm ring-2 ring-white/20"
@@ -91,45 +92,45 @@ export function PositionDialog({
           </div>
           <div className="flex-1 min-w-0">
             <DialogTitle className="text-white text-base font-semibold leading-tight truncate">
-              {mode === "create" ? "Nouveau poste" : position?.name}
+              {mode === "create" ? t("nouveau_poste") : position?.name}
             </DialogTitle>
             <p className="text-xs text-white/75 mt-0.5">
-              Pré-remplit rôle + département à la création d&apos;un utilisateur
+              {t("pre_remplit_role_departement_creation")}
             </p>
           </div>
         </div>
 
-        {/* Body */}
+
         <div className="p-6 space-y-4">
           <Field
-            label="Nom du poste"
+            label={t("nom_poste")}
             required
-            hint={position?.isSystem ? "Le nom d'un poste système ne peut être modifié" : undefined}
+            hint={position?.isSystem ? t("nom_poste_systeme_ne_peut") : undefined}
           >
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="ex : Gestionnaire de projet"
+              placeholder={t("ex_gestionnaire_projet")}
               disabled={position?.isSystem}
             />
           </Field>
 
-          <Field label="Description">
+          <Field label={t("description")}>
             <Textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
-              placeholder="Responsabilités du poste"
+              placeholder={t("responsabilites_poste")}
               className="text-sm"
             />
           </Field>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Rôle d'accès par défaut">
+            <Field label={t("role_acces_defaut")}>
               <Select value={defaultRoleId} onValueChange={setDefaultRoleId}>
-                <SelectTrigger><SelectValue placeholder="Choisir" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">— Aucun —</SelectItem>
+                  <SelectItem value="none">{t("aucun_tiret")}</SelectItem>
                   {roles.map((r) => (
                     <SelectItem key={r.id} value={r.id.toString()}>
                       <span className="inline-flex items-center gap-2">
@@ -141,16 +142,16 @@ export function PositionDialog({
                 </SelectContent>
               </Select>
             </Field>
-            <Field label="Département par défaut">
+            <Field label={t("departement_defaut")}>
               <Input
                 value={defaultDepartment}
                 onChange={(e) => setDefaultDepartment(e.target.value)}
-                placeholder="Ventes"
+                placeholder={t("ventes")}
               />
             </Field>
           </div>
 
-          <Field label="Couleur">
+          <Field label={t("couleur")}>
             <div className="flex gap-1.5">
               {COLORS.map((c) => (
                 <button
@@ -169,7 +170,7 @@ export function PositionDialog({
           </Field>
         </div>
 
-        {/* Footer */}
+
         <div className="border-t bg-muted/30 px-6 py-3 flex justify-end gap-2 shrink-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             {tc("cancel")}
@@ -179,7 +180,7 @@ export function PositionDialog({
             disabled={pending || !name.trim()}
             className="bg-[#0F2D52] hover:bg-[#0F2D52]/90 shadow-sm"
           >
-            {pending ? "..." : mode === "create" ? "Créer le poste" : "Enregistrer"}
+            {pending ? "..." : mode === "create" ? t("creer_poste") : t("enregistrer")}
           </Button>
         </div>
       </DialogContent>

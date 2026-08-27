@@ -26,9 +26,10 @@ export function FileUploadInput({
   value, onChange, accept = "application/pdf",
   maxSizeMB = 10,
   uploadUrl = "/api/admin/upload",
-  placeholder = "https://… ou cliquez « Téléverser »",
+  placeholder,
   folder = "uploads",
 }: Props) {
+  const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +49,7 @@ export function FileUploadInput({
       formData.append("file", file);
       formData.append("folder", folder);
 
-      // XHR pour suivre la progression upload
+
       const url = await new Promise<string>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open("POST", uploadUrl);
@@ -60,24 +61,24 @@ export function FileUploadInput({
             try {
               const data = JSON.parse(xhr.responseText);
               if (data.url) resolve(data.url);
-              else reject(new Error("Réponse invalide (pas d'URL)"));
+              else reject(new Error(t("reponse_invalide_pas_url")));
             } catch {
-              reject(new Error("Réponse JSON invalide"));
+              reject(new Error(t("reponse_json_invalide")));
             }
           } else {
             reject(new Error(`Upload échoué (${xhr.status})`));
           }
         };
-        xhr.onerror = () => reject(new Error("Erreur réseau"));
+        xhr.onerror = () => reject(new Error(t("erreur_reseau")));
         xhr.send(formData);
       });
 
       onChange(url);
-      toast.success("Fichier téléversé");
+      toast.success(t("fichier_televerse"));
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      const msg = err instanceof Error ? err.message : t("erreur_inconnue");
       toast.error(`Échec du téléversement : ${msg}`);
-      // Fallback : proposer le mode URL
+
       setMode("url");
     } finally {
       setUploading(false);
@@ -87,7 +88,7 @@ export function FileUploadInput({
 
   return (
     <div className="space-y-2">
-      {/* Mode switcher */}
+
       <div className="flex gap-1 text-[11px] font-medium">
         <button
           type="button"
@@ -123,7 +124,7 @@ export function FileUploadInput({
             >
               <Upload className={`h-5 w-5 text-muted-foreground ${uploading ? "animate-pulse" : ""}`} />
               <span className="text-xs font-medium">
-                {uploading ? `Téléversement… ${progress}%` : "Cliquez pour choisir un fichier"}
+                {uploading ? `Téléversement… ${progress}%` : t("cliquez_choisir_fichier")}
               </span>
               <span className="text-[10px] text-muted-foreground">
                 {accept === "application/pdf" ? "PDF" : accept} · max {maxSizeMB} MB
@@ -146,7 +147,7 @@ export function FileUploadInput({
                 size="icon"
                 className="h-7 w-7 hover:text-destructive"
                 onClick={() => onChange("")}
-                aria-label="Retirer le fichier"
+                aria-label={t("retirer_fichier")}
               >
                 <X className="h-3.5 w-3.5" />
               </Button>
@@ -157,7 +158,7 @@ export function FileUploadInput({
         <Input
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder}
+          placeholder={placeholder ?? t("url_ou_cliquez_televerser")}
           type="url"
         />
       )}

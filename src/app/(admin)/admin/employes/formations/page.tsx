@@ -1,5 +1,7 @@
 // HR · Matrice formations (qui a quoi) · alertes expiration
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
@@ -8,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function HrTrainingsPage() {
+  const t = await getTranslations("admin.hr_nav");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   if (!(await isHrAdmin(session.user.adminId!, { domain: "safety" }))) redirect("/admin/employes/organigramme");
@@ -18,7 +21,7 @@ export default async function HrTrainingsPage() {
     include: { admin: { select: { id: true, fullName: true, email: true, isActive: true } } },
   });
 
-  // Grouper par titre pour matrice
+
   const byTitle = new Map<string, typeof trainings>();
   for (const t of trainings) {
     if (!byTitle.has(t.title)) byTitle.set(t.title, []);
@@ -35,18 +38,18 @@ export default async function HrTrainingsPage() {
           <GraduationCap className="h-5 w-5 text-[#0F2D52]" />Formations & cursus
         </h1>
         <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble des formations suivies par tout le personnel.
+          {t("vue_apos_ensemble_formations_suivies")}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Card className="p-3"><p className="text-xs uppercase tracking-wider text-muted-foreground">Total enregistrées</p><p className="text-2xl font-bold">{totalActive}</p></Card>
-        <Card className="p-3 bg-red-50/40 border-red-200"><p className="text-xs uppercase tracking-wider text-red-700">Expirées</p><p className="text-2xl font-bold text-red-900">{expired.length}</p></Card>
-        <Card className="p-3"><p className="text-xs uppercase tracking-wider text-muted-foreground">Types distincts</p><p className="text-2xl font-bold">{byTitle.size}</p></Card>
+        <Card className="p-3"><p className="text-xs uppercase tracking-wider text-muted-foreground">{t("total_enregistrees")}</p><p className="text-2xl font-bold">{totalActive}</p></Card>
+        <Card className="p-3 bg-red-50/40 border-red-200"><p className="text-xs uppercase tracking-wider text-red-700">{t("expirees")}</p><p className="text-2xl font-bold text-red-900">{expired.length}</p></Card>
+        <Card className="p-3"><p className="text-xs uppercase tracking-wider text-muted-foreground">{t("types_distincts")}</p><p className="text-2xl font-bold">{byTitle.size}</p></Card>
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold mb-2">Par formation</h2>
+        <h2 className="text-sm font-semibold mb-2">{t("formation")}</h2>
         <div className="space-y-2">
           {Array.from(byTitle.entries()).map(([title, list]) => (
             <Card key={title} className="p-4">
@@ -71,7 +74,7 @@ export default async function HrTrainingsPage() {
             </Card>
           ))}
           {byTitle.size === 0 && (
-            <Card className="p-10 text-center text-sm text-muted-foreground">Aucune formation enregistrée.</Card>
+            <Card className="p-10 text-center text-sm text-muted-foreground">{t("aucune_formation_enregistree")}</Card>
           )}
         </div>
       </section>

@@ -46,13 +46,13 @@ import { DatePopover } from "@/components/admin/date-popover";
 import { FormSection, Field } from "@/components/admin/form-section";
 
 export const PERSONAL_DOC_CATEGORIES = [
-  { value: "licence", label: "Licence / Permis" },
-  { value: "diploma", label: "Diplôme" },
-  { value: "certification", label: "Certification" },
-  { value: "id_card", label: "Carte d'identité" },
-  { value: "passport", label: "Passeport" },
-  { value: "medical", label: "Document médical" },
-  { value: "other", label: "Autre" },
+  { value: "licence", labelKey: "licence_permis" },
+  { value: "diploma", labelKey: "diplome" },
+  { value: "certification", labelKey: "certification" },
+  { value: "id_card", labelKey: "carte_identite" },
+  { value: "passport", labelKey: "passeport" },
+  { value: "medical", labelKey: "document_medical" },
+  { value: "other", labelKey: "autre" },
 ] as const;
 
 export type PersonalDocCategory = (typeof PERSONAL_DOC_CATEGORIES)[number]["value"];
@@ -75,9 +75,10 @@ export function DocumentUploader({
   employeeId: number;
   open: boolean;
   onClose: () => void;
-  /** Appelé après upload réussi — typiquement router.refresh(). */
+
   onUploaded: () => void;
 }) {
+  const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -119,7 +120,7 @@ export function DocumentUploader({
 
   const validateAndSet = (f: File) => {
     if (!ACCEPTED_TYPES.includes(f.type)) {
-      toast.error("Type de fichier non supporté. Utilisez PDF, PNG, JPEG ou WebP.");
+      toast.error(t("type_fichier_non_supporte_utilisez"));
       return;
     }
     if (f.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -133,7 +134,7 @@ export function DocumentUploader({
     } else {
       setPreviewUrl(null);
     }
-    // Préfill titre si vide à partir du nom de fichier
+
     if (!title.trim()) {
       const base = f.name.replace(/\.[^.]+$/, "");
       setTitle(base.slice(0, 120));
@@ -156,11 +157,11 @@ export function DocumentUploader({
 
   const submit = async () => {
     if (!file) {
-      toast.error("Sélectionnez un fichier à téléverser.");
+      toast.error(t("selectionnez_fichier_televerser"));
       return;
     }
     if (!title.trim()) {
-      toast.error("Le titre est requis.");
+      toast.error(t("titre_requis"));
       return;
     }
 
@@ -179,9 +180,9 @@ export function DocumentUploader({
     formData.append("isPrivate", isPrivate ? "1" : "0");
 
     try {
-      // TODO(backend) : endpoint à créer
-      //   POST /api/admin/employees/[id]/personal-docs/upload
-      //   FormData ci-dessus, réponse { success, document } | { error }
+
+
+
       await new Promise<void>((resolve, reject) => {
         const xhr = new XMLHttpRequest();
         xhr.open(
@@ -208,21 +209,21 @@ export function DocumentUploader({
               const data = JSON.parse(xhr.responseText || "{}");
               if (data?.error) errMsg = data.error;
             } catch {
-              /* ignore */
+
             }
             reject(new Error(errMsg));
           }
         };
-        xhr.onerror = () => reject(new Error("Erreur réseau"));
+        xhr.onerror = () => reject(new Error(t("erreur_reseau")));
         xhr.send(formData);
       });
 
-      toast.success("Document téléversé");
+      toast.success(t("document_televerse"));
       onUploaded();
       reset();
       onClose();
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erreur inconnue";
+      const msg = err instanceof Error ? err.message : t("erreur_inconnue");
       toast.error(`Échec : ${msg}`);
     } finally {
       setUploading(false);
@@ -233,12 +234,12 @@ export function DocumentUploader({
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="max-w-2xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Upload className="h-4 w-4" />
-              Téléverser un document personnel
+              {t("televerser_document_personnel")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               PDF, PNG, JPEG ou WebP — max {MAX_SIZE_MB} Mo. Les documents marqués
@@ -247,10 +248,10 @@ export function DocumentUploader({
           </DialogHeader>
         </div>
 
-        {/* Body */}
+
         <div className="p-5 space-y-5 overflow-y-auto flex-1">
-          {/* Drop zone */}
-          <FormSection icon={Upload} title="Fichier">
+
+          <FormSection icon={Upload} title={t("fichier")}>
             <input
               ref={fileInputRef}
               type="file"
@@ -278,7 +279,7 @@ export function DocumentUploader({
               >
                 <Upload className="h-6 w-6 text-muted-foreground" />
                 <span className="text-sm font-medium">
-                  Glissez un fichier ici ou cliquez pour parcourir
+                  {t("glissez_fichier_ici_cliquez_parcourir")}
                 </span>
                 <span className="text-[10px] text-muted-foreground">
                   PDF, PNG, JPEG, WebP — max {MAX_SIZE_MB} Mo
@@ -287,7 +288,7 @@ export function DocumentUploader({
             ) : (
               <div className="rounded-lg border bg-muted/20 p-3 flex items-start gap-3">
                 {previewUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
+
                   <img
                     src={previewUrl}
                     alt={file.name}
@@ -323,7 +324,7 @@ export function DocumentUploader({
                   className="h-7 w-7 hover:text-destructive shrink-0"
                   onClick={removeFile}
                   disabled={uploading}
-                  aria-label="Retirer le fichier"
+                  aria-label={t("retirer_fichier")}
                 >
                   <X className="h-3.5 w-3.5" />
                 </Button>
@@ -331,10 +332,10 @@ export function DocumentUploader({
             )}
           </FormSection>
 
-          {/* Métadonnées */}
-          <FormSection icon={FileText} title="Détails du document">
+
+          <FormSection icon={FileText} title={t("details_document")}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Catégorie" required>
+              <Field label={t("categorie")} required>
                 <Select
                   value={category}
                   onValueChange={(v) => setCategory(v as PersonalDocCategory)}
@@ -345,13 +346,13 @@ export function DocumentUploader({
                   <SelectContent>
                     {PERSONAL_DOC_CATEGORIES.map((c) => (
                       <SelectItem key={c.value} value={c.value}>
-                        {c.label}
+                        {t(c.labelKey)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </Field>
-              <Field label="Émetteur" hint="Ex : SAAQ, MELS, employeur…">
+              <Field label={t("emetteur")} hint={t("ex_saaq_mels_employeur")}>
                 <Input
                   value={issuer}
                   onChange={(e) => setIssuer(e.target.value)}
@@ -359,35 +360,35 @@ export function DocumentUploader({
                 />
               </Field>
             </div>
-            <Field label="Titre" required>
+            <Field label={t("titre")} required>
               <Input
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Permis classe 5"
+                placeholder={t("permis_classe_5")}
                 maxLength={140}
               />
             </Field>
-            <Field label="Numéro de référence">
+            <Field label={t("numero_reference")}>
               <Input
                 value={refNumber}
                 onChange={(e) => setRefNumber(e.target.value)}
                 placeholder="V1234-567890-12"
               />
             </Field>
-            <Field label="Description">
+            <Field label={t("description")}>
               <Textarea
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Notes complémentaires…"
+                placeholder={t("notes_complementaires")}
                 rows={3}
                 className="text-sm resize-y"
               />
             </Field>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Field label="Date d'émission">
+              <Field label={t("date_emission")}>
                 <DatePopover value={issuedAt} onChange={setIssuedAt} />
               </Field>
-              <Field label="Date d'expiration" hint="Laisser vide si pas d'expiration">
+              <Field label={t("date_expiration")} hint={t("laisser_vide_si_pas_expiration")}>
                 <DatePopover value={expiresAt} onChange={setExpiresAt} min={issuedAt || undefined} />
               </Field>
             </div>
@@ -400,17 +401,17 @@ export function DocumentUploader({
               <div className="space-y-0.5">
                 <p className="text-sm font-medium flex items-center gap-1.5">
                   <Lock className="h-3.5 w-3.5 text-[#0F2D52]" />
-                  Document privé
+                  {t("document_prive")}
                 </p>
                 <p className="text-[11px] text-muted-foreground">
-                  Visible uniquement par vous et les responsables RH.
+                  {t("visible_uniquement_vous_responsables_rh")}
                 </p>
               </div>
             </label>
           </FormSection>
         </div>
 
-        {/* Footer sticky */}
+
         <DialogFooter className="px-5 py-3 border-t bg-muted/30 shrink-0">
           <Button
             type="button"

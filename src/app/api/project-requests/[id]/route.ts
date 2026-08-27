@@ -2,6 +2,7 @@
 // PATCH /api/project-requests/[id] — mettre a jour (status, urgence, notes admin, etc.) — admin only
 // DELETE /api/project-requests/[id] — supprimer une demande — admin only
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -19,13 +20,13 @@ const updateSchema = z.object({
   serviceType: z.string().nullable().optional(),
   plcBrand: z.string().nullable().optional(),
   budgetRange: z.string().nullable().optional(),
-}).refine((d) => Object.keys(d).length > 0, { message: "Aucune donnée à mettre à jour" });
+}).refine((d) => Object.keys(d).length > 0, { message: "aucune_donnee_a_mettre_a_jour" });
 
 const STATUS_LABELS: Record<string, string> = {
   new: "Nouvelle",
   in_progress: "En traitement",
   converted: "Convertie",
-  closed: "Fermée",
+  closed: "statut_fermee",
 };
 
 export async function GET(
@@ -62,6 +63,7 @@ export async function PATCH(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -80,7 +82,7 @@ export async function PATCH(
   const body = await req.json();
   const parsed = updateSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.errors[0].message }, { status: 400 });
+    return NextResponse.json({ error: t(parsed.error.errors[0].message) }, { status: 400 });
   }
 
   const updated = await prisma.projectRequest.update({

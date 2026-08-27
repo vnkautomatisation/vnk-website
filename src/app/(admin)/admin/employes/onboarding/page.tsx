@@ -1,5 +1,8 @@
 // HR · Vue centralisée des onboardings (qui n'a pas signé quoi, qui manque d'éléments)
 import { prisma } from "@/lib/prisma";
+import { getLocale, getTranslations } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
+import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
 import { redirect } from "next/navigation";
@@ -9,6 +12,8 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function OnboardingCentralPage() {
+  const t = await getTranslations("admin.hr_nav");
+  const dl = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   if (!(await isHrAdmin(session.user.adminId!))) redirect("/admin/employes/organigramme");
@@ -55,24 +60,23 @@ export default async function OnboardingCentralPage() {
     <div className="space-y-5">
       <div>
         <h1 className="text-xl font-bold flex items-center gap-2">
-          <ScrollText className="h-5 w-5 text-[#0F2D52]" />Onboarding centralisé
-        </h1>
+          <ScrollText className="h-5 w-5 text-[#0F2D52]" />{t("page_onboarding_centralise")}</h1>
         <p className="text-sm text-muted-foreground">
-          Vue d&apos;ensemble des activations en cours · qui n&apos;a pas signé quoi · 2FA manquante.
+          {t("vue_apos_ensemble_activations_cours")}
         </p>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Card className="p-4 bg-amber-50/50 border-amber-200">
-          <p className="text-xs uppercase tracking-wider font-semibold text-amber-700">Incomplets</p>
+          <p className="text-xs uppercase tracking-wider font-semibold text-amber-700">{t("incomplets")}</p>
           <p className="text-3xl font-bold tabular-nums text-amber-900">{incomplete.length}</p>
         </Card>
         <Card className="p-4 bg-emerald-50/50 border-emerald-200">
-          <p className="text-xs uppercase tracking-wider font-semibold text-emerald-700">Complets</p>
+          <p className="text-xs uppercase tracking-wider font-semibold text-emerald-700">{t("complets")}</p>
           <p className="text-3xl font-bold tabular-nums text-emerald-900">{complete.length}</p>
         </Card>
         <Card className="p-4">
-          <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Total équipe</p>
+          <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">{t("total_equipe")}</p>
           <p className="text-3xl font-bold tabular-nums">{admins.length}</p>
         </Card>
       </div>
@@ -84,7 +88,7 @@ export default async function OnboardingCentralPage() {
         {incomplete.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground inline-flex items-center justify-center gap-2 w-full">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-            Tout le monde est à jour
+            {t("tout_monde_jour")}
           </Card>
         ) : (
           <div className="space-y-2">
@@ -99,14 +103,14 @@ export default async function OnboardingCentralPage() {
                     <Link href={`/admin/employes#${u.id}`} className="font-medium text-sm hover:underline">
                       {u.fullName || u.email}
                     </Link>
-                    <p className="text-xs text-muted-foreground">{u.position?.name ?? "—"} · ajouté le {new Date(u.createdAt).toLocaleDateString("fr-CA")}</p>
+                    <p className="text-xs text-muted-foreground">{u.position?.name ?? "—"} · {t("ajoute_le", { date: new Date(u.createdAt).toLocaleDateString(dl) })}</p>
                     <div className="flex gap-1 mt-1 flex-wrap">
-                      {u.missing.onboarding && <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50"><ScrollText className="h-2.5 w-2.5 mr-1" />Wizard incomplet</Badge>}
+                      {u.missing.onboarding && <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50"><ScrollText className="h-2.5 w-2.5 mr-1" />{t("wizard_incomplet")}</Badge>}
                       {u.missing.twoFactor && <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50"><ShieldCheck className="h-2.5 w-2.5 mr-1" />2FA</Badge>}
-                      {u.missing.passkey && <Badge variant="outline" className="text-[10px] text-muted-foreground"><Fingerprint className="h-2.5 w-2.5 mr-1" />Pas de passkey</Badge>}
+                      {u.missing.passkey && <Badge variant="outline" className="text-[10px] text-muted-foreground"><Fingerprint className="h-2.5 w-2.5 mr-1" />{t("pas_passkey")}</Badge>}
                       {u.missing.docs > 0 && (
                         <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300 bg-amber-50">
-                          <FileSignature className="h-2.5 w-2.5 mr-1" />{u.missing.docs} doc{u.missing.docs > 1 ? "s" : ""} non signé{u.missing.docs > 1 ? "s" : ""}
+                          <FileSignature className="h-2.5 w-2.5 mr-1" />{t("n_docs_non_signes", { count: u.missing.docs })}
                         </Badge>
                       )}
                     </div>

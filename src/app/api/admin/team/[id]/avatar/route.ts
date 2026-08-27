@@ -1,6 +1,7 @@
 // API · Upload avatar pour un utilisateur admin spécifique.
 // Requiert permission users:write OU être le user lui-même.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
@@ -27,6 +28,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -43,10 +45,10 @@ export async function POST(
     const form = await req.formData();
     const file = form.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
-      return NextResponse.json({ error: "Format non supporté (JPG, PNG, WebP, GIF)" }, { status: 415 });
+      return NextResponse.json({ error: t("format_non_supporte_jpg_png_webp_gif") }, { status: 415 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: "Fichier trop volumineux (max 2 Mo)" }, { status: 413 });

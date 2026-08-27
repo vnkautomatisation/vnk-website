@@ -1,5 +1,6 @@
 // HR · Vue d'ensemble des permis pros (toutes équipes) + alertes expiration
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -9,6 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function HrLicensesPage() {
+  const t = await getTranslations("admin.trainings");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
   if (!(await isHrAdmin(session.user.adminId!, { domain: "safety" }))) redirect("/admin/employes/organigramme");
@@ -34,21 +36,21 @@ export default async function HrLicensesPage() {
           <BadgeCheck className="h-5 w-5 text-[#0F2D52]" />Permis & certifications
         </h1>
         <p className="text-sm text-muted-foreground">
-          Surveillance des permis pros de tout le personnel · alertes d&apos;expiration.
+          {t("surveillance_permis_pros_tout_personnel")}
         </p>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <KpiBox label="Expirés" value={expired.length} accent="red" />
-        <KpiBox label="< 30 jours" value={critical.length} accent="amber" />
-        <KpiBox label="< 90 jours" value={warning.length} accent="blue" />
-        <KpiBox label="Valides" value={valid.length} accent="emerald" />
+        <KpiBox label={t("expires")} value={expired.length} accent="red" />
+        <KpiBox label={t("moins_30_jours")} value={critical.length} accent="amber" />
+        <KpiBox label={t("moins_90_jours")} value={warning.length} accent="blue" />
+        <KpiBox label={t("valides")} value={valid.length} accent="emerald" />
       </div>
 
-      {expired.length > 0 && <Section title="Expirés" icon={XCircle} iconColor="text-red-600" rows={expired} variant="red" />}
-      {critical.length > 0 && <Section title="Critiques (< 30 jours)" icon={AlertTriangle} iconColor="text-amber-600" rows={critical} variant="amber" />}
-      {warning.length > 0 && <Section title="À surveiller (30-90 jours)" icon={AlertCircle} iconColor="text-blue-600" rows={warning} variant="blue" />}
-      <Section title="Valides" icon={CheckCircle2} iconColor="text-emerald-600" rows={valid} variant="emerald" />
+      {expired.length > 0 && <Section title={t("expires")} icon={XCircle} iconColor="text-red-600" rows={expired} variant="red" />}
+      {critical.length > 0 && <Section title={t("critiques_30_jours")} icon={AlertTriangle} iconColor="text-amber-600" rows={critical} variant="amber" />}
+      {warning.length > 0 && <Section title={t("surveiller_30_90_jours")} icon={AlertCircle} iconColor="text-blue-600" rows={warning} variant="blue" />}
+      <Section title={t("valides")} icon={CheckCircle2} iconColor="text-emerald-600" rows={valid} variant="emerald" />
     </div>
   );
 }
@@ -75,6 +77,7 @@ type Row = {
 };
 
 function Section({ title, icon: Icon, iconColor, rows, variant }: { title: string; icon: LucideIcon; iconColor: string; rows: Row[]; variant: "red" | "amber" | "blue" | "emerald" }) {
+  const t = useTranslations("admin.hr_nav");
   const tc = useTranslations("common");
   void variant;
   return (
@@ -105,7 +108,7 @@ function Section({ title, icon: Icon, iconColor, rows, variant }: { title: strin
                         {days !== null && days < 0 && <span className="text-red-600 font-semibold"> · expiré depuis {-days}j</span>}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground italic">Pas d&apos;expiration</span>
+                      <span className="text-muted-foreground italic">{t("pas_apos_expiration")}</span>
                     )}
                   </p>
                 </div>

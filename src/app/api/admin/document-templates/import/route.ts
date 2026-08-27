@@ -14,6 +14,7 @@
 // Auth : admin uniquement.
 // ─────────────────────────────────────────────────────────
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
@@ -59,6 +60,7 @@ function resolveFormat(file: File): ImportSourceFormat | null {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -104,7 +106,7 @@ export async function POST(req: NextRequest) {
       if (!format) {
         return NextResponse.json(
           {
-            error: "Format non supporté. Utilisez .txt, .pdf ou .docx",
+            error: t("format_non_supporte_utilisez_txt_pdf_ou"),
           },
           { status: 415 },
         );
@@ -116,7 +118,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: "Content-Type non supporté (attendu application/json ou multipart/form-data)" },
+      { error: t("content_type_non_supporte_attendu_application_json") },
       { status: 415 },
     );
   } catch (err) {

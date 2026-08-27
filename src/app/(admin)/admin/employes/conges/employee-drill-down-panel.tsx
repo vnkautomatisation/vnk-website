@@ -46,19 +46,19 @@ import { PdfPreviewModal } from "@/components/admin/pdf-preview-modal";
 import { AuditActionBadge, AuditChangesDisplay } from "@/components/admin/audit-changes-display";
 import { AddToCalendarMenu } from "@/components/admin/add-to-calendar-menu";
 
-const TYPE_META: Record<string, { label: string; icon: typeof Sun; color: string }> = {
-  vacation: { label: "Vacances", icon: Sun, color: "bg-cyan-100 text-cyan-700" },
-  sick: { label: "Maladie", icon: Bandage, color: "bg-red-100 text-red-700" },
-  parental: { label: "Parental", icon: Baby, color: "bg-pink-100 text-pink-700" },
-  unpaid: { label: "Sans solde", icon: Home, color: "bg-slate-100 text-slate-700" },
-  bereavement: { label: "Décès", icon: Home, color: "bg-gray-100 text-gray-700" },
-  other: { label: "Autre", icon: CalendarDays, color: "bg-amber-100 text-amber-700" },
+const TYPE_META: Record<string, { labelKey: string; icon: typeof Sun; color: string }> = {
+  vacation: { labelKey: "type_vacation", icon: Sun, color: "bg-cyan-100 text-cyan-700" },
+  sick: { labelKey: "type_sick", icon: Bandage, color: "bg-red-100 text-red-700" },
+  parental: { labelKey: "type_parental", icon: Baby, color: "bg-pink-100 text-pink-700" },
+  unpaid: { labelKey: "type_unpaid", icon: Home, color: "bg-slate-100 text-slate-700" },
+  bereavement: { labelKey: "type_bereavement", icon: Home, color: "bg-gray-100 text-gray-700" },
+  other: { labelKey: "type_other", icon: CalendarDays, color: "bg-amber-100 text-amber-700" },
 };
-const STATUS_META: Record<string, { label: string; color: string }> = {
-  pending: { label: "En attente", color: "bg-amber-100 text-amber-700" },
-  approved: { label: "Approuvée", color: "bg-emerald-100 text-emerald-700" },
-  rejected: { label: "Refusée", color: "bg-red-100 text-red-700" },
-  cancelled: { label: "Annulée", color: "bg-gray-100 text-gray-600" },
+const STATUS_META: Record<string, { labelKey: string; color: string }> = {
+  pending: { labelKey: "status_pending", color: "bg-amber-100 text-amber-700" },
+  approved: { labelKey: "status_approved", color: "bg-emerald-100 text-emerald-700" },
+  rejected: { labelKey: "status_rejected", color: "bg-red-100 text-red-700" },
+  cancelled: { labelKey: "status_cancelled", color: "bg-gray-100 text-gray-600" },
 };
 const typeMeta = (t: string) => TYPE_META[t] ?? TYPE_META.other;
 const statusMeta = (s: string) => STATUS_META[s] ?? { label: s, color: "bg-gray-100 text-gray-700" };
@@ -126,6 +126,7 @@ export function EmployeeDrillDownPanel({
   onEditRequest: (req: LeaveRow, employee: Employee) => void;
   onCreateForEmployee: (employee: Employee) => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const router = useRouter();
   const [loading, setLoading] = useState(false);
@@ -135,7 +136,7 @@ export function EmployeeDrillDownPanel({
   const [busyIds, setBusyIds] = useState<Set<number>>(new Set());
   const [policies, setPolicies] = useState<Policy[]>([]);
 
-  // Dialog states
+
   const [policyDialogOpen, setPolicyDialogOpen] = useState(false);
   const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
   const [blockDialogOpen, setBlockDialogOpen] = useState(false);
@@ -145,7 +146,7 @@ export function EmployeeDrillDownPanel({
   const [convertDialogReq, setConvertDialogReq] = useState<LeaveRow | null>(null);
   const [duplicateDialogReq, setDuplicateDialogReq] = useState<LeaveRow | null>(null);
   const [historyDialogReq, setHistoryDialogReq] = useState<LeaveRow | null>(null);
-  // Aperçu PDF (preview modal) — convention VNK : jamais window.open direct pour les PDFs
+
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
 
   useEffect(() => {
@@ -164,7 +165,7 @@ export function EmployeeDrillDownPanel({
         setPolicies(polData.policies ?? []);
       })
       .catch(() => {
-        if (!cancelled) toast.error("Impossible de charger les détails employé");
+        if (!cancelled) toast.error(t("impossible_charger_details_employe"));
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -189,34 +190,34 @@ export function EmployeeDrillDownPanel({
     markBusy(r.id, true);
     const res = await reviewLeaveRequestAction({ id: r.id, decision: "approved" });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Approuvée"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("approuvee")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
   const onReject = async (r: LeaveRow) => {
     const notes = await promptDialog({
-      title: "Refuser la demande",
-      label: "Motif du refus (optionnel)",
+      title: t("refuser_demande"),
+      label: t("motif_refus_optionnel"),
       multiline: true,
       variant: "destructive",
-      confirmLabel: "Refuser",
+      confirmLabel: t("refuser"),
     });
     if (notes === null) return;
     markBusy(r.id, true);
     const res = await reviewLeaveRequestAction({ id: r.id, decision: "rejected", notes: notes.trim() || undefined });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Refusée"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("refusee")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
-  // TÂCHE 4 (P1-8) : annuler une demande PENDING au nom de l'employé
+
   const onCancelPending = async (r: LeaveRow) => {
     const reason = await promptDialog({
-      title: "Annuler cette demande au nom de l'employé",
-      description: "L'employé sera notifié de l'annulation.",
-      label: "Raison (requise)",
+      title: t("annuler_demande_nom_employe"),
+      description: t("employe_sera_notifie_annulation"),
+      label: t("raison_requise"),
       multiline: true,
       variant: "destructive",
       required: true,
-      confirmLabel: "Annuler la demande",
+      confirmLabel: t("annuler_demande"),
     });
     if (!reason) return;
     markBusy(r.id, true);
@@ -225,60 +226,60 @@ export function EmployeeDrillDownPanel({
       reason: `Annulé par l'administrateur : ${reason}`,
     });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Demande annulée"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("demande_annulee")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
 
   const onCancelApproved = async (r: LeaveRow) => {
     const reason = await promptDialog({
-      title: "Annuler ce congé approuvé",
-      description: "L'employé sera notifié. Les TimeClock auto-créés seront supprimés.",
-      label: "Raison (requise)",
+      title: t("annuler_conge_approuve"),
+      description: t("employe_sera_notifie_timeclock_auto"),
+      label: t("raison_requise"),
       multiline: true,
       variant: "destructive",
       required: true,
-      confirmLabel: "Annuler le congé",
+      confirmLabel: t("annuler_conge"),
     });
     if (!reason) return;
     markBusy(r.id, true);
     const res = await adminCancelApprovedLeaveAction({ id: r.id, reason });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Congé annulé"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("conge_annule")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
   const onDelete = async (r: LeaveRow) => {
     const ok = await confirmDialog({
-      title: "Supprimer définitivement",
-      description: "Cette action est irréversible. La demande sera supprimée et l'employé notifié.",
+      title: t("supprimer_definitivement"),
+      description: t("action_irreversible_demande_sera_supprimee"),
       variant: "destructive",
-      confirmLabel: "Supprimer",
+      confirmLabel: t("supprimer"),
     });
     if (!ok) return;
     markBusy(r.id, true);
     const res = await adminDeleteLeaveAction({ id: r.id });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Supprimée"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("supprimee")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
   const onUnapprove = async (r: LeaveRow) => {
     const reason = await promptDialog({
-      title: "Retirer l'approbation",
-      description: "La demande repasse en attente. L'employé sera notifié.",
-      label: "Raison (requise)",
+      title: t("retirer_approbation"),
+      description: t("demande_repasse_attente_employe_sera"),
+      label: t("raison_requise"),
       multiline: true,
       required: true,
       variant: "destructive",
-      confirmLabel: "Retirer l'approbation",
+      confirmLabel: t("retirer_approbation"),
     });
     if (!reason) return;
     markBusy(r.id, true);
     const res = await unapproveLeaveAction({ id: r.id, reason });
     markBusy(r.id, false);
-    if (res.success) { toast.success("Approbation retirée"); refresh(); }
-    else toast.error(res.error || "Erreur");
+    if (res.success) { toast.success(t("approbation_retiree")); refresh(); }
+    else toast.error(res.error || t("erreur"));
   };
 
-  // Conflits équipe : récupère les pairs absents sur les périodes des demandes futures de l'employé
+
   const [conflicts, setConflicts] = useState<Array<{ requestId: number; period: string; peers: Array<{ id: number; name: string; period: string; type: string }> }>>([]);
   const loadConflicts = useCallback(async () => {
     if (!employeeId) return;
@@ -286,7 +287,7 @@ export function EmployeeDrillDownPanel({
     const now = new Date(); now.setHours(0, 0, 0, 0);
     const future = requests.filter((r) => (r.status === "approved" || r.status === "pending") && new Date(r.endDate) >= now);
     if (future.length === 0) return;
-    // Borne large : +90 jours
+
     const horizon = new Date(now); horizon.setDate(horizon.getDate() + 90);
     try {
       const url = `/api/admin/leaves/calendar?employeeId=${employeeId}&from=${now.toISOString().slice(0, 10)}&to=${horizon.toISOString().slice(0, 10)}`;
@@ -317,7 +318,7 @@ export function EmployeeDrillDownPanel({
       }
       setConflicts(out);
     } catch {
-      toast.error("Impossible de charger les conflits");
+      toast.error(t("impossible_charger_conflits"));
     }
   }, [employeeId, requests]);
 
@@ -330,11 +331,11 @@ export function EmployeeDrillDownPanel({
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="p-0 w-full sm:max-w-2xl flex flex-col">
-        {/* Header navy */}
+
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4 shrink-0">
           <SheetHeader>
             <SheetTitle className="text-white text-base">
-              {employee?.fullName || employee?.email || "Chargement…"}
+              {employee?.fullName || employee?.email || t("chargement")}
             </SheetTitle>
           </SheetHeader>
           {employee && (
@@ -364,10 +365,10 @@ export function EmployeeDrillDownPanel({
           </div>
         ) : (
           <div className="flex-1 overflow-y-auto">
-            {/* Bloc Solde & Politique */}
+
             {employee && (
               <div className="p-4 border-b bg-muted/20 space-y-3">
-                {/* Bandeau blocage */}
+
                 {isBlocked && employee.leaveBlockedUntil && (
                   <div className="rounded-md border border-red-200 bg-red-50 p-3 flex items-start justify-between gap-3">
                     <div className="flex items-start gap-2 flex-1 min-w-0">
@@ -387,16 +388,16 @@ export function EmployeeDrillDownPanel({
                       className="h-7 text-[11px] border-red-300 text-red-700 hover:bg-red-100"
                       onClick={async () => {
                         const ok = await confirmDialog({
-                          title: "Débloquer les soumissions ?",
-                          confirmLabel: "Débloquer",
+                          title: t("debloquer_soumissions"),
+                          confirmLabel: t("debloquer"),
                         });
                         if (!ok) return;
                         const res = await unblockEmployeeLeaveAction({ employeeId: employee.id });
-                        if (res.success) { toast.success("Débloqué"); refresh(); }
-                        else toast.error(res.error || "Erreur");
+                        if (res.success) { toast.success(t("debloque")); refresh(); }
+                        else toast.error(res.error || t("erreur"));
                       }}
                     >
-                      Débloquer
+                      {t("debloquer")}
                     </Button>
                   </div>
                 )}
@@ -404,9 +405,9 @@ export function EmployeeDrillDownPanel({
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   {balance && (
                     <>
-                      <KpiBox label="Restant" value={balance.vacationDaysRemaining} unit="j" tone={balance.vacationDaysRemaining <= 2 ? "danger" : "success"} />
-                      <KpiBox label="Pris" value={balance.vacationDaysTaken} unit="j" tone="muted" />
-                      <KpiBox label="Planifiés" value={balance.vacationDaysPlanned} unit="j" tone="muted" />
+                      <KpiBox label={t("restant")} value={balance.vacationDaysRemaining} unit="j" tone={balance.vacationDaysRemaining <= 2 ? "danger" : "success"} />
+                      <KpiBox label={t("pris")} value={balance.vacationDaysTaken} unit="j" tone="muted" />
+                      <KpiBox label={t("planifies")} value={balance.vacationDaysPlanned} unit="j" tone="muted" />
                     </>
                   )}
                 </div>
@@ -414,12 +415,12 @@ export function EmployeeDrillDownPanel({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <div className="rounded-md border bg-background p-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Politique</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("politique")}</p>
                       <p className="text-sm font-semibold text-foreground mt-0.5 truncate">
-                        {balance?.policyName || "Défaut"}
+                        {balance?.policyName || t("defaut")}
                       </p>
                     </div>
-                    <ActionTooltip label="Changer la politique">
+                    <ActionTooltip label={t("changer_politique")}>
                       <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setPolicyDialogOpen(true)}>
                         <SlidersHorizontal className="h-3 w-3 mr-1" />Changer
                       </Button>
@@ -427,12 +428,12 @@ export function EmployeeDrillDownPanel({
                   </div>
                   <div className="rounded-md border bg-background p-3 flex items-center justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Accumulés</p>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("accumules")}</p>
                       <p className="text-sm font-semibold text-foreground mt-0.5">
                         {balance?.accruedDays ?? 0} j
                       </p>
                     </div>
-                    <ActionTooltip label="Ajuster manuellement le solde">
+                    <ActionTooltip label={t("ajuster_manuellement_solde")}>
                       <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setAdjustDialogOpen(true)}>
                         <Plus className="h-3 w-3 mr-0.5" /><Minus className="h-3 w-3 mr-1" />Ajuster
                       </Button>
@@ -447,21 +448,20 @@ export function EmployeeDrillDownPanel({
                     className="h-7 text-[11px] text-red-600 border-red-200 hover:bg-red-50"
                     onClick={() => setBlockDialogOpen(true)}
                   >
-                    <Ban className="h-3 w-3 mr-1" />Bloquer les soumissions
-                  </Button>
+                    <Ban className="h-3 w-3 mr-1" />{t("employee_drill_down_bloquer_les_soumissions")}</Button>
                 )}
               </div>
             )}
 
-            {/* Barre d'actions globales */}
+
             {employee && (
               <div className="px-4 py-2 border-b bg-background flex items-center gap-1.5 flex-wrap">
-                <ActionTooltip label="Rapport annuel (résumé écran)">
+                <ActionTooltip label={t("rapport_annuel_resume_ecran")}>
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setAnnualDialogOpen(true)}>
                     <FileText className="h-3 w-3 mr-1" />Rapport annuel
                   </Button>
                 </ActionTooltip>
-                <ActionTooltip label="Aperçu du relevé annuel en PDF">
+                <ActionTooltip label={t("apercu_releve_annuel_pdf")}>
                   <Button
                     size="sm"
                     variant="outline"
@@ -469,19 +469,17 @@ export function EmployeeDrillDownPanel({
                     onClick={() => setPdfPreview({
                       url: `/api/admin/leaves/employee/${employee.id}/annual-report-pdf`,
                       title: `Relevé annuel — ${employee.fullName || employee.email}`,
-                      description: "Période courante (1er mai → 30 avril)",
+                      description: t("periode_courante_1er_mai_30"),
                       filename: `releve-annuel-${employee.id}.pdf`,
                     })}
                   >
-                    <Download className="h-3 w-3 mr-1" />Aperçu PDF
-                  </Button>
+                    <Download className="h-3 w-3 mr-1" />{t("employee_drill_down_apercu_pdf")}</Button>
                 </ActionTooltip>
-                <ActionTooltip label="Conflits avec les pairs (à venir)">
+                <ActionTooltip label={t("conflits_pairs_venir")}>
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setConflictsDialogOpen(true)}>
-                    <Users className="h-3 w-3 mr-1" />Conflits équipe
-                  </Button>
+                    <Users className="h-3 w-3 mr-1" />{t("employee_drill_down_conflits_equipe")}</Button>
                 </ActionTooltip>
-                <ActionTooltip label="Envoyer une notification à l'employé">
+                <ActionTooltip label={t("envoyer_notification_employe")}>
                   <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => setNotifyDialogOpen(true)}>
                     <Mail className="h-3 w-3 mr-1" />Notifier
                   </Button>
@@ -489,7 +487,7 @@ export function EmployeeDrillDownPanel({
               </div>
             )}
 
-            {/* Liste des demandes */}
+
             <div className="p-4 space-y-2">
               <div className="flex items-center justify-between mb-1">
                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52]">
@@ -499,7 +497,7 @@ export function EmployeeDrillDownPanel({
 
               {requests.length === 0 ? (
                 <div className="text-center py-8 text-xs text-muted-foreground">
-                  Aucune demande pour cet employé.
+                  {t("aucune_demande_cet_employe")}
                 </div>
               ) : (
                 requests.map((r) => {
@@ -516,12 +514,12 @@ export function EmployeeDrillDownPanel({
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant="outline" className="text-[10px]">{meta.label}</Badge>
-                            <Badge className={`text-[10px] ${sMeta.color}`}>{sMeta.label}</Badge>
+                            <Badge variant="outline" className="text-[10px]">{t(meta.labelKey)}</Badge>
+                            <Badge className={`text-[10px] ${sMeta.color}`}>{t(sMeta.labelKey)}</Badge>
                             {r.halfDay && <Badge variant="outline" className="text-[10px]">½ {r.halfDay}</Badge>}
                             {r.isLockedByPaid && (
                               <Badge variant="outline" className="text-[10px] text-amber-700 border-amber-300">
-                                Période payée
+                                {t("periode_payee")}
                               </Badge>
                             )}
                             {r.attachmentUrl && (
@@ -540,25 +538,25 @@ export function EmployeeDrillDownPanel({
                           {r.reason && <p className="text-[11px] italic text-muted-foreground mt-1 line-clamp-2">« {r.reason} »</p>}
                           {r.reviewNotes && r.status !== "pending" && (
                             <p className="text-[11px] text-muted-foreground mt-1">
-                              <strong>Note revue :</strong> {r.reviewNotes}
+                              <strong>{t("note_revue")}</strong> {r.reviewNotes}
                             </p>
                           )}
                         </div>
                       </div>
-                      {/* Actions */}
+
                       <div className="mt-2 flex flex-wrap gap-1.5 justify-end">
                         {r.status === "pending" && (
                           <>
-                            <ActionTooltip label="Approuver">
+                            <ActionTooltip label={t("approuver")}>
                               <Button
                                 size="sm" variant="outline" disabled={busy}
                                 className="h-7 text-[11px] text-emerald-700 border-emerald-200 hover:bg-emerald-50"
                                 onClick={() => onApprove(r)}
                               >
-                                <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : "Approuver"}
+                                <CheckCircle2 className="h-3 w-3 mr-1" />{busy ? "..." : t("approuver")}
                               </Button>
                             </ActionTooltip>
-                            <ActionTooltip label="Refuser">
+                            <ActionTooltip label={t("refuser")}>
                               <Button
                                 size="sm" variant="outline" disabled={busy}
                                 className="h-7 text-[11px] text-red-600 border-red-200 hover:bg-red-50"
@@ -567,8 +565,8 @@ export function EmployeeDrillDownPanel({
                                 <XCircle className="h-3 w-3 mr-1" />Refuser
                               </Button>
                             </ActionTooltip>
-                            {/* TÂCHE 4 (P1-8) : annuler au nom de l'employé */}
-                            <ActionTooltip label="Annuler cette demande au nom de l'employé">
+
+                            <ActionTooltip label={t("annuler_demande_nom_employe")}>
                               <Button
                                 size="sm" variant="outline" disabled={busy}
                                 className="h-7 text-[11px] text-red-700 border-red-200 hover:bg-red-50"
@@ -580,7 +578,7 @@ export function EmployeeDrillDownPanel({
                           </>
                         )}
                         {!r.isLockedByPaid && (
-                          <ActionTooltip label="Modifier (admin)">
+                          <ActionTooltip label={t("modifier_admin")}>
                             <Button
                               size="sm" variant="outline" disabled={busy}
                               className="h-7 text-[11px]"
@@ -590,7 +588,7 @@ export function EmployeeDrillDownPanel({
                             </Button>
                           </ActionTooltip>
                         )}
-                        <ActionTooltip label="Historique des modifications">
+                        <ActionTooltip label={t("historique_modifications")}>
                           <Button
                             size="sm" variant="outline"
                             className="h-7 text-[11px]"
@@ -604,14 +602,14 @@ export function EmployeeDrillDownPanel({
                             <AddToCalendarMenu
                               event={{
                                 leaveId: r.id,
-                                title: `Congé : ${TYPE_META[r.type]?.label ?? "Congé"} — ${employee?.fullName || employee?.email || ""}`.trim(),
+                                title: `Congé : ${t(TYPE_META[r.type]?.labelKey ?? "type_other")} — ${employee?.fullName || employee?.email || ""}`.trim(),
                                 startDate: r.startDate,
                                 endDate: r.endDate,
                                 description: r.reason || undefined,
                               }}
-                              triggerLabel="Calendrier"
+                              triggerLabel={t("calendrier")}
                             />
-                            <ActionTooltip label="Aperçu de la lettre de confirmation PDF">
+                            <ActionTooltip label={t("apercu_lettre_confirmation_pdf")}>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -628,7 +626,7 @@ export function EmployeeDrillDownPanel({
                             </ActionTooltip>
                           </>
                         )}
-                        {/* Menu Plus */}
+
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button size="sm" variant="outline" className="h-7 w-7 p-0" disabled={busy}>
@@ -638,13 +636,11 @@ export function EmployeeDrillDownPanel({
                           <DropdownMenuContent align="end" className="w-56">
                             {r.status === "approved" && !r.isLockedByPaid && (
                               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onUnapprove(r); }}>
-                                <RefreshCw className="h-3.5 w-3.5 mr-2" />Retirer l&apos;approbation
-                              </DropdownMenuItem>
+                                <RefreshCw className="h-3.5 w-3.5 mr-2" />{t("employee_drill_down_retirer_l_approbation")}</DropdownMenuItem>
                             )}
                             {!r.isLockedByPaid && (
                               <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setConvertDialogReq(r); }}>
-                                <RotateCcw className="h-3.5 w-3.5 mr-2" />Convertir le type
-                              </DropdownMenuItem>
+                                <RotateCcw className="h-3.5 w-3.5 mr-2" />{t("employee_drill_down_convertir_le_type")}</DropdownMenuItem>
                             )}
                             <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setDuplicateDialogReq(r); }}>
                               <Copy className="h-3.5 w-3.5 mr-2" />Dupliquer
@@ -654,8 +650,7 @@ export function EmployeeDrillDownPanel({
                               <>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); onCancelApproved(r); }} className="text-amber-700 focus:text-amber-700">
-                                  <Ban className="h-3.5 w-3.5 mr-2" />Annuler le congé
-                                </DropdownMenuItem>
+                                  <Ban className="h-3.5 w-3.5 mr-2" />{t("employee_drill_down_annuler_le_conge")}</DropdownMenuItem>
                               </>
                             )}
                             {!r.isLockedByPaid && (
@@ -677,7 +672,7 @@ export function EmployeeDrillDownPanel({
           </div>
         )}
 
-        {/* Footer sticky : créer pour... */}
+
         {employee && (
           <div className="px-5 py-3 border-t bg-muted/30 shrink-0 flex items-center justify-between gap-2">
             <p className="text-xs text-muted-foreground">
@@ -688,14 +683,13 @@ export function EmployeeDrillDownPanel({
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
               onClick={() => onCreateForEmployee(employee)}
               disabled={isBlocked}
-              title={isBlocked ? "Soumissions bloquées" : undefined}
+              title={isBlocked ? t("soumissions_bloquees") : undefined}
             >
-              <Plus className="h-3 w-3 mr-1" />Créer une demande
-            </Button>
+              <Plus className="h-3 w-3 mr-1" />{t("employee_drill_down_creer_une_demande")}</Button>
           </div>
         )}
 
-        {/* ─── DIALOGS ─── */}
+
         {employee && (
           <>
             <PolicyDialog
@@ -733,7 +727,7 @@ export function EmployeeDrillDownPanel({
               onPdfPreview={() => setPdfPreview({
                 url: `/api/admin/leaves/employee/${employee.id}/annual-report-pdf`,
                 title: `Relevé annuel — ${employee.fullName || employee.email}`,
-                description: "Période courante (1er mai → 30 avril)",
+                description: t("periode_courante_1er_mai_30"),
                 filename: `releve-annuel-${employee.id}.pdf`,
               })}
             />
@@ -759,7 +753,7 @@ export function EmployeeDrillDownPanel({
           </>
         )}
 
-        {/* Modal global d'aperçu PDF (convention VNK : jamais window.open direct) */}
+
         <PdfPreviewModal
           open={!!pdfPreview}
           url={pdfPreview?.url ?? null}
@@ -793,6 +787,7 @@ function KpiBox({
 
 // ─── DropdownMenuItem custom pour upload (déclenche un input file caché) ──
 function AttachmentMenuItem({ r, onUploaded }: { r: LeaveRow; onUploaded: () => void }) {
+  const t = useTranslations("admin.leaves");
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
@@ -804,11 +799,11 @@ function AttachmentMenuItem({ r, onUploaded }: { r: LeaveRow; onUploaded: () => 
       fd.append("file", file);
       const res = await fetch(`/api/admin/leaves/${r.id}/attachment`, { method: "POST", body: fd });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Échec de l'upload");
-      toast.success("Justificatif joint");
+      if (!res.ok) throw new Error(data.error || t("echec_upload"));
+      toast.success(t("justificatif_joint"));
       onUploaded();
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Erreur upload");
+      toast.error(e instanceof Error ? e.message : t("erreur_upload"));
     } finally {
       setUploading(false);
     }
@@ -835,7 +830,7 @@ function AttachmentMenuItem({ r, onUploaded }: { r: LeaveRow; onUploaded: () => 
         onSelect={(e) => { e.preventDefault(); inputRef.current?.click(); }}
       >
         <Paperclip className="h-3.5 w-3.5 mr-2" />
-        {r.attachmentUrl ? "Remplacer le justificatif" : "Uploader un justificatif"}
+        {r.attachmentUrl ? t("remplacer_justificatif") : t("uploader_justificatif")}
       </DropdownMenuItem>
     </>
   );
@@ -850,6 +845,7 @@ function PolicyDialog({
   policies: Policy[]; currentId: number | null;
   employeeId: number; onSaved: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [val, setVal] = useState<string>(currentId !== null ? String(currentId) : "__null__");
   const [busy, setBusy] = useState(false);
@@ -860,21 +856,21 @@ function PolicyDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Changer la politique</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("changer_politique")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              La politique régit les règles de calcul (taux, carry-over, quotas).
+              {t("politique_regit_regles_calcul_taux")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
-          <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Politique</Label>
+          <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("politique")}</Label>
           <Select value={val} onValueChange={setVal}>
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="__null__">— Politique par défaut —</SelectItem>
+              <SelectItem value="__null__">{t("politique_defaut")}</SelectItem>
               {policies.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)}>
-                  {p.name}{p.isDefault ? " (défaut)" : ""}
+                  {p.name}{p.isDefault ? t("defaut_2") : ""}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -890,11 +886,11 @@ function PolicyDialog({
               const policyId = val === "__null__" ? null : Number(val);
               const res = await assignLeavePolicyAction({ employeeId, policyId });
               setBusy(false);
-              if (res.success) { toast.success("Politique mise à jour"); onSaved(); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("politique_mise_jour")); onSaved(); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Enregistrer"}
+            {busy ? "..." : t("enregistrer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -905,6 +901,7 @@ function PolicyDialog({
 function AdjustBalanceDialog({
   open, onClose, employeeId, onSaved,
 }: { open: boolean; onClose: () => void; employeeId: number; onSaved: () => void; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [delta, setDelta] = useState<string>("");
   const [reason, setReason] = useState<string>("");
@@ -918,25 +915,25 @@ function AdjustBalanceDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Ajuster le solde manuellement</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("ajuster_solde_manuellement")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Delta en jours (positif ou négatif) appliqué à la période de référence courante.
+              {t("delta_jours_positif_negatif_applique")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Delta (jours)</Label>
-            <Input type="number" step="0.5" value={delta} onChange={(e) => setDelta(e.target.value)} placeholder="Ex : +2 ou -1" />
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("delta_jours")}</Label>
+            <Input type="number" step="0.5" value={delta} onChange={(e) => setDelta(e.target.value)} placeholder={t("ex_2_1")} />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Raison</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("raison")}</Label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30"
-              placeholder="Ex : correction historique, bonus, etc."
+              placeholder={t("ex_correction_historique_bonus_etc")}
             />
           </div>
         </div>
@@ -949,11 +946,11 @@ function AdjustBalanceDialog({
               setBusy(true);
               const res = await adjustLeaveBalanceAction({ employeeId, deltaDays: num, reason: reason.trim() });
               setBusy(false);
-              if (res.success) { toast.success("Solde ajusté"); onSaved(); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("solde_ajuste")); onSaved(); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Appliquer"}
+            {busy ? "..." : t("appliquer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -964,6 +961,7 @@ function AdjustBalanceDialog({
 function BlockDialog({
   open, onClose, employeeId, onSaved,
 }: { open: boolean; onClose: () => void; employeeId: number; onSaved: () => void; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [until, setUntil] = useState<string>("");
   const [reason, setReason] = useState<string>("");
@@ -976,25 +974,25 @@ function BlockDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-red-700 to-red-900 text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Bloquer les soumissions</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("bloquer_soumissions")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              L&apos;employé ne pourra plus soumettre de nouvelles demandes jusqu&apos;à la date choisie.
+              {t("apos_employe_ne_pourra_plus")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Bloquer jusqu&apos;au</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("bloquer_jusqu_apos")}</Label>
             <Input type="date" value={until} onChange={(e) => setUntil(e.target.value)} />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Raison</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("raison")}</Label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={3}
               className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm resize-y focus:outline-none focus:ring-2 focus:ring-[#0F2D52]/30"
-              placeholder="Ex : période critique, sanction disciplinaire, etc."
+              placeholder={t("ex_periode_critique_sanction_disciplinaire")}
             />
           </div>
         </div>
@@ -1007,11 +1005,11 @@ function BlockDialog({
               setBusy(true);
               const res = await blockEmployeeLeaveAction({ employeeId, until, reason: reason.trim() });
               setBusy(false);
-              if (res.success) { toast.success("Soumissions bloquées"); onSaved(); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("soumissions_bloquees")); onSaved(); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Bloquer"}
+            {busy ? "..." : t("bloquer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1022,6 +1020,7 @@ function BlockDialog({
 function NotifyDialog({
   open, onClose, employeeId, employeeName,
 }: { open: boolean; onClose: () => void; employeeId: number; employeeName: string; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
@@ -1037,17 +1036,17 @@ function NotifyDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-base">Notifier {employeeName}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Un message in-app sera créé dans son centre de notifications.
+              {t("message_in_app_sera_cree")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Sujet</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("sujet")}</Label>
             <Input value={subject} onChange={(e) => setSubject(e.target.value)} maxLength={200} />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Message</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("message")}</Label>
             <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -1057,7 +1056,7 @@ function NotifyDialog({
             />
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Lien (optionnel)</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("lien_optionnel")}</Label>
             <Input value={link} onChange={(e) => setLink(e.target.value)} placeholder="/admin/..." />
           </div>
         </div>
@@ -1075,11 +1074,11 @@ function NotifyDialog({
                 link: link.trim() || undefined,
               });
               setBusy(false);
-              if (res.success) { toast.success("Notification envoyée"); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("notification_envoyee")); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Envoyer"}
+            {busy ? "..." : t("envoyer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1096,8 +1095,9 @@ function AnnualReportDialog({
   requests: LeaveRow[];
   onPdfPreview: () => void;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
-  // Filtre sur l'année courante de référence (1er mai → 30 avril)
+
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
   const periodStart = new Date(refYear, 4, 1);
@@ -1131,25 +1131,25 @@ function AnnualReportDialog({
         <div className="p-5 space-y-4 max-h-[60vh] overflow-y-auto">
           {balance && (
             <div className="grid grid-cols-4 gap-2">
-              <KpiBox label="Restant" value={balance.vacationDaysRemaining} unit="j" tone="success" />
-              <KpiBox label="Pris" value={balance.vacationDaysTaken} unit="j" tone="muted" />
-              <KpiBox label="Planifiés" value={balance.vacationDaysPlanned} unit="j" tone="muted" />
-              <KpiBox label="Accumulés" value={balance.accruedDays ?? 0} unit="j" tone="muted" />
+              <KpiBox label={t("restant")} value={balance.vacationDaysRemaining} unit="j" tone="success" />
+              <KpiBox label={t("pris")} value={balance.vacationDaysTaken} unit="j" tone="muted" />
+              <KpiBox label={t("planifies")} value={balance.vacationDaysPlanned} unit="j" tone="muted" />
+              <KpiBox label={t("accumules")} value={balance.accruedDays ?? 0} unit="j" tone="muted" />
             </div>
           )}
           <div>
-            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] mb-2">Totaux par type (approuvés)</h4>
+            <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#0F2D52] mb-2">{t("totaux_type_approuves")}</h4>
             {byType.size === 0 ? (
-              <p className="text-xs text-muted-foreground italic">Aucune demande approuvée sur la période.</p>
+              <p className="text-xs text-muted-foreground italic">{t("aucune_demande_approuvee_periode")}</p>
             ) : (
               <div className="space-y-1.5">
-                {Array.from(byType.entries()).map(([t, v]) => {
-                  const m = typeMeta(t);
+                {Array.from(byType.entries()).map(([leaveType, v]) => {
+                  const m = typeMeta(leaveType);
                   const Icon = m.icon;
                   return (
-                    <div key={t} className="flex items-center justify-between rounded-md border bg-background p-2">
+                    <div key={leaveType} className="flex items-center justify-between rounded-md border bg-background p-2">
                       <span className="inline-flex items-center gap-2 text-sm">
-                        <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />{m.label}
+                        <Icon className="h-3.5 w-3.5 text-[#0F2D52]" />{t(m.labelKey)}
                       </span>
                       <span className="text-sm tabular-nums">
                         <strong>{v.days}</strong> j <span className="text-muted-foreground">({v.count} demande{v.count > 1 ? "s" : ""})</span>
@@ -1167,8 +1167,7 @@ function AnnualReportDialog({
             className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white"
             onClick={onPdfPreview}
           >
-            <FileText className="h-3.5 w-3.5 mr-1.5" />Aperçu PDF
-          </Button>
+            <FileText className="h-3.5 w-3.5 mr-1.5" />{t("employee_drill_down_apercu_pdf")}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -1181,21 +1180,22 @@ function ConflictsDialog({
   open: boolean; onClose: () => void;
   conflicts: Array<{ requestId: number; period: string; peers: Array<{ id: number; name: string; period: string; type: string }> }>;
 }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="p-0 overflow-hidden max-w-lg">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Conflits avec les pairs</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("conflits_pairs")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Demandes à venir qui chevauchent celles des collègues du même scope.
+              {t("demandes_venir_chevauchent_celles_collegues")}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3 max-h-[60vh] overflow-y-auto">
           {conflicts.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic">Aucun conflit détecté.</p>
+            <p className="text-xs text-muted-foreground italic">{t("aucun_conflit_detecte")}</p>
           ) : (
             conflicts.map((c) => (
               <div key={c.requestId} className="rounded-md border bg-background p-3">
@@ -1204,7 +1204,7 @@ function ConflictsDialog({
                   {c.peers.map((p, i) => (
                     <li key={i} className="text-xs text-muted-foreground">
                       <ShieldCheck className="inline h-3 w-3 mr-1 text-amber-600" />
-                      <strong className="text-foreground">{p.name}</strong> · {typeMeta(p.type).label} · {p.period}
+                      <strong className="text-foreground">{p.name}</strong> · {t(typeMeta(p.type).labelKey)} · {p.period}
                     </li>
                   ))}
                 </ul>
@@ -1223,6 +1223,7 @@ function ConflictsDialog({
 function ConvertTypeDialog({
   req, onClose, onSaved,
 }: { req: LeaveRow | null; onClose: () => void; onSaved: () => void; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [newType, setNewType] = useState<string>("");
   const [reason, setReason] = useState("");
@@ -1235,26 +1236,26 @@ function ConvertTypeDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Convertir le type</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("convertir_type")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Demande #{req.id} — type actuel : {typeMeta(req.type).label}
+              Demande #{req.id} — type actuel : {t(typeMeta(req.type).labelKey)}
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Nouveau type</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("nouveau_type")}</Label>
             <Select value={newType} onValueChange={setNewType}>
-              <SelectTrigger><SelectValue placeholder="Choisir un type" /></SelectTrigger>
+              <SelectTrigger><SelectValue placeholder={t("choisir_type")} /></SelectTrigger>
               <SelectContent>
                 {TYPE_KEYS.filter((k) => k !== req.type).map((k) => (
-                  <SelectItem key={k} value={k}>{typeMeta(k).label}</SelectItem>
+                  <SelectItem key={k} value={k}>{t(typeMeta(k).labelKey)}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div>
-            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Raison</Label>
+            <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("raison")}</Label>
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -1272,11 +1273,11 @@ function ConvertTypeDialog({
               setBusy(true);
               const res = await convertLeaveTypeAction({ id: req.id, newType, reason: reason.trim() });
               setBusy(false);
-              if (res.success) { toast.success("Type converti"); onSaved(); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("type_converti")); onSaved(); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Convertir"}
+            {busy ? "..." : t("convertir")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1287,13 +1288,14 @@ function ConvertTypeDialog({
 function DuplicateDialog({
   req, onClose, onSaved,
 }: { req: LeaveRow | null; onClose: () => void; onSaved: () => void; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [busy, setBusy] = useState(false);
   useEffect(() => {
     if (req) {
-      // Pré-rempli : +30j
+
       const s = new Date(req.startDate); s.setDate(s.getDate() + 30);
       const e = new Date(req.endDate); e.setDate(e.getDate() + 30);
       setStart(s.toISOString().slice(0, 10));
@@ -1307,20 +1309,20 @@ function DuplicateDialog({
       <DialogContent className="p-0 overflow-hidden max-w-md">
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
-            <DialogTitle className="text-white text-base">Dupliquer la demande</DialogTitle>
+            <DialogTitle className="text-white text-base">{t("dupliquer_demande")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Crée une nouvelle demande {typeMeta(req.type).label} sur de nouvelles dates (en attente).
+              Crée une nouvelle demande {t(typeMeta(req.type).labelKey)} sur de nouvelles dates (en attente).
             </DialogDescription>
           </DialogHeader>
         </div>
         <div className="p-5 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <div>
-              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Début</Label>
+              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("debut")}</Label>
               <Input type="date" value={start} onChange={(e) => setStart(e.target.value)} />
             </div>
             <div>
-              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">Fin</Label>
+              <Label className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground">{t("fin")}</Label>
               <Input type="date" value={end} onChange={(e) => setEnd(e.target.value)} />
             </div>
           </div>
@@ -1334,11 +1336,11 @@ function DuplicateDialog({
               setBusy(true);
               const res = await duplicateLeaveAction({ id: req.id, newStartDate: start, newEndDate: end });
               setBusy(false);
-              if (res.success) { toast.success("Demande dupliquée"); onSaved(); onClose(); }
-              else toast.error(res.error || "Erreur");
+              if (res.success) { toast.success(t("demande_dupliquee")); onSaved(); onClose(); }
+              else toast.error(res.error || t("erreur"));
             }}
           >
-            {busy ? "..." : "Dupliquer"}
+            {busy ? "..." : t("dupliquer")}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -1357,6 +1359,7 @@ type AuditEntry = {
 function HistoryDialog({
   req, onClose,
 }: { req: LeaveRow | null; onClose: () => void; }) {
+  const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1366,7 +1369,7 @@ function HistoryDialog({
     fetch(`/api/admin/leaves/${req.id}/history`)
       .then((r) => r.ok ? r.json() : { logs: [] })
       .then((d) => setLogs(d.logs || []))
-      .catch(() => toast.error("Impossible de charger l'historique"))
+      .catch(() => toast.error(t("impossible_charger_historique")))
       .finally(() => setLoading(false));
   }, [req]);
   if (!req) return null;
@@ -1377,7 +1380,7 @@ function HistoryDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-base">Historique — Demande #{req.id}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Journal d&apos;audit complet (création, modifications, décisions).
+              {t("journal_apos_audit_complet_creation")}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -1385,7 +1388,7 @@ function HistoryDialog({
           {loading ? (
             <div className="flex items-center justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
           ) : logs.length === 0 ? (
-            <p className="text-xs text-muted-foreground italic text-center py-4">Aucune entrée d&apos;audit.</p>
+            <p className="text-xs text-muted-foreground italic text-center py-4">{t("aucune_entree_apos_audit")}</p>
           ) : (
             <ol className="space-y-2">
               {logs.map((l) => (
@@ -1396,8 +1399,7 @@ function HistoryDialog({
                       {new Date(l.createdAt).toLocaleString("fr-CA")}
                     </span>
                   </div>
-                  <p className="text-xs text-foreground mt-1">
-                    Par <strong>{l.actor ? (l.actor.fullName || l.actor.email) : "Système"}</strong>
+                  <p className="text-xs text-foreground mt-1">{t("employee_drill_down_par")}<strong>{l.actor ? (l.actor.fullName || l.actor.email) : t("systeme")}</strong>
                   </p>
                   <AuditChangesDisplay changes={l.changes} />
                 </li>

@@ -3,6 +3,7 @@
 // Auth: admin with payroll/users write permission.
 // Optional query: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +22,7 @@ function csv(v: string | number): string {
 }
 
 export async function GET(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -62,7 +64,13 @@ export async function GET(req: NextRequest) {
     },
   });
 
-  const lines: string[] = ["Employé,Date début,Heure début,Date fin,Heure fin,Durée (min),Catégorie,Approuvé par,Notes"];
+  const lines: string[] = [
+    [
+      t("exp_h_employe"), t("csvh_date_debut"), t("csvh_heure_debut"),
+      t("csvh_date_fin"), t("csvh_heure_fin"), t("csvh_duree_min"),
+      t("csvh_categorie"), t("exp_h_approuve_par"), t("csvh_notes"),
+    ].join(","),
+  ];
   for (const e of entries) {
     const row = [
       csv(e.admin.fullName || e.admin.email),

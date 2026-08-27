@@ -1,6 +1,7 @@
 // API · Web Push — enregistrer/supprimer un abonnement.
 // La clé publique VAPID est exposée pour que le client puisse s'abonner.
 import { NextRequest, NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -16,6 +17,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -29,7 +31,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { endpoint, keys, label } = body;
     if (!endpoint || !keys?.p256dh || !keys?.auth) {
-      return NextResponse.json({ error: "Subscription incomplète" }, { status: 400 });
+      return NextResponse.json({ error: t("subscription_incomplete") }, { status: 400 });
     }
 
     const userAgent = req.headers.get("user-agent") ?? null;

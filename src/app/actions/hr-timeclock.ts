@@ -2,6 +2,7 @@
 // Employee time clock actions.
 // The employee punches in and out; a supervisor approves.
 import { z } from "zod";
+import { getTranslations } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { startOfWeek } from "@/lib/week";
@@ -156,7 +157,7 @@ async function assertCanReviewMany(actorId: number, targetAdminIds: number[]): P
   return true;
 }
 
-const ERR_NO_AUTHORITY = "Vous n'avez pas l'autorité pour gérer cet employé.";
+const ERR_NO_AUTHORITY = "vous_n_avez_pas_l_autorite_pour_2";
 
 // ── Is this date inside a locked or paid PayPeriod? ──
 // Returns null when fine, otherwise the error message to send back.
@@ -187,9 +188,10 @@ async function getActorName(adminId: number): Promise<string> {
 // ── Guard: a deactivated account may not punch at all.
 // Returns an error Result when refused, null when fine.
 async function assertAccountActive(adminId: number): Promise<{ success: false; error: string } | null> {
+  const t = await getTranslations("admin.action_errors");
   const a = await prisma.admin.findUnique({ where: { id: adminId }, select: { isActive: true } });
   if (!a || !a.isActive) {
-    return { success: false, error: "Compte désactivé — contactez RH." };
+    return { success: false, error: t("compte_desactive_contactez_rh") };
   }
   return null;
 }
@@ -200,6 +202,7 @@ async function assertAccountActive(adminId: number): Promise<{ success: false; e
 // Optional lat/lng: GPS capture (settings hr_pointage). When geofencing is
 // enabled, web punches outside the configured radius are rejected.
 export async function clockInAction(input: { jobCodeId?: number; category?: string; notes?: string; lat?: number; lng?: number }): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -212,7 +215,7 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
   const open = await prisma.timeClock.findFirst({
     where: { adminId, clockOut: null },
   });
-  if (open) return { success: false, error: "Vous avez déjà un pointage ouvert — fermez-le d'abord" };
+  if (open) return { success: false, error: t("vous_avez_deja_un_pointage_ouvert_fermez") };
 
   // Position of the employee plus the codes available to it.
   const me = await prisma.admin.findUnique({
@@ -230,10 +233,10 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
   if (availableCodes.length > 0) {
     // At least one code available: choosing one is mandatory.
     if (!input.jobCodeId) {
-      return { success: false, error: "Choisissez un code de tâche pour commencer" };
+      return { success: false, error: t("choisissez_un_code_de_tache_pour_commencer") };
     }
     const valid = availableCodes.find((c) => c.id === input.jobCodeId);
-    if (!valid) return { success: false, error: "Code de tâche invalide pour votre poste" };
+    if (!valid) return { success: false, error: t("code_de_tache_invalide_pour_votre_poste") };
     jobCodeId = valid.id;
   }
 
@@ -268,6 +271,7 @@ export async function clockInAction(input: { jobCodeId?: number; category?: stri
 // A break still running at clock-out is closed first, so its minutes land in
 // the totals before the worked duration is computed.
 export async function clockOutAction(input?: { lat?: number; lng?: number }): Promise<Result<{ durationMin: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -347,7 +351,7 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
             recipientType: "admin",
             recipientId: adminId,
             type: "warning",
-            title: "Seuil de 40 h atteint cette semaine",
+            title: t("seuil_de_40_h_atteint_cette_semaine"),
             body: `Vous avez cumulé ${hours} h ${String(mins).padStart(2, "0")} cette semaine — les heures suivantes comptent en temps supplémentaire.`,
             link: "/admin/mon-espace/pointage",
             icon: "clock",
@@ -359,7 +363,7 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
               recipientType: "admin",
               recipientId: me2.managerId,
               type: "warning",
-              title: "Temps supplémentaire dans votre équipe",
+              title: t("temps_supplementaire_dans_votre_equipe"),
               body: `${me2.fullName ?? me2.email} a dépassé 40 h cette semaine (${hours} h ${String(mins).padStart(2, "0")}).`,
               link: "/admin/employes/pointage",
               icon: "clock",
@@ -417,6 +421,7 @@ export async function pauseClockAction(input?: { kind?: "meal" | "paid" }): Prom
 // ── Reprendre ──────────────────────────────────────────────
 // Back from a break: its minutes are added to the running total.
 export async function resumeClockAction(): Promise<Result<{ breakAddedMin: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -430,7 +435,7 @@ export async function resumeClockAction(): Promise<Result<{ breakAddedMin: numbe
     orderBy: { clockIn: "desc" },
   });
   if (!open) return { success: false, error: "Aucun pointage en cours" };
-  if (!open.pausedAt) return { success: false, error: "Pas en pause" };
+  if (!open.pausedAt) return { success: false, error: t("pas_en_pause") };
 
   // PayPeriod check on the running shift.
   const isPrivilegedR = (await isFounderAdmin(adminId)) || (await isSuperAdmin(adminId));
@@ -486,18 +491,19 @@ const manualSchema = z.object({
 const MAX_HOURS_PER_ENTRY = 16;
 
 export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>): Promise<Result<{ id: number; submittedForApproval: boolean }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = manualSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // Entering time for someone else requires authority over them; without it
   // the entry falls back to the caller's own.
   let adminId = actorId;
   if (parsed.data.targetAdminId && parsed.data.targetAdminId !== actorId) {
     if (!(await assertCanReviewAdmin(actorId, parsed.data.targetAdminId))) {
-      return { success: false, error: ERR_NO_AUTHORITY };
+      return { success: false, error: t(ERR_NO_AUTHORITY) };
     }
     adminId = parsed.data.targetAdminId;
   }
@@ -505,7 +511,7 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
   const ci = new Date(parsed.data.clockIn);
   const co = new Date(parsed.data.clockOut);
   if (isNaN(ci.getTime()) || isNaN(co.getTime())) return { success: false, error: "Dates invalides" };
-  if (co <= ci) return { success: false, error: "L'heure de fin doit être après le début" };
+  if (co <= ci) return { success: false, error: t("l_heure_de_fin_doit_etre_apres") };
 
   const durationMs = co.getTime() - ci.getTime();
   if (durationMs > MAX_HOURS_PER_ENTRY * 60 * 60 * 1000) {
@@ -513,8 +519,8 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
   }
 
   const nowDate = new Date();
-  if (ci > nowDate) return { success: false, error: "Date de début dans le futur refusée" };
-  if (co > nowDate) return { success: false, error: "Date de fin dans le futur refusée" };
+  if (ci > nowDate) return { success: false, error: t("date_de_debut_dans_le_futur_refusee") };
+  if (co > nowDate) return { success: false, error: t("date_de_fin_dans_le_futur_refusee") };
 
   // super_admin and founder bypass "locked" periods. Judged on the ACTOR, not
   // the target, who may well be a regular employee.
@@ -615,19 +621,20 @@ function fmtHoursShort(min: number): string {
 
 // ── Employee deletion, only while unapproved and unpaid ──
 export async function deleteTimeClockAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
 
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
   if (!tc) return { success: false, error: "Introuvable" };
-  if (tc.adminId !== adminId) return { success: false, error: "Vous ne pouvez supprimer que vos propres entrées" };
-  if (tc.approvedAt) return { success: false, error: "Approuvée — non modifiable" };
-  if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin de paie" };
+  if (tc.adminId !== adminId) return { success: false, error: t("vous_ne_pouvez_supprimer_que_vos_propres") };
+  if (tc.approvedAt) return { success: false, error: t("approuvee_non_modifiable") };
+  if (tc.payStubId) return { success: false, error: t("deja_sur_un_bulletin_de_paie") };
   // Workflow rule: submitted entries are locked — unlock request required
   // (founder excepted).
   if (tc.submittedAt && !(await isFounderAdmin(adminId))) {
-    return { success: false, error: "Entrée soumise — demandez un déblocage avant de supprimer" };
+    return { success: false, error: t("entree_soumise_demandez_un_deblocage_avant_de") };
   }
 
   await prisma.timeClock.delete({ where: { id: input.id } });
@@ -656,6 +663,7 @@ async function createSnapshot(actorId: number, reason: string, payload: unknown)
 export async function mergeDayTimeClockAction(
   input: { date: string },
 ): Promise<Result<{ id: number; snapshotId: number; groups: number; punches: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -679,7 +687,7 @@ export async function mergeDayTimeClockAction(
     },
     orderBy: { clockIn: "asc" },
   });
-  if (entries.length < 2) return { success: false, error: "Rien à fusionner (besoin de 2+ pointages éligibles)" };
+  if (entries.length < 2) return { success: false, error: t("rien_a_fusionner_besoin_de_2_pointages") };
 
   // A merged entry spans first start -> last end, so any gap inside it is time
   // that was not worked. Only the mis-punch case (out and back in within
@@ -770,6 +778,7 @@ export async function mergeDayTimeClockAction(
 
 // ── Delete a day's short punches, under maxMin minutes ──
 export async function deleteShortTimeClockAction(input: { date: string; maxMin: number }): Promise<Result<{ deleted: number; snapshotId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -788,7 +797,7 @@ export async function deleteShortTimeClockAction(input: { date: string; maxMin: 
       payStubId: null,
     },
   });
-  if (targets.length === 0) return { success: false, error: "Aucun pointage court à supprimer" };
+  if (targets.length === 0) return { success: false, error: t("aucun_pointage_court_a_supprimer") };
 
   const ids = targets.map((t) => t.id);
 
@@ -815,9 +824,10 @@ export async function deleteShortTimeClockAction(input: { date: string; maxMin: 
 
 // ── Supervisor approval ───────────────────────────────────
 export async function approveTimeClockAction(input: { ids: number[] }): Promise<Result<{ approved: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
-  if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: "Aucune entrée fournie" };
+  if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
+  if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: t("aucune_entree_fournie") };
 
   // No self-approval, and an org-chart check on every target.
   const targets = await prisma.timeClock.findMany({
@@ -826,10 +836,10 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
   });
   const targetAdminIds = Array.from(new Set(targets.map((t) => t.adminId)));
   if (!(await canReviewTargets(actorId, targetAdminIds))) {
-    return { success: false, error: "Vous ne pouvez pas approuver vos propres heures" };
+    return { success: false, error: t("vous_ne_pouvez_pas_approuver_vos_propres_2") };
   }
   if (!(await assertCanReviewMany(actorId, targetAdminIds))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   // Workflow rule: only SUBMITTED entries can be approved (drafts stay with
@@ -839,7 +849,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
     data: { approvedBy: actorId, approvedAt: new Date() },
   });
   if (r.count === 0) {
-    return { success: false, error: "Aucune entrée soumise à approuver — l'employé doit d'abord soumettre sa semaine" };
+    return { success: false, error: t("aucune_entree_soumise_a_approuver_l_employe") };
   }
 
   // Notify every employee whose hours were just approved.
@@ -853,7 +863,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
         recipientType: "admin",
         recipientId: e.adminId,
         type: "success",
-        title: "Pointage approuvé",
+        title: t("pointage_approuve"),
         body: `Pointage du ${e.clockIn.toLocaleDateString("fr-CA")} validé.`,
         link: "/admin/mon-espace/pointage",
         icon: "check-circle",
@@ -877,14 +887,15 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
 
 // ── Approve an employee's whole week ──────────────────────
 export async function approveWeekTimeClockAction(input: { adminId: number; weekStart?: string }): Promise<Result<{ approved: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
+  if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
 
   if (!(await canReviewTargets(actorId, [input.adminId]))) {
-    return { success: false, error: "Vous ne pouvez pas approuver vos propres heures" };
+    return { success: false, error: t("vous_ne_pouvez_pas_approuver_vos_propres_2") };
   }
   if (!(await assertCanReviewAdmin(actorId, input.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   // Current week (Sunday -> Saturday, project convention) or explicit weekStart.
@@ -919,9 +930,9 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
       },
     });
     if (totalThisWeek === 0) {
-      return { success: false, error: "Aucun pointage cette semaine pour cet employé" };
+      return { success: false, error: t("aucun_pointage_cette_semaine_pour_cet_employe") };
     }
-    return { success: false, error: "Tous les pointages de la semaine sont déjà approuvés ou payés" };
+    return { success: false, error: t("tous_les_pointages_de_la_semaine_sont") };
   }
 
   return approveTimeClockAction({ ids: targets.map((t) => t.id) });
@@ -931,33 +942,34 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
 // approvedAt and approvedBy cleared, submittedAt kept so the entry returns to
 // the approval queue. Refused once the entry sits on a pay stub.
 export async function unapproveTimeClockAction(input: { ids: number[]; reason?: string }): Promise<Result<{ unapproved: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
-  if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: "Aucune entrée fournie" };
+  if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
+  if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: t("aucune_entree_fournie") };
 
   const targets = await prisma.timeClock.findMany({
     where: { id: { in: input.ids } },
     select: { id: true, adminId: true, clockIn: true, payStubId: true, approvedAt: true, notes: true },
   });
-  if (targets.length === 0) return { success: false, error: "Aucune entrée trouvée" };
+  if (targets.length === 0) return { success: false, error: t("aucune_entree_trouvee") };
 
   // Hard refusal as soon as one is already paid.
   const paid = targets.filter((t) => t.payStubId != null);
   if (paid.length > 0) {
-    return { success: false, error: "Une ou plusieurs entrées sont déjà sur un bulletin de paie — non modifiables" };
+    return { success: false, error: t("une_ou_plusieurs_entrees_sont_deja_sur") };
   }
 
   const targetAdminIds = Array.from(new Set(targets.map((t) => t.adminId)));
   if (!(await canReviewTargets(actorId, targetAdminIds))) {
-    return { success: false, error: "Vous ne pouvez pas modifier vos propres approbations" };
+    return { success: false, error: t("vous_ne_pouvez_pas_modifier_vos_propres") };
   }
   if (!(await assertCanReviewMany(actorId, targetAdminIds))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   // Only the entries actually approved.
   const approvedTargets = targets.filter((t) => t.approvedAt != null);
-  if (approvedTargets.length === 0) return { success: false, error: "Aucune entrée approuvée à annuler" };
+  if (approvedTargets.length === 0) return { success: false, error: t("aucune_entree_approuvee_a_annuler") };
 
   // `notes` belongs to the employee: the trail lives in TimeClockHistory.
   const r = await prisma.timeClock.updateMany({
@@ -969,8 +981,8 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
   // One "unapproved" event per entry actually reverted.
   if (unapproved > 0) {
     await prisma.timeClockHistory.createMany({
-      data: approvedTargets.map((t) => ({
-        timeClockId: t.id,
+      data: approvedTargets.map((entry) => ({
+        timeClockId: entry.id,
         actorId,
         event: "unapproved",
         reason: input.reason ?? null,
@@ -979,12 +991,12 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
 
     // One message per reverted entry.
     await prisma.notification.createMany({
-      data: approvedTargets.map((t) => ({
+      data: approvedTargets.map((entry) => ({
         recipientType: "admin",
-        recipientId: t.adminId,
+        recipientId: entry.adminId,
         type: "warning",
-        title: "Approbation annulée",
-        body: `L'approbation du pointage du ${t.clockIn.toLocaleDateString("fr-CA")} a été annulée${input.reason ? ` : ${input.reason}` : ""}.`,
+        title: t("approbation_annulee"),
+        body: `L'approbation du pointage du ${entry.clockIn.toLocaleDateString("fr-CA")} a été annulée${input.reason ? ` : ${input.reason}` : ""}.`,
         link: "/admin/mon-espace/pointage",
         icon: "alert-circle",
       })),
@@ -1003,19 +1015,20 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
 
 // ── Rejection: back to the employee ───────────────────────
 export async function rejectTimeClockAction(input: { id: number; reason: string }): Promise<Result<{ snapshotId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
   if (!tc) return { success: false, error: "Introuvable" };
-  if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin — débloquer le bulletin d'abord" };
+  if (tc.payStubId) return { success: false, error: t("deja_sur_un_bulletin_debloquer_le_bulletin") };
   if (!tc.submittedAt && !tc.approvedAt) {
-    return { success: false, error: "Entrée non soumise — rien à rejeter (brouillon de l'employé)" };
+    return { success: false, error: t("entree_non_soumise_rien_a_rejeter_brouillon") };
   }
   if (!(await canReviewTargets(actorId, [tc.adminId]))) {
-    return { success: false, error: "Vous ne pouvez pas rejeter vos propres heures" };
+    return { success: false, error: t("vous_ne_pouvez_pas_rejeter_vos_propres") };
   }
   if (!(await assertCanReviewAdmin(actorId, tc.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   const snapshotId = await createSnapshot(actorId, "reject", {
@@ -1060,7 +1073,7 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
       recipientType: "admin",
       recipientId: tc.adminId,
       type: "warning",
-      title: "Pointage rejeté",
+      title: t("pointage_rejete"),
       body: `Pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} rejeté : ${input.reason}`,
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
@@ -1078,13 +1091,14 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
 export async function rejectManyTimeClockAction(
   input: { ids: number[]; reason: string },
 ): Promise<Result<{ rejected: number; skipped: number; snapshotId: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   if (!Array.isArray(input.ids) || input.ids.length === 0) {
-    return { success: false, error: "Aucune entrée selectionnee" };
+    return { success: false, error: t("aucune_entree_selectionnee") };
   }
   if (!input.reason || input.reason.trim().length < 2) {
-    return { success: false, error: "Une raison est requise" };
+    return { success: false, error: t("une_raison_est_requise_2") };
   }
 
   const targets = await prisma.timeClock.findMany({
@@ -1095,24 +1109,24 @@ export async function rejectManyTimeClockAction(
       approvedAt: true, approvedBy: true, submittedAt: true, payStubId: true,
     },
   });
-  if (targets.length === 0) return { success: false, error: "Aucune entrée trouvée" };
+  if (targets.length === 0) return { success: false, error: t("aucune_entree_trouvee") };
 
   // Hard refusal as soon as one is already paid.
   const paid = targets.filter((t) => t.payStubId != null);
   if (paid.length > 0) {
-    return { success: false, error: "Une ou plusieurs entrées sont déjà sur un bulletin de paie — non rejetables" };
+    return { success: false, error: t("une_ou_plusieurs_entrees_sont_deja_sur_2") };
   }
   // Workflow rule: drafts (never submitted) cannot be rejected.
   if (targets.every((t) => !t.submittedAt && !t.approvedAt)) {
-    return { success: false, error: "Aucune entrée soumise dans la sélection — rien à rejeter" };
+    return { success: false, error: t("aucune_entree_soumise_dans_la_selection_rien") };
   }
 
   const targetAdminIds = Array.from(new Set(targets.map((t) => t.adminId)));
   if (!(await canReviewTargets(actorId, targetAdminIds))) {
-    return { success: false, error: "Vous ne pouvez pas rejeter vos propres heures" };
+    return { success: false, error: t("vous_ne_pouvez_pas_rejeter_vos_propres") };
   }
   if (!(await assertCanReviewMany(actorId, targetAdminIds))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   const reason = input.reason.trim().slice(0, 500);
@@ -1142,8 +1156,8 @@ export async function rejectManyTimeClockAction(
 
   // One createMany for the history.
   await prisma.timeClockHistory.createMany({
-    data: targets.map((t) => ({
-      timeClockId: t.id,
+    data: targets.map((entry) => ({
+      timeClockId: entry.id,
       actorId,
       event: "rejected",
       reason,
@@ -1152,12 +1166,12 @@ export async function rejectManyTimeClockAction(
 
   // One createMany for the notifications.
   await prisma.notification.createMany({
-    data: targets.map((t) => ({
+    data: targets.map((entry) => ({
       recipientType: "admin",
-      recipientId: t.adminId,
+      recipientId: entry.adminId,
       type: "warning",
-      title: "Pointage rejeté",
-      body: `Pointage du ${t.clockIn.toLocaleDateString("fr-CA")} rejeté : ${reason}`,
+      title: t("pointage_rejete"),
+      body: `Pointage du ${entry.clockIn.toLocaleDateString("fr-CA")} rejeté : ${reason}`,
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
     })),
@@ -1183,11 +1197,12 @@ const updateSchema = z.object({
 });
 
 export async function updateTimeClockAction(input: z.infer<typeof updateSchema>): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
   const parsed = updateSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const tc = await prisma.timeClock.findUnique({ where: { id: parsed.data.id } });
   if (!tc) return { success: false, error: "Introuvable" };
@@ -1197,7 +1212,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   const isAdminOverride = !isOwner && payrollId != null;
   if (!isOwner && !isAdminOverride) return unauthorized();
 
-  if (tc.payStubId) return { success: false, error: "Déjà sur un bulletin de paie — non modifiable" };
+  if (tc.payStubId) return { success: false, error: t("deja_sur_un_bulletin_de_paie_non") };
 
   // An approved entry may only be edited by an admin override (actor is not
   // the owner and holds payroll.write) or by the founder. Either way the edit
@@ -1208,8 +1223,8 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     return {
       success: false,
       error: isOwner
-        ? "Vous ne pouvez pas modifier vos propres heures approuvées (fondateur uniquement)"
-        : "Approuvée — non modifiable (admin requis)",
+        ? t("pas_modifier_propres_heures_approuvees")
+        : t("approuvee_non_modifiable_admin"),
     };
   }
 
@@ -1217,7 +1232,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   // owner can no longer edit directly — they must go through an unlock
   // request. Admin override and founder bypass.
   if (tc.submittedAt && isOwner && !isAdminOverride && !isFounder) {
-    return { success: false, error: "Entrée soumise — demandez un déblocage pour la modifier" };
+    return { success: false, error: t("entree_soumise_demandez_un_deblocage_pour_la") };
   }
 
   // Build the new state.
@@ -1225,13 +1240,13 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
   const newCo = parsed.data.clockOut === undefined
     ? tc.clockOut
     : (parsed.data.clockOut === null ? null : new Date(parsed.data.clockOut));
-  if (isNaN(newCi.getTime())) return { success: false, error: "Date d'entrée invalide" };
-  if (newCo && isNaN(newCo.getTime())) return { success: false, error: "Date de sortie invalide" };
+  if (isNaN(newCi.getTime())) return { success: false, error: t("date_d_entree_invalide") };
+  if (newCo && isNaN(newCo.getTime())) return { success: false, error: t("date_de_sortie_invalide") };
 
   const nowDate = new Date();
-  if (newCi > nowDate) return { success: false, error: "Date de début dans le futur refusée" };
-  if (newCo && newCo > nowDate) return { success: false, error: "Date de fin dans le futur refusée" };
-  if (newCo && newCo <= newCi) return { success: false, error: "Sortie doit être après entrée" };
+  if (newCi > nowDate) return { success: false, error: t("date_de_debut_dans_le_futur_refusee") };
+  if (newCo && newCo > nowDate) return { success: false, error: t("date_de_fin_dans_le_futur_refusee") };
+  if (newCo && newCo <= newCi) return { success: false, error: t("sortie_doit_etre_apres_entree") };
 
   // Refused when the new date falls in a locked or paid period, privileges
   // excepted.
@@ -1333,7 +1348,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
         recipientType: "admin",
         recipientId: tc.adminId,
         type: "warning",
-        title: "Pointage modifié et remis en attente",
+        title: t("pointage_modifie_et_remis_en_attente"),
         body: `${actorName} a modifié votre pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} — il doit être ré-approuvé.`,
         link: "/admin/mon-espace/pointage",
         icon: "alert-triangle",
@@ -1354,11 +1369,12 @@ const submitWeekSchema = z.object({ weekStart: z.string().optional() });
 export async function submitWeekTimeClocksAction(
   input: z.infer<typeof submitWeekSchema>,
 ): Promise<Result<{ submitted: number; workMin: number; breakMin: number; leaveMin: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = submitWeekSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const ref = parsed.data.weekStart ? new Date(parsed.data.weekStart) : new Date();
   if (isNaN(ref.getTime())) return { success: false, error: "Date invalide" };
@@ -1396,7 +1412,7 @@ export async function submitWeekTimeClocksAction(
   }
 
   if (toSubmitIds.length === 0) {
-    return { success: false, error: "Aucune entrée éligible à soumettre" };
+    return { success: false, error: t("aucune_entree_eligible_a_soumettre") };
   }
 
   const r = await prisma.timeClock.updateMany({
@@ -1430,7 +1446,7 @@ export async function submitWeekTimeClocksAction(
         recipientType: "admin",
         recipientId: rid,
         type: "info",
-        title: "Semaine soumise pour validation",
+        title: t("semaine_soumise_pour_validation"),
         body: `${meName} a soumis sa semaine du ${weekLabel} (${workHours}h travaillées).`,
         link: `/admin/employes/pointage?focus=${adminId}`,
         icon: "clock",
@@ -1457,23 +1473,24 @@ const requestEditSchema = z.object({
 export async function requestEditTimeClockAction(
   input: z.infer<typeof requestEditSchema>,
 ): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
   const parsed = requestEditSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   // The entries must belong to the employee and actually be submitted.
   const entries = await prisma.timeClock.findMany({
     where: { id: { in: parsed.data.ids }, adminId },
     select: { id: true, clockIn: true, submittedAt: true, payStubId: true },
   });
-  if (entries.length === 0) return { success: false, error: "Aucune entrée correspondante" };
+  if (entries.length === 0) return { success: false, error: t("aucune_entree_correspondante") };
   if (entries.some((e) => !e.submittedAt)) {
-    return { success: false, error: "Certaines entrées ne sont pas verrouillées" };
+    return { success: false, error: t("certaines_entrees_ne_sont_pas_verrouillees") };
   }
   if (entries.some((e) => e.payStubId)) {
-    return { success: false, error: "Une entrée est déjà sur un bulletin — admin requis" };
+    return { success: false, error: t("une_entree_est_deja_sur_un_bulletin") };
   }
 
   const req = await prisma.timeClockEditRequest.create({
@@ -1511,7 +1528,7 @@ export async function requestEditTimeClockAction(
           recipientType: "admin",
           recipientId: rid,
           type: "info",
-          title: "Demande de modification de pointage",
+          title: t("demande_de_modification_de_pointage"),
           body: `${meName} demande à modifier sa semaine du ${firstDate} · Raison : ${parsed.data.reason.slice(0, 120)}`,
           link: "/admin/employes/pointage",
           icon: "unlock",
@@ -1539,23 +1556,24 @@ const unlockSchema = z.object({
 export async function unlockTimeClockEntriesAction(
   input: z.infer<typeof unlockSchema>,
 ): Promise<Result<{ unlocked: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
+  if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
   const parsed = unlockSchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const req = await prisma.timeClockEditRequest.findUnique({ where: { id: parsed.data.requestId } });
   if (!req) return { success: false, error: "Demande introuvable" };
-  if (req.status !== "pending") return { success: false, error: "Demande déjà traitée" };
+  if (req.status !== "pending") return { success: false, error: t("demande_deja_traitee") };
   if (!(await canReviewTargets(actorId, [req.adminId]))) {
-    return { success: false, error: "Vous ne pouvez pas approuver votre propre demande de modification" };
+    return { success: false, error: t("vous_ne_pouvez_pas_approuver_votre_propre") };
   }
   if (!(await assertCanReviewAdmin(actorId, req.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   const ids = Array.isArray(req.entryIds) ? (req.entryIds as number[]).filter((n) => typeof n === "number") : [];
-  if (ids.length === 0) return { success: false, error: "Liste d'entrées vide" };
+  if (ids.length === 0) return { success: false, error: t("liste_d_entrees_vide") };
 
   const r = await prisma.timeClock.updateMany({
     where: { id: { in: ids }, adminId: req.adminId, payStubId: null },
@@ -1572,8 +1590,8 @@ export async function unlockTimeClockEntriesAction(
       recipientType: "admin",
       recipientId: req.adminId,
       type: "success",
-      title: "Pointage déverrouillé",
-      body: "Vos heures sont à nouveau modifiables.",
+      title: t("pointage_deverrouille"),
+      body: t("vos_heures_sont_a_nouveau_modifiables"),
       link: "/admin/mon-espace/pointage",
       icon: "unlock",
     },
@@ -1597,19 +1615,20 @@ const denySchema = z.object({
 });
 
 export async function denyEditRequestAction(input: z.infer<typeof denySchema>): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
-  if (!actorId) return { success: false, error: "Non autorisé (rôle paie/RH requis)" };
+  if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
   const parsed = denySchema.safeParse(input);
-  if (!parsed.success) return { success: false, error: parsed.error.errors[0].message };
+  if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
   const req = await prisma.timeClockEditRequest.findUnique({ where: { id: parsed.data.requestId } });
   if (!req) return { success: false, error: "Demande introuvable" };
-  if (req.status !== "pending") return { success: false, error: "Demande déjà traitée" };
+  if (req.status !== "pending") return { success: false, error: t("demande_deja_traitee") };
   if (!(await canReviewTargets(actorId, [req.adminId]))) {
-    return { success: false, error: "Vous ne pouvez pas refuser votre propre demande de modification" };
+    return { success: false, error: t("vous_ne_pouvez_pas_refuser_votre_propre") };
   }
   if (!(await assertCanReviewAdmin(actorId, req.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   await prisma.timeClockEditRequest.update({
@@ -1627,10 +1646,10 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
       recipientType: "admin",
       recipientId: req.adminId,
       type: "warning",
-      title: "Modification refusée",
+      title: t("modification_refusee"),
       body: parsed.data.reason
         ? `Modification refusée : ${parsed.data.reason.slice(0, 200)}`
-        : "Votre demande de modification a été refusée.",
+        : t("votre_demande_modification_refusee"),
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
     },
@@ -1651,25 +1670,26 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
 // Duration is (closeAt - clockIn) - totalBreakMin, closing a running break
 // first. Refused on a "paid" period, and on "locked" without privileges.
 export async function forceClockOutAction(input: { adminId: number; when?: string }): Promise<Result<{ id: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   if (!(await canReviewTargets(actorId, [input.adminId]))) {
-    return { success: false, error: "Vous ne pouvez pas forcer la fermeture de votre propre pointage" };
+    return { success: false, error: t("vous_ne_pouvez_pas_forcer_la_fermeture") };
   }
   if (!(await assertCanReviewAdmin(actorId, input.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
 
   const open = await prisma.timeClock.findFirst({
     where: { adminId: input.adminId, clockOut: null },
     orderBy: { clockIn: "desc" },
   });
-  if (!open) return { success: false, error: "Aucun pointage ouvert pour cet employé" };
+  if (!open) return { success: false, error: t("aucun_pointage_ouvert_pour_cet_employe") };
 
   const closeAt = input.when ? new Date(input.when) : new Date();
   if (isNaN(closeAt.getTime())) return { success: false, error: "Date invalide" };
-  if (closeAt <= open.clockIn) return { success: false, error: "La date de fermeture doit être après l'ouverture" };
-  if (closeAt > new Date(Date.now() + 60_000)) return { success: false, error: "Date dans le futur refusée" };
+  if (closeAt <= open.clockIn) return { success: false, error: t("la_date_de_fermeture_doit_etre_apres") };
+  if (closeAt > new Date(Date.now() + 60_000)) return { success: false, error: t("date_dans_le_futur_refusee") };
 
   // Refused on a "paid" period, and on "locked" without privileges.
   const isPrivileged = (await isFounderAdmin(actorId)) || (await isSuperAdmin(actorId));
@@ -1707,7 +1727,7 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
       recipientType: "admin",
       recipientId: open.adminId,
       type: "warning",
-      title: "Pointage fermé par l'administration",
+      title: t("pointage_ferme_par_l_administration"),
       body: `Votre pointage a été fermé par ${actorName} à ${closeAt.toLocaleString("fr-CA")}.`,
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
@@ -1738,14 +1758,15 @@ type SnapshotEntry = {
 };
 
 export async function undoTimeClockSnapshotAction(input: { snapshotId: number }): Promise<Result<{ restored: number }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
 
   const snap = await prisma.timeClockSnapshot.findUnique({ where: { id: input.snapshotId } });
   if (!snap) return { success: false, error: "Snapshot introuvable" };
-  if (snap.restoredAt) return { success: false, error: "Déjà annulé" };
-  if (snap.expiresAt < new Date()) return { success: false, error: "Snapshot expiré (annulation impossible)" };
+  if (snap.restoredAt) return { success: false, error: t("deja_annule") };
+  if (snap.expiresAt < new Date()) return { success: false, error: t("snapshot_expire_annulation_impossible") };
 
   const isOriginal = snap.actorId === actorId;
   const isSuper = await isSuperAdmin(actorId);
@@ -1852,23 +1873,24 @@ const notifyForgottenSchema = z.object({
 export async function notifyForgottenDaysAction(
   input: z.infer<typeof notifyForgottenSchema>,
 ): Promise<Result<{ notified: boolean }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
-    return { success: false, error: "Non autorisé." };
+    return { success: false, error: t("non_autorise") };
   }
   const actorId = session.user.adminId!;
   const parsed = notifyForgottenSchema.safeParse(input);
   if (!parsed.success) {
-    return { success: false, error: "Paramètres invalides." };
+    return { success: false, error: t("parametres_invalides") };
   }
   if (!(await assertCanReviewAdmin(actorId, parsed.data.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
   const target = await prisma.admin.findUnique({
     where: { id: parsed.data.adminId },
     select: { id: true, fullName: true, email: true },
   });
-  if (!target) return { success: false, error: "Employé introuvable." };
+  if (!target) return { success: false, error: t("employe_introuvable_2") };
 
   // Idempotent: a second call for the same employee within 24h is refused,
   // detected from the last "Pointages manquants" notification sent to them.
@@ -1877,7 +1899,7 @@ export async function notifyForgottenDaysAction(
     where: {
       recipientType: "admin",
       recipientId: parsed.data.adminId,
-      title: "Pointages manquants à rattraper",
+      title: t("pointages_manquants_a_rattraper"),
       createdAt: { gte: since24h },
     },
     select: { createdAt: true },
@@ -1904,7 +1926,7 @@ export async function notifyForgottenDaysAction(
       recipientType: "admin",
       recipientId: parsed.data.adminId,
       type: "warning",
-      title: "Pointages manquants à rattraper",
+      title: t("pointages_manquants_a_rattraper"),
       body,
       link: "/admin/mon-espace/pointage",
       icon: "clock",
@@ -1926,18 +1948,19 @@ export async function notifyForgottenDaysAction(
 // Sends a notification asking the employee to submit their draft hours.
 // Scope-checked like every review action.
 export async function remindSubmitWeekAction(input: { adminId: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   if (!(await assertCanReviewAdmin(actorId, input.adminId))) {
-    return { success: false, error: ERR_NO_AUTHORITY };
+    return { success: false, error: t(ERR_NO_AUTHORITY) };
   }
   await prisma.notification.create({
     data: {
       recipientType: "admin",
       recipientId: input.adminId,
       type: "warning",
-      title: "Heures à soumettre",
-      body: "Vos heures de la semaine sont encore en brouillon — cliquez « Soumettre la semaine » pour les envoyer en validation.",
+      title: t("heures_a_soumettre"),
+      body: t("vos_heures_de_la_semaine_sont_encore"),
       link: "/admin/mon-espace/pointage",
       icon: "clock",
     },
@@ -1960,6 +1983,7 @@ export async function updateTimeclockSettingsAction(input: {
   kioskEnabled: boolean;
   overtimeWeeklyMin: number;
 }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
 
@@ -1968,28 +1992,28 @@ export async function updateTimeclockSettingsAction(input: {
   }
   if (input.geofenceEnabled) {
     if (input.geofenceLat === null || input.geofenceLng === null) {
-      return { success: false, error: "Coordonnées requises pour activer le géorepérage" };
+      return { success: false, error: t("coordonnees_requises_pour_activer_le_georeperage") };
     }
     if (Math.abs(input.geofenceLat) > 90 || Math.abs(input.geofenceLng) > 180) {
-      return { success: false, error: "Coordonnées hors limites" };
+      return { success: false, error: t("coordonnees_hors_limites") };
     }
   }
   const radius = Math.min(50000, Math.max(10, Math.round(input.geofenceRadiusM)));
   // 20h to 80h: below is not a work week, above cannot be a legal threshold.
   const overtime = Math.round(input.overtimeWeeklyMin);
   if (!Number.isFinite(overtime) || overtime < 1200 || overtime > 4800) {
-    return { success: false, error: "Seuil d'heures supplémentaires invalide (entre 20 h et 80 h)" };
+    return { success: false, error: t("seuil_d_heures_supplementaires_invalide_entre_20") };
   }
 
   const entries: Array<{ key: string; value: string; label: string }> = [
     { key: "rounding_min", value: String(input.roundingMin), label: "Arrondi des punchs (minutes)" },
     { key: "geoloc_enabled", value: String(input.geolocEnabled), label: "Capture GPS au punch" },
-    { key: "geofence_enabled", value: String(input.geofenceEnabled), label: "Géorepérage actif" },
-    { key: "geofence_lat", value: input.geofenceLat === null ? "" : String(input.geofenceLat), label: "Latitude du lieu de travail" },
-    { key: "geofence_lng", value: input.geofenceLng === null ? "" : String(input.geofenceLng), label: "Longitude du lieu de travail" },
-    { key: "geofence_radius_m", value: String(radius), label: "Rayon autorisé (mètres)" },
-    { key: "kiosk_enabled", value: String(input.kioskEnabled), label: "Mode kiosque (borne partagée)" },
-    { key: "overtime_weekly_min", value: String(overtime), label: "Seuil hebdomadaire des heures supplémentaires (minutes)" },
+    { key: "geofence_enabled", value: String(input.geofenceEnabled), label: t("lbl_georeperage_active") },
+    { key: "geofence_lat", value: input.geofenceLat === null ? "" : String(input.geofenceLat), label: t("lbl_latitude_lieu") },
+    { key: "geofence_lng", value: input.geofenceLng === null ? "" : String(input.geofenceLng), label: t("lbl_longitude_lieu") },
+    { key: "geofence_radius_m", value: String(radius), label: t("lbl_rayon_autorise") },
+    { key: "kiosk_enabled", value: String(input.kioskEnabled), label: t("lbl_mode_kiosque") },
+    { key: "overtime_weekly_min", value: String(overtime), label: t("lbl_seuil_hebdo_supp") },
   ];
 
   for (const e of entries) {
@@ -2042,8 +2066,7 @@ async function generateUniqueKioskPin(excludeAdminId: number): Promise<string | 
   return null;
 }
 
-const ERR_NO_ENCRYPTION =
-  "Chiffrement indisponible (CREDENTIALS_ENCRYPTION_KEY absente) : le NIP ne pourrait jamais être réaffiché à l'employé. Corrigez la configuration avant d'en attribuer un.";
+const ERR_NO_ENCRYPTION = "chiffrement_indisponible_nip";
 
 /** Stores the PIN (hash + encrypted copy). False when encryption is
   *  unavailable: refuse rather than issue a PIN nobody can read back. */
@@ -2069,6 +2092,7 @@ async function storeKioskPin(adminId: number, pin: string): Promise<boolean> {
 // Re-display the owner's own PIN. Requires the account password — the reveal
 // is written to the audit trail.
 export async function revealMyKioskPinAction(input: { password: string }): Promise<Result<{ pin: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -2079,10 +2103,10 @@ export async function revealMyKioskPinAction(input: { password: string }): Promi
     where: { id: adminId },
     select: { passwordHash: true },
   });
-  if (!me?.passwordHash) return { success: false, error: "Compte sans mot de passe — impossible de vérifier" };
+  if (!me?.passwordHash) return { success: false, error: t("compte_sans_mot_de_passe_impossible_de") };
   const bcrypt = (await import("bcryptjs")).default;
   if (!(await bcrypt.compare(input.password ?? "", me.passwordHash))) {
-    return { success: false, error: "Mot de passe incorrect" };
+    return { success: false, error: t("mot_de_passe_incorrect") };
   }
 
   const rows = await prisma.$queryRaw<Array<{ kiosk_pin_enc: string | null; has_hash: boolean }>>`
@@ -2095,8 +2119,8 @@ export async function revealMyKioskPinAction(input: { password: string }): Promi
     return {
       success: false,
       error: rows[0]?.has_hash
-        ? "Ce NIP ne peut pas être réaffiché (créé sans chiffrement). Demandez aux RH de le remplacer."
-        : "Aucun NIP — demandez-en un aux ressources humaines.",
+        ? t("nip_non_reaffichable")
+        : t("aucun_nip_demandez_rh"),
     };
   }
   let pin: string | null = null;
@@ -2107,7 +2131,7 @@ export async function revealMyKioskPinAction(input: { password: string }): Promi
     pin = null;
   }
   if (!pin) {
-    return { success: false, error: "NIP illisible — demandez aux RH de le remplacer." };
+    return { success: false, error: t("nip_illisible_demandez_aux_rh_de_le") };
   }
   await logAudit({
     adminId, action: "view", entityType: "admin", entityId: adminId,
@@ -2119,6 +2143,7 @@ export async function revealMyKioskPinAction(input: { password: string }): Promi
 // HR issues the PIN: generate one FOR an employee and show it once so it can
 // be handed over. HR never reads an existing PIN — only replaces it.
 export async function resetKioskPinForAction(input: { adminId: number }): Promise<Result<{ pin: string; name: string }>> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
 
@@ -2126,12 +2151,12 @@ export async function resetKioskPinForAction(input: { adminId: number }): Promis
     where: { id: input.adminId },
     select: { id: true, isActive: true, fullName: true, email: true },
   });
-  if (!target || !target.isActive) return { success: false, error: "Employé introuvable ou inactif" };
+  if (!target || !target.isActive) return { success: false, error: t("employe_introuvable_ou_inactif") };
 
   const pin = await generateUniqueKioskPin(input.adminId);
-  if (!pin) return { success: false, error: "Impossible de générer un NIP unique — réessayez" };
+  if (!pin) return { success: false, error: t("impossible_de_generer_un_nip_unique_reessayez") };
   if (!(await storeKioskPin(input.adminId, pin))) {
-    return { success: false, error: ERR_NO_ENCRYPTION };
+    return { success: false, error: t(ERR_NO_ENCRYPTION) };
   }
   // Closes any pending request and notifies the employee. The PIN stays out
   // of the notification: he reveals it himself with his password.
@@ -2143,8 +2168,8 @@ export async function resetKioskPinForAction(input: { adminId: number }): Promis
       recipientType: "admin",
       recipientId: input.adminId,
       type: "info",
-      title: "Votre NIP de borne est prêt",
-      body: "Un NIP à 4 chiffres vous a été attribué pour poinçonner sur la tablette partagée. Affichez-le depuis Mon espace › Mon pointage avec votre mot de passe.",
+      title: t("votre_nip_de_borne_est_pret"),
+      body: t("un_nip_a_4_chiffres_vous_a"),
       link: "/admin/mon-espace/pointage",
       icon: "clock",
     },
@@ -2158,6 +2183,7 @@ export async function resetKioskPinForAction(input: { adminId: number }): Promis
 
 // Employee PIN request. Acts as a ticket: stays in the HR list until issued.
 export async function requestKioskPinAction(): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorized();
@@ -2166,14 +2192,14 @@ export async function requestKioskPinAction(): Promise<Result> {
 
   const { getTimeclockConfig } = await import("@/lib/services/timeclock-config");
   const cfg = await getTimeclockConfig();
-  if (!cfg.kioskEnabled) return { success: false, error: "Le mode kiosque est désactivé" };
+  if (!cfg.kioskEnabled) return { success: false, error: t("le_mode_kiosque_est_desactive") };
 
   const rows = await prisma.$queryRaw<Array<{ requested_at: Date | null }>>`
     SELECT kiosk_pin_requested_at AS requested_at FROM admins WHERE id = ${adminId}
   `;
   const last = rows[0]?.requested_at;
   if (last && Date.now() - new Date(last).getTime() < 12 * 3600 * 1000) {
-    return { success: false, error: "Votre demande est déjà en attente — les RH vont y répondre." };
+    return { success: false, error: t("votre_demande_est_deja_en_attente_les") };
   }
 
   await prisma.$executeRaw`
@@ -2198,7 +2224,7 @@ export async function requestKioskPinAction(): Promise<Result> {
         recipientType: "admin",
         recipientId: rid,
         type: "warning",
-        title: "Demande de NIP de borne",
+        title: t("demande_de_nip_de_borne"),
         body: `${name} demande un NIP pour poinçonner sur la borne.`,
         link: "/admin/employes/pointage/parametres",
         icon: "clock",

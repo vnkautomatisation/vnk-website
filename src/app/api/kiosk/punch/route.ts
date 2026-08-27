@@ -18,6 +18,7 @@
 // source="kiosk", punch rounding applied, geofence bypassed (the tablet
 // itself is on site).
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
@@ -46,9 +47,10 @@ async function identifyByPin(pin: string): Promise<KioskAdmin | null> {
 }
 
 export async function POST(req: NextRequest) {
+  const t = await getTranslations("api_errors");
   const cfg = await getTimeclockConfig();
   if (!cfg.kioskEnabled) {
-    return NextResponse.json({ error: "Mode kiosque désactivé" }, { status: 403 });
+    return NextResponse.json({ error: t("mode_kiosque_desactive") }, { status: 403 });
   }
 
   const h = await headers().catch(() => null);
@@ -56,14 +58,14 @@ export async function POST(req: NextRequest) {
   // 4-digit PINs: tighter window to compensate (10k combinations).
   const rl = checkRateLimit({ key: `kiosk:${ip}`, limit: 12, windowMs: 10 * 60 * 1000 });
   if (!rl.ok) {
-    return NextResponse.json({ error: "Trop de tentatives — réessayez dans quelques minutes" }, { status: 429 });
+    return NextResponse.json({ error: t("trop_de_tentatives_reessayez_dans_quelques_minutes") }, { status: 429 });
   }
 
   let body: { pin?: string; action?: string; jobCodeId?: number; kind?: string } = {};
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: "Requête invalide" }, { status: 400 });
+    return NextResponse.json({ error: t("requete_invalide") }, { status: 400 });
   }
   const pin = String(body.pin ?? "");
   const action = String(body.action ?? "status");
@@ -139,7 +141,7 @@ export async function POST(req: NextRequest) {
 
   if (action === "in") {
     if (open) {
-      return NextResponse.json({ error: "Un pointage est déjà ouvert — fermez-le d'abord" }, { status: 409 });
+      return NextResponse.json({ error: t("un_pointage_est_deja_ouvert_fermez_le") }, { status: 409 });
     }
     const codes = admin.position_id
       ? await prisma.jobCode.findMany({
@@ -151,7 +153,7 @@ export async function POST(req: NextRequest) {
     if (codes.length > 0) {
       const chosen = codes.find((c) => c.id === Number(body.jobCodeId));
       if (!chosen) {
-        return NextResponse.json({ error: "Choisissez un code de tâche" }, { status: 400 });
+        return NextResponse.json({ error: t("choisissez_un_code_de_tache") }, { status: 400 });
       }
       jobCodeId = chosen.id;
     }
@@ -176,7 +178,7 @@ export async function POST(req: NextRequest) {
   // "paid" is tracked in paidBreakMin but never deducted.
   if (action === "pause") {
     if (!open) return NextResponse.json({ error: "Aucun pointage ouvert" }, { status: 409 });
-    if (open.pausedAt) return NextResponse.json({ error: "Pause déjà en cours" }, { status: 409 });
+    if (open.pausedAt) return NextResponse.json({ error: t("pause_deja_en_cours") }, { status: 409 });
     const kind = body.kind === "paid" ? "paid" : "meal";
     await prisma.timeClock.update({
       where: { id: open.id },

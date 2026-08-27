@@ -1,6 +1,7 @@
 // POST /api/invoices/[id]/remind — envoyer un rappel manuel (admin)
 // → message chat + notification client + bump remindersSent + workflow event
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -13,6 +14,7 @@ export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -47,7 +49,7 @@ export async function POST(
       recipientType: "client",
       recipientId: invoice.clientId,
       type: "warning",
-      title: "Rappel de paiement",
+      title: t("rappel_de_paiement"),
       body: `${invoice.invoiceNumber} — ${Number(invoice.amountTtc).toFixed(2)} $ TTC`,
       link: `/portail/factures`,
     },

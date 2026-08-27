@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import {
   Dialog,
   DialogContent,
@@ -79,17 +80,18 @@ export function NewRequestModal({
   onOpenChange: (open: boolean) => void;
   onCreated?: () => void;
 }) {
+  const t = useTranslations("portal");
   const [step, setStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
 
-  // Form state
+
   const [serviceType, setServiceType] = useState("");
   const [description, setDescription] = useState("");
   const [plcBrand, setPlcBrand] = useState("");
   const [urgency, setUrgency] = useState<UrgencyLevel>("normal");
   const [budget, setBudget] = useState("");
 
-  // ── Reset ──────────────────────────────────────────
+
   function reset() {
     setStep(1);
     setServiceType("");
@@ -105,11 +107,11 @@ export function NewRequestModal({
     onOpenChange(v);
   }
 
-  // ── Validation ─────────────────────────────────────
+
   const canGoStep2 = serviceType !== "";
   const canGoStep3 = description.trim().length > 0;
 
-  // ── Submit ─────────────────────────────────────────
+
   async function handleSubmit() {
     setSubmitting(true);
     try {
@@ -127,33 +129,33 @@ export function NewRequestModal({
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || "Erreur lors de l'envoi");
+        throw new Error(data.error || t("erreur_lors_envoi"));
       }
 
-      toast.success("Demande envoyee avec succes");
+      toast.success(t("demande_envoyee_succes"));
       handleOpenChange(false);
       onCreated?.();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Erreur lors de l'envoi");
+      toast.error(err instanceof Error ? err.message : t("erreur_lors_envoi"));
     } finally {
       setSubmitting(false);
     }
   }
 
-  // ── Service label helper ───────────────────────────
+
   const selectedService = SERVICE_OPTIONS.find((s) => s.value === serviceType);
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-[600px] max-sm:max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Nouvelle demande</DialogTitle>
+          <DialogTitle>{t("nouvelle_demande")}</DialogTitle>
           <DialogDescription>
-            Decrivez votre besoin en 3 etapes
+            {t("decrivez_besoin_3_etapes")}
           </DialogDescription>
         </DialogHeader>
 
-        {/* ── Step indicators ─────────────────────────── */}
+
         <div className="flex items-center justify-center gap-2 py-2">
           {[1, 2, 3].map((s) => (
             <div
@@ -170,11 +172,11 @@ export function NewRequestModal({
           ))}
         </div>
 
-        {/* ── Step 1: Service type ────────────────────── */}
+
         {step === 1 && (
           <div className="space-y-4">
             <p className="text-sm font-medium text-muted-foreground">
-              Type de service
+              {t("type_service")}
             </p>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {SERVICE_OPTIONS.map((opt) => {
@@ -217,7 +219,7 @@ export function NewRequestModal({
           </div>
         )}
 
-        {/* ── Step 2: Details ─────────────────────────── */}
+
         {step === 2 && (
           <div className="space-y-4">
             <div className="space-y-2">
@@ -229,27 +231,27 @@ export function NewRequestModal({
                 rows={3}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Decrivez votre besoin..."
+                placeholder={t("decrivez_besoin")}
                 className="flex w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 resize-none"
               />
             </div>
 
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="req-plc">
-                Marque PLC <span className="text-muted-foreground text-xs">(optionnel)</span>
+                Marque PLC <span className="text-muted-foreground text-xs">{t("optionnel")}</span>
               </label>
               <input
                 id="req-plc"
                 type="text"
                 value={plcBrand}
                 onChange={(e) => setPlcBrand(e.target.value)}
-                placeholder="Ex: Siemens S7-1500"
+                placeholder={t("ex_siemens_s7_1500")}
                 className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Urgence</label>
+              <label className="text-sm font-medium">{t("urgence")}</label>
               <div className="flex gap-2">
                 {(Object.entries(URGENCY_CONFIG) as [UrgencyLevel, (typeof URGENCY_CONFIG)[UrgencyLevel]][]).map(
                   ([key, config]) => (
@@ -277,30 +279,30 @@ export function NewRequestModal({
 
             <div className="space-y-2">
               <label className="text-sm font-medium" htmlFor="req-budget">
-                Budget estime <span className="text-muted-foreground text-xs">(optionnel)</span>
+                Budget estime <span className="text-muted-foreground text-xs">{t("optionnel")}</span>
               </label>
               <input
                 id="req-budget"
                 type="text"
                 value={budget}
                 onChange={(e) => setBudget(e.target.value)}
-                placeholder="Ex: 5000 $ - 10000 $"
+                placeholder={t("ex_5000_10000")}
                 className="flex h-10 w-full rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
             </div>
           </div>
         )}
 
-        {/* ── Step 3: Recap ───────────────────────────── */}
+
         {step === 3 && (
           <div className="space-y-4">
             <p className="text-sm font-medium text-muted-foreground">
-              Recapitulatif
+              {t("recapitulatif")}
             </p>
 
             <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Service</span>
+                <span className="text-sm text-muted-foreground">{t("service")}</span>
                 <span className="text-sm font-semibold">
                   {selectedService?.label ?? serviceType}
                 </span>
@@ -309,7 +311,7 @@ export function NewRequestModal({
               <div className="border-t" />
 
               <div>
-                <span className="text-sm text-muted-foreground">Description</span>
+                <span className="text-sm text-muted-foreground">{t("description")}</span>
                 <p className="text-sm mt-1">{description}</p>
               </div>
 
@@ -317,7 +319,7 @@ export function NewRequestModal({
                 <>
                   <div className="border-t" />
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Marque PLC</span>
+                    <span className="text-sm text-muted-foreground">{t("marque_plc")}</span>
                     <span className="text-sm font-medium">{plcBrand}</span>
                   </div>
                 </>
@@ -326,7 +328,7 @@ export function NewRequestModal({
               <div className="border-t" />
 
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Urgence</span>
+                <span className="text-sm text-muted-foreground">{t("urgence")}</span>
                 <Badge variant={URGENCY_CONFIG[urgency].badgeVariant}>
                   {URGENCY_CONFIG[urgency].label}
                 </Badge>
@@ -336,7 +338,7 @@ export function NewRequestModal({
                 <>
                   <div className="border-t" />
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Budget estime</span>
+                    <span className="text-sm text-muted-foreground">{t("budget_estime")}</span>
                     <span className="text-sm font-medium">{budget}</span>
                   </div>
                 </>
@@ -345,7 +347,7 @@ export function NewRequestModal({
           </div>
         )}
 
-        {/* ── Navigation ──────────────────────────────── */}
+
         <div className="flex items-center justify-between pt-2">
           <Button
             variant="ghost"
@@ -355,7 +357,7 @@ export function NewRequestModal({
             className={cn(step === 1 && "invisible")}
           >
             <ArrowLeft className="h-4 w-4 mr-1" />
-            Precedent
+            {t("precedent")}
           </Button>
 
           {step < 3 ? (
@@ -364,7 +366,7 @@ export function NewRequestModal({
               onClick={() => setStep((s) => s + 1)}
               disabled={step === 1 ? !canGoStep2 : !canGoStep3}
             >
-              Suivant
+              {t("suivant")}
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           ) : (

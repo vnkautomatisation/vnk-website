@@ -1,6 +1,7 @@
 // POST /api/refunds/[id]/process-stripe — execute le vrai remboursement via Stripe
 // Necessite que le Refund soit lie a une Invoice avec stripePaymentIntentId
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -20,6 +21,7 @@ export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -46,7 +48,7 @@ export async function POST(
   }
   if (!refund.invoice?.stripePaymentIntentId) {
     return NextResponse.json(
-      { error: "Facture liee non payee via Stripe — impossible de rembourser automatiquement" },
+      { error: t("facture_liee_non_payee_via_stripe_impossible") },
       { status: 400 },
     );
   }
@@ -107,7 +109,7 @@ export async function POST(
         recipientType: "client",
         recipientId: refund.clientId,
         type: "info",
-        title: "Remboursement émis",
+        title: t("remboursement_emis"),
         body: `Un remboursement de ${Number(refund.amount).toFixed(2)} $ a été initié sur votre carte. Délai bancaire 5–10 jours ouvrables.`,
         link: `/portail/paiements`,
       },

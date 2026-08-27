@@ -3,6 +3,7 @@
 // Filtre par l'autorité de l'acteur : assertCanReviewLeave.
 // Inclut le solde courant + dernières demandes (limite 50).
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
@@ -12,6 +13,7 @@ import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 export const dynamic = "force-dynamic";
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -54,7 +56,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     getLeaveBalance(employeeId, "vacation").catch(() => null),
   ]);
 
-  if (!employee) return NextResponse.json({ error: "Employé introuvable" }, { status: 404 });
+  if (!employee) return NextResponse.json({ error: t("employe_introuvable") }, { status: 404 });
 
   // Détection paySLA : pour chaque demande approuvée payée, indique si on peut encore éditer
   const noteStubs = requests

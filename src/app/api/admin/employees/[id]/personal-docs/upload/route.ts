@@ -4,6 +4,7 @@
 // Cette route uploade UNIQUEMENT le fichier ; la création de la ligne
 // EmployeePersonalDocument se fait ensuite via upsertPersonalDocAction.
 import "server-only";
+import { getTranslations } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import crypto from "crypto";
 import { auth } from "@/lib/auth";
@@ -36,6 +37,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const t = await getTranslations("admin.action_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -70,7 +72,7 @@ export async function POST(
     const file = form.get("file");
 
     if (!(file instanceof File)) {
-      return NextResponse.json({ error: "Aucun fichier reçu" }, { status: 400 });
+      return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
       return NextResponse.json({ error: `Type non autorisé (${file.type})` }, { status: 415 });
@@ -85,7 +87,7 @@ export async function POST(
     const buf = Buffer.from(await file.arrayBuffer());
     if (!magicByteCheck(buf, file.type)) {
       return NextResponse.json(
-        { error: "Magic bytes invalides — fichier corrompu ou type erroné" },
+        { error: t("magic_bytes_invalides_fichier_corrompu_ou_type") },
         { status: 415 },
       );
     }

@@ -24,13 +24,14 @@ export function mergeInfo(entry: TimingInput) {
 }
 
 export function MergedBadge({ count, gapMin, coherent, small = false }: { count: number; gapMin: number; coherent: boolean; small?: boolean }) {
+  const t = useTranslations("admin.timeclock");
   const label = coherent
     ? `${count} pointages fusionnés : la plage va du premier début à la dernière fin${gapMin > 0 ? `, et les ${gapMin} min d'écart entre eux sont comptées en pause` : ""}.`
-    : "Fusion ancienne : le temps entre les pointages n'a pas été comptabilisé, ces heures de début et de fin ne sont pas fiables.";
+    : t("fusion_ancienne_temps_non_comptabilise");
   return (
     <ActionTooltip label={label}>
       <Badge variant="outline" className={`${small ? "text-[9px]" : "text-[10px]"} text-violet-700 border-violet-300 bg-violet-50 cursor-help`}>
-        {count > 0 ? `Fusion de ${count}` : "Fusion"}
+        {count > 0 ? `Fusion de ${count}` : t("fusion")}
       </Badge>
     </ActionTooltip>
   );
@@ -52,14 +53,14 @@ export function PanelEntryRow({
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
   const isSubmitted = !!entry.submittedAt;
-  // Workflow rule: only SUBMITTED entries are reviewable.
+
   const isPending = !isApproved && !!entry.clockOut && isSubmitted;
   const isDraft = !isApproved && !!entry.clockOut && !isSubmitted;
   const isOpen = !entry.clockOut;
   const isPaid = !!entry.payStubId;
-  // Rejected: structured history first (current flow), legacy [REJET notes
-  // prefix as fallback for old data. A rejected entry goes back to draft
-  // (submittedAt reset) until the employee resubmits.
+
+
+
   const rejectEvent = (entry.history ?? []).find((h) => h.event === "rejected");
   const isRejected =
     !isApproved && !isSubmitted
@@ -76,7 +77,7 @@ export function PanelEntryRow({
               {fmtTime(start)}
               {entry.clockOut
                 ? ` → ${fmtTime(entry.clockOut)}`
-                : " · en cours"}
+                : t("cours_suffixe")}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
             {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
@@ -90,12 +91,12 @@ export function PanelEntryRow({
             {isApproved && <ApprovedBadge />}
             {isPending && (
               <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
-                En attente
+                {t("attente")}
               </Badge>
             )}
             {isDraft && !isRejected && (
               <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
-                Brouillon (non soumis)
+                {t("brouillon_non_soumis")}
               </Badge>
             )}
             {isRejected && !isApproved && (
@@ -107,12 +108,12 @@ export function PanelEntryRow({
             )}
             {isPaid && (
               <Badge variant="outline" className="text-[9px] text-violet-700 border-violet-300 bg-violet-50">
-                Sur bulletin
+                {t("bulletin")}
               </Badge>
             )}
             {isOpen && (
               <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700 bg-blue-50">
-                Ouvert
+                {t("ouvert")}
               </Badge>
             )}
           </div>
@@ -155,7 +156,7 @@ export function PanelEntryRow({
           {(entry.history?.length ?? 0) > 0 && <HistoryPopover history={entry.history} />}
           {isPending && (
             <>
-              <ActionTooltip label="Approuver">
+              <ActionTooltip label={t("approuver")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -166,7 +167,7 @@ export function PanelEntryRow({
                   <CheckCircle2 className="h-3 w-3 mr-1" />Approuver
                 </Button>
               </ActionTooltip>
-              <ActionTooltip label="Rejeter (avec raison)">
+              <ActionTooltip label={t("rejeter_raison")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -181,11 +182,11 @@ export function PanelEntryRow({
           )}
           {isRejected && !isApproved && (
             <p className="text-[10px] text-muted-foreground italic">
-              En attente de re-soumission par l&apos;employé
+              {t("attente_re_soumission_apos_employe")}
             </p>
           )}
           {isApproved && (
-            <ActionTooltip label="Annuler l'approbation">
+            <ActionTooltip label={t("annuler_approbation")}>
               <Button
                 size="sm"
                 variant="ghost"
@@ -201,7 +202,7 @@ export function PanelEntryRow({
       )}
       {isPaid && (
         <p className="text-[10px] text-muted-foreground italic mt-1 text-right">
-          Verrouille : deja sur un bulletin de paie
+          {t("verrouille_deja_bulletin_paie")}
         </p>
       )}
     </div>
@@ -232,7 +233,7 @@ export function CompactEntryRow({
             {fmtTime(start)}
             {entry.clockOut
               ? ` → ${fmtTime(entry.clockOut)}`
-              : " · en cours"}
+              : t("cours_suffixe")}
           </span>
           <Badge className={`text-[10px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
           {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} />}
@@ -245,7 +246,7 @@ export function CompactEntryRow({
           )}
           {entry.source === "kiosk" && (
             <Badge variant="outline" className="text-[10px] text-slate-600 border-slate-300 bg-slate-50">
-              Kiosque
+              {t("kiosque")}
             </Badge>
           )}
           {typeof entry.clockInLat === "number" && typeof entry.clockInLng === "number" && (
@@ -257,7 +258,7 @@ export function CompactEntryRow({
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-flex items-center text-slate-400 hover:text-[#0F2D52]"
-                aria-label="Position GPS au punch"
+                aria-label={t("position_gps_punch")}
               >
                 <MapPin className="h-3.5 w-3.5" />
               </a>
@@ -266,23 +267,21 @@ export function CompactEntryRow({
           {entry.approvedAt && <ApprovedBadge />}
           {entry.submittedAt && !entry.approvedAt && (
             <Badge variant="outline" className="text-[10px] text-blue-700 border-blue-300 bg-blue-50">
-              <Clock className="h-2.5 w-2.5 mr-1" />En attente d&apos;approbation
-            </Badge>
+              <Clock className="h-2.5 w-2.5 mr-1" />{t("entryrows_en_attente_d_approbation")}</Badge>
           )}
-          {/* Structured history first, legacy [REJET notes as fallback. */}
+
           {!entry.submittedAt && !entry.approvedAt
             && ((entry.history ?? []).some((h) => h.event === "rejected") || (entry.notes ?? "").startsWith("[REJET")) && (
             <ActionTooltip
-              label={(entry.history ?? []).find((h) => h.event === "rejected")?.reason ?? entry.notes ?? "Pointage rejeté"}
+              label={(entry.history ?? []).find((h) => h.event === "rejected")?.reason ?? entry.notes ?? t("pointage_rejete")}
             >
               <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50 cursor-help">
-                <XCircle className="h-2.5 w-2.5 mr-1" />Rejeté
-              </Badge>
+                <XCircle className="h-2.5 w-2.5 mr-1" />{t("entryrows_rejete")}</Badge>
             </ActionTooltip>
           )}
           {entry.payStubId && (
             <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50">
-              Sur bulletin
+              {t("bulletin")}
             </Badge>
           )}
         </div>
@@ -294,13 +293,13 @@ export function CompactEntryRow({
         )}
       </div>
       <div className="text-right shrink-0">
-        {/* Net time: breaks already deducted. */}
+
         <p className="font-mono text-sm font-bold tabular-nums">
           {entry.durationMin != null
             ? fmtDuration(entry.durationMin)
             : formatShiftDuration(entry.clockIn, entry.clockOut)}
         </p>
-        {/* Gross span + breaks, for transparency. */}
+
         {(entry.totalBreakMin > 0 || (entry.durationMin != null && entry.clockOut)) && (
           <p className="text-[10px] text-muted-foreground tabular-nums">
             {entry.clockOut && grossIsCoherent && (
@@ -317,19 +316,19 @@ export function CompactEntryRow({
       </div>
       {isLocked && !entry.approvedAt && (
         <>
-          <ActionTooltip label="Heures soumises et verrouillées">
+          <ActionTooltip label={t("heures_soumises_verrouillees")}>
             <span className="flex items-center justify-center h-7 w-7 shrink-0 text-muted-foreground cursor-help">
               <Lock className="h-3.5 w-3.5" />
             </span>
           </ActionTooltip>
           {onRequestUnlock && (
-            <ActionTooltip label="Demander modification">
+            <ActionTooltip label={t("demander_modification")}>
               <Button
                 size="icon"
                 variant="ghost"
                 className="h-7 w-7 shrink-0 text-[#0F2D52]"
                 onClick={onRequestUnlock}
-                aria-label="Demander modification"
+                aria-label={t("demander_modification")}
               >
                 <Unlock className="h-3.5 w-3.5" />
               </Button>
@@ -409,12 +408,11 @@ export function EntryRow({
           {entry.approvedAt && <ApprovedBadge />}
           {entry.submittedAt && !entry.approvedAt && (
             <Badge variant="outline" className="text-[10px] text-blue-700 border-blue-300 bg-blue-50">
-              <Clock className="h-2.5 w-2.5 mr-1" />En attente d&apos;approbation
-            </Badge>
+              <Clock className="h-2.5 w-2.5 mr-1" />{t("entryrows_en_attente_d_approbation")}</Badge>
           )}
           {entry.payStubId && (
             <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50">
-              Sur bulletin
+              {t("bulletin")}
             </Badge>
           )}
         </div>
@@ -422,7 +420,7 @@ export function EntryRow({
           {date.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" })}
           {" · "}
           {fmtTime(date)}
-          {entry.clockOut ? ` → ${fmtTime(entry.clockOut)}` : " · en cours"}
+          {entry.clockOut ? ` → ${fmtTime(entry.clockOut)}` : t("cours_suffixe")}
         </p>
         {displayNotes(entry.notes) && <p className="text-[11px] text-muted-foreground italic mt-0.5 truncate">{displayNotes(entry.notes)}</p>}
         {entry.approvedAt && entry.approver && entry.approvedBy !== entry.adminId && (
@@ -452,7 +450,7 @@ export function EntryRow({
         )}
         <div className="flex gap-1 mt-1 justify-end">
           {isReviewer && onEdit && !entry.payStubId && (
-            <ActionTooltip label="Modifier (admin)">
+            <ActionTooltip label={t("modifier_admin")}>
               <Button
                 size="icon"
                 variant="ghost"
@@ -460,9 +458,9 @@ export function EntryRow({
                 onClick={async () => {
                   if (entry.approvedAt) {
                     const ok = await confirmDialog({
-                      title: "Modifier une entrée approuvée",
-                      description: "Cette entrée est approuvée — modifier va annuler l'approbation.",
-                      confirmLabel: "Continuer",
+                      title: t("modifier_entree_approuvee"),
+                      description: t("entree_approuvee_modifier_va_annuler"),
+                      confirmLabel: t("continuer"),
                       variant: "destructive",
                     });
                     if (!ok) return;
@@ -477,13 +475,13 @@ export function EntryRow({
           )}
           {isReviewer && entry.submittedAt && !entry.approvedAt && entry.clockOut && (
             <>
-              <ActionTooltip label="Approuver">
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600" onClick={onApprove} aria-label="Approuver">
+              <ActionTooltip label={t("approuver")}>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-emerald-600" onClick={onApprove} aria-label={t("approuver")}>
                   <CheckCircle2 className="h-3.5 w-3.5" />
                 </Button>
               </ActionTooltip>
-              <ActionTooltip label="Rejeter">
-                <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600" onClick={onReject} aria-label="Rejeter">
+              <ActionTooltip label={t("rejeter")}>
+                <Button size="icon" variant="ghost" className="h-6 w-6 text-red-600" onClick={onReject} aria-label={t("rejeter")}>
                   <XCircle className="h-3.5 w-3.5" />
                 </Button>
               </ActionTooltip>
@@ -518,12 +516,13 @@ export function DayAggregateRow({
   onApprove: () => void;
   onReject: () => void;
 }) {
+  const t = useTranslations("admin.timeclock");
   void totalMin; // kept in the signature for compatibility, never rendered
   const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
     weekday: "short", day: "numeric", month: "short",
   }));
   const initials = adminName.slice(0, 2).toUpperCase();
-  // Pure work only: excludes meetings and training.
+
   const pureWorkMin = Math.max(0, workMin - meetingMin - trainingMin);
 
   const statusBadge = (() => {
@@ -539,8 +538,7 @@ export function DayAggregateRow({
       case "rejected":
         return (
           <Badge variant="outline" className="text-[10px] text-red-700 border-red-300 bg-red-50">
-            <XCircle className="h-2.5 w-2.5 mr-1" />Rejeté
-          </Badge>
+            <XCircle className="h-2.5 w-2.5 mr-1" />{t("entryrows_rejete")}</Badge>
         );
       case "pending":
         return (
@@ -551,7 +549,7 @@ export function DayAggregateRow({
       case "mixed":
         return (
           <Badge variant="outline" className="text-[10px] text-violet-700 border-violet-300 bg-violet-50">
-            Mixte
+            {t("mixte")}
           </Badge>
         );
     }
@@ -578,7 +576,7 @@ export function DayAggregateRow({
           onChange={(e) => onSelectAll(e.target.checked)}
           onClick={(e) => e.stopPropagation()}
           className="h-4 w-4 rounded border-input"
-          aria-label="Selectionner toutes les entrees en attente du jour"
+          aria-label={t("selectionner_toutes_entrees_attente_jour")}
           title={`Selectionner ${pendingIds.length} entree(s) en attente`}
         />
       )}
@@ -607,16 +605,16 @@ export function DayAggregateRow({
       </div>
       <div className="text-right shrink-0">
         <p className="font-mono text-sm font-bold tabular-nums text-[#0F2D52]">{fmtDuration(workMin)}</p>
-        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">Travail effectif</p>
+        <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{t("travail_effectif")}</p>
       </div>
       <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <ActionTooltip label="Voir details (audit)">
+        <ActionTooltip label={t("voir_details_audit")}>
         <Button
           size="icon"
           variant="ghost"
           className="h-7 w-7"
           onClick={onShowDetails}
-          aria-label="Voir details"
+          aria-label={t("voir_details")}
         >
           <FileText className="h-3.5 w-3.5" />
         </Button>
@@ -629,7 +627,7 @@ export function DayAggregateRow({
               variant="ghost"
               className="h-7 w-7 text-emerald-600"
               onClick={onApprove}
-              aria-label="Approuver"
+              aria-label={t("approuver")}
             >
               <CheckCircle2 className="h-3.5 w-3.5" />
             </Button>
@@ -640,7 +638,7 @@ export function DayAggregateRow({
               variant="ghost"
               className="h-7 w-7 text-red-600"
               onClick={onReject}
-              aria-label="Rejeter"
+              aria-label={t("rejeter")}
             >
               <XCircle className="h-3.5 w-3.5" />
             </Button>
@@ -671,7 +669,7 @@ export function PanelEntryRowWithHistory({
   const start = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
   const isApproved = !!entry.approvedAt;
-  // Only SUBMITTED entries are reviewable; drafts are not.
+
   const isPending = !isApproved && !!entry.clockOut && !!entry.submittedAt;
   const isDraft = !isApproved && !!entry.clockOut && !entry.submittedAt;
   const isOpen = !entry.clockOut;
@@ -687,7 +685,7 @@ export function PanelEntryRowWithHistory({
               {fmtTime(start)}
               {entry.clockOut
                 ? ` → ${fmtTime(entry.clockOut)}`
-                : " · en cours"}
+                : t("cours_suffixe")}
             </span>
             <Badge className={`text-[9px] ${cat.color}`}>{catLabel(t, entry.category)}</Badge>
             {isMerged && <MergedBadge count={mergedCount} gapMin={mergedGapMin} coherent={grossIsCoherent} small />}
@@ -701,22 +699,22 @@ export function PanelEntryRowWithHistory({
             {isApproved && <ApprovedBadge />}
             {isDraft && (
               <Badge variant="outline" className="text-[9px] text-slate-600 border-slate-300 bg-slate-50">
-                Brouillon (non soumis)
+                {t("brouillon_non_soumis")}
               </Badge>
             )}
             {isPending && (
               <Badge variant="outline" className="text-[9px] text-amber-700 border-amber-300 bg-amber-50">
-                En attente
+                {t("attente")}
               </Badge>
             )}
             {isPaid && (
               <Badge variant="outline" className="text-[9px] text-violet-700 border-violet-300 bg-violet-50">
-                Sur bulletin
+                {t("bulletin")}
               </Badge>
             )}
             {isOpen && (
               <Badge variant="outline" className="text-[9px] border-blue-300 text-blue-700 bg-blue-50">
-                Ouvert
+                {t("ouvert")}
               </Badge>
             )}
           </div>
@@ -747,7 +745,7 @@ export function PanelEntryRowWithHistory({
           {hasHistory && <HistoryPopover history={entry.history} />}
           {isPending && (
             <>
-              <ActionTooltip label="Approuver">
+              <ActionTooltip label={t("approuver")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -758,7 +756,7 @@ export function PanelEntryRowWithHistory({
                   <CheckCircle2 className="h-3 w-3 mr-1" />Approuver
                 </Button>
               </ActionTooltip>
-              <ActionTooltip label="Rejeter (avec raison)">
+              <ActionTooltip label={t("rejeter_raison")}>
                 <Button
                   size="sm"
                   variant="outline"
@@ -772,7 +770,7 @@ export function PanelEntryRowWithHistory({
             </>
           )}
           {isApproved && (
-            <ActionTooltip label="Annuler l'approbation">
+            <ActionTooltip label={t("annuler_approbation")}>
               <Button
                 size="sm"
                 variant="ghost"
@@ -785,7 +783,7 @@ export function PanelEntryRowWithHistory({
             </ActionTooltip>
           )}
           {onEdit && (
-            <ActionTooltip label="Modifier (admin override)">
+            <ActionTooltip label={t("modifier_admin_override")}>
               <Button
                 size="icon"
                 variant="ghost"
@@ -804,7 +802,7 @@ export function PanelEntryRowWithHistory({
         <div className="flex items-center gap-1 mt-1 justify-end">
           <HistoryPopover history={entry.history} />
           <span className="text-[10px] text-muted-foreground italic">
-            Verrouillé : déjà sur un bulletin de paie
+            {t("verrouille_deja_bulletin_paie_2")}
           </span>
         </div>
       )}

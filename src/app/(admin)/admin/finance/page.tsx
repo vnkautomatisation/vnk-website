@@ -1,12 +1,17 @@
 import { prisma } from "@/lib/prisma";
+import { getTranslations } from "next-intl/server";
 import { FinanceView } from "./finance-view";
 import type { Metadata } from "next";
 
-export const metadata: Metadata = { title: "Tableau de bord finance" };
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getTranslations("admin.page_titles");
+  return { title: t("tableau_bord_finance") };
+}
 
 const DAYS_WINDOW = 30; // fenêtre du graphique d'évolution journalière (comme Wix)
 
 export default async function FinancePage() {
+  const t = await getTranslations("admin.finance");
   const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
   const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
@@ -185,7 +190,7 @@ export default async function FinancePage() {
   // ─── Répartition par type de service ───────────────────────
   const serviceMap = new Map<string, { total: number; count: number }>();
   payments.forEach((p) => {
-    const svc = p.invoice?.serviceType ?? "Non catégorisé";
+    const svc = p.invoice?.serviceType ?? t("non_categorise");
     const cur = serviceMap.get(svc) ?? { total: 0, count: 0 };
     cur.total += Number(p.amountCad ?? p.amount);
     cur.count += 1;

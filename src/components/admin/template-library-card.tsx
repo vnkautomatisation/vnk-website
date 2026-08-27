@@ -83,8 +83,8 @@ function kindToDocType(kind: LibraryTemplateKind): TemplateDocumentType {
 
 // Apercu propre : variables {{...}} remplacees par leur label FR,
 // markdown strippe, troncature au mot.
-function plainPreview(md: string): string {
-  return formatPreviewMarkdown(md, 220);
+function plainPreview(md: string, t: (k: string) => string): string {
+  return formatPreviewMarkdown(md, 220, t);
 }
 
 export function TemplateLibraryCard({
@@ -97,12 +97,14 @@ export function TemplateLibraryCard({
   previewEmployeeId,
   onPreviewWithoutEmployee,
 }: Props) {
+  const t = useTranslations("admin.ui");
+  const tv = useTranslations("admin.library");
   const tc = useTranslations("common");
   const [busy] = useState(false);
 
-  const preview = plainPreview(template.bodyMarkdown);
+  const preview = plainPreview(template.bodyMarkdown, tv);
 
-  // Icone principale selon le kind
+
   const KindIcon =
     template.kind === "legal"
       ? ShieldCheck
@@ -117,7 +119,7 @@ export function TemplateLibraryCard({
         !template.isActive && "opacity-70",
       )}
     >
-      {/* Header ruban */}
+
       <div className="flex items-start gap-2 px-4 pt-3 pb-2 border-b">
         <div className="h-8 w-8 rounded-md bg-[#0F2D52]/10 flex items-center justify-center shrink-0">
           <KindIcon className="h-4 w-4 text-[#0F2D52]" />
@@ -133,14 +135,14 @@ export function TemplateLibraryCard({
                 className="text-[10px] gap-1 px-1.5 py-0 h-4 border-emerald-300 bg-emerald-50 text-emerald-700"
               >
                 <Sparkles className="h-2.5 w-2.5" />
-                Starter VNK
+                {t("starter_vnk")}
               </Badge>
             ) : (
               <Badge
                 variant="outline"
                 className="text-[10px] gap-1 px-1.5 py-0 h-4 border-slate-300 bg-slate-50 text-slate-700"
               >
-                Personnalise
+                {t("personnalise")}
               </Badge>
             )}
             {!template.isActive && (
@@ -149,7 +151,7 @@ export function TemplateLibraryCard({
                 className="text-[10px] gap-1 px-1.5 py-0 h-4 border-amber-300 bg-amber-50 text-amber-700"
               >
                 <Archive className="h-2.5 w-2.5" />
-                Archive
+                {t("archive")}
               </Badge>
             )}
             {template.categoryLabel && (
@@ -181,10 +183,10 @@ export function TemplateLibraryCard({
         </div>
       </div>
 
-      {/* Body : apercu + postes cibles */}
+
       <div className="px-4 py-3 flex-1 space-y-2">
         <p className="text-xs text-muted-foreground line-clamp-2 leading-snug min-h-[2.4em]">
-          {preview || "Aucun apercu disponible."}
+          {preview || t("aucun_apercu_disponible")}
         </p>
         {template.targetPositions.length > 0 && (
           <div className="flex flex-wrap items-center gap-1">
@@ -207,14 +209,14 @@ export function TemplateLibraryCard({
         {template.targetPositions.length === 0 &&
           template.targetDepartments.length === 0 && (
             <p className="text-[10px] text-muted-foreground italic">
-              Applicable a tous les employes
+              {t("applicable_tous_employes")}
             </p>
           )}
       </div>
 
-      {/* Footer actions */}
+
       <div className="flex items-center gap-1 px-3 py-2 border-t bg-muted/30">
-        {/* Apercu PDF — directement si employeeId fourni, sinon picker */}
+
         {previewEmployeeId !== undefined ? (
           <TemplatePdfPreviewButton
             bodyMarkdown={template.bodyMarkdown}
@@ -223,7 +225,7 @@ export function TemplateLibraryCard({
             employeeId={previewEmployeeId}
             metadata={{ version: template.version || "1.0" }}
             trigger={
-              <ActionTooltip label="Apercu PDF">
+              <ActionTooltip label={t("apercu_pdf")}>
                 <Button
                   type="button"
                   variant="ghost"
@@ -236,7 +238,7 @@ export function TemplateLibraryCard({
             }
           />
         ) : (
-          <ActionTooltip label="Apercu PDF">
+          <ActionTooltip label={t("apercu_pdf")}>
             <Button
               type="button"
               variant="ghost"
@@ -251,7 +253,7 @@ export function TemplateLibraryCard({
         )}
 
         {onUse && (
-          <ActionTooltip label="Utiliser ce modele">
+          <ActionTooltip label={t("utiliser_modele")}>
             <Button
               type="button"
               variant="ghost"
@@ -266,13 +268,13 @@ export function TemplateLibraryCard({
         )}
 
         {onRequestSignature && template.kind === "legal" && template.isActive && (() => {
-          // Mission 5 : label / icone adaptes au type d'engagement
+
           const ackMode = template.acknowledgmentMode ?? "signature";
           const isReadingOnly = ackMode === "reading_only";
           const Icon = isReadingOnly ? BookOpen : FileSignature;
           const tooltip = isReadingOnly
-            ? "Envoyer ce document pour lecture"
-            : "Demander la signature de ce document";
+            ? t("envoyer_document_lecture")
+            : t("demander_signature_document");
           return (
             <ActionTooltip label={tooltip}>
               <Button
@@ -290,7 +292,7 @@ export function TemplateLibraryCard({
         })()}
 
         {onDuplicate && (
-          <ActionTooltip label="Dupliquer">
+          <ActionTooltip label={t("dupliquer")}>
             <Button
               type="button"
               variant="ghost"
@@ -322,7 +324,7 @@ export function TemplateLibraryCard({
         <div className="flex-1" />
 
         {onArchive && !template.isStarter && (
-          <ActionTooltip label={template.isActive ? "Archiver" : "Restaurer"}>
+          <ActionTooltip label={template.isActive ? t("archiver") : t("restaurer")}>
             <Button
               type="button"
               variant="ghost"

@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,33 +10,34 @@ import { Zap, Bell, Receipt, MessageSquare } from "lucide-react";
 
 type AutomationToggle = {
   key: string;
-  title: string;
-  description: string;
+  titleKey: string;
+  descriptionKey: string;
   icon: React.ComponentType<{ className?: string }>;
 };
 
 const AUTOMATIONS: AutomationToggle[] = [
   {
     key: "auto_invoice",
-    title: "Générer la facture après signature",
-    description: "Crée automatiquement une facture lorsque le contrat est signé",
+    titleKey: "auto_invoice_title",
+    descriptionKey: "auto_invoice_desc",
     icon: Receipt,
   },
   {
     key: "auto_notify",
-    title: "Notifier le client à chaque étape",
-    description: "Messages automatiques dans la messagerie du portail",
+    titleKey: "auto_notify_title",
+    descriptionKey: "auto_notify_desc",
     icon: MessageSquare,
   },
   {
     key: "auto_reminder",
-    title: "Rappels des factures en retard",
-    description: "Rappel automatique après la date d'échéance",
+    titleKey: "auto_reminder_title",
+    descriptionKey: "auto_reminder_desc",
     icon: Bell,
   },
 ];
 
 export function TabAutomatisations() {
+  const t = useTranslations("admin.profile.banner");
   const [toggles, setToggles] = useState<Record<string, boolean>>({
     auto_invoice: true,
     auto_notify: true,
@@ -44,11 +46,11 @@ export function TabAutomatisations() {
 
   const handleToggle = (key: string, value: boolean) => {
     setToggles((prev) => ({ ...prev, [key]: value }));
-    toast.success(value ? "Automatisation activée" : "Automatisation désactivée");
+    toast.success(value ? t("automatisation_activee") : t("automatisation_desactivee"));
   };
 
   const handleSendReminders = () => {
-    toast.success("Rappels envoyés aux clients avec factures en retard");
+    toast.success(t("rappels_envoyes_clients_factures_retard"));
   };
 
   return (
@@ -56,7 +58,7 @@ export function TabAutomatisations() {
       <CardHeader className="pb-4">
         <CardTitle className="text-base flex items-center gap-2">
           <Zap className="h-4 w-4" />
-          Automatisations
+          {t("automatisations")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -71,8 +73,8 @@ export function TabAutomatisations() {
                     <Icon className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div>
-                    <p className="text-sm font-semibold">{auto.title}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{auto.description}</p>
+                    <p className="text-sm font-semibold">{t(auto.titleKey)}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t(auto.descriptionKey)}</p>
                   </div>
                 </div>
                 <Switch
@@ -88,7 +90,7 @@ export function TabAutomatisations() {
 
         <Button variant="outline" size="sm" onClick={handleSendReminders} className="gap-1.5">
           <Bell className="h-3.5 w-3.5" />
-          Envoyer rappels maintenant
+          {t("envoyer_rappels_maintenant")}
         </Button>
       </CardContent>
     </Card>

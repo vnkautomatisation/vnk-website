@@ -1,6 +1,7 @@
 // GET /api/contracts — liste contrats
 // POST /api/contracts — créer un contrat (admin)
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -42,6 +43,7 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
+  const t = await getTranslations("api_errors");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -53,7 +55,7 @@ export async function POST(req: Request) {
   const body = await req.json();
   const parsed = createSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Données invalides" }, { status: 400 });
+    return NextResponse.json({ error: t("donnees_invalides") }, { status: 400 });
   }
 
   const prefix = (await getSetting<string>("billing", "contract_number_prefix")) ?? "CT-{YYYY}-";
