@@ -10,6 +10,9 @@ export default async function AdminGroupLayout({
   children: React.ReactNode;
 }) {
   const locale = await getLocale();
+  // The whole catalogue: this layout renders once per hard load and is kept
+  // across client-side navigation, so a per-route subset would leave later
+  // pages without their namespaces.
   const messages = await getMessages();
 
   return (

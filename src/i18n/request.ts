@@ -25,10 +25,11 @@ export default getRequestConfig(async ({ requestLocale }) => {
     }
   } catch { /* fallback */ }
 
-  // 3. Admin connecté → priorité absolue à sa préférence
+  // 3. Admin connecté → priorité absolue à sa préférence, en contexte admin
+  //    uniquement : sur le site public, le segment [locale] de l'URL prime.
   try {
     const session = await auth();
-    if (session?.user?.role === "admin" && session.user.adminId) {
+    if (isAdminContext && session?.user?.role === "admin" && session.user.adminId) {
       const admin = await prisma.admin.findUnique({
         where: { id: session.user.adminId },
         select: { locale: true, timezone: true },

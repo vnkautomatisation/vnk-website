@@ -17,7 +17,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:seed-hr": "tsx prisma/seed-hr.ts",
     "seed:templates": "tsx prisma/seed-document-templates.ts",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "i18n:check": "node scripts/check-i18n-keys.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.37.2",
