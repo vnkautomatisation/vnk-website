@@ -117,7 +117,9 @@ export async function POST(req: Request) {
   await createWorkflowEvent({
     clientId: client.id,
     eventType: "message_from_client",
-    eventLabel: `Email entrant de ${client.fullName}`,
+    eventLabel: t("route_email_entrant_de_p0", { p0: client.fullName }),
+    labelKey: "api_errors.route_email_entrant_de_p0",
+    labelParams: { p0: client.fullName },
     triggeredBy: "email",
   });
 

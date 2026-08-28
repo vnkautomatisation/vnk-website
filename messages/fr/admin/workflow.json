@@ -93,5 +93,11 @@
   "voir_client": "Voir le client",
   "workflow": "Workflow",
   "workflow_kanban_activite_recente": "Activité récente",
-  "workflow_kanban_effacer_les_filtres": "Effacer les filtres"
+  "workflow_kanban_effacer_les_filtres": "Effacer les filtres",
+  "workflow_kanban_la_facture_p0_sera_marquee_comme_payee": "La facture {p0} sera marquée comme payée.",
+  "workflow_kanban_la_facture_p0_sera_marquee_comme_payee_passage": "La facture {p0} sera marquée comme payée (passage Paiement → Complété).",
+  "workflow_kanban_le_devis_p0_sera_accepte_passage_devis_contrat": "Le devis {p0} sera accepté (passage Devis → Contrat).",
+  "workflow_kanban_le_devis_p0_sera_marque_comme_accepte_et": "Le devis {p0} sera marqué comme accepté et un contrat sera généré automatiquement.",
+  "workflow_kanban_vous_allez_ouvrir_la_creation_d_un_nouveau": "Vous allez ouvrir la création d'un nouveau mandat pour {p0} (passage Prospect → Mandat).",
+  "workflow_kanban_vous_allez_ouvrir_la_creation_d_un_nouveau_x": "Vous allez ouvrir la création d'un nouveau devis pour {p0} (passage Mandat → Devis)."
 }

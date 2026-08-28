@@ -1,10 +1,12 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { CreditCard } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type P = {
   id: number;
@@ -21,6 +23,7 @@ type P = {
 
 export function TransactionsTable({ payments }: { payments: P[] }) {
   const t = useTranslations("admin.transactions");
+  const formatCurrency = useCurrency();
 
   const columns: Column<P>[] = [
     { key: "date", header: t("date"), accessor: (r) => formatDate(r.paidAt ?? r.createdAt), sortable: true, sortBy: (r) => (r.paidAt ?? r.createdAt).getTime() },

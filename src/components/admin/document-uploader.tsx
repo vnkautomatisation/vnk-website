@@ -204,7 +204,7 @@ export function DocumentUploader({
               resolve();
             }
           } else {
-            let errMsg = `Échec de l'upload (${xhr.status})`;
+            let errMsg = t("document_uploader_echec_de_l_upload_p0", { p0: xhr.status });
             try {
               const data = JSON.parse(xhr.responseText || "{}");
               if (data?.error) errMsg = data.error;
@@ -224,7 +224,7 @@ export function DocumentUploader({
       onClose();
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("erreur_inconnue");
-      toast.error(`Échec : ${msg}`);
+      toast.error(t("document_uploader_echec_p0", { p0: msg }));
     } finally {
       setUploading(false);
       setProgress(0);
@@ -243,7 +243,7 @@ export function DocumentUploader({
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               PDF, PNG, JPEG ou WebP — max {MAX_SIZE_MB} Mo. Les documents marqués
-              «&nbsp;privés&nbsp;» ne sont visibles que par vous et les RH.
+              {t("prives_visibles_rh")}
             </DialogDescription>
           </DialogHeader>
         </div>

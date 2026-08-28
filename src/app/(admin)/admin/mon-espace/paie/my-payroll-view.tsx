@@ -9,6 +9,7 @@
 //  - PDFs via PdfPreviewModal
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -67,26 +68,26 @@ const TAX_TYPE_META: Record<string, { label: string; short: string }> = {
 
 type TabKey = "stubs" | "tax";
 
-function formatMoney(v: number | string): string {
+function formatMoney(v: number | string, tag: string): string {
   const n = typeof v === "number" ? v : Number(v);
   if (Number.isNaN(n)) return "-";
-  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD" }).format(n);
+  return new Intl.NumberFormat(tag, { style: "currency", currency: "CAD" }).format(n);
 }
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 // A @db.Date column serializes at UTC midnight, so reading it locally shows the
 // day before anywhere west of Greenwich. Pay period bounds are date-only.
-function formatDateOnly(iso: string | null | undefined): string {
+function formatDateOnly(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function isThisYear(iso: string | null | undefined): boolean {
@@ -105,6 +106,7 @@ export function MyPayrollView({
   const t = useTranslations("admin.payroll");
   const [tab, setTab] = useState<TabKey>("stubs");
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+  const dateTag = useDateLocale();
 
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -129,8 +131,8 @@ export function MyPayrollView({
   const openStubPdf = useCallback((s: Stub) => {
     setPdfPreview({
       url: `/api/admin/pay-stubs/${s.id}/pdf`,
-      title: `Bulletin de paie #${s.id}`,
-      description: `${formatDateOnly(s.period.startDate)} - ${formatDateOnly(s.period.endDate)}`,
+      title: t("my_payroll_view_bulletin_de_paie_p0", { p0: s.id }),
+      description: `${formatDateOnly(s.period.startDate, dateTag)} - ${formatDateOnly(s.period.endDate, dateTag)}`,
       filename: `bulletin-paie-${s.id}.pdf`,
     });
   }, []);
@@ -194,20 +196,20 @@ export function MyPayrollView({
           icon={Receipt}
           accent="info"
           hint={kpis.last
-            ? `Dernier : ${formatDateOnly(kpis.last.period.startDate)}`
+            ? `Dernier : ${formatDateOnly(kpis.last.period.startDate, dateTag)}`
             : t("aucun_bulletin_moment")}
           onClick={() => setTab("stubs")}
         />
         <DocumentStatsCard
           label={t("net_cumule_ytd")}
-          value={formatMoney(kpis.ytd)}
+          value={formatMoney(kpis.ytd, dateTag)}
           icon={Wallet}
           accent="success"
           hint={`Annee ${new Date().getFullYear()}`}
         />
         <DocumentStatsCard
           label={t("brut_cumule_ytd")}
-          value={formatMoney(kpis.grossYtd)}
+          value={formatMoney(kpis.grossYtd, dateTag)}
           icon={DollarSign}
           accent="navy"
           hint={t("avant_deductions_source")}
@@ -242,7 +244,7 @@ export function MyPayrollView({
                   <span className="min-[480px]:hidden">{t("ytd")}</span>
                   <span className="hidden min-[480px]:inline">{t("net_ytd")}</span>
                 </span>
-                <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd)}</span>
+                <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd, dateTag)}</span>
               </span>
               <span className="text-muted-foreground">·</span>
               <span className="inline-flex items-baseline gap-1">
@@ -279,7 +281,7 @@ export function MyPayrollView({
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             <span className="text-muted-foreground">{t("net_ytd")}</span>
-            <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd)}</span>
+            <span className="font-semibold text-emerald-700">{formatMoney(kpis.ytd, dateTag)}</span>
           </span>
           <span className="flex items-baseline gap-1.5 whitespace-nowrap">
             <span className="text-muted-foreground">{t("docs_fiscaux")}</span>
@@ -335,6 +337,7 @@ function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) 
 
 function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
   const t = useTranslations("admin.payroll");
+  const dateTag = useDateLocale();
   const totalDeductions =
     Number(stub.deductionFederal) + Number(stub.deductionProvincial) +
     Number(stub.deductionRrq) + Number(stub.deductionAe) +
@@ -350,14 +353,14 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider opacity-80">{t("periode")}</p>
             <h3 className="font-bold text-sm truncate">
-              {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
+              {formatDateOnly(stub.period.startDate, dateTag)} - {formatDateOnly(stub.period.endDate, dateTag)}
             </h3>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider opacity-80">{t("net_payer")}</p>
-            <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay)}</p>
+            <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay, dateTag)}</p>
           </div>
           <Button
             size="sm"
@@ -376,7 +379,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             {t("heures_regulieres")}
           </p>
           <p className="font-mono">
-            {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate)}
+            {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate, dateTag)}
           </p>
         </div>
         {Number(stub.hoursOvertime) > 0 && (
@@ -400,7 +403,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
               {t("indemnite_ferie")}
             </p>
-            <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
+            <p className="font-mono">{formatMoney(stub.holidayIndemnity, dateTag)}</p>
           </div>
         )}
         {Number(stub.hoursVacation) > 0 && (
@@ -414,31 +417,31 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         <div className="col-span-full border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div>
             <span className="text-muted-foreground">{t("brut")} </span>
-            <strong className="tabular-nums">{formatMoney(stub.grossPay)}</strong>
+            <strong className="tabular-nums">{formatMoney(stub.grossPay, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("federal")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionFederal)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionFederal, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("provincial")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("rrq")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionRrq)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRrq, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("ae")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionAe)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionAe, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("rqap")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionRqap)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRqap, dateTag)}</strong>
           </div>
           <div className="md:col-span-2">
             <span className="text-muted-foreground">{t("total_deductions")} </span>
-            <strong className="tabular-nums">-{formatMoney(totalDeductions)}</strong>
+            <strong className="tabular-nums">-{formatMoney(totalDeductions, dateTag)}</strong>
           </div>
         </div>
       </div>
@@ -453,6 +456,7 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
   const t = useTranslations("admin.payroll");
   const [search, setSearch] = useState("");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const dateTag = useDateLocale();
 
   const years = useMemo(
     () => Array.from(new Set(docs.map((d) => d.taxYear).filter((y): y is number => y !== null))).sort((a, b) => b - a),
@@ -548,7 +552,7 @@ function MyTaxDocsTab({ docs, onOpenPdf }: { docs: TaxDoc[]; onOpenPdf: (d: TaxD
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-sm truncate">{d.title}</p>
                         <p className="text-xs text-muted-foreground truncate">
-                          {meta.label} - emis le {formatDate(d.issuedAt)}
+                          {meta.label} - emis le {formatDate(d.issuedAt, dateTag)}
                         </p>
                       </div>
                       <ActionTooltip label={t("apercu_pdf")}>

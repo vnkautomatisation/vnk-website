@@ -92,7 +92,7 @@ export default async function ReportsPage() {
         <Card className="p-3 flex items-center gap-2 bg-amber-50/50 border-amber-200">
           <Calendar className="h-4 w-4 text-amber-600" />
           <div>
-            <p className="text-xs font-semibold">{pendingLeaves} congé{pendingLeaves > 1 ? "s" : ""} à approuver</p>
+            <p className="text-xs font-semibold">{t("conges_a_approuver", { count: pendingLeaves })}</p>
           </div>
         </Card>
         <Card className="p-3 flex items-center gap-2 bg-amber-50/50 border-amber-200">
@@ -110,7 +110,7 @@ export default async function ReportsPage() {
         <Card className="p-3 flex items-center gap-2 bg-red-50/40 border-red-200">
           <AlertTriangle className="h-4 w-4 text-red-600" />
           <div>
-            <p className="text-xs font-semibold">{cnesstThisYear} déclaration{cnesstThisYear > 1 ? "s" : ""} CNESST</p>
+            <p className="text-xs font-semibold">{t("declarations_cnesst", { count: cnesstThisYear })}</p>
           </div>
         </Card>
       </div>

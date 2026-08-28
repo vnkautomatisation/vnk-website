@@ -28,7 +28,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
       });
       const data = await res.json();
       if (!res.ok) return NextResponse.json({ ok: false, error: data.error?.message ?? "Échec de connexion Stripe" }, { status: 400 });
-      return NextResponse.json({ ok: true, message: `Connecté à Stripe (${data.id})`, account: data.id });
+      return NextResponse.json({ ok: true, message: t("route_connecte_a_stripe_p0", { p0: data.id }), account: data.id });
     }
 
     if (provider === "sendgrid") {
@@ -55,7 +55,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
       });
       if (!res.ok) return NextResponse.json({ ok: false, error: t("cle_api_dropbox_sign_invalide") }, { status: 400 });
       const data = await res.json();
-      return NextResponse.json({ ok: true, message: `Connecté en tant que ${data.account?.email_address ?? "compte Dropbox Sign"}` });
+      return NextResponse.json({ ok: true, message: t("route_connecte_en_tant_que_p0", { p0: data.account?.email_address ?? "compte Dropbox Sign" }) });
     }
 
     if (provider === "smtp") {
@@ -98,7 +98,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ provid
       });
       if (!res.ok) return NextResponse.json({ ok: false, error: "Token Calendly invalide" }, { status: 400 });
       const data = await res.json();
-      return NextResponse.json({ ok: true, message: `Connecté en tant que ${data.resource?.name ?? "compte Calendly"}` });
+      return NextResponse.json({ ok: true, message: t("route_connecte_en_tant_que_p0", { p0: data.resource?.name ?? "compte Calendly" }) });
     }
 
     return NextResponse.json({ ok: false, error: t("test_non_disponible_pour_ce_fournisseur") }, { status: 400 });

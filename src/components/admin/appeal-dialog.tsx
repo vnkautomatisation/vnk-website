@@ -5,6 +5,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Megaphone,
@@ -51,12 +52,13 @@ export function SubmitAppealDialog({
   const tc = useTranslations("common");
   const [reason, setReason] = useState("");
   const [pending, setPending] = useState(false);
+  const dateTag = useDateLocale();
 
   const reasonOk = reason.trim().length >= MIN_REASON && reason.trim().length <= MAX_REASON;
 
   const submit = async () => {
     if (!reasonOk) {
-      toast.error(`Le motif doit faire entre ${MIN_REASON} et ${MAX_REASON} caractères.`);
+      toast.error(t("appeal_dialog_le_motif_doit_faire_entre_p0_et_p1", { p0: MIN_REASON, p1: MAX_REASON }));
       return;
     }
     setPending(true);
@@ -92,8 +94,8 @@ export function SubmitAppealDialog({
             <p>
               Période concernée :{" "}
               <strong>
-                {new Date(preference.startDate).toLocaleDateString("fr-CA")} →{" "}
-                {new Date(preference.endDate).toLocaleDateString("fr-CA")}
+                {new Date(preference.startDate).toLocaleDateString(dateTag)} →{" "}
+                {new Date(preference.endDate).toLocaleDateString(dateTag)}
               </strong>
             </p>
             <p className="text-muted-foreground mt-1">

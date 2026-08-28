@@ -59,7 +59,7 @@ export const SECTOR_OPTIONS = [
 ];
 
 // Le secteur et la categorie restent stockes en francais : seul l'affichage suit la locale.
-const SECTOR_EN: Record<string, string> = {
+export const SECTOR_EN: Record<string, string> = {
   "Manufacturier": "Manufacturing",
   "Agroalimentaire": "Food and beverage",
   "Pharmaceutique": "Pharmaceutical",

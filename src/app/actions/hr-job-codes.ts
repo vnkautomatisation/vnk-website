@@ -47,7 +47,7 @@ export async function createJobCodeAction(input: z.infer<typeof createSchema>): 
 
   // Verifier unicite du code (global)
   const existing = await prisma.jobCode.findUnique({ where: { code: parsed.data.code } });
-  if (existing) return { success: false, error: `Le code "${parsed.data.code}" existe déjà` };
+  if (existing) return { success: false, error: t("hr_job_codes_le_code_p0_existe_deja", { p0: parsed.data.code }) };
 
   // Verifier que la position existe
   const pos = await prisma.position.findUnique({ where: { id: parsed.data.positionId } });
@@ -90,7 +90,7 @@ export async function updateJobCodeAction(input: z.infer<typeof updateSchema>): 
   // Si on change le code, verifier unicite
   if (parsed.data.code && parsed.data.code !== existing.code) {
     const dup = await prisma.jobCode.findUnique({ where: { code: parsed.data.code } });
-    if (dup) return { success: false, error: `Le code "${parsed.data.code}" existe déjà` };
+    if (dup) return { success: false, error: t("hr_job_codes_le_code_p0_existe_deja", { p0: parsed.data.code }) };
   }
 
   await prisma.jobCode.update({
@@ -110,6 +110,7 @@ export async function updateJobCodeAction(input: z.infer<typeof updateSchema>): 
 
 // ─── Delete ────────────────────────────────────────────────
 export async function deleteJobCodeAction(input: { id: number }): Promise<Result> {
+  const t = await getTranslations("admin.action_errors");
   const actorId = await requireUsersWrite();
   if (!actorId) return unauthorized();
 
@@ -119,7 +120,7 @@ export async function deleteJobCodeAction(input: { id: number }): Promise<Result
   });
   if (!existing) return { success: false, error: "Introuvable" };
   if (existing._count.timeClocks > 0) {
-    return { success: false, error: `Impossible de supprimer : ${existing._count.timeClocks} pointage(s) lié(s). Désactivez-le plutôt.` };
+    return { success: false, error: t("hr_job_codes_impossible_de_supprimer_p0_pointage_s_lie_s", { p0: existing._count.timeClocks }) };
   }
 
   await prisma.jobCode.delete({ where: { id: input.id } });

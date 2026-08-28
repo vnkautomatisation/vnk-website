@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useWeekdayNames } from "@/lib/i18n-format";
+import { useWeekdayNames, useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import {
@@ -81,13 +81,13 @@ function getMonthWeeks(year: number, month: number): Date[][] {
   return weeks;
 }
 
-function formatMonthYear(d: Date): string {
-  return new Intl.DateTimeFormat("fr-CA", { month: "long", year: "numeric" }).format(d);
+function formatMonthYear(d: Date, tag: string): string {
+  return new Intl.DateTimeFormat(tag, { month: "long", year: "numeric" }).format(d);
 }
 
-function formatDayFull(key: string): string {
+function formatDayFull(key: string, tag: string): string {
   const d = new Date(key + "T12:00:00");
-  return new Intl.DateTimeFormat("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
+  return new Intl.DateTimeFormat(tag, { weekday: "long", day: "numeric", month: "long", year: "numeric" }).format(d);
 }
 
 function dotColor(status: string): string {
@@ -108,6 +108,7 @@ function timelineColor(status: string): string {
 // ── Composant principal ──
 export function AppointmentsList({ appointments }: { appointments: Appointment[] }) {
   const t = useTranslations("portal");
+  const dateTag = useDateLocale();
   const DAY_NAMES = useWeekdayNames();
   const router = useRouter();
   const [currentMonth, setCurrentMonth] = useState(() => {
@@ -234,7 +235,7 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
               <ChevronLeft className="h-4 w-4" />
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-semibold capitalize">{formatMonthYear(currentMonth)}</span>
+              <span className="text-sm font-semibold capitalize">{formatMonthYear(currentMonth, dateTag)}</span>
               <button onClick={goToday} className="text-[10px] font-medium text-[#0F2D52] hover:underline">
                 {t("aujourd_apos_hui")}
               </button>
@@ -310,9 +311,9 @@ export function AppointmentsList({ appointments }: { appointments: Appointment[]
             <>
 
               <div className="px-5 py-3 border-b bg-muted/30">
-                <p className="text-sm font-semibold capitalize">{formatDayFull(selectedDate)}</p>
+                <p className="text-sm font-semibold capitalize">{formatDayFull(selectedDate, dateTag)}</p>
                 <p className="text-xs text-muted-foreground">
-                  {selectedAppts.length} rendez-vous
+                  {t("appt_count", { count: selectedAppts.length })}
                 </p>
               </div>
 

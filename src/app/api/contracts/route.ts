@@ -85,7 +85,9 @@ export async function POST(req: Request) {
     clientId: contract.clientId,
     contractId: contract.id,
     eventType: "contract_created",
-    eventLabel: `Contrat ${contractNumber} créé`,
+    eventLabel: t("route_contrat_p0_cree", { p0: contractNumber }),
+    labelKey: "api_errors.route_contrat_p0_cree",
+    labelParams: { p0: contractNumber },
     triggeredBy: "admin",
   });
 

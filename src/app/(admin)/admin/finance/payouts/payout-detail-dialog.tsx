@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -23,7 +24,8 @@ import {
   AlertTriangle,
   Eye,
 } from "lucide-react";
-import { formatCurrency, formatDate, cn } from "@/lib/utils";
+import { formatDate, cn } from "@/lib/utils";
+
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 import { TYPE_META, getStatusDisplay } from "@/lib/payment-status";
@@ -113,6 +115,7 @@ export function PayoutDetailDialog({
   const [data, setData] = useState<PayoutDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [drillPaymentId, setDrillPaymentId] = useState<number | null>(null);
+  const formatCurrency = useCurrency();
 
   useEffect(() => {
     if (!open || !payoutId) {
@@ -140,7 +143,7 @@ export function PayoutDetailDialog({
         <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 space-y-1">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <Banknote className="h-5 w-5" />
-            Détail du versement
+            {t("detail_du_versement")}
             {p && <span className="text-white/60 text-xs font-mono ml-2">#{p.id}</span>}
           </DialogTitle>
           <DialogDescription className="text-white/70 text-xs inline-flex items-center flex-wrap gap-1.5">

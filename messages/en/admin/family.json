@@ -13,9 +13,11 @@
   "family_view_conjoint_e_et_enfants_couverts_par_votre": "Spouse and children covered by your group insurance or declared to the tax authorities.",
   "family_view_famille_dependants": "Family / dependants",
   "modifier": "Edit",
+  "modifier_dependant": "Edit dependant",
   "nom_complet": "Full name *",
   "nom_requis": "Name required",
   "nouveau": "New",
+  "nouveau_dependant": "New dependant",
   "supprime": "Deleted",
   "type": "Type"
 }

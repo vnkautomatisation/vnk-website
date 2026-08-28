@@ -857,13 +857,112 @@ function drawDisclaimer(doc: CapturedDoc, kind: "t4" | "r1") {
   doc.fillColor(C.text);
 }
 
+// Libelles des documents RH. Les cases fiscales reprennent mot pour mot les
+// intitules officiels de l'ARC (T4) et de Revenu Quebec (RL-1) : une
+// traduction libre serait un ecart de conformite.
+type HrLang = "fr" | "en";
+const HR_LABELS: Record<HrLang, Record<string, string>> = {
+  fr: {
+    t4_title: "T4 — Sommaire",
+    t4_subtitle: "Etat de la remuneration payee (resume non officiel)",
+    t4_boxes: "Cases du feuillet T4 — Annee",
+    t4_footer: "Resume non officiel",
+    r1_title: "Releve 1 — Sommaire",
+    r1_subtitle: "Revenus d'emploi et revenus divers (resume non officiel)",
+    r1_boxes: "Cases du Releve 1 — Annee",
+    employee: "Employe",
+    name: "Nom",
+    email: "Courriel",
+    address: "Adresse",
+    sin: "NAS",
+    reporting_period: "Periode declarative",
+    tax_year: "Annee fiscale",
+    from: "Du",
+    to: "Au",
+    jan_1: "1er janvier",
+    dec_31: "31 decembre",
+    stubs_included: "Bulletins inclus",
+    employer: "Employeur",
+    summary: "Recapitulatif",
+    yearly_totals: "Totaux annuels",
+    gross_employment_income: "Revenus bruts d'emploi",
+    total_source_deductions: "Total des deductions a la source",
+    net_paid: "Net verse a l'employe",
+    // T4 : intitules ARC
+    t4_14: "Revenus d'emploi",
+    t4_22: "Impot sur le revenu retenu",
+    t4_16: "Cotisations de l'employe au RPC/RRQ",
+    t4_18: "Cotisations de l'employe a l'AE",
+    t4_24: "Gains assurables d'AE",
+    t4_26: "Gains ouvrant droit a pension RPC/RRQ",
+    t4_55: "Cotisations de l'employe au RPAP/RQAP",
+    t4_56: "Gains assurables du RPAP/RQAP",
+    // RL-1 : intitules Revenu Quebec
+    r1_A: "Revenus d'emploi",
+    r1_E: "Impot du Quebec retenu",
+    r1_B: "Cotisation au RRQ",
+    r1_C: "Cotisation a l'assurance-emploi",
+    r1_H: "Cotisation au RQAP",
+    r1_G: "Salaire admissible au RRQ",
+    r1_I: "Salaire admissible au RQAP",
+    r1_F: "Cotisation syndicale",
+  },
+  en: {
+    t4_title: "T4 — Summary",
+    t4_subtitle: "Statement of Remuneration Paid (unofficial summary)",
+    t4_boxes: "T4 slip boxes — Year",
+    t4_footer: "Unofficial summary",
+    r1_title: "RL-1 — Summary",
+    r1_subtitle: "Employment and Other Income (unofficial summary)",
+    r1_boxes: "RL-1 slip boxes — Year",
+    employee: "Employee",
+    name: "Name",
+    email: "Email",
+    address: "Address",
+    sin: "SIN",
+    reporting_period: "Reporting period",
+    tax_year: "Tax year",
+    from: "From",
+    to: "To",
+    jan_1: "January 1",
+    dec_31: "December 31",
+    stubs_included: "Pay stubs included",
+    employer: "Employer",
+    summary: "Summary",
+    yearly_totals: "Yearly totals",
+    gross_employment_income: "Gross employment income",
+    total_source_deductions: "Total source deductions",
+    net_paid: "Net paid to the employee",
+    // T4 box names, as published by the CRA
+    t4_14: "Employment income",
+    t4_22: "Income tax deducted",
+    t4_16: "Employee's CPP contributions",
+    t4_18: "Employee's EI premiums",
+    t4_24: "EI insurable earnings",
+    t4_26: "CPP/QPP pensionable earnings",
+    t4_55: "Employee's PPIP premiums",
+    t4_56: "PPIP insurable earnings",
+    // RL-1 box names, as published by Revenu Quebec
+    r1_A: "Employment income before source deductions",
+    r1_E: "Quebec income tax withheld at source",
+    r1_B: "Quebec Pension Plan (QPP) contribution",
+    r1_C: "Employment Insurance premium",
+    r1_H: "Quebec parental insurance plan (QPIP) premium",
+    r1_G: "Pensionable salary or wages under the QPP",
+    r1_I: "Eligible salary or wages under the QPIP",
+    r1_F: "Union dues",
+  },
+};
+const lbl = (lang: HrLang | undefined, key: string) => HR_LABELS[lang ?? "fr"][key];
+
 export async function generateT4SummaryPdf(params: {
   admin: TaxAdminInfo;
   year: number;
   totals: TaxTotals;
   stubCount: number;
+  lang?: HrLang;
 }): Promise<Buffer> {
-  const { admin, year, totals, stubCount } = params;
+  const { admin, year, totals, stubCount, lang } = params;
   // EI insurable earnings = grossPay; the yearly maximum is ignored here.
   const insurableEarnings = totals.grossPay;
   const pensionableEarnings = totals.grossPay;
@@ -871,52 +970,52 @@ export async function generateT4SummaryPdf(params: {
   return capture((doc) => {
     drawHeader(
       doc,
-      `T4 — Sommaire ${year}`,
-      "Etat de la remuneration payee (resume non officiel)",
+      `${lbl(lang, "t4_title")} ${year}`,
+      lbl(lang, "t4_subtitle"),
     );
 
-    drawInfoBlock(doc, "Employe", [
-      ["Nom", sanitize(admin.fullName) || sanitize(admin.email)],
-      ["Courriel", sanitize(admin.email)],
-      ["Adresse", sanitize(admin.address) || "—"],
-      ["NAS", sanitize(admin.sin) || "—"],
+    drawInfoBlock(doc, lbl(lang, "employee"), [
+      [lbl(lang, "name"), sanitize(admin.fullName) || sanitize(admin.email)],
+      [lbl(lang, "email"), sanitize(admin.email)],
+      [lbl(lang, "address"), sanitize(admin.address) || "—"],
+      [lbl(lang, "sin"), sanitize(admin.sin) || "—"],
     ], { accent: C.navy });
 
-    drawInfoBlock(doc, "Periode declarative", [
-      ["Annee fiscale", String(year)],
-      ["Du", `1er janvier ${year}`],
-      ["Au", `31 decembre ${year}`],
-      ["Bulletins inclus", String(stubCount)],
-      ["Employeur", COMPANY.fullName],
+    drawInfoBlock(doc, lbl(lang, "reporting_period"), [
+      [lbl(lang, "tax_year"), String(year)],
+      [lbl(lang, "from"), `${lbl(lang, "jan_1")} ${year}`],
+      [lbl(lang, "to"), `${lbl(lang, "dec_31")} ${year}`],
+      [lbl(lang, "stubs_included"), String(stubCount)],
+      [lbl(lang, "employer"), COMPANY.fullName],
     ]);
 
-    sectionTitle(doc, `Cases du feuillet T4 — Annee ${year}`);
+    sectionTitle(doc, `${lbl(lang, "t4_boxes")} ${year}`);
     drawTaxBoxes(doc, [
-      { code: "14", label: "Revenus d'emploi", amount: totals.grossPay },
-      { code: "22", label: "Impot sur le revenu retenu", amount: totals.deductionFederal },
-      { code: "16", label: "Cotisations de l'employe au RPC/RRQ", amount: totals.deductionRrq },
-      { code: "18", label: "Cotisations de l'employe a l'AE", amount: totals.deductionAe },
-      { code: "24", label: "Gains assurables d'AE", amount: insurableEarnings, muted: true },
-      { code: "26", label: "Gains ouvrant droit a pension RPC/RRQ", amount: pensionableEarnings, muted: true },
-      { code: "55", label: "Cotisations de l'employe au RPAP/RQAP", amount: totals.deductionRqap },
-      { code: "56", label: "Gains assurables du RPAP/RQAP", amount: insurableEarnings, muted: true },
+      { code: "14", label: lbl(lang, "t4_14"), amount: totals.grossPay },
+      { code: "22", label: lbl(lang, "t4_22"), amount: totals.deductionFederal },
+      { code: "16", label: lbl(lang, "t4_16"), amount: totals.deductionRrq },
+      { code: "18", label: lbl(lang, "t4_18"), amount: totals.deductionAe },
+      { code: "24", label: lbl(lang, "t4_24"), amount: insurableEarnings, muted: true },
+      { code: "26", label: lbl(lang, "t4_26"), amount: pensionableEarnings, muted: true },
+      { code: "55", label: lbl(lang, "t4_55"), amount: totals.deductionRqap },
+      { code: "56", label: lbl(lang, "t4_56"), amount: insurableEarnings, muted: true },
     ]);
 
-    sectionTitle(doc, "Recapitulatif");
-    drawAmountTable(doc, "Totaux annuels", [
-      { label: "Revenus bruts d'emploi", amount: totals.grossPay },
-      { label: "Total des deductions a la source", amount: -(
+    sectionTitle(doc, lbl(lang, "summary"));
+    drawAmountTable(doc, lbl(lang, "yearly_totals"), [
+      { label: lbl(lang, "gross_employment_income"), amount: totals.grossPay },
+      { label: lbl(lang, "total_source_deductions"), amount: -(
         totals.deductionFederal + totals.deductionProvincial + totals.deductionRrq +
         totals.deductionAe + totals.deductionRqap + totals.deductionOther
       ), negative: true },
     ], {
-      label: "Net verse a l'employe",
+      label: lbl(lang, "net_paid"),
       amount: totals.netPay,
       emphasize: true,
     });
 
     drawDisclaimer(doc, "t4");
-  }, `T4 ${year} · ${COMPANY.fullName} · Resume non officiel`);
+  }, `T4 ${year} · ${COMPANY.fullName} · ${lbl(lang, "t4_footer")}`);
 }
 
 export async function generateReleve1Pdf(params: {
@@ -924,59 +1023,60 @@ export async function generateReleve1Pdf(params: {
   year: number;
   totals: TaxTotals;
   stubCount: number;
+  lang?: HrLang;
 }): Promise<Buffer> {
-  const { admin, year, totals, stubCount } = params;
+  const { admin, year, totals, stubCount, lang } = params;
   const pensionableEarnings = totals.grossPay;
 
   return capture((doc) => {
     drawHeader(
       doc,
-      `Releve 1 — Sommaire ${year}`,
-      "Revenus d'emploi et revenus divers (resume non officiel)",
+      `${lbl(lang, "r1_title")} ${year}`,
+      lbl(lang, "r1_subtitle"),
     );
 
-    drawInfoBlock(doc, "Employe", [
-      ["Nom", sanitize(admin.fullName) || sanitize(admin.email)],
-      ["Courriel", sanitize(admin.email)],
-      ["Adresse", sanitize(admin.address) || "—"],
-      ["NAS", sanitize(admin.sin) || "—"],
+    drawInfoBlock(doc, lbl(lang, "employee"), [
+      [lbl(lang, "name"), sanitize(admin.fullName) || sanitize(admin.email)],
+      [lbl(lang, "email"), sanitize(admin.email)],
+      [lbl(lang, "address"), sanitize(admin.address) || "—"],
+      [lbl(lang, "sin"), sanitize(admin.sin) || "—"],
     ], { accent: C.navy });
 
-    drawInfoBlock(doc, "Periode declarative", [
-      ["Annee fiscale", String(year)],
-      ["Du", `1er janvier ${year}`],
-      ["Au", `31 decembre ${year}`],
-      ["Bulletins inclus", String(stubCount)],
-      ["Employeur", COMPANY.fullName],
+    drawInfoBlock(doc, lbl(lang, "reporting_period"), [
+      [lbl(lang, "tax_year"), String(year)],
+      [lbl(lang, "from"), `${lbl(lang, "jan_1")} ${year}`],
+      [lbl(lang, "to"), `${lbl(lang, "dec_31")} ${year}`],
+      [lbl(lang, "stubs_included"), String(stubCount)],
+      [lbl(lang, "employer"), COMPANY.fullName],
     ]);
 
-    sectionTitle(doc, `Cases du Releve 1 — Annee ${year}`);
+    sectionTitle(doc, `${lbl(lang, "r1_boxes")} ${year}`);
     drawTaxBoxes(doc, [
-      { code: "A", label: "Revenus d'emploi", amount: totals.grossPay },
-      { code: "E", label: "Impot du Quebec retenu", amount: totals.deductionProvincial },
-      { code: "B", label: "Cotisation au RRQ", amount: totals.deductionRrq },
-      { code: "C", label: "Cotisation a l'assurance-emploi", amount: totals.deductionAe },
-      { code: "H", label: "Cotisation au RQAP", amount: totals.deductionRqap },
-      { code: "G", label: "Salaire admissible au RRQ", amount: pensionableEarnings, muted: true },
-      { code: "I", label: "Salaire admissible au RQAP", amount: pensionableEarnings, muted: true },
-      { code: "F", label: "Cotisation syndicale", amount: 0, muted: true },
+      { code: "A", label: lbl(lang, "r1_A"), amount: totals.grossPay },
+      { code: "E", label: lbl(lang, "r1_E"), amount: totals.deductionProvincial },
+      { code: "B", label: lbl(lang, "r1_B"), amount: totals.deductionRrq },
+      { code: "C", label: lbl(lang, "r1_C"), amount: totals.deductionAe },
+      { code: "H", label: lbl(lang, "r1_H"), amount: totals.deductionRqap },
+      { code: "G", label: lbl(lang, "r1_G"), amount: pensionableEarnings, muted: true },
+      { code: "I", label: lbl(lang, "r1_I"), amount: pensionableEarnings, muted: true },
+      { code: "F", label: lbl(lang, "r1_F"), amount: 0, muted: true },
     ]);
 
-    sectionTitle(doc, "Recapitulatif");
-    drawAmountTable(doc, "Totaux annuels", [
-      { label: "Revenus bruts d'emploi", amount: totals.grossPay },
-      { label: "Total des deductions a la source", amount: -(
+    sectionTitle(doc, lbl(lang, "summary"));
+    drawAmountTable(doc, lbl(lang, "yearly_totals"), [
+      { label: lbl(lang, "gross_employment_income"), amount: totals.grossPay },
+      { label: lbl(lang, "total_source_deductions"), amount: -(
         totals.deductionFederal + totals.deductionProvincial + totals.deductionRrq +
         totals.deductionAe + totals.deductionRqap + totals.deductionOther
       ), negative: true },
     ], {
-      label: "Net verse a l'employe",
+      label: lbl(lang, "net_paid"),
       amount: totals.netPay,
       emphasize: true,
     });
 
     drawDisclaimer(doc, "r1");
-  }, `Releve 1 ${year} · ${COMPANY.fullName} · Resume non officiel`);
+  }, `${lbl(lang, "r1_title")} ${year} · ${COMPANY.fullName} · ${lbl(lang, "t4_footer")}`);
 }
 
 export async function generateEmploymentLetterPdf(params: LetterParams): Promise<Buffer> {
@@ -1283,13 +1383,24 @@ type DayBucket = {
   isSubmitted: boolean;
 };
 
-const ABSENCE_TYPE_LABELS: Record<string, string> = {
-  vacation: "Vacances",
-  sick: "Maladie",
-  parental: "Parental",
-  bereavement: "Décès",
-  unpaid: "Sans solde",
-  other: "Autre",
+// Types d'absence affiches dans la feuille de temps, dans la langue du lecteur.
+const ABSENCE_TYPE_LABELS: Record<HrLang, Record<string, string>> = {
+  fr: {
+    vacation: "Vacances",
+    sick: "Maladie",
+    parental: "Parental",
+    bereavement: "Décès",
+    unpaid: "Sans solde",
+    other: "Autre",
+  },
+  en: {
+    vacation: "Vacation",
+    sick: "Sick leave",
+    parental: "Parental",
+    bereavement: "Bereavement",
+    unpaid: "Unpaid",
+    other: "Other",
+  },
 };
 
 function dayKeyFromDate(d: Date): string {
@@ -1325,7 +1436,7 @@ function aggregateByDay(entries: PersonalTimesheetEntry[]): DayBucket[] {
     else if (e.category === "meeting") { b.meetingMin += dur; b.totalEffMin += dur; }
     else if (e.category === "training") { b.trainingMin += dur; b.totalEffMin += dur; }
     else if (e.category === "break") { b.breakMin += dur; }
-    else if (e.category && ABSENCE_TYPE_LABELS[e.category]) {
+    else if (e.category && ABSENCE_TYPE_LABELS.fr[e.category]) {
       // vacation, sick, parental, bereavement, unpaid, other -> paid absence
       b.absenceMin += dur;
       b.totalEffMin += dur;
@@ -1342,8 +1453,9 @@ export async function generatePersonalTimesheetPdf(params: {
   from: Date;
   to: Date;
   entries: PersonalTimesheetEntry[];
+  lang?: HrLang;
 }): Promise<Buffer> {
-  const { admin, from, to, entries } = params;
+  const { admin, from, to, entries, lang } = params;
   const buckets = aggregateByDay(entries);
   const totalEffMin = buckets.reduce((s, b) => s + b.totalEffMin, 0);
   const totalWorkMin = buckets.reduce((s, b) => s + b.workMin, 0);
@@ -1435,7 +1547,7 @@ export async function generatePersonalTimesheetPdf(params: {
         const travailMin = b.workMin + b.meetingMin + b.trainingMin;
         // Absence : duree + libelle court du type (ex: "8h00 Vacances")
         const absenceCell = b.absenceMin > 0
-          ? `${fmtDurFromMin(b.absenceMin)}${b.absenceType ? ` ${ABSENCE_TYPE_LABELS[b.absenceType] ?? ""}`.trimEnd() : ""}`
+          ? `${fmtDurFromMin(b.absenceMin)}${b.absenceType ? ` ${ABSENCE_TYPE_LABELS[lang ?? "fr"][b.absenceType] ?? ""}`.trimEnd() : ""}`
           : "—";
         const cells = [
           dateLabel,

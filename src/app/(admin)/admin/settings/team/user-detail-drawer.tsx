@@ -3,6 +3,7 @@
 // Chargement lazy via /api/admin/team/[id] à l'ouverture.
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -67,7 +68,7 @@ type UserDetail = {
   }>;
 };
 
-function formatRelative(iso: string, t: (k: string) => string): string {
+function formatRelative(iso: string, t: (k: string) => string, tag: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60_000);
   if (min < 1) return t("instant");
@@ -76,7 +77,7 @@ function formatRelative(iso: string, t: (k: string) => string): string {
   if (h < 24) return `il y a ${h} h`;
   const d = Math.floor(h / 24);
   if (d < 7) return `il y a ${d} j`;
-  return new Date(iso).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return new Date(iso).toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function UserDetailDrawer({
@@ -104,6 +105,7 @@ export function UserDetailDrawer({
   const [editingNotes, setEditingNotes] = useState(false);
   const [notesValue, setNotesValue] = useState("");
   const [notesSaving, setNotesSaving] = useState(false);
+  const dateTag = useDateLocale();
 
   const reload = () => {
     if (!userId) return;
@@ -140,7 +142,7 @@ export function UserDetailDrawer({
     setPendingAction(true);
     const r = await lockUserAction({ id: userId, hours });
     setPendingAction(false);
-    if (r.success) { toast.success(`Compte bloqué pour ${hours}h`); reload(); router.refresh(); }
+    if (r.success) { toast.success(ta("user_detail_drawer_compte_bloque_pour_p0_h", { p0: hours })); reload(); router.refresh(); }
     else toast.error(r.error || t("erreur"));
     setConfirmLock(false);
   };
@@ -352,23 +354,23 @@ export function UserDetailDrawer({
                 <Row
                   icon={Calendar}
                   label={t("derniere_connexion")}
-                  value={data.admin.lastLogin ? `${formatRelative(data.admin.lastLogin, t)} · ${new Date(data.admin.lastLogin).toLocaleDateString("fr-CA")}` : t("jamais_connecte")}
+                  value={data.admin.lastLogin ? `${formatRelative(data.admin.lastLogin, t, dateTag)} · ${new Date(data.admin.lastLogin).toLocaleDateString(dateTag)}` : t("jamais_connecte")}
                 />
                 <Row
                   icon={KeyRound}
                   label={t("mot_passe_modifie")}
-                  value={data.admin.passwordChangedAt ? formatRelative(data.admin.passwordChangedAt, t) : t("jamais_modifie")}
+                  value={data.admin.passwordChangedAt ? formatRelative(data.admin.passwordChangedAt, t, dateTag) : t("jamais_modifie")}
                 />
                 <Row
                   icon={Calendar}
                   label={t("compte_cree")}
-                  value={new Date(data.admin.createdAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}
+                  value={new Date(data.admin.createdAt).toLocaleDateString(dateTag, { day: "numeric", month: "long", year: "numeric" })}
                 />
                 {data.admin.startDate && (
                   <Row
                     icon={Calendar}
                     label={t("date_embauche")}
-                    value={new Date(data.admin.startDate).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}
+                    value={new Date(data.admin.startDate).toLocaleDateString(dateTag, { day: "numeric", month: "long", year: "numeric" })}
                   />
                 )}
               </DrawerSection>
@@ -443,7 +445,7 @@ export function UserDetailDrawer({
                               <MapPin className="h-2.5 w-2.5" />{s.city}, {s.country}
                             </span>
                           )}
-                          {s.lastActiveAt && <span>Vu {formatRelative(s.lastActiveAt, t)}</span>}
+                          {s.lastActiveAt && <span>Vu {formatRelative(s.lastActiveAt, t, dateTag)}</span>}
                         </div>
                       </div>
                     ))}
@@ -469,7 +471,7 @@ export function UserDetailDrawer({
                               <p className="text-[11px] text-muted-foreground line-clamp-1">{e.message}</p>
                             )}
                             <p className="text-[10px] text-muted-foreground mt-0.5">
-                              {formatRelative(e.createdAt, t)}
+                              {formatRelative(e.createdAt, t, dateTag)}
                               {e.ipAddress && ` · ${e.ipAddress}`}
                               {e.city && ` · ${e.city}, ${e.country}`}
                             </p>
@@ -504,7 +506,7 @@ export function UserDetailDrawer({
                         <span className="flex-1 min-w-0 text-xs">
                           {entityLabelWithId(ta, a.entityType, a.entityId)}
                         </span>
-                        <span className="text-[10px] text-muted-foreground shrink-0">{formatRelative(a.createdAt, t)}</span>
+                        <span className="text-[10px] text-muted-foreground shrink-0">{formatRelative(a.createdAt, t, dateTag)}</span>
                       </div>
                     ))}
                   </div>

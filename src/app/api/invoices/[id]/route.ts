@@ -101,7 +101,9 @@ export async function PATCH(
         clientId: updated.clientId,
         invoiceId: updated.id,
         eventType: "invoice_overdue",
-        eventLabel: `Facture ${updated.invoiceNumber} marquée en retard`,
+        eventLabel: t("route_facture_p0_marquee_en_retard", { p0: updated.invoiceNumber }),
+        labelKey: "api_errors.route_facture_p0_marquee_en_retard",
+        labelParams: { p0: updated.invoiceNumber },
         triggeredBy: "admin",
       });
     }

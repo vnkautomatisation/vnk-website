@@ -327,7 +327,7 @@ export async function returnEquipmentAction(input: { id: number; condition: "goo
           recipientType: "admin",
           recipientId: equipment.adminId,
           type: "info",
-          title: `Équipement marqué retourné : ${equipment.name}`,
+          title: t("hr_employee_file_equipement_marque_retourne_p0", { p0: equipment.name }),
           body: t("rh_ont_enregistre_retour_equipement", { etat: input.condition === "good" ? t("etat_bon") : input.condition === "damaged" ? t("etat_endommage") : t("etat_perdu") }),
           link: "/admin/mon-espace/equipement",
           icon: "package",

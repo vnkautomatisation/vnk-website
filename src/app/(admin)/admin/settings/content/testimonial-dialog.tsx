@@ -131,7 +131,7 @@ export function TestimonialDialog({
           <div>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("temoignage")}</Label>
             <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={4} maxLength={2000} placeholder={t("projet_automatisation_transforme")} className="mt-1 text-sm" />
-            <p className="text-[10px] text-muted-foreground mt-1">{content.length}/2000 caractères</p>
+            <p className="text-[10px] text-muted-foreground mt-1">{tc("chars_count", { count: content.length, max: 2000 })}</p>
           </div>
           <div>
             <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("note")}</Label>
@@ -142,7 +142,7 @@ export function TestimonialDialog({
                   type="button"
                   onClick={() => setRating(n)}
                   className="p-1"
-                  aria-label={`${n} étoile${n > 1 ? "s" : ""}`}
+                  aria-label={t("testimonial_dialog_p0_etoile_p1", { p0: n, p1: n > 1 ? "s" : "" })}
                 >
                   <Star className={cn("h-6 w-6 transition-colors", n <= rating ? "text-amber-500 fill-amber-500" : "text-muted-foreground/30")} />
                 </button>

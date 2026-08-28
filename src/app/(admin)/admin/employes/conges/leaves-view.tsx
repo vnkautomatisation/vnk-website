@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -105,6 +106,7 @@ export function LeavesView({
   const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const { confirm, ConfirmModal } = useConfirm();
   const [tab, setTab] = useState<"my" | "review" | "team">("my");
   const [createOpen, setCreateOpen] = useState(false);
@@ -179,7 +181,7 @@ export function LeavesView({
 
   const isBlocked = !!myBlock;
   const blockMsg = myBlock
-    ? `Vos soumissions de congés sont bloquées jusqu'au ${new Date(myBlock.until).toLocaleDateString("fr-CA")}${myBlock.reason ? ` — ${myBlock.reason}` : ""}.`
+    ? t("leaves_view_vos_soumissions_de_conges_sont_bloquees_jusqu_au", { p0: new Date(myBlock.until).toLocaleDateString(dateTag), p1: myBlock.reason ? ` — ${myBlock.reason}` : "" })
     : "";
 
   return (
@@ -366,8 +368,8 @@ export function LeavesView({
                 onAttachmentChange={() => router.refresh()}
                 onPdfPreview={() => setPdfPreview({
                   url: `/api/admin/leaves/${r.id}/pdf-letter`,
-                  title: `Lettre de confirmation — Demande #${r.id}`,
-                  description: `${TYPE_META[r.type] ? t(TYPE_META[r.type].labelKey) : r.type} ${formatLeaveRange(r.startDate, r.endDate)}`,
+                  title: t("leaves_view_lettre_de_confirmation_demande_p0", { p0: r.id }),
+                  description: `${TYPE_META[r.type] ? t(TYPE_META[r.type].labelKey) : r.type} ${formatLeaveRange(r.startDate, r.endDate, dateTag)}`,
                   filename: `lettre-conge-${r.id}.pdf`,
                 })}
               />
@@ -557,7 +559,7 @@ export function LeavesView({
         <RequestConflictsDialog
           open
           leaveId={conflictsLeave.id}
-          leaveLabel={`${TYPE_META[conflictsLeave.type] ? t(TYPE_META[conflictsLeave.type].labelKey) : conflictsLeave.type} — ${formatLeaveRange(conflictsLeave.startDate, conflictsLeave.endDate)}`}
+          leaveLabel={`${TYPE_META[conflictsLeave.type] ? t(TYPE_META[conflictsLeave.type].labelKey) : conflictsLeave.type} — ${formatLeaveRange(conflictsLeave.startDate, conflictsLeave.endDate, dateTag)}`}
           onClose={() => setConflictsLeave(null)}
         />
       )}
@@ -587,6 +589,7 @@ function RequestCard({
   onConflicts?: () => void;
 }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   const tc = useTranslations("common");
   const meta = TYPE_META[request.type] ?? TYPE_META.other;
   const s = STATUS_META[request.status] ?? { label: request.status, color: "bg-gray-100 text-gray-700" };
@@ -615,7 +618,7 @@ function RequestCard({
             )}
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
-            <strong>{formatLeaveRange(request.startDate, request.endDate)}</strong>
+            <strong>{formatLeaveRange(request.startDate, request.endDate, dateTag)}</strong>
             {" · "}
             {Number(request.daysCount)} jour{Number(request.daysCount) > 1 ? "s" : ""}
           </p>
@@ -655,7 +658,7 @@ function RequestCard({
               <AddToCalendarMenu
                 event={{
                   leaveId: request.id,
-                  title: `Congé : ${TYPE_META[request.type] ? t(TYPE_META[request.type].labelKey) : t("conge")}`,
+                  title: t("leaves_view_conge_p0", { p0: TYPE_META[request.type] ? t(TYPE_META[request.type].labelKey) : t("conge") }),
                   startDate: request.startDate,
                   endDate: request.endDate,
                   description: request.reason || undefined,
@@ -810,6 +813,7 @@ function ContentRow({ group, days, inRange }: {
   inRange: (d: Date, s: string, e: string) => boolean;
 }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   return (
     <>
       <div className="px-3 py-2 text-xs border-r bg-background sticky left-0 z-10 truncate">
@@ -822,7 +826,7 @@ function ContentRow({ group, days, inRange }: {
         // TÂCHE 2 (P0-2) : différencier pending visuellement (hachuré) sans révéler le motif
         const isPending = leaveOnDay?.status === "pending";
         const tooltip = leaveOnDay
-          ? `${meta ? t(meta.labelKey) : ""}${isPending ? t("attente_approbation") : ""} — ${formatLeaveRange(leaveOnDay.startDate, leaveOnDay.endDate)}`
+          ? `${meta ? t(meta.labelKey) : ""}${isPending ? t("attente_approbation") : ""} — ${formatLeaveRange(leaveOnDay.startDate, leaveOnDay.endDate, dateTag)}`
           : "";
         const style: React.CSSProperties | undefined = isPending
           ? {
@@ -939,6 +943,7 @@ function AnnualSelfDialog({
 }) {
   const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
   const periodStart = new Date(refYear, 4, 1);
@@ -962,7 +967,7 @@ function AnnualSelfDialog({
           <DialogHeader>
             <DialogTitle className="text-white text-base">{t("mon_rapport_annuel")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Période {periodStart.toLocaleDateString("fr-CA")} → {periodEnd.toLocaleDateString("fr-CA")}
+              Période {periodStart.toLocaleDateString(dateTag)} → {periodEnd.toLocaleDateString(dateTag)}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -1117,6 +1122,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
   const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const dateTag = useDateLocale();
   useEffect(() => {
     if (!req) return;
     setLoading(true);
@@ -1147,7 +1153,7 @@ function SelfHistoryDialog({ req, onClose }: { req: Request | null; onClose: () 
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <AuditActionBadge action={l.action} />
                     <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {new Date(l.createdAt).toLocaleString("fr-CA")}
+                      {new Date(l.createdAt).toLocaleString(dateTag)}
                     </span>
                   </div>
                   <p className="text-xs text-foreground mt-1">{t("leaves_view_par")}<strong>{l.actor ? (l.actor.fullName || l.actor.email) : t("systeme")}</strong>

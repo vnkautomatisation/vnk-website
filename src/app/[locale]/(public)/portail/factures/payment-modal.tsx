@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { CreditCard, Lock, Shield, Receipt } from "lucide-react";
 import {
@@ -11,7 +12,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type Invoice = {
   id: number;
@@ -38,6 +40,7 @@ export function PaymentModal({
 }) {
   const t = useTranslations("portal");
   const [loading, setLoading] = useState(false);
+  const formatCurrency = useCurrency();
 
   if (!invoice) return null;
 

@@ -131,7 +131,7 @@ export function LongFormWizard({
           <DialogHeader>
             <DialogTitle className="text-white text-base flex items-center gap-2">
               <ClipboardList className="h-5 w-5 shrink-0" />
-              <span className="truncate">Compléter — {templateTitle}</span>
+              <span className="truncate">{t("completer_titre", { title: templateTitle })}</span>
             </DialogTitle>
             <p className="text-white/80 text-xs mt-1">
               {structure.count} champ{structure.count > 1 ? "s" : ""} à compléter

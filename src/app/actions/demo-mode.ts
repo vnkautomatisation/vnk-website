@@ -63,7 +63,7 @@ export async function enableDemoModeAction(): Promise<Result<{ created: { client
         passwordHash: pwHash,
         companyName: c.company,
         province: c.province,
-        internalNotes: `${DEMO_TAG} Compte démo créé automatiquement.`,
+        internalNotes: t("demo_mode_p0_compte_demo_cree_automatiquement", { p0: DEMO_TAG }),
       },
       select: { id: true },
     });
@@ -84,7 +84,7 @@ export async function enableDemoModeAction(): Promise<Result<{ created: { client
       data: {
         clientId,
         quoteNumber,
-        title: `${DEMO_TAG} Devis démo #${i + 1}`,
+        title: t("demo_mode_p0_devis_demo_p1", { p0: DEMO_TAG, p1: i + 1 }),
         description: "Devis fictif généré pour les démos.",
         serviceType: ["Automatisation", "Audit", "Support continu", "Formation"][i % 4],
         amountHt,
@@ -112,7 +112,7 @@ export async function enableDemoModeAction(): Promise<Result<{ created: { client
       data: {
         clientId,
         invoiceNumber,
-        title: `${DEMO_TAG} Facture démo #${i + 1}`,
+        title: t("demo_mode_p0_facture_demo_p1", { p0: DEMO_TAG, p1: i + 1 }),
         serviceType: ["Automatisation", "Audit", "Support continu"][i % 3],
         amountHt,
         tpsAmount: tps,

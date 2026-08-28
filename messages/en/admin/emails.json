@@ -33,6 +33,7 @@
   "code_expire_dans": "This code expires in {minutes} minutes. If you did not ask for this, ignore this email.",
   "compte_pret_active": "Your employee account is ready to activate",
   "demande_depuis_ip": "Request made from IP address {ip}",
+  "email_message_template_npieces_jointes_n_p0_nconnectez_vous_au_portail": "\\nAttachments:\\n{p0}\\nSign in to the portal to download them.",
   "invitation_toujours_active": "Your invitation to join VNK Automatisation is still active. Here is your activation link:",
   "login_alert_ce_n_etait_pas_moi": "This was not me",
   "login_alert_cliquez_sur_le_bouton_ci_dessous_pour": "Click the button below to revoke this session immediately and flag the attempt as suspicious.",
@@ -46,6 +47,7 @@
   "sujet_invitation": "Invitation to join VNK Automatisation",
   "sujet_reinitialisation": "Reset your password — VNK Automatisation",
   "titre_reinitialisation": "Password reset",
+  "users_invitation_envoyee_a_p0": "Invitation sent to {p0}",
   "users_vnk_automatisation_inc_securite_geree_par_le": "VNK Automatisation Inc. · Security managed from the admin portal",
   "vous_avez_demande_reinitialiser": "You asked to reset your password. Here is your security code:",
   "x_vous_invite": "{inviteur} invites you to join the VNK Automatisation admin portal."

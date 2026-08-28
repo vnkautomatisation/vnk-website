@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -274,7 +275,7 @@ function IntegrationDialog({
         enable: true,
       });
       if (r.success) {
-        toast.success(`${provider.name} configuré`);
+        toast.success(t("tab_integrations_p0_configure", { p0: provider.name }));
         onSaved();
       } else {
         toast.error(r.error);
@@ -300,7 +301,7 @@ function IntegrationDialog({
   };
 
   const handleDelete = () => {
-    if (!confirm(`Déconnecter ${provider.name} ? Les configurations seront supprimées.`)) return;
+    if (!confirm(t("tab_integrations_deconnecter_p0_les_configurations_seront_supprimees", { p0: provider.name }))) return;
     startTransition(async () => {
       const r = await deleteIntegrationAction(provider.key);
       if (r.success) {
@@ -595,6 +596,7 @@ function OAuthPanel({
   onChanged: () => void;
 }) {
   const t = useTranslations("admin.profile");
+  const dateTag = useDateLocale();
   const [status, setStatus] = useState<{
     connected: boolean;
     accountEmail: string | null;
@@ -633,7 +635,7 @@ function OAuthPanel({
   };
 
   const handleDisconnect = async () => {
-    if (!confirm(`Déconnecter votre compte ${provider.name} ? Les rendez-vous ne seront plus synchronisés.`)) return;
+    if (!confirm(t("tab_integrations_deconnecter_votre_compte_p0_les_rendez_vous_ne", { p0: provider.name }))) return;
     setDisconnecting(true);
     try {
       const res = await fetch(statusUrl, { method: "DELETE" });
@@ -799,7 +801,7 @@ function OAuthPanel({
             <p className="text-xs text-emerald-700 mt-0.5 break-all">{status.accountEmail ?? t("authentifie")}</p>
             {status.expiresAt && (
               <p className="text-[10px] text-emerald-600 mt-1">
-                Jeton valide jusqu&apos;au {new Date(status.expiresAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })} — renouvellement automatique
+                Jeton valide jusqu&apos;au {new Date(status.expiresAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })} — renouvellement automatique
               </p>
             )}
           </div>
@@ -853,7 +855,7 @@ function OAuthPanel({
         <p className="font-semibold">{t("autorisation_requise")}</p>
         <p className="text-xs text-muted-foreground">
           Cliquez sur le bouton ci-dessous pour vous connecter à votre compte {provider.name}.
-          Vous serez redirigé vers le fournisseur pour autoriser l&apos;accès au calendrier et aux réunions.
+          {t("redirige_vers_fournisseur")}
         </p>
       </div>
       <Button onClick={handleConnect} className="w-full" style={{ backgroundColor: provider.brandColor }}>

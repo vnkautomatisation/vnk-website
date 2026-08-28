@@ -129,7 +129,7 @@ export async function upsertLegalDocAction(input: z.infer<typeof docSchema> & { 
                     recipientId: id,
                     type: "warning",
                     title: t("document_mis_a_jour_re_signature_requise"),
-                    body: `« ${parsed.data.title} » est passé en version ${parsed.data.version}. Merci de le relire et le re-signer.`,
+                    body: t("hr_legal_docs_p0_est_passe_en_version_p1_merci_de", { p0: parsed.data.title, p1: parsed.data.version }),
                     link: "/admin/mon-espace/documents",
                     icon: "file-signature",
                   },
@@ -534,7 +534,7 @@ export async function signLegalDocAction(
         recipientId: adminId,
         type: "success",
         title: t("document_signe"),
-        body: `Votre signature de « ${tpl.title} » est enregistrée. Le PDF final est disponible.`,
+        body: t("hr_legal_docs_votre_signature_de_p0_est_enregistree_le_pdf", { p0: tpl.title }),
         link: "/admin/mon-espace/documents",
         icon: "file-check",
       },
@@ -886,7 +886,7 @@ export async function employerSignLegalDocAction(
       recipientId: sig.adminId,
       type: "success",
       title: t("document_contresigne"),
-      body: `« ${sig.template.title} » a été contresigné par l'employeur. Le PDF final est à jour.`,
+      body: t("hr_legal_docs_p0_a_ete_contresigne_par_l_employeur_le", { p0: sig.template.title }),
       link: "/admin/mon-espace/documents",
       icon: "file-check",
     },
@@ -896,5 +896,5 @@ export async function employerSignLegalDocAction(
   revalidatePath("/admin/mon-espace/documents");
   return res.ok
     ? { success: true, data: { finalPdfUrl: res.finalPdfUrl } }
-    : { success: false, error: `Contresignature enregistrée, PDF à régénérer (${res.error})` };
+    : { success: false, error: t("hr_legal_docs_contresignature_enregistree_pdf_a_regenerer_p0", { p0: res.error }) };
 }

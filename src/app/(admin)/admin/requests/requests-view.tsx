@@ -162,7 +162,7 @@ export function RequestsView({
 
   const updateStatus = async (r: Request, newStatus: string, label: string) => {
     const ok = await confirm({
-      title: `${label} cette demande ?`,
+      title: t("requests_view_p0_cette_demande", { p0: label }),
       description: t("passera_statut", { title: r.title, status: newStatus === "in_progress" ? t("traitement") : newStatus === "closed" ? t("fermee") : newStatus }),
       confirmLabel: label,
       variant: newStatus === "closed" ? "destructive" : "default",
@@ -180,7 +180,7 @@ export function RequestsView({
   const handleDelete = async (r: Request) => {
     const ok = await confirm({
       title: t("supprimer_demande"),
-      description: `"${r.title}" sera supprimée définitivement.`,
+      description: t("requests_view_p0_sera_supprimee_definitivement", { p0: r.title }),
       confirmLabel: t("supprimer"),
       variant: "destructive",
     });
@@ -194,7 +194,7 @@ export function RequestsView({
   const handleBulkClose = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Fermer ${selectedIds.size} demande(s) ?`,
+      title: tc("confirm_close_requests", { count: selectedIds.size }),
       description: t("demandes_selectionnees_passeront_statut_fermee"),
       confirmLabel: t("fermer_tous"),
       variant: "destructive",
@@ -210,7 +210,7 @@ export function RequestsView({
       });
       if (res.ok) success++;
     }
-    toast.success(`${success}/${ids.length} demande(s) fermée(s)`);
+    toast.success(t("requests_view_p0_p1_demande_s_fermee_s", { p0: success, p1: ids.length }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -218,7 +218,7 @@ export function RequestsView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} demande(s) ?`,
+      title: tc("confirm_delete_requests", { count: selectedIds.size }),
       description: t("action_irreversible"),
       confirmLabel: t("supprimer_tous"),
       variant: "destructive",
@@ -230,7 +230,7 @@ export function RequestsView({
       const res = await fetch(`/api/project-requests/${id}`, { method: "DELETE" });
       if (res.ok) success++;
     }
-    toast.success(`${success}/${ids.length} demande(s) supprimée(s)`);
+    toast.success(t("requests_view_p0_p1_demande_s_supprimee_s", { p0: success, p1: ids.length }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -274,7 +274,7 @@ export function RequestsView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.title}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("requests_view_selectionner_p0", { p0: r.title })} />
       ),
     },
     {
@@ -299,7 +299,7 @@ export function RequestsView({
     },
     {
       key: "service", header: t("service"),
-      accessor: (r) => <span className="text-xs">{r.serviceType ? (SERVICE_KEYS[r.serviceType] ?? r.serviceType) : "—"}</span>,
+      accessor: (r) => <span className="text-xs">{r.serviceType ? (SERVICE_KEYS[r.serviceType] ? t(SERVICE_KEYS[r.serviceType]) : r.serviceType) : "—"}</span>,
       hiddenOnMobile: true,
     },
     {
@@ -307,7 +307,7 @@ export function RequestsView({
       accessor: (r) => (
         <span className={cn("px-2 py-0.5 rounded-full text-xs font-medium border inline-flex items-center gap-1", URGENCY_COLORS[r.urgency] ?? "bg-gray-100")}>
           {r.urgency === "critical" && <AlertTriangle className="h-3 w-3" />}
-          {URGENCY_KEYS[r.urgency] ?? r.urgency}
+          {URGENCY_KEYS[r.urgency] ? t(URGENCY_KEYS[r.urgency]) : r.urgency}
         </span>
       ),
       sortable: true,
@@ -385,7 +385,7 @@ export function RequestsView({
               <Inbox className="h-4 w-4" />
               {t("demandes")}
             </span>
-            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="font-semibold">{tc("shown_f", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("nouvelles")} <span className="font-semibold text-indigo-600">{kpis.newCount}</span></span>
             <span className="text-muted-foreground">{t("traitement")} <span className="font-semibold text-amber-600">{kpis.inProgress}</span></span>
             <span className="text-muted-foreground">{t("converties")} <span className="font-semibold text-emerald-600">{kpis.converted}</span></span>
@@ -489,7 +489,7 @@ export function RequestsView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionnée(s)</span>
+            <span className="text-sm font-medium">{tc("selected_f", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -523,7 +523,7 @@ export function RequestsView({
               onClick={() => openEntity("request", r.id)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>{r.serviceType ? (SERVICE_KEYS[r.serviceType] ?? r.serviceType) : t("aucun_service")}</span>
+                  <span>{r.serviceType ? (SERVICE_KEYS[r.serviceType] ? t(SERVICE_KEYS[r.serviceType]) : r.serviceType) : t("aucun_service")}</span>
                   <span>{formatDate(new Date(r.createdAt))}</span>
                 </div>
               }

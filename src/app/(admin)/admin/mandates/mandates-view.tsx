@@ -322,7 +322,7 @@ export function MandatesView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} mandat(s) ?`,
+      title: tc("confirm_delete_mandates", { count: selectedIds.size }),
       description: t("mandats_sans_devis_contrats_factures"),
       confirmLabel: t("supprimer"),
       variant: "destructive",
@@ -334,7 +334,7 @@ export function MandatesView({
       const res = await fetch(`/api/mandates/${id}`, { method: "DELETE" });
       if (res.ok) success++; else if (res.status === 409) blocked++;
     }
-    toast.success(`${success}/${ids.length} supprimé(s)${blocked > 0 ? ` · ${blocked} bloqué(s) (enfants liés)` : ""}`);
+    toast.success(t("mandates_view_p0_p1_supprime_s_p2", { p0: success, p1: ids.length, p2: blocked > 0 ? ` · ${blocked} bloqué(s) (enfants liés)` : "" }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -381,7 +381,7 @@ export function MandatesView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.title}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("mandates_view_selectionner_p0", { p0: r.title })} />
       ),
     },
     {
@@ -492,7 +492,7 @@ export function MandatesView({
               <Briefcase className="h-4 w-4" />
               {t("mandats")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("cours")} <span className="font-semibold text-blue-600">{counts.active}</span></span>
             <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{counts.pending}</span></span>
             <span className="text-muted-foreground">{t("completes")} <span className="font-semibold text-emerald-600">{counts.completed}</span></span>
@@ -589,7 +589,7 @@ export function MandatesView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -696,7 +696,7 @@ export function MandatesView({
         open={!!deleteMandate}
         onOpenChange={(o) => { if (!o) setDeleteMandate(null); }}
         title={t("supprimer_mandat")}
-        description={`Le mandat "${deleteMandate?.title}" sera supprimé. Cette action est irréversible.`}
+        description={t("mandates_view_le_mandat_p0_sera_supprime_cette_action_est", { p0: (deleteMandate?.title ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />

@@ -380,7 +380,7 @@ export function NewRequestModal({
               ) : (
                 <Send className="h-4 w-4 mr-1" />
               )}
-              Envoyer la demande
+              {t("envoyer_la_demande")}
             </Button>
           )}
         </div>

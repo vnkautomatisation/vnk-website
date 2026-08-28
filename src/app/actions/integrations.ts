@@ -104,7 +104,7 @@ export async function upsertIntegrationAction(input: z.infer<typeof upsertSchema
       adminId,
       type: "preferences_updated",
       severity: "warning",
-      message: `Intégration configurée : ${provider.name}`,
+      message: t("integrations_integration_configuree_p0", { p0: provider.name }),
       metadata: { provider: provider.key },
     });
 

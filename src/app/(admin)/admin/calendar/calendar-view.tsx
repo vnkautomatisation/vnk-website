@@ -1,6 +1,6 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
-import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useMonthNames, useWeekdayNames, useDateLocale } from "@/lib/i18n-format";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -159,6 +159,7 @@ export function CalendarView({
   const t = useTranslations("admin.calendar");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
 
@@ -211,12 +212,12 @@ export function CalendarView({
   // Periode label
   const periodLabel = useMemo(() => {
     if (viewMode === "day") {
-      return selectedDate.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+      return selectedDate.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long", year: "numeric" });
     }
     if (viewMode === "week") {
       const start = getWeekStart(selectedDate);
       const end = new Date(start); end.setDate(start.getDate() + 6);
-      return `${start.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })} — ${end.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" })}`;
+      return `${start.toLocaleDateString(dateTag, { day: "numeric", month: "short" })} — ${end.toLocaleDateString(dateTag, { day: "numeric", month: "short", year: "numeric" })}`;
     }
     return `${MONTHS_FR[selectedDate.getMonth()]} ${selectedDate.getFullYear()}`;
   }, [selectedDate, viewMode]);
@@ -403,7 +404,7 @@ export function CalendarView({
       });
       if (res.ok) {
         const data = await res.json();
-        toast.success(`${data.count} créneaux générés`);
+        toast.success(t("calendar_view_p0_creneaux_generes", { p0: data.count }));
         setBulkOpen(false);
         router.refresh();
       } else {
@@ -971,13 +972,14 @@ function DayView({
   onEmptyClick: (time: string) => void;
 }) {
   const t = useTranslations("admin.calendar");
+  const dateTag = useDateLocale();
   const timeSlots = buildTimeSlots();
   return (
     <Card className="flex flex-col min-h-[600px] lg:h-full lg:min-h-0 overflow-hidden">
       {/* Header non-scrollable */}
       <div className="bg-card border-b px-4 py-3 shrink-0 shadow-sm">
         <p className="text-sm font-semibold capitalize">
-          {date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })}
+          {date.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long" })}
         </p>
       </div>
       {/* Contenu scrollable */}

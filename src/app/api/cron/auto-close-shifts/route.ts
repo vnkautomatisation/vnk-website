@@ -6,10 +6,11 @@
 // A executer toutes les heures via Railway cron :
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/auto-close-shifts
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +27,7 @@ function authorize(req: Request): boolean {
 
 export async function POST(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -60,7 +62,7 @@ export async function POST(req: Request) {
         recipientId: tc.adminId,
         type: "warning",
         title: t("pointage_auto_ferme"),
-        body: `Votre pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} a été fermé automatiquement (durée par défaut 8h). Ajustez si vous avez travaillé plus ou moins.`,
+        body: t("route_votre_pointage_du_p0_a_ete_ferme_automatiquement", { p0: tc.clockIn.toLocaleDateString(dateTag) }),
         link: "/admin/mon-espace/pointage",
         icon: "alert-triangle",
       },

@@ -252,7 +252,7 @@ export function TemplatePdfPreviewButton(props: TemplatePdfPreviewButtonProps) {
       <PdfPreviewModal
         open={open}
         url={dataUrl}
-        title={`Aperçu : ${props.title}`}
+        title={t("template_pdf_preview_apercu_p0", { p0: props.title })}
         description={props.metadata?.employeeName
           ? `Destinataire : ${props.metadata.employeeName}`
           : undefined}

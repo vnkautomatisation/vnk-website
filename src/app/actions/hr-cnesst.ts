@@ -1,13 +1,14 @@
 "use server";
 // CNESST — déclaration d'accident du travail (Québec, obligatoire <24h).
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -30,6 +31,7 @@ const incidentSchema = z.object({
 
 export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentSchema>): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   if (!(await hasSafetyWrite(session.user.adminId!))) return { success: false, error: t("non_autorise_sst_rh_requis") };
@@ -72,7 +74,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
           recipientId: sa.id,
           type: "error",
           title: t("nouvelle_declaration_cnesst"),
-          body: `Accident déclaré le ${data.incidentDate.toLocaleDateString("fr-CA")} · ${data.location}`,
+          body: t("hr_cnesst_accident_declare_le_p0_p1", { p0: data.incidentDate.toLocaleDateString(dateTag), p1: data.location }),
           link: "/admin/employes/cnesst",
           icon: "alert-triangle",
         },
@@ -82,7 +84,7 @@ export async function upsertCnesstIncidentAction(input: z.infer<typeof incidentS
       adminId: actorId,
       type: "suspicious_login", // pas de type cnesst — on réutilise pour visibilité critique
       severity: "critical",
-      message: `Déclaration CNESST créée pour admin#${parsed.data.adminId} · ${parsed.data.location}`,
+      message: t("hr_cnesst_declaration_cnesst_creee_pour_admin_p0_p1", { p0: parsed.data.adminId, p1: parsed.data.location }),
       metadata: { incidentId: row.id, adminId: parsed.data.adminId },
     }).catch(() => null);
   }

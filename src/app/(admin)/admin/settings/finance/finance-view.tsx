@@ -3,6 +3,7 @@
 // Utilise updateSettingsAction (catégorie par catégorie).
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -55,6 +56,7 @@ export function FinanceView({ initial }: { initial: Record<string, string> }) {
   const tc = useTranslations("common");
   const router = useRouter();
   const [section, setSection] = useState<Section>("bank");
+  const dateTag = useDateLocale();
   const [pending, startTransition] = useTransition();
   const [values, setValues] = useState<Record<string, string>>(initial);
   const [dirty, setDirty] = useState<Set<string>>(new Set());
@@ -242,7 +244,7 @@ export function FinanceView({ initial }: { initial: Record<string, string> }) {
                     <SelectContent>
                       {Array.from({ length: 12 }).map((_, i) => (
                         <SelectItem key={i + 1} value={(i + 1).toString()}>
-                          {new Date(2026, i, 1).toLocaleString("fr-CA", { month: "long" })}
+                          {new Date(2026, i, 1).toLocaleString(dateTag, { month: "long" })}
                         </SelectItem>
                       ))}
                     </SelectContent>

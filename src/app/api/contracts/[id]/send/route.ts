@@ -58,7 +58,7 @@ export async function POST(
     data: {
       clientId: contract.clientId,
       sender: "vnk",
-      content: `Nouveau contrat à signer : ${contract.contractNumber}${contract.amountTtc ? ` — ${Number(contract.amountTtc).toFixed(2)} $ TTC` : ""}. Consultez et signez via votre portail (/portail/contrats).`,
+      content: t("route_nouveau_contrat_a_signer_p0_p1_consultez_et", { p0: contract.contractNumber, p1: contract.amountTtc ? ` — ${Number(contract.amountTtc).toFixed(2)} $ TTC` : "" }),
       channel: "chat",
       isRead: false,
     },
@@ -81,7 +81,9 @@ export async function POST(
     clientId: contract.clientId,
     contractId: contract.id,
     eventType: "contract_sent_for_signature",
-    eventLabel: `Contrat ${contract.contractNumber} envoyé pour signature`,
+    eventLabel: t("route_contrat_p0_envoye_pour_signature", { p0: contract.contractNumber }),
+    labelKey: "api_errors.route_contrat_p0_envoye_pour_signature",
+    labelParams: { p0: contract.contractNumber },
     triggeredBy: "admin",
   });
 

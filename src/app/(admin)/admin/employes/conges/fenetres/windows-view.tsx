@@ -15,6 +15,7 @@
 // (draft->open a openingDate, open->closed apres closingDate).
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -104,26 +105,29 @@ function phaseIndex(status: string): number {
   return Math.max(0, PHASES.findIndex((p) => p.key === status));
 }
 
-function formatRemaining(toIso: string): { label: string; urgency: "low" | "medium" | "high" } | null {
+// Helpers hors composant : le traducteur leur est passe, sinon leurs libelles
+// restaient francais quelle que soit la langue du lecteur.
+type Tr = (key: string, params?: Record<string, string | number>) => string;
+
+function formatRemaining(toIso: string, t: Tr): { label: string; urgency: "low" | "medium" | "high" } | null {
   const target = new Date(toIso).getTime();
   const now = Date.now();
   if (target <= now) return null;
   const diffH = Math.floor((target - now) / (1000 * 60 * 60));
-  if (diffH < 6) return { label: `Ferme dans ${diffH}h`, urgency: "high" };
-  if (diffH < 24) return { label: `Ferme dans ${diffH}h`, urgency: "high" };
+  if (diffH < 24) return { label: t("ferme_dans_h", { hours: diffH }), urgency: "high" };
   const diffD = Math.floor(diffH / 24);
-  if (diffD <= 3) return { label: `J-${diffD} avant fermeture`, urgency: "medium" };
-  return { label: `Ferme dans ${diffD} jour${diffD > 1 ? "s" : ""}`, urgency: "low" };
+  if (diffD <= 3) return { label: t("jours_avant_fermeture", { days: diffD }), urgency: "medium" };
+  return { label: t("ferme_dans_jours", { days: diffD }), urgency: "low" };
 }
 
-function formatOpeningIn(toIso: string): string | null {
+function formatOpeningIn(toIso: string, t: Tr): string | null {
   const target = new Date(toIso).getTime();
   const now = Date.now();
   if (target <= now) return null;
   const diffH = Math.floor((target - now) / (1000 * 60 * 60));
-  if (diffH < 24) return `Ouvre dans ${diffH}h`;
+  if (diffH < 24) return t("ouvre_dans_h", { hours: diffH });
   const diffD = Math.floor(diffH / 24);
-  return `Ouvre dans ${diffD} jour${diffD > 1 ? "s" : ""}`;
+  return t("ouvre_dans_jours", { days: diffD });
 }
 
 export function WindowsView({ windows }: { windows: Window[] }) {
@@ -436,13 +440,14 @@ function WindowCard({ window: w, onChanged, confirm }: {
   const [busy, setBusy] = useState(false);
   const [simulation, setSimulation] = useState<SimulationResult | null>(null);
   const [simBusy, setSimBusy] = useState(false);
+  const dateTag = useDateLocale();
   const status = STATUS_META[w.status] ?? STATUS_META.draft;
   const submittedAdmins = new Set(w.preferences.map((p) => p.adminId)).size;
   const grantedCount = w.preferences.filter((p) => p.status === "granted").length;
   const deniedCount = w.preferences.filter((p) => p.status === "denied").length;
   const phaseIdx = phaseIndex(w.status);
-  const remaining = w.status === "open" ? formatRemaining(w.closingDate) : null;
-  const openingIn = w.status === "draft" ? formatOpeningIn(w.openingDate) : null;
+  const remaining = w.status === "open" ? formatRemaining(w.closingDate, t) : null;
+  const openingIn = w.status === "draft" ? formatOpeningIn(w.openingDate, t) : null;
 
   const simulate = async () => {
     setSimBusy(true);
@@ -499,7 +504,7 @@ function WindowCard({ window: w, onChanged, confirm }: {
   const unallocate = async () => {
     const ok = await confirm({
       title: t("annuler_attribution_fenetre"),
-      description: `Cette action supprimera ${grantedWithLeaves.length} congé(s) créé(s) et notifiera ${affectedEmployees} employé(s). La fenêtre repassera en statut t("fermee") pour permettre une nouvelle attribution. Les congés déjà dans une période payée seront refusés.`,
+      description: t("windows_view_cette_action_supprimera_p0_conge_s_cree_s", { p0: grantedWithLeaves.length, p1: affectedEmployees }),
       variant: "destructive",
       confirmLabel: t("continuer"),
     });
@@ -518,7 +523,7 @@ function WindowCard({ window: w, onChanged, confirm }: {
     const r = await unallocateVacationsAction({ windowId: w.id, reason: reason.trim() });
     setBusy(false);
     if (r.success) {
-      toast.success(`Attribution annulée : ${r.data.unallocated} préférence(s), ${r.data.deletedLeaves} congé(s) supprimé(s)`);
+      toast.success(t("windows_view_attribution_annulee_p0_preference_s_p1_conge_s", { p0: r.data.unallocated, p1: r.data.deletedLeaves }));
       onChanged();
     } else toast.error(r.error || t("erreur_lors_annulation"));
   };
@@ -559,11 +564,11 @@ function WindowCard({ window: w, onChanged, confirm }: {
           <ul className="text-xs text-muted-foreground mt-1.5 space-y-0.5">
             <li>
               <strong>{t("soumission")}</strong>{" "}
-              {new Date(w.openingDate).toLocaleDateString("fr-CA")} → {new Date(w.closingDate).toLocaleDateString("fr-CA")}
+              {new Date(w.openingDate).toLocaleDateString(dateTag)} → {new Date(w.closingDate).toLocaleDateString(dateTag)}
             </li>
             <li>
               <strong>{t("couvre")}</strong>{" "}
-              {new Date(w.coversFrom).toLocaleDateString("fr-CA")} → {new Date(w.coversTo).toLocaleDateString("fr-CA")}
+              {new Date(w.coversFrom).toLocaleDateString(dateTag)} → {new Date(w.coversTo).toLocaleDateString(dateTag)}
               {" · "}max {w.maxDaysPerEmployee} j/employe
             </li>
             <li className="flex items-center gap-1 flex-wrap">
@@ -918,6 +923,7 @@ function PreferencesTable({
 }) {
   const t = useTranslations("admin.leave_windows");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
 
   const byAdmin = new Map<number, { admin: Preference["admin"]; prefs: Preference[] }>();
   for (const p of preferences) {
@@ -963,7 +969,7 @@ function PreferencesTable({
             <div className="truncate font-medium">{admin.fullName || admin.email}</div>
             <div className="text-[#0F2D52] font-bold">#{p.rank}</div>
             <div className="text-muted-foreground tabular-nums">
-              {new Date(p.startDate).toLocaleDateString("fr-CA")} → {new Date(p.endDate).toLocaleDateString("fr-CA")}
+              {new Date(p.startDate).toLocaleDateString(dateTag)} → {new Date(p.endDate).toLocaleDateString(dateTag)}
             </div>
             <div className="text-right tabular-nums">{Number(p.daysCount)}</div>
             <div className="text-right">

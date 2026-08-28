@@ -2,7 +2,7 @@
 // Employee time clock actions.
 // The employee punches in and out; a supervisor approves.
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { startOfWeek } from "@/lib/week";
@@ -10,6 +10,7 @@ import { workedMin, minutesBetween, closeRunningBreak, MERGE_MAX_GAP_MIN } from 
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -164,6 +165,7 @@ const ERR_NO_AUTHORITY = "vous_n_avez_pas_l_autorite_pour_2";
 // "paid": hard refusal, super_admin and founder included.
 // "locked": refused unless isPrivileged (super_admin or founder).
 async function checkPayPeriodForDate(date: Date, isPrivileged: boolean): Promise<string | null> {
+  const dateTag = dateLocale(await getLocale());
   const day = new Date(date);
   day.setHours(0, 0, 0, 0);
   const period = await prisma.payPeriod.findFirst({
@@ -172,10 +174,10 @@ async function checkPayPeriodForDate(date: Date, isPrivileged: boolean): Promise
   });
   if (!period) return null;
   if (period.status === "paid") {
-    return `La période du ${period.startDate.toLocaleDateString("fr-CA")} au ${period.endDate.toLocaleDateString("fr-CA")} est déjà payée — contactez RH.`;
+    return `La période du ${period.startDate.toLocaleDateString(dateTag)} au ${period.endDate.toLocaleDateString(dateTag)} est déjà payée — contactez RH.`;
   }
   if (period.status === "locked" && !isPrivileged) {
-    return `La période du ${period.startDate.toLocaleDateString("fr-CA")} au ${period.endDate.toLocaleDateString("fr-CA")} est verrouillée — contactez RH.`;
+    return `La période du ${period.startDate.toLocaleDateString(dateTag)} au ${period.endDate.toLocaleDateString(dateTag)} est verrouillée — contactez RH.`;
   }
   return null;
 }
@@ -352,7 +354,7 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
             recipientId: adminId,
             type: "warning",
             title: t("seuil_de_40_h_atteint_cette_semaine"),
-            body: `Vous avez cumulé ${hours} h ${String(mins).padStart(2, "0")} cette semaine — les heures suivantes comptent en temps supplémentaire.`,
+            body: t("hr_timeclock_vous_avez_cumule_p0_h_p1_cette_semaine", { p0: hours, p1: String(mins).padStart(2, "0") }),
             link: "/admin/mon-espace/pointage",
             icon: "clock",
           },
@@ -364,7 +366,7 @@ export async function clockOutAction(input?: { lat?: number; lng?: number }): Pr
               recipientId: me2.managerId,
               type: "warning",
               title: t("temps_supplementaire_dans_votre_equipe"),
-              body: `${me2.fullName ?? me2.email} a dépassé 40 h cette semaine (${hours} h ${String(mins).padStart(2, "0")}).`,
+              body: t("hr_timeclock_p0_a_depasse_40_h_cette_semaine_p1", { p0: me2.fullName ?? me2.email, p1: hours, p2: String(mins).padStart(2, "0") }),
               link: "/admin/employes/pointage",
               icon: "clock",
             },
@@ -492,6 +494,7 @@ const MAX_HOURS_PER_ENTRY = 16;
 
 export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>): Promise<Result<{ id: number; submittedForApproval: boolean }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -515,7 +518,7 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
 
   const durationMs = co.getTime() - ci.getTime();
   if (durationMs > MAX_HOURS_PER_ENTRY * 60 * 60 * 1000) {
-    return { success: false, error: `Période > ${MAX_HOURS_PER_ENTRY}h refusée — saisissez plusieurs entrées` };
+    return { success: false, error: t("hr_timeclock_periode_p0_h_refusee_saisissez_plusieurs_entrees", { p0: MAX_HOURS_PER_ENTRY }) };
   }
 
   const nowDate = new Date();
@@ -544,13 +547,13 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
     if (period.status === "paid") {
       return {
         success: false,
-        error: `La période du ${period.startDate.toLocaleDateString("fr-CA")} au ${period.endDate.toLocaleDateString("fr-CA")} est déjà payée — non modifiable.`,
+        error: t("hr_timeclock_la_periode_du_p0_au_p1_est_deja", { p0: period.startDate.toLocaleDateString(dateTag), p1: period.endDate.toLocaleDateString(dateTag) }),
       };
     }
     if (period.status === "locked" && !isPrivileged) {
       return {
         success: false,
-        error: `La période du ${period.startDate.toLocaleDateString("fr-CA")} au ${period.endDate.toLocaleDateString("fr-CA")} est verrouillée pour calcul de paie. Contactez RH.`,
+        error: t("hr_timeclock_la_periode_du_p0_au_p1_est_verrouillee", { p0: period.startDate.toLocaleDateString(dateTag), p1: period.endDate.toLocaleDateString(dateTag) }),
       };
     }
   }
@@ -564,7 +567,7 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
   if (paidEntry) {
     return {
       success: false,
-      error: `La journée du ${paidEntry.clockIn.toLocaleDateString("fr-CA")} est déjà sur un bulletin de paie — non modifiable.`,
+      error: t("hr_timeclock_la_journee_du_p0_est_deja_sur_un", { p0: paidEntry.clockIn.toLocaleDateString(dateTag) }),
     };
   }
 
@@ -583,7 +586,7 @@ export async function manualTimeEntryAction(input: z.infer<typeof manualSchema>)
     select: { id: true, clockIn: true },
   });
   if (overlap) {
-    return { success: false, error: `Chevauchement avec un pointage existant le ${overlap.clockIn.toLocaleDateString("fr-CA")}` };
+    return { success: false, error: t("hr_timeclock_chevauchement_avec_un_pointage_existant_le_p0", { p0: overlap.clockIn.toLocaleDateString(dateTag) }) };
   }
 
   const durationMin = workedMin(ci, co, 0);
@@ -705,7 +708,7 @@ export async function mergeDayTimeClockAction(
   if (mergeable.length === 0) {
     return {
       success: false,
-      error: `Aucun pointage à fusionner : ils sont tous séparés de plus de ${MERGE_MAX_GAP_MIN} minutes. Les fusionner créerait des heures non travaillées.`,
+      error: t("hr_timeclock_aucun_pointage_a_fusionner_ils_sont_tous_separes", { p0: MERGE_MAX_GAP_MIN }),
     };
   }
 
@@ -825,6 +828,7 @@ export async function deleteShortTimeClockAction(input: { date: string; maxMin: 
 // ── Supervisor approval ───────────────────────────────────
 export async function approveTimeClockAction(input: { ids: number[] }): Promise<Result<{ approved: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
   if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: t("aucune_entree_fournie") };
@@ -864,7 +868,7 @@ export async function approveTimeClockAction(input: { ids: number[] }): Promise<
         recipientId: e.adminId,
         type: "success",
         title: t("pointage_approuve"),
-        body: `Pointage du ${e.clockIn.toLocaleDateString("fr-CA")} validé.`,
+        body: t("hr_timeclock_pointage_du_p0_valide", { p0: e.clockIn.toLocaleDateString(dateTag) }),
         link: "/admin/mon-espace/pointage",
         icon: "check-circle",
       })),
@@ -943,6 +947,7 @@ export async function approveWeekTimeClockAction(input: { adminId: number; weekS
 // the approval queue. Refused once the entry sits on a pay stub.
 export async function unapproveTimeClockAction(input: { ids: number[]; reason?: string }): Promise<Result<{ unapproved: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requirePayrollWrite();
   if (!actorId) return { success: false, error: t("non_autorise_role_paie_rh_requis") };
   if (!Array.isArray(input.ids) || input.ids.length === 0) return { success: false, error: t("aucune_entree_fournie") };
@@ -996,7 +1001,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
         recipientId: entry.adminId,
         type: "warning",
         title: t("approbation_annulee"),
-        body: `L'approbation du pointage du ${entry.clockIn.toLocaleDateString("fr-CA")} a été annulée${input.reason ? ` : ${input.reason}` : ""}.`,
+        body: t("hr_timeclock_l_approbation_du_pointage_du_p0_a_ete", { p0: entry.clockIn.toLocaleDateString(dateTag), p1: input.reason ? ` : ${input.reason}` : "" }),
         link: "/admin/mon-espace/pointage",
         icon: "alert-circle",
       })),
@@ -1016,6 +1021,7 @@ export async function unapproveTimeClockAction(input: { ids: number[]; reason?: 
 // ── Rejection: back to the employee ───────────────────────
 export async function rejectTimeClockAction(input: { id: number; reason: string }): Promise<Result<{ snapshotId: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   const tc = await prisma.timeClock.findUnique({ where: { id: input.id } });
@@ -1074,7 +1080,7 @@ export async function rejectTimeClockAction(input: { id: number; reason: string 
       recipientId: tc.adminId,
       type: "warning",
       title: t("pointage_rejete"),
-      body: `Pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} rejeté : ${input.reason}`,
+      body: t("hr_timeclock_pointage_du_p0_rejete_p1", { p0: tc.clockIn.toLocaleDateString(dateTag), p1: input.reason }),
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
     },
@@ -1092,6 +1098,7 @@ export async function rejectManyTimeClockAction(
   input: { ids: number[]; reason: string },
 ): Promise<Result<{ rejected: number; skipped: number; snapshotId: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   if (!Array.isArray(input.ids) || input.ids.length === 0) {
@@ -1171,7 +1178,7 @@ export async function rejectManyTimeClockAction(
       recipientId: entry.adminId,
       type: "warning",
       title: t("pointage_rejete"),
-      body: `Pointage du ${entry.clockIn.toLocaleDateString("fr-CA")} rejeté : ${reason}`,
+      body: t("hr_timeclock_pointage_du_p0_rejete_p1", { p0: entry.clockIn.toLocaleDateString(dateTag), p1: reason }),
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
     })),
@@ -1198,6 +1205,7 @@ const updateSchema = z.object({
 
 export async function updateTimeClockAction(input: z.infer<typeof updateSchema>): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1262,13 +1270,13 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
     if (_period.status === "paid") {
       return {
         success: false,
-        error: `La période du ${_period.startDate.toLocaleDateString("fr-CA")} au ${_period.endDate.toLocaleDateString("fr-CA")} est déjà payée — non modifiable.`,
+        error: t("hr_timeclock_la_periode_du_p0_au_p1_est_deja", { p0: _period.startDate.toLocaleDateString(dateTag), p1: _period.endDate.toLocaleDateString(dateTag) }),
       };
     }
     if (_period.status === "locked" && !_isPrivileged) {
       return {
         success: false,
-        error: `La période ${_period.startDate.toLocaleDateString("fr-CA")} - ${_period.endDate.toLocaleDateString("fr-CA")} est verrouillée. Contactez RH.`,
+        error: t("hr_timeclock_la_periode_p0_p1_est_verrouillee_contactez_rh", { p0: _period.startDate.toLocaleDateString(dateTag), p1: _period.endDate.toLocaleDateString(dateTag) }),
       };
     }
   }
@@ -1286,7 +1294,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
       },
       select: { id: true, clockIn: true },
     });
-    if (overlap) return { success: false, error: `Chevauchement avec un pointage du ${overlap.clockIn.toLocaleDateString("fr-CA")}` };
+    if (overlap) return { success: false, error: t("hr_timeclock_chevauchement_avec_un_pointage_du_p0", { p0: overlap.clockIn.toLocaleDateString(dateTag) }) };
   }
 
   const durationMin = workedMin(newCi, newCo, tc.totalBreakMin);
@@ -1349,7 +1357,7 @@ export async function updateTimeClockAction(input: z.infer<typeof updateSchema>)
         recipientId: tc.adminId,
         type: "warning",
         title: t("pointage_modifie_et_remis_en_attente"),
-        body: `${actorName} a modifié votre pointage du ${tc.clockIn.toLocaleDateString("fr-CA")} — il doit être ré-approuvé.`,
+        body: t("hr_timeclock_p0_a_modifie_votre_pointage_du_p1_il", { p0: actorName, p1: tc.clockIn.toLocaleDateString(dateTag) }),
         link: "/admin/mon-espace/pointage",
         icon: "alert-triangle",
       },
@@ -1370,6 +1378,7 @@ export async function submitWeekTimeClocksAction(
   input: z.infer<typeof submitWeekSchema>,
 ): Promise<Result<{ submitted: number; workMin: number; breakMin: number; leaveMin: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -1427,7 +1436,7 @@ export async function submitWeekTimeClocksAction(
   });
   const meName = me?.fullName || me?.email || `Admin#${adminId}`;
   const workHours = (workMin / 60).toFixed(1);
-  const weekLabel = weekStart.toLocaleDateString("fr-CA");
+  const weekLabel = weekStart.toLocaleDateString(dateTag);
 
   const recipientIds: number[] = [];
   if (me?.managerId) {
@@ -1447,7 +1456,7 @@ export async function submitWeekTimeClocksAction(
         recipientId: rid,
         type: "info",
         title: t("semaine_soumise_pour_validation"),
-        body: `${meName} a soumis sa semaine du ${weekLabel} (${workHours}h travaillées).`,
+        body: t("hr_timeclock_p0_a_soumis_sa_semaine_du_p1_p2", { p0: meName, p1: weekLabel, p2: workHours }),
         link: `/admin/employes/pointage?focus=${adminId}`,
         icon: "clock",
       })),
@@ -1474,6 +1483,7 @@ export async function requestEditTimeClockAction(
   input: z.infer<typeof requestEditSchema>,
 ): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -1510,7 +1520,7 @@ export async function requestEditTimeClockAction(
     select: { fullName: true, email: true, managerId: true },
   });
   const meName = me?.fullName || me?.email || `Admin#${adminId}`;
-  const firstDate = entries[0].clockIn.toLocaleDateString("fr-CA");
+  const firstDate = entries[0].clockIn.toLocaleDateString(dateTag);
   const recipientIds: number[] = [];
   if (me?.managerId) {
     recipientIds.push(me.managerId);
@@ -1529,7 +1539,7 @@ export async function requestEditTimeClockAction(
           recipientId: rid,
           type: "info",
           title: t("demande_de_modification_de_pointage"),
-          body: `${meName} demande à modifier sa semaine du ${firstDate} · Raison : ${parsed.data.reason.slice(0, 120)}`,
+          body: t("hr_timeclock_p0_demande_a_modifier_sa_semaine_du_p1", { p0: meName, p1: firstDate, p2: parsed.data.reason.slice(0, 120) }),
           link: "/admin/employes/pointage",
           icon: "unlock",
         },
@@ -1648,7 +1658,7 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
       type: "warning",
       title: t("modification_refusee"),
       body: parsed.data.reason
-        ? `Modification refusée : ${parsed.data.reason.slice(0, 200)}`
+        ? t("hr_timeclock_modification_refusee_p0", { p0: parsed.data.reason.slice(0, 200) })
         : t("votre_demande_modification_refusee"),
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
@@ -1671,6 +1681,7 @@ export async function denyEditRequestAction(input: z.infer<typeof denySchema>): 
 // first. Refused on a "paid" period, and on "locked" without privileges.
 export async function forceClockOutAction(input: { adminId: number; when?: string }): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requirePayrollWrite();
   if (!actorId) return unauthorized();
   if (!(await canReviewTargets(actorId, [input.adminId]))) {
@@ -1728,7 +1739,7 @@ export async function forceClockOutAction(input: { adminId: number; when?: strin
       recipientId: open.adminId,
       type: "warning",
       title: t("pointage_ferme_par_l_administration"),
-      body: `Votre pointage a été fermé par ${actorName} à ${closeAt.toLocaleString("fr-CA")}.`,
+      body: t("hr_timeclock_votre_pointage_a_ete_ferme_par_p0_a", { p0: actorName, p1: closeAt.toLocaleString(dateTag) }),
       link: "/admin/mon-espace/pointage",
       icon: "alert-triangle",
     },
@@ -1874,6 +1885,7 @@ export async function notifyForgottenDaysAction(
   input: z.infer<typeof notifyForgottenSchema>,
 ): Promise<Result<{ notified: boolean }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return { success: false, error: t("non_autorise") };
@@ -1907,19 +1919,19 @@ export async function notifyForgottenDaysAction(
   });
   if (recent) {
     const hoursAgo = Math.max(1, Math.floor((Date.now() - recent.createdAt.getTime()) / (60 * 60 * 1000)));
-    return { success: false, error: `Déjà signalé il y a ${hoursAgo}h — attendez 24h avant de relancer.` };
+    return { success: false, error: t("hr_timeclock_deja_signale_il_y_a_p0_h_attendez", { p0: hoursAgo }) };
   }
 
   const actorName = await getActorName(actorId);
   // Human-readable list: "lun 18 mai, mar 19 mai...".
   const formatDay = (d: string) => {
     const dt = new Date(`${d}T12:00:00`);
-    return dt.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" });
+    return dt.toLocaleDateString(dateTag, { weekday: "short", day: "numeric", month: "short" });
   };
   const daysLabel = parsed.data.days.map(formatDay).join(", ");
   const body = parsed.data.days.length === 1
-    ? `${actorName} vous rappelle de saisir votre pointage du ${daysLabel}.`
-    : `${actorName} vous rappelle de saisir ${parsed.data.days.length} jours de pointage manquants : ${daysLabel}.`;
+    ? t("hr_timeclock_p0_vous_rappelle_de_saisir_votre_pointage_du", { p0: actorName, p1: daysLabel })
+    : t("hr_timeclock_p0_vous_rappelle_de_saisir_p1_jours_de", { p0: actorName, p1: parsed.data.days.length, p2: daysLabel });
 
   await prisma.notification.create({
     data: {
@@ -2225,7 +2237,7 @@ export async function requestKioskPinAction(): Promise<Result> {
         recipientId: rid,
         type: "warning",
         title: t("demande_de_nip_de_borne"),
-        body: `${name} demande un NIP pour poinçonner sur la borne.`,
+        body: t("hr_timeclock_p0_demande_un_nip_pour_poinconner_sur_la", { p0: name }),
         link: "/admin/employes/pointage/parametres",
         icon: "clock",
       })),

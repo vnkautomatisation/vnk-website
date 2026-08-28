@@ -38,6 +38,8 @@
   "devise": "Currency",
   "discover": "Discover",
   "disputes_view_effacer_les_filtres": "Clear the filters",
+  "disputes_view_le_litige_p0_sera_supprime_definitivement": "The dispute \"{p0}\" will be deleted permanently.",
+  "disputes_view_p0_p1_supprime_s": "{p0}/{p1} deleted",
   "duplicate": "Duplicate",
   "echeance": "Due",
   "echeance_preuves": "Evidence deadline",

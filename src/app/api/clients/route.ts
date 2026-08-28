@@ -136,6 +136,7 @@ export async function POST(req: Request) {
       clientId: client.id,
       eventType: "client_created",
       eventLabel: `Nouveau client: ${client.fullName}`,
+      metadata: { labelKey: "workflow_events.client_cree", labelParams: { name: client.fullName } },
       triggeredBy: "admin",
     },
   });

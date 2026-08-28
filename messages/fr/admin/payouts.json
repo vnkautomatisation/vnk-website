@@ -1,5 +1,6 @@
 {
   "30_jours": "30 jours",
+  "a_investiguer": "{count} à investiguer",
   "annee": "Cette année",
   "annule": "Annulé",
   "annules": "Annulés",
@@ -22,6 +23,7 @@
   "description": "Description",
   "destination": "Destination",
   "destination_bancaire": "Destination bancaire",
+  "detail_du_versement": "Détail du versement",
   "du": "Du",
   "echoue": "Échoué",
   "echoues": "Échoués",

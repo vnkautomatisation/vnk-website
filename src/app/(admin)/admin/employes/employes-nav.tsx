@@ -149,7 +149,7 @@ export function EmployesNav({
         .filter((s) => s.items.length > 0);
   return (
     <ModuleSidebarNav
-      moduleLabel="RH"
+      moduleLabel={t("module_label")}
       moduleIcon={Users}
       moduleTagline={t("vnk_module_rh")}
       sections={sections}

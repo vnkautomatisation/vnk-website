@@ -2,12 +2,13 @@
 // POST /api/payments/export?format=... avec body { paymentIds: number[] } pour exporter une selection
 // Genere un fichier d'export comptable pour les paiements de la periode (ou de la selection)
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 function csvCell(v: unknown): string {
   if (v === null || v === undefined) return "";
@@ -26,6 +27,7 @@ function safeFileName(s: string): string {
 type PaymentWithRelations = Awaited<ReturnType<typeof loadPayments>>[number];
 
 async function loadPayments(where: Record<string, unknown>) {
+  const dateTag = dateLocale(await getLocale());
   return prisma.payment.findMany({
     where,
     include: {
@@ -36,7 +38,7 @@ async function loadPayments(where: Record<string, unknown>) {
   });
 }
 
-function buildBody(payments: PaymentWithRelations[], format: string, t: (k: string) => string): { body: string; filename: string; suffix: string } {
+function buildBody(payments: PaymentWithRelations[], format: string, t: (k: string) => string, dateTag: string): { body: string; filename: string; suffix: string } {
   if (format === "quickbooks") {
     const rows: (string | number | Date | null | undefined)[][] = [
       ["Date", "Type", "Num", "Name", "Memo", "Account", "Amount", "Class"],
@@ -85,7 +87,7 @@ function buildBody(payments: PaymentWithRelations[], format: string, t: (k: stri
     payments.forEach((p) => {
       const inv = p.invoice;
       rows.push([
-        (p.paidAt ?? p.createdAt).toLocaleDateString("fr-CA"),
+        (p.paidAt ?? p.createdAt).toLocaleDateString(dateTag),
         `P-${p.id}`,
         p.client?.id ? `C${p.client.id}` : "",
         p.client?.fullName ?? "",
@@ -161,6 +163,7 @@ function csvResponse(body: string, filename: string): Response {
 
 export async function GET(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -191,7 +194,7 @@ export async function GET(req: Request) {
   if (onlyNotExported) where.exportedAt = null;
 
   const payments = await loadPayments(where);
-  const { body, filename, suffix } = buildBody(payments, format, t);
+  const { body, filename, suffix } = buildBody(payments, format, t, dateTag);
   const period = `${from ?? "all"}_${to ?? "now"}`;
   await markExportedAndAudit(payments, suffix, session.user.adminId ?? null, session.user.email ?? null);
   return csvResponse(body, `${filename}_${safeFileName(period)}.csv`);
@@ -199,6 +202,7 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -220,7 +224,7 @@ export async function POST(req: Request) {
   }
 
   const payments = await loadPayments({ id: { in: paymentIds } });
-  const { body: csv, filename, suffix } = buildBody(payments, format, t);
+  const { body: csv, filename, suffix } = buildBody(payments, format, t, dateTag);
   await markExportedAndAudit(payments, suffix, session.user.adminId ?? null, session.user.email ?? null);
   return csvResponse(csv, `${filename}_selection_${new Date().toISOString().slice(0, 10)}.csv`);
 }

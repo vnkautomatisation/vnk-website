@@ -68,7 +68,7 @@ export async function POST(
       data: {
         mandateId: mandate.id,
         action: "CREATED",
-        description: `Mandat créé depuis la demande #${existing.id}`,
+        description: t("route_mandat_cree_depuis_la_demande_p0", { p0: existing.id }),
         createdBy: "admin",
       },
     });
@@ -83,6 +83,8 @@ export async function POST(
       mandateId: mandate.id,
       eventType: "mandate_created",
       eventLabel: `Mandat ouvert — ${mandate.title} (depuis demande #${existing.id})`,
+      labelKey: "workflow_events.mandat_ouvert_depuis_demande",
+      labelParams: { title: mandate.title, id: existing.id },
       triggeredBy: "admin",
       metadata: { fromRequestId: existing.id },
     });
@@ -91,6 +93,8 @@ export async function POST(
       clientId: existing.clientId,
       eventType: "project_request_converted",
       eventLabel: `Demande "${existing.title}" convertie en mandat`,
+      labelKey: "workflow_events.demande_convertie_mandat",
+      labelParams: { title: existing.title },
       triggeredBy: "admin",
       metadata: { requestId: existing.id, mandateId: mandate.id },
     });
@@ -155,7 +159,9 @@ export async function POST(
     clientId: existing.clientId,
     quoteId: quote.id,
     eventType: "quote_created",
-    eventLabel: `Devis ${quoteNumber} créé — ${taxes.ttc.toFixed(2)} $ TTC (depuis demande #${existing.id})`,
+    eventLabel: t("route_devis_p0_cree_p1_ttc_depuis_demande_p2", { p0: quoteNumber, p1: taxes.ttc.toFixed(2), p2: existing.id }),
+    labelKey: "api_errors.route_devis_p0_cree_p1_ttc_depuis_demande_p2",
+    labelParams: { p0: quoteNumber, p1: taxes.ttc.toFixed(2), p2: existing.id },
     triggeredBy: "admin",
     metadata: { fromRequestId: existing.id },
   });
@@ -164,6 +170,8 @@ export async function POST(
     clientId: existing.clientId,
     eventType: "project_request_converted",
     eventLabel: `Demande "${existing.title}" convertie en devis ${quoteNumber}`,
+    labelKey: "workflow_events.demande_convertie_devis",
+    labelParams: { title: existing.title, number: quoteNumber },
     triggeredBy: "admin",
     metadata: { requestId: existing.id, quoteId: quote.id },
   });

@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         value: dataUrl,
         type: "image",
         label: `Logo ${slot}`,
-        description: `Logo pour l'emplacement « ${slot} »`,
+        description: t("route_logo_pour_l_emplacement_p0", { p0: slot }),
         isPublic: true,
         updatedBy: adminId,
       },

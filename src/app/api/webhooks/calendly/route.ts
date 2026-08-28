@@ -147,6 +147,8 @@ async function handleInviteeCreated(payload: CalendlyEventPayload): Promise<void
       clientId: client.id,
       eventType: "appointment_booked",
       eventLabel: `Rendez-vous Calendly réservé — ${event.name || startTime}`,
+      labelKey: "workflow_events.calendly_reserve",
+      labelParams: { name: event.name || startTime },
       triggeredBy: "client",
       metadata: { appointmentId: appointment.id, source: "calendly", calendlyUri: event.uri },
     });
@@ -181,6 +183,7 @@ async function handleInviteeCanceled(payload: CalendlyEventPayload): Promise<voi
       clientId: appointment.clientId,
       eventType: "appointment_cancelled",
       eventLabel: `Rendez-vous Calendly annulé`,
+      labelKey: "workflow_events.calendly_annule",
       triggeredBy: "client",
       metadata: { appointmentId: appointment.id, source: "calendly" },
     });

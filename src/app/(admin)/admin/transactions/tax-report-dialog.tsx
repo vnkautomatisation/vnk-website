@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -20,7 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { FileText, Calendar, Download } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
 
 type TaxReport = {
   period: { from: string; to: string };
@@ -78,6 +79,7 @@ export function TaxReportDialog({
   const [to, setTo] = useState(defaultTo);
   const [report, setReport] = useState<TaxReport | null>(null);
   const [loading, setLoading] = useState(false);
+  const formatCurrency = useCurrency();
 
   useEffect(() => {
     if (open) {
@@ -115,7 +117,7 @@ export function TaxReportDialog({
     if (!report) return;
     const rows: string[][] = [];
     rows.push([t("rapport_fiscal_vnk_automatisation_inc")]);
-    rows.push([`Période : ${report.period.from} au ${report.period.to}`]);
+    rows.push([t("tax_report_dialog_periode_p0_au_p1", { p0: report.period.from, p1: report.period.to })]);
     rows.push([]);
     rows.push(["SOMMAIRE"]);
     rows.push(["", "HT", "TPS (5%)", "TVQ (9.975%)", "Total TTC", "Nb"]);
@@ -230,19 +232,19 @@ export function TaxReportDialog({
                 <div className="p-3 rounded-md border bg-card">
                   <p className="text-xs uppercase tracking-wider font-semibold text-emerald-600">Revenus ({report.summary.revenue.count})</p>
                   <div className="mt-2 space-y-0.5 text-xs">
-                    <div className="flex justify-between"><span className="text-muted-foreground">HT</span><span>{formatCurrency(report.summary.revenue.ht)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">TPS</span><span>{formatCurrency(report.summary.revenue.tps)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">TVQ</span><span>{formatCurrency(report.summary.revenue.tvq)}</span></div>
-                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>TTC</span><span>{formatCurrency(report.summary.revenue.ttc)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("ht")}</span><span>{formatCurrency(report.summary.revenue.ht)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("tps")}</span><span>{formatCurrency(report.summary.revenue.tps)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq")}</span><span>{formatCurrency(report.summary.revenue.tvq)}</span></div>
+                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>{t("ttc")}</span><span>{formatCurrency(report.summary.revenue.ttc)}</span></div>
                   </div>
                 </div>
                 <div className="p-3 rounded-md border bg-card">
                   <p className="text-xs uppercase tracking-wider font-semibold text-red-600">Remboursements ({report.summary.refunds.count})</p>
                   <div className="mt-2 space-y-0.5 text-xs">
-                    <div className="flex justify-between"><span className="text-muted-foreground">HT</span><span>-{formatCurrency(report.summary.refunds.ht)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">TPS</span><span>-{formatCurrency(report.summary.refunds.tps)}</span></div>
-                    <div className="flex justify-between"><span className="text-muted-foreground">TVQ</span><span>-{formatCurrency(report.summary.refunds.tvq)}</span></div>
-                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>TTC</span><span>-{formatCurrency(report.summary.refunds.ttc)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("ht")}</span><span>-{formatCurrency(report.summary.refunds.ht)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("tps")}</span><span>-{formatCurrency(report.summary.refunds.tps)}</span></div>
+                    <div className="flex justify-between"><span className="text-muted-foreground">{t("tvq")}</span><span>-{formatCurrency(report.summary.refunds.tvq)}</span></div>
+                    <div className="flex justify-between font-bold border-t pt-1 mt-1"><span>{t("ttc")}</span><span>-{formatCurrency(report.summary.refunds.ttc)}</span></div>
                   </div>
                 </div>
               </div>
@@ -256,10 +258,10 @@ export function TaxReportDialog({
                       <thead className="bg-muted">
                         <tr className="text-left">
                           <th className="p-2">{t("mois_2")}</th>
-                          <th className="p-2 text-right">HT</th>
-                          <th className="p-2 text-right">TPS</th>
-                          <th className="p-2 text-right">TVQ</th>
-                          <th className="p-2 text-right">TTC</th>
+                          <th className="p-2 text-right">{t("ht")}</th>
+                          <th className="p-2 text-right">{t("tps")}</th>
+                          <th className="p-2 text-right">{t("tvq")}</th>
+                          <th className="p-2 text-right">{t("ttc")}</th>
                           <th className="p-2 text-right">{t("nb")}</th>
                         </tr>
                       </thead>

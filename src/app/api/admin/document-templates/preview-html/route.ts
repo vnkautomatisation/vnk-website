@@ -25,6 +25,8 @@ import {
   renderTemplateAsHtml,
   type TemplateDocumentType,
 } from "@/lib/services/pdf-html-renderer";
+import { getLocale } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -109,6 +111,7 @@ async function buildMinimalContext(): Promise<TemplateContext> {
 }
 
 export async function POST(req: NextRequest) {
+  const dateTag = dateLocale(await getLocale());
   const session = await requireAdmin();
   if (!session) {
     return unauthorizedJson();
@@ -144,7 +147,7 @@ export async function POST(req: NextRequest) {
     context = { ...context, ...payload.extraContext };
   }
   if (!context["date.todayFr"]) {
-    context["date.todayFr"] = new Date().toLocaleDateString("fr-CA", {
+    context["date.todayFr"] = new Date().toLocaleDateString(dateTag, {
       day: "2-digit",
       month: "long",
       year: "numeric",

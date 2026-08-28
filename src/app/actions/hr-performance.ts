@@ -115,7 +115,7 @@ export async function updatePerformanceReviewAction(input: z.infer<typeof review
         data: {
           recipientType: "admin", recipientId: review.reviewerId,
           type: "success", title: t("evaluation_reconnue"),
-          body: `L'employé a pris connaissance de l'évaluation`,
+          body: t("hr_performance_l_employe_a_pris_connaissance_de_l_evaluation"),
           link: `/admin/employes/evaluations`,
         },
       }).catch(() => null);
@@ -255,7 +255,7 @@ export async function addBonusAction(input: z.infer<typeof bonusSchema>): Promis
     data: {
       recipientType: "admin", recipientId: parsed.data.adminId,
       type: "success", title: t("bonus_accorde"),
-      body: `Un bonus de ${parsed.data.amount.toFixed(2)} $ vous a été accordé`,
+      body: t("hr_performance_un_bonus_de_p0_vous_a_ete_accorde", { p0: parsed.data.amount.toFixed(2) }),
       link: "/admin/mon-espace/paie",
       icon: "gift",
     },

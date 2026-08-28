@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,14 +22,16 @@ const MEETING_TYPES = [
   { key: "onsite" as const, labelKey: "type_sur_place", icon: MapPin },
 ];
 
+// `label` reste la forme canonique : elle compose le sujet enregistre, que le
+// back-office VNK relit. Seul l'affichage suit la langue du client.
 const SERVICES = [
-  { value: "plc-support", label: "Support PLC" },
-  { value: "plc-programming", label: "Programmation PLC" },
-  { value: "scada", label: "SCADA / HMI" },
-  { value: "audit", label: "Audit technique" },
-  { value: "documentation", label: "Documentation" },
-  { value: "consultation", label: "Consultation" },
-  { value: "other", label: "Autre" },
+  { value: "plc-support", label: "Support PLC", labelKey: "svc_plc_support" },
+  { value: "plc-programming", label: "Programmation PLC", labelKey: "svc_plc_programming" },
+  { value: "scada", label: "SCADA / HMI", labelKey: "svc_scada" },
+  { value: "audit", label: "Audit technique", labelKey: "svc_audit" },
+  { value: "documentation", label: "Documentation", labelKey: "svc_documentation" },
+  { value: "consultation", label: "Consultation", labelKey: "svc_consultation" },
+  { value: "other", label: "Autre", labelKey: "svc_other" },
 ];
 
 type Mandate = { id: number; title: string };
@@ -43,6 +46,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
   const [subject, setSubject] = useState("");
   const [notes, setNotes] = useState("");
   const [sending, setSending] = useState(false);
+  const dateTag = useDateLocale();
 
 
   const toLocalDate = (iso: string) => {
@@ -145,7 +149,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
           <div className="flex items-center justify-between mb-5">
             <h2 className="font-semibold text-lg">{t("choisissez_date")}</h2>
             <span className="text-xs text-muted-foreground">
-              {dates.length} jour{dates.length !== 1 ? "s" : ""} disponible{dates.length !== 1 ? "s" : ""}
+              {t("jours_disponibles", { count: dates.length })}
             </span>
           </div>
 
@@ -228,7 +232,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
                   <div className="flex items-center gap-2 mb-3">
                     <Clock className="h-4 w-4 text-[#0F2D52]" />
                     <h3 className="font-semibold text-sm">
-                      Heures disponibles — {new Date(selectedDate).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })}
+                      {t("heures_disponibles", { date: new Date(selectedDate).toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long" }) })}
                     </h3>
                   </div>
                   <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
@@ -268,7 +272,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
               <div className="flex items-center gap-2 mb-1">
                 <CalendarCheck className="h-4 w-4 text-[#0F2D52]" />
                 <span className="font-semibold text-sm">
-                  {new Date(selectedSlot.slotDate).toLocaleDateString("fr-CA", {
+                  {new Date(selectedSlot.slotDate).toLocaleDateString(dateTag, {
                     weekday: "long",
                     day: "numeric",
                     month: "long",
@@ -338,7 +342,7 @@ export function BookingView({ slots, mandates = [] }: { slots: Slot[]; mandates?
             >
               <option value="">{t("selectionnez_service")}</option>
               {SERVICES.map((s) => (
-                <option key={s.value} value={s.value}>{s.label}</option>
+                <option key={s.value} value={s.value}>{t(s.labelKey)}</option>
               ))}
             </select>
           </div>

@@ -43,6 +43,7 @@
   "maintenance_mise_jour": "Maintenance updated",
   "maintenance_planifiee": "Maintenance planned",
   "maintenance_view_planifier_une_maintenance": "Schedule maintenance",
+  "maintenance_view_resolu_p0": "· Resolved: {p0}",
   "maintenance_view_signaler_un_incident": "Report an incident",
   "maintenance_vnk": "Maintenance — VNK",
   "majeur": "Major",

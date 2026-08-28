@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 import { PayoutDetailDialog } from "./payout-detail-dialog";
 
 type Payout = {
@@ -107,6 +109,7 @@ export function PayoutsView({
   dateRange: { from: string; to: string };
 }) {
   const t = useTranslations("admin.payouts");
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -116,6 +119,7 @@ export function PayoutsView({
 
 
   const [detailPayoutId, setDetailPayoutId] = useState<number | null>(null);
+  const formatCurrency = useCurrency();
 
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -212,7 +216,7 @@ export function PayoutsView({
       header: t("paiements"),
       accessor: (p) => (
         <div>
-          <div className="text-sm font-semibold">{p.paymentCount} liés</div>
+          <div className="text-sm font-semibold">{tc("linked_count", { count: p.paymentCount })}</div>
           <div className="text-[10px] text-muted-foreground">{formatCurrency(p.paymentSum)}</div>
         </div>
       ),
@@ -319,7 +323,7 @@ export function PayoutsView({
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("echoues")}</p>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(kpis.totalFailed)}</p>
-          <p className="text-[10px] text-muted-foreground">{kpis.countFailed} à investiguer</p>
+          <p className="text-[10px] text-muted-foreground">{t("a_investiguer", { count: kpis.countFailed })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("total")}</p>
@@ -339,7 +343,7 @@ export function PayoutsView({
               <Banknote className="h-4 w-4" />
               {t("versements")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("verses")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.totalPaid)}</span></span>
             <span className="text-muted-foreground">{t("cours")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalPending)}</span></span>
             {kpis.countFailed > 0 && (

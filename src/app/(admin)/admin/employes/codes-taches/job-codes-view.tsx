@@ -72,7 +72,7 @@ export function JobCodesView({
   const handleDelete = async (id: number, code: string) => {
     const ok = await confirmDialog({
       title: t("supprimer_code_tache"),
-      description: `Le code « ${code} » sera retiré des choix proposés au pointage.`,
+      description: t("job_codes_view_le_code_p0_sera_retire_des_choix_proposes", { p0: code }),
       confirmLabel: t("supprimer"),
       variant: "destructive",
     });

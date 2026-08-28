@@ -404,7 +404,7 @@ export function SignaturePadMobile({
               ) : pdfBlobUrl ? (
                 <iframe
                   src={pdfBlobUrl}
-                  title={`Aperçu - ${doc.title}`}
+                  title={t("signature_pad_mobile_apercu_p0", { p0: doc.title })}
                   className="flex-1 w-full border-0 bg-white"
                   onLoad={() => setPdfOpenedOnce(true)}
                 />

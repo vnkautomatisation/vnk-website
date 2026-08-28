@@ -6,6 +6,7 @@
 // TemplatePdfPreviewButton (rendu a la volee depuis le markdown).
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -39,11 +40,11 @@ type Policy = {
   publisher: { fullName: string | null; email: string } | null;
 };
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function isRecent(iso: string | null | undefined): boolean {
@@ -132,7 +133,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
           accent={recentCount > 0 ? "info" : "navy"}
           hint={
             recentCount > 0
-              ? `Mises a jour recentes a consulter`
+              ? t("policies_employee_view_mises_a_jour_recentes_a_consulter")
               : t("aucun_changement_recent")
           }
         />
@@ -225,7 +226,7 @@ export function PoliciesEmployeeView({ policies }: { policies: Policy[] }) {
         <Card className="p-10 text-center space-y-3">
           <ScrollText className="h-10 w-10 mx-auto text-muted-foreground/40" />
           <p className="text-sm font-semibold">
-            {search ? `Aucune politique pour "${search}"` : t("aucune_politique_publiee")}
+            {search ? t("policies_employee_view_aucune_politique_pour_p0", { p0: search }) : t("aucune_politique_publiee")}
           </p>
           <p className="text-xs text-muted-foreground">
             {search
@@ -265,6 +266,7 @@ function PolicyCard({
   onOpen: () => void;
 }) {
   const t = useTranslations("admin.my_dashboard");
+  const dateTag = useDateLocale();
   const recent = isRecent(policy.effectiveFrom);
   const preview =
     policy.bodyMarkdown
@@ -289,7 +291,7 @@ function PolicyCard({
               </Badge>
               <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
                 <Calendar className="h-2.5 w-2.5" />
-                En vigueur le {formatDate(policy.effectiveFrom)}
+                En vigueur le {formatDate(policy.effectiveFrom, dateTag)}
               </span>
               {recent && (
                 <Badge className="text-[10px] bg-sky-100 text-sky-700 border-sky-200">
@@ -345,6 +347,7 @@ function PolicyReaderSheet({
 }) {
   const t = useTranslations("admin.my_dashboard");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   return (
     <Sheet open={!!policy} onOpenChange={(o) => !o && onClose()}>
       <SheetContent
@@ -368,7 +371,7 @@ function PolicyReaderSheet({
                     </Badge>
                     <span className="inline-flex items-center gap-1">
                       <Calendar className="h-2.5 w-2.5" />
-                      En vigueur le {formatDate(policy.effectiveFrom)}
+                      En vigueur le {formatDate(policy.effectiveFrom, dateTag)}
                     </span>
                     {policy.publisher && (
                       <span className="truncate">

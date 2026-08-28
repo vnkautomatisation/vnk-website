@@ -12,6 +12,7 @@ import { PortalUserMenu } from "@/components/portal/portal-user-menu";
 import { ChatWidget } from "@/components/chat/chat-widget";
 import { PortalHeartbeat } from "@/components/portal/portal-heartbeat";
 import { NavigationFeedback } from "@/components/navigation-feedback";
+import { PortalSessionProvider } from "@/components/portal/portal-session-provider";
 
 const getClient = cache(async (clientId: number) =>
   prisma.client.findUnique({
@@ -57,7 +58,7 @@ export default async function PortalLayout({
   ]);
 
   return (
-    <>
+    <PortalSessionProvider>
       {/* Feedback navigation global VNK (cohérent avec admin + site public) */}
       <Suspense fallback={null}>
         <NavigationFeedback />
@@ -90,6 +91,6 @@ export default async function PortalLayout({
       <PortalBottomNav badges={badges} />
       <ChatWidget clientId={clientId} clientName={client?.fullName ?? ""} />
       <PortalHeartbeat />
-    </>
+    </PortalSessionProvider>
   );
 }

@@ -1,6 +1,6 @@
 // HR · Matrice formations (qui a quoi) · alertes expiration
 import { prisma } from "@/lib/prisma";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -8,8 +8,10 @@ import { redirect } from "next/navigation";
 import { GraduationCap } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { dateLocale } from "@/lib/i18n-format";
 
 export default async function HrTrainingsPage() {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.hr_nav");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
@@ -66,7 +68,7 @@ export default async function HrTrainingsPage() {
                   return (
                     <span key={t.id} className={`text-[11px] px-2 py-1 rounded-full border ${colorClass}`}>
                       {t.admin.fullName || t.admin.email}
-                      {t.expiresAt && <span className="opacity-70 ml-1">· {new Date(t.expiresAt).toLocaleDateString("fr-CA")}</span>}
+                      {t.expiresAt && <span className="opacity-70 ml-1">· {new Date(t.expiresAt).toLocaleDateString(dateTag)}</span>}
                     </span>
                   );
                 })}

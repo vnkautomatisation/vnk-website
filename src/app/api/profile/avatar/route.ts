@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
     }
     if (file.size > MAX_AVATAR_BYTES) {
       return NextResponse.json(
-        { error: `Fichier trop volumineux (max 2 Mo, reçu ${(file.size / 1024 / 1024).toFixed(2)} Mo)` },
+        { error: t("route_fichier_trop_volumineux_max_2_mo_recu_p0", { p0: (file.size / 1024 / 1024).toFixed(2) }) },
         { status: 413 }
       );
     }

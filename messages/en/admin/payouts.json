@@ -1,5 +1,6 @@
 {
   "30_jours": "30 days",
+  "a_investiguer": "{count} to investigate",
   "annee": "This year",
   "annule": "Cancelled",
   "annules": "Cancelled",
@@ -22,6 +23,7 @@
   "description": "Description",
   "destination": "Destination",
   "destination_bancaire": "Bank destination",
+  "detail_du_versement": "Payout details",
   "du": "From",
   "echoue": "Failed",
   "echoues": "Failed",

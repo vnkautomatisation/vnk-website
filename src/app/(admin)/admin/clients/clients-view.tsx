@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
-import { useTranslations } from "next-intl";
+import { SECTOR_EN } from "@/components/admin/client-form-fields";
+import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -62,6 +63,7 @@ export function ClientsView({
   counts: { total: number; active: number; inactive: number; newThisMonth: number };
 }) {
   const t = useTranslations("admin.clients");
+  const isEn = useLocale().startsWith("en");
   const tc = useTranslations("common");
   const router = useRouter();
   const { confirm, ConfirmModal } = useConfirm();
@@ -192,7 +194,7 @@ export function ClientsView({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ archived: false, isActive: true }),
       });
-      if (res.ok) { toast.success(`${c.fullName} restauré`); router.refresh(); }
+      if (res.ok) { toast.success(t("clients_view_p0_restaure", { p0: c.fullName })); router.refresh(); }
       else { toast.error(t("erreur_lors_restauration")); }
     } finally { setBusyId(null); }
   };
@@ -203,8 +205,8 @@ export function ClientsView({
     const ok = await confirm({
       title: willActivate ? t("activer_client") : t("desactiver_client"),
       description: willActivate
-        ? `${c.fullName} pourra de nouveau accéder au portail.`
-        : `${c.fullName} ne pourra plus se connecter au portail (compte conservé).`,
+        ? t("clients_view_p0_pourra_de_nouveau_acceder_au_portail", { p0: c.fullName })
+        : t("clients_view_p0_ne_pourra_plus_se_connecter_au_portail", { p0: c.fullName }),
       confirmLabel: willActivate ? t("activer") : t("desactiver"),
       variant: willActivate ? "default" : "destructive",
     });
@@ -225,7 +227,7 @@ export function ClientsView({
   const handleResetPassword = async (c: Client) => {
     const ok = await confirm({
       title: t("reinitialiser_mot_passe"),
-      description: `Un nouveau mot de passe sera généré pour ${c.fullName}. L'ancien sera invalidé immédiatement. Tu pourras copier le nouveau dans la fenêtre suivante.`,
+      description: t("clients_view_un_nouveau_mot_de_passe_sera_genere_pour", { p0: c.fullName }),
       confirmLabel: t("generer_nouveau"),
       variant: "default",
     });
@@ -247,7 +249,7 @@ export function ClientsView({
   const handleBulkArchive = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Archiver ${selectedIds.size} client(s) ?`,
+      title: tc("confirm_archive_clients", { count: selectedIds.size }),
       description: t("clients_selectionnes_seront_archives_action"),
       confirmLabel: t("archiver_tous"),
     });
@@ -258,7 +260,7 @@ export function ClientsView({
       const res = await fetch(`/api/clients/${id}`, { method: "DELETE" });
       if (res.ok) success++;
     }
-    toast.success(`${success}/${ids.length} client(s) archivé(s)`);
+    toast.success(t("clients_view_p0_p1_client_s_archive_s", { p0: success, p1: ids.length }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -431,7 +433,7 @@ export function ClientsView({
           checked={selectedIds.has(r.id)}
           onCheckedChange={() => toggleSelectId(r.id)}
           onClick={(e) => e.stopPropagation()}
-          aria-label={`Sélectionner ${r.fullName}`}
+          aria-label={t("clients_view_selectionner_p0", { p0: r.fullName })}
         />
       ),
     },
@@ -442,7 +444,9 @@ export function ClientsView({
       </button>
     ), sortable: true, sortBy: (r) => r.fullName },
     { key: "company", header: t("entreprise"), accessor: (r) => r.companyName ?? "—", sortable: true, sortBy: (r) => r.companyName ?? "", hiddenOnMobile: true },
-    { key: "sector", header: t("secteur"), accessor: (r) => r.sector ?? "—", hiddenOnMobile: true },
+    { key: "sector", header: t("secteur"),
+      // Le secteur est stocke en francais : on affiche sa contrepartie anglaise.
+      accessor: (r) => (r.sector ? (isEn ? SECTOR_EN[r.sector] ?? r.sector : r.sector) : "—"), hiddenOnMobile: true },
     { key: "city", header: t("ville"), accessor: (r) => r.city ?? "—", hiddenOnMobile: true },
     { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.archived ? "cancelled" : r.isActive ? "active" : "paused"} /> },
     { key: "mandates", header: t("mandats"), accessor: (r) => r.mandateCount > 0 ? r.mandateCount : "—", sortable: true, sortBy: (r) => r.mandateCount, hiddenOnMobile: true },
@@ -491,7 +495,7 @@ export function ClientsView({
               <Users className="h-4 w-4" />
               {t("clients")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("actifs")} <span className="font-semibold text-emerald-600">{counts.active}</span></span>
             <span className="text-muted-foreground">{t("inactifs")} <span className="font-semibold text-amber-600">{counts.inactive}</span></span>
             <span className="ml-auto text-muted-foreground">{t("nouveaux_mois")} <span className="font-semibold text-violet-600">{counts.newThisMonth}</span></span>
@@ -591,7 +595,7 @@ export function ClientsView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -687,7 +691,7 @@ export function ClientsView({
         open={!!deleteClient}
         onOpenChange={(o) => { if (!o) setDeleteClient(null); }}
         title={t("archiver_client")}
-        description={`Le client "${deleteClient?.fullName}" sera archivé. Cette action est réversible.`}
+        description={t("clients_view_le_client_p0_sera_archive_cette_action_est", { p0: (deleteClient?.fullName ?? "") })}
         confirmLabel={t("archiver")}
         onConfirm={handleArchive}
       />
@@ -743,7 +747,7 @@ export function ClientsView({
           </div>
           <DialogFooter className="px-6 pb-5">
             <Button className="w-full bg-[#0F2D52] hover:bg-[#1a3a66]" onClick={() => {
-              navigator.clipboard.writeText(`Courriel : ${generatedCreds?.email}\nMot de passe : ${generatedCreds?.password}`);
+              navigator.clipboard.writeText(t("clients_view_courriel_p0_nmot_de_passe_p1", { p0: (generatedCreds?.email ?? ""), p1: (generatedCreds?.password ?? "") }));
               toast.success(t("identifiants_copies"));
             }}>
               <Copy className="h-4 w-4 mr-1.5" />{t("clients_view_copier_les_deux")}</Button>

@@ -4,6 +4,7 @@
 // SSR-safe : 1er render = heure de demarrage statique, puis useEffect cote
 // client kick le compteur live. Pas de hydration mismatch.
 import { useState, useEffect, useMemo } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 
 export type LiveShiftCounterVariant = "dark" | "light";
 
@@ -36,6 +37,7 @@ export function LiveShiftCounter({
   const startMs = useMemo(() => new Date(clockIn).getTime(), [clockIn]);
   const pausedMs = useMemo(() => (pausedAt ? new Date(pausedAt).getTime() : null), [pausedAt]);
   const [now, setNow] = useState<number | null>(null);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     setNow(Date.now());
@@ -46,7 +48,7 @@ export function LiveShiftCounter({
   }, [startMs, pausedMs]);
 
   const styles = VARIANTS[variant];
-  const startLabel = new Date(clockIn).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+  const startLabel = new Date(clockIn).toLocaleTimeString(dateTag, { hour: "2-digit", minute: "2-digit" });
 
   // 1er render (SSR + premier render client) : heure de demarrage statique
   if (now === null) {

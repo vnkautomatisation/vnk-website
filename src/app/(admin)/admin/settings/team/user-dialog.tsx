@@ -320,7 +320,7 @@ export function UserDialog({
       const result = await sendPasswordResetEmailAction({ id: user.id });
       if (result.success) {
         toast.success(t("courriel_envoye"), {
-          description: `${user.fullName || user.email} recevra un lien de réinitialisation valide 30 minutes.`,
+          description: t("user_dialog_p0_recevra_un_lien_de_reinitialisation_valide_30", { p0: user.fullName || user.email }),
         });
         onSaved(); onOpenChange(false);
       } else {
@@ -353,7 +353,7 @@ export function UserDialog({
                   </DialogTitle>
                   <p className="text-xs text-white/85 mt-0.5">
                     {inviteResult.emailSent
-                      ? `Email envoyé à ${inviteResult.targetName}`
+                      ? t("user_dialog_email_envoye_a_p0", { p0: inviteResult.targetName })
                       : t("email_n_pas_pu_etre")}
                   </p>
                 </div>

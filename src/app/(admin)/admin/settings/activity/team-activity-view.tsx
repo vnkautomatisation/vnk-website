@@ -111,7 +111,7 @@ export function TeamActivityView({
         <div className="flex-1">
           <h1 className="text-2xl font-bold tracking-tight">{t("activite_apos_equipe")}</h1>
           <p className="text-muted-foreground text-sm mt-0.5">
-            Journal des actions effectuées par les administrateurs · {totalLogs.toLocaleString("fr-CA")} entrées au total
+            Journal des actions effectuées par les administrateurs · {totalLogs.toLocaleString(dateTag)} entrées au total
           </p>
         </div>
       </div>
@@ -231,7 +231,7 @@ export function TeamActivityView({
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground">
                       <span>{formatRelative(log.createdAt, t, dateTag)}</span>
-                      <span>{new Date(log.createdAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}</span>
+                      <span>{new Date(log.createdAt).toLocaleString(dateTag, { dateStyle: "short", timeStyle: "short" })}</span>
                       {log.ipAddress && <span className="font-mono">{log.ipAddress}</span>}
                     </div>
                     {log.changes && typeof log.changes === "object" && Object.keys(log.changes).length > 0 && (

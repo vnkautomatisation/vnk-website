@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Badge } from "@/components/ui/badge";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { confirmDialog } from "@/components/admin/prompt-dialog";
@@ -26,12 +27,12 @@ export function mergeInfo(entry: TimingInput) {
 export function MergedBadge({ count, gapMin, coherent, small = false }: { count: number; gapMin: number; coherent: boolean; small?: boolean }) {
   const t = useTranslations("admin.timeclock");
   const label = coherent
-    ? `${count} pointages fusionnés : la plage va du premier début à la dernière fin${gapMin > 0 ? `, et les ${gapMin} min d'écart entre eux sont comptées en pause` : ""}.`
+    ? t("entryrows_p0_pointages_fusionnes_la_plage_va_du_premier", { p0: count, p1: gapMin > 0 ? `, et les ${gapMin} min d'écart entre eux sont comptées en pause` : "" })
     : t("fusion_ancienne_temps_non_comptabilise");
   return (
     <ActionTooltip label={label}>
       <Badge variant="outline" className={`${small ? "text-[9px]" : "text-[10px]"} text-violet-700 border-violet-300 bg-violet-50 cursor-help`}>
-        {count > 0 ? `Fusion de ${count}` : t("fusion")}
+        {count > 0 ? t("entryrows_fusion_de_p0", { p0: count }) : t("fusion")}
       </Badge>
     </ActionTooltip>
   );
@@ -48,6 +49,7 @@ export function PanelEntryRow({
   onUnapprove: () => void;
 }) {
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const start = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
@@ -128,7 +130,7 @@ export function PanelEntryRow({
           {isApproved && entry.approver && entry.approvedBy !== entry.adminId && (
             <p className="text-[10px] text-muted-foreground mt-0.5">
               Approuve par {entry.approver.fullName || entry.approver.email}
-              {entry.approvedAt && ` le ${new Date(entry.approvedAt).toLocaleDateString("fr-CA")}`}
+              {entry.approvedAt && t("entryrows_le_p0", { p0: new Date(entry.approvedAt).toLocaleDateString(dateTag) })}
             </p>
           )}
         </div>
@@ -145,7 +147,7 @@ export function PanelEntryRow({
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
             )}
             {(entry.paidBreakMin ?? 0) > 0 && (
-              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
+              <span className="text-sky-700"> · {t("pause_payee_duree", { duration: fmtDuration(entry.paidBreakMin ?? 0) })}</span>
             )}
             </p>
           )}
@@ -251,7 +253,7 @@ export function CompactEntryRow({
           )}
           {typeof entry.clockInLat === "number" && typeof entry.clockInLng === "number" && (
             <ActionTooltip
-              label={`Position au punch : ${entry.clockInLat.toFixed(5)}, ${entry.clockInLng.toFixed(5)} — ouvrir dans Google Maps`}
+              label={t("entryrows_position_au_punch_p0_p1_ouvrir_dans_google", { p0: entry.clockInLat.toFixed(5), p1: entry.clockInLng.toFixed(5) })}
             >
               <a
                 href={`https://www.google.com/maps?q=${entry.clockInLat},${entry.clockInLng}`}
@@ -309,7 +311,7 @@ export function CompactEntryRow({
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
             )}
             {(entry.paidBreakMin ?? 0) > 0 && (
-              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
+              <span className="text-sky-700"> · {t("pause_payee_duree", { duration: fmtDuration(entry.paidBreakMin ?? 0) })}</span>
             )}
           </p>
         )}
@@ -367,6 +369,7 @@ export function EntryRow({
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const cat = CAT_LABEL[entry.category] ?? { key: "", color: "bg-gray-100 text-gray-700" };
   const date = new Date(entry.clockIn);
   const { isMerged, count: mergedCount, gapMin: mergedGapMin, grossIsCoherent } = mergeInfo(entry);
@@ -417,7 +420,7 @@ export function EntryRow({
           )}
         </div>
         <p className="text-xs text-muted-foreground mt-0.5">
-          {date.toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "short" })}
+          {date.toLocaleDateString(dateTag, { weekday: "short", day: "numeric", month: "short" })}
           {" · "}
           {fmtTime(date)}
           {entry.clockOut ? ` → ${fmtTime(entry.clockOut)}` : t("cours_suffixe")}
@@ -444,7 +447,7 @@ export function EntryRow({
               <span className="text-amber-700"> · pause {fmtDuration(entry.totalBreakMin)}</span>
             )}
             {(entry.paidBreakMin ?? 0) > 0 && (
-              <span className="text-sky-700"> · pause payée {fmtDuration(entry.paidBreakMin ?? 0)}</span>
+              <span className="text-sky-700"> · {t("pause_payee_duree", { duration: fmtDuration(entry.paidBreakMin ?? 0) })}</span>
             )}
           </p>
         )}
@@ -517,8 +520,9 @@ export function DayAggregateRow({
   onReject: () => void;
 }) {
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   void totalMin; // kept in the signature for compatibility, never rendered
-  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString(dateTag, {
     weekday: "short", day: "numeric", month: "short",
   }));
   const initials = adminName.slice(0, 2).toUpperCase();
@@ -567,7 +571,7 @@ export function DayAggregateRow({
           onClickName();
         }
       }}
-      aria-label={`Ouvrir le panneau pour ${adminName} - ${dateLabel}`}
+      aria-label={t("entryrows_ouvrir_le_panneau_pour_p0_p1", { p0: adminName, p1: dateLabel })}
     >
       {hasPending && (
         <input

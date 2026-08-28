@@ -67,14 +67,15 @@ const STATUS_TABS: { key: StatusFilter; labelKey: string }[] = [
   { key: "manual", labelKey: "manuels" },
 ];
 
+// La valeur reste celle stockee ; seul le libelle suit le lecteur.
 const CATEGORY_OPTIONS = [
-  { value: "documentation_technique", label: "Documentation technique", color: "bg-indigo-100 text-indigo-700" },
-  { value: "livrables", label: "Livrables", color: "bg-emerald-100 text-emerald-700" },
-  { value: "factures", label: "Factures", color: "bg-blue-100 text-blue-700" },
-  { value: "devis", label: "Devis", color: "bg-violet-100 text-violet-700" },
-  { value: "contrats", label: "Contrats", color: "bg-amber-100 text-amber-700" },
-  { value: "rapports", label: "Rapports", color: "bg-cyan-100 text-cyan-700" },
-  { value: "autres", label: "Autres", color: "bg-gray-100 text-gray-700" },
+  { value: "documentation_technique", labelKey: "cat_documentation_technique", color: "bg-indigo-100 text-indigo-700" },
+  { value: "livrables", labelKey: "cat_livrables", color: "bg-emerald-100 text-emerald-700" },
+  { value: "factures", labelKey: "cat_factures", color: "bg-blue-100 text-blue-700" },
+  { value: "devis", labelKey: "cat_devis", color: "bg-violet-100 text-violet-700" },
+  { value: "contrats", labelKey: "cat_contrats", color: "bg-amber-100 text-amber-700" },
+  { value: "rapports", labelKey: "cat_rapports", color: "bg-cyan-100 text-cyan-700" },
+  { value: "autres", labelKey: "cat_autres", color: "bg-gray-100 text-gray-700" },
 ];
 
 const MAX_UPLOAD_MB = 10;
@@ -246,7 +247,7 @@ export function DocumentsView({
           } catch { errors++; }
         }
       }
-      if (success > 0) toast.success(`${success} document(s) déposé(s)${errors > 0 ? ` · ${errors} erreur(s)` : ""}`);
+      if (success > 0) toast.success(t("documents_view_p0_document_s_depose_s_p1", { p0: success, p1: errors > 0 ? tc("errors_count", { count: errors }) : "" }));
       else toast.error(t("aucun_document_n_pu_etre"));
       setCreateOpen(false);
       resetForm();
@@ -281,14 +282,14 @@ export function DocumentsView({
   const handleSendToClient = async (d: Doc) => {
     const ok = await confirm({
       title: t("envoyer_document_client"),
-      description: `Un message chat + une notification seront créés pour ${d.clientName}.`,
+      description: t("documents_view_un_message_chat_une_notification_seront_crees_pour", { p0: d.clientName }),
       confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/documents/${d.id}/send`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
-      toast.success(`Document envoyé à ${data.clientName}`);
+      toast.success(t("documents_view_document_envoye_a_p0", { p0: data.clientName }));
       router.refresh();
     } else { toast.error(t("erreur")); }
   };
@@ -321,7 +322,7 @@ export function DocumentsView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} document(s) ?`,
+      title: tc("confirm_delete_documents", { count: selectedIds.size }),
       description: t("action_irreversible"),
       confirmLabel: t("supprimer_tous"),
       variant: "destructive",
@@ -332,7 +333,7 @@ export function DocumentsView({
       const r = await fetch(`/api/documents/${id}`, { method: "DELETE" });
       if (r.ok) success++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimé(s)`);
+    toast.success(t("documents_view_p0_p1_supprime_s", { p0: success, p1: selectedIds.size }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -347,7 +348,7 @@ export function DocumentsView({
       });
       if (r.ok) success++;
     }
-    toast.success(`${success}/${selectedIds.size} marqué(s) ${next ? "lus" : t("non_lus")}`);
+    toast.success(t("documents_view_p0_p1_marque_s_p2", { p0: success, p1: selectedIds.size, p2: next ? "lus" : t("non_lus") }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -463,7 +464,7 @@ export function DocumentsView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.title}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("documents_view_selectionner_p0", { p0: r.title })} />
       ),
     },
     {
@@ -502,7 +503,7 @@ export function DocumentsView({
       accessor: (r) => {
         const cat = CATEGORY_OPTIONS.find((c) => c.value === r.category);
         return cat ? (
-          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", cat.color)}>{cat.label}</span>
+          <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium", cat.color)}>{t(cat.labelKey as "cat_autres")}</span>
         ) : <span className="text-xs text-muted-foreground">—</span>;
       },
       hiddenOnMobile: true,
@@ -525,7 +526,7 @@ export function DocumentsView({
         </span>
       ) : (
         <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-700">
-          <FileText className="h-2.5 w-2.5" />Lien
+          <FileText className="h-2.5 w-2.5" />{t("lien")}
         </span>
       ),
       hiddenOnMobile: true,
@@ -591,7 +592,7 @@ export function DocumentsView({
             {kpis.unread > 0 && (
               <div className="flex items-center gap-2 bg-amber-500/20 border border-amber-300/30 rounded-lg px-3 py-2 backdrop-blur">
                 <EyeOff className="h-4 w-4 text-amber-200" />
-                <span className="text-sm font-semibold text-white">{kpis.unread} non lus</span>
+                <span className="text-sm font-semibold text-white">{tc("unread_count", { count: kpis.unread })}</span>
               </div>
             )}
             <Button className="bg-white text-[#0F2D52] hover:bg-white/90 shadow-md font-semibold"
@@ -618,7 +619,7 @@ export function DocumentsView({
               <FileText className="h-4 w-4" />
               {t("documents")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("total")} <span className="font-semibold text-blue-600">{kpis.total}</span></span>
             <span className="text-muted-foreground">{t("mois")} <span className="font-semibold text-indigo-600">{kpis.thisMonth}</span></span>
             {kpis.unread > 0 && <span className="text-muted-foreground">{t("non_lus")} <span className="font-semibold text-amber-600">{kpis.unread}</span></span>}
@@ -687,7 +688,7 @@ export function DocumentsView({
                       }}
                       className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium transition-colors",
                         isOn ? "bg-[#0F2D52] text-white" : c.color)}>
-                      {c.label}
+                      {t(c.labelKey as "cat_autres")}
                     </button>
                   );
                 })}
@@ -713,7 +714,7 @@ export function DocumentsView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2 flex-wrap">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -723,7 +724,7 @@ export function DocumentsView({
               <Eye className="h-3.5 w-3.5 mr-1" />Marquer lus
             </Button>
             <Button size="sm" variant="outline" onClick={() => handleBulkMarkRead(false)}>
-              <EyeOff className="h-3.5 w-3.5 mr-1" />Marquer non lus
+              <EyeOff className="h-3.5 w-3.5 mr-1" />{t("marquer_non_lus")}
             </Button>
             <Button size="sm" variant="destructive" onClick={handleBulkDelete}>
               <Trash2 className="h-3.5 w-3.5 mr-1" />{tc("delete")}
@@ -744,7 +745,7 @@ export function DocumentsView({
                 subtitle={d.clientName}
                 icon={<Icon className="h-5 w-5 text-muted-foreground" />}
                 badges={[
-                  ...(d.category ? [{ label: (CATEGORY_OPTIONS.find((c) => c.value === d.category)?.label ?? d.category), variant: "outline" as const }] : []),
+                  ...(d.category ? [{ label: ((() => { const c = CATEGORY_OPTIONS.find((o) => o.value === d.category); return c ? t(c.labelKey as "cat_autres") : d.category; })()), variant: "outline" as const }] : []),
                   ...(!d.isRead ? [{ label: t("non_lu"), variant: "destructive" as const }] : []),
                 ]}
                 actions={getActions(d)}
@@ -923,7 +924,7 @@ export function DocumentsView({
                   <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">{t("aucune")}</SelectItem>
-                    {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                    {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{t(c.labelKey as "cat_autres")}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>
@@ -941,7 +942,7 @@ export function DocumentsView({
               disabled={submitting || !fClientId}
               className="bg-[#0F2D52] hover:bg-[#1a3a66] text-white shadow-md"
             >
-              {submitting ? t("televersement") : fFiles.length > 0 ? `Téléverser ${fFiles.length} fichier${fFiles.length > 1 ? "s" : ""}` : "Créer"}
+              {submitting ? t("televersement") : fFiles.length > 0 ? t("documents_view_televerser_p0_fichier_p1", { p0: fFiles.length, p1: fFiles.length > 1 ? "s" : "" }) : "Créer"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -972,7 +973,7 @@ export function DocumentsView({
                 <SelectTrigger><SelectValue placeholder={t("choisir")} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">{t("aucune")}</SelectItem>
-                  {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
+                  {CATEGORY_OPTIONS.map((c) => (<SelectItem key={c.value} value={c.value}>{t(c.labelKey as "cat_autres")}</SelectItem>))}
                 </SelectContent>
               </Select>
             </div>
@@ -1015,7 +1016,7 @@ export function DocumentsView({
         open={!!deleteDoc}
         onOpenChange={(o) => { if (!o) setDeleteDoc(null); }}
         title={t("supprimer_document")}
-        description={`Le document "${deleteDoc?.title}" sera supprimé définitivement.`}
+        description={t("documents_view_le_document_p0_sera_supprime_definitivement", { p0: (deleteDoc?.title ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -1069,7 +1070,7 @@ function DocumentDetailDialog({
             <div className="flex-1 min-w-0">
               <DialogTitle className="text-white text-lg break-words">{doc.title}</DialogTitle>
               <DialogDescription className="text-white/70 mt-0.5 flex flex-wrap items-center gap-2">
-                {cat && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/15">{cat.label}</span>}
+                {cat && <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/15">{t(cat.labelKey as "cat_autres")}</span>}
                 {doc.isRead ? (
                   <span className="inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-100">
                     <Eye className="h-3 w-3" />{t("documents_view_lu_par_le_client")}</span>
@@ -1102,7 +1103,7 @@ function DocumentDetailDialog({
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] uppercase tracking-wider font-semibold text-[#0F2D52]">{t("document_genere_depuis")}</p>
-                  <p className="text-sm font-medium">{t(source.labelKey)} #{source.id} — pour changer le contenu, modifier l&apos;entité source</p>
+                  <p className="text-sm font-medium">{t(source.labelKey)} #{source.id} {t("modifier_entite_source")}</p>
                 </div>
               </div>
               <div className="flex gap-2">

@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useMonthNames, useWeekdayNames, useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home as HomeIcon } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -44,6 +44,7 @@ export function CalendarMonthView({
   const DAYS_FR = useWeekdayNames();
   const MONTHS_FR = useMonthNames();
   const t = useTranslations("admin.hr_nav");
+  const dateTag = useDateLocale();
 
   const days: Date[] = [];
   const start = new Date(gridStart);
@@ -69,7 +70,7 @@ export function CalendarMonthView({
           <h1 className="text-xl font-bold flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-[#0F2D52]" />Calendrier RH
           </h1>
-          <p className="text-sm text-muted-foreground">{MONTHS_FR[month]} {year} · congés approuvés + jours fériés.</p>
+          <p className="text-sm text-muted-foreground">{MONTHS_FR[month]} {year} · {t("conges_approuves_feries")}</p>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="icon" aria-label={t("mois_precedent")} asChild>
@@ -191,7 +192,7 @@ export function CalendarMonthView({
                       <p className="text-xs text-muted-foreground inline-flex items-center gap-1">
                         <Icon className="h-3 w-3" />{t(meta.labelKey)}
                         <span>·</span>
-                        <span>{new Date(l.startDate).toLocaleDateString("fr-CA")} → {new Date(l.endDate).toLocaleDateString("fr-CA")}</span>
+                        <span>{new Date(l.startDate).toLocaleDateString(dateTag)} → {new Date(l.endDate).toLocaleDateString(dateTag)}</span>
                       </p>
                     </div>
                     <Badge variant="outline" className="text-[10px] shrink-0">{Number(l.daysCount)} j</Badge>

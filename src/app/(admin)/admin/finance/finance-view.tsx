@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
-import { useCountryName, useDateLocale } from "@/lib/i18n-format";
+import { useCountryName, useDateLocale, useCurrency } from "@/lib/i18n-format";
 import Link from "next/link";
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
@@ -26,7 +26,7 @@ import {
   Banknote,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { formatCurrency } from "@/lib/utils";
+
 
 type Kpis = {
   totalPaid: number;
@@ -140,6 +140,7 @@ export function FinanceView({
   const t = useTranslations("admin.finance");
   const dateTag = useDateLocale();
   const isEn = useLocale().startsWith("en");
+  const formatCurrency = useCurrency();
   const countryName = useCountryName();
   const totalCurrencies = byCurrency.length;
   const isInternational = byJurisdiction.length > 1;
@@ -199,9 +200,9 @@ export function FinanceView({
               {t("tableau_bord_finance")}
             </h1>
             <p className="text-white/70 text-sm mt-1">
-              {totalCurrencies > 1 ? `${totalCurrencies} devises actives · ` : ""}
-              {byJurisdiction.length} {byJurisdiction.length > 1 ? "juridictions" : "juridiction"} ·
-              Vue 90 derniers jours
+              {totalCurrencies > 1 ? `${t("n_devises_actives", { count: totalCurrencies })} · ` : ""}
+              {t("n_juridictions", { count: byJurisdiction.length })} ·{" "}
+              {t("vue_90_derniers_jours")}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -242,7 +243,7 @@ export function FinanceView({
             <TrendingUp className="h-4 w-4 text-blue-500" />
           </div>
           <p className="text-2xl font-bold">{formatCurrency(kpis.paidThisYear)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{kpis.totalPaidCount} factures payées au total</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("n_factures_payees_total", { count: kpis.totalPaidCount })}</p>
         </div>
         <div className="rounded-lg border bg-card p-4">
           <div className="flex items-center justify-between mb-1">
@@ -258,7 +259,7 @@ export function FinanceView({
             <AlertCircle className="h-4 w-4 text-red-500" />
           </div>
           <p className="text-2xl font-bold text-red-600">{formatCurrency(kpis.totalOverdue)}</p>
-          <p className="text-xs text-muted-foreground mt-1">{kpis.totalOverdueCount} facture{kpis.totalOverdueCount > 1 ? "s" : ""}</p>
+          <p className="text-xs text-muted-foreground mt-1">{t("n_factures", { count: kpis.totalOverdueCount })}</p>
         </div>
       </div>
 
@@ -297,7 +298,7 @@ export function FinanceView({
             <span className="font-semibold text-red-600">{formatCurrency(kpis.totalOverdue)}</span>
           </span>
           <span className="flex ml-auto items-center gap-3 text-muted-foreground">
-            <span>{byJurisdiction.length} {byJurisdiction.length > 1 ? "juridictions" : "juridiction"}</span>
+            <span>{t("n_juridictions", { count: byJurisdiction.length })}</span>
             <span>·</span>
             <span>{totalCurrencies} devise{totalCurrencies > 1 ? "s" : ""}</span>
           </span>
@@ -320,7 +321,7 @@ export function FinanceView({
               )}
             </div>
             <p className="text-xs text-muted-foreground mt-0.5">
-              {kpis.windowDays} derniers jours · vs période précédente
+              {t("n_derniers_jours_vs_precedente", { count: kpis.windowDays })}
             </p>
           </div>
         </div>
@@ -347,7 +348,7 @@ export function FinanceView({
                 tick={{ fontSize: 11, fill: "#64748b" }}
                 axisLine={false}
                 tickLine={false}
-                tickFormatter={(v: number) => `${v} $`}
+                tickFormatter={(v: number) => formatCurrency(v).replace(/[.,]00/, "")}
                 width={50}
               />
               <Tooltip
@@ -508,7 +509,7 @@ export function FinanceView({
         <div className="rounded-xl border bg-card p-5">
           <div className="flex items-center justify-between mb-3">
             <h2 className="text-sm font-semibold flex items-center gap-2"><MapPin className="h-4 w-4" />{t("ventes_ville")}</h2>
-            <span className="text-[10px] text-muted-foreground">{topCities.length} villes</span>
+            <span className="text-[10px] text-muted-foreground">{t("n_villes", { count: topCities.length })}</span>
           </div>
           {cityChartData.length === 0 ? (
             <p className="text-sm text-muted-foreground italic text-center py-12">{t("aucune_ville_enregistree")}</p>
@@ -526,7 +527,7 @@ export function FinanceView({
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(v: number) => `${v} $`}
+                    tickFormatter={(v: number) => formatCurrency(v).replace(/[.,]00/, "")}
                   />
                   <YAxis
                     dataKey="name"
@@ -637,7 +638,7 @@ export function FinanceView({
                     tick={{ fontSize: 11, fill: "#64748b" }}
                     axisLine={false}
                     tickLine={false}
-                    tickFormatter={(v: number) => `${v} $`}
+                    tickFormatter={(v: number) => formatCurrency(v).replace(/[.,]00/, "")}
                   />
                   <Tooltip
                     content={(props) => (
@@ -667,7 +668,7 @@ export function FinanceView({
               <BarChart data={monthlyRevenue.slice(-12).map((m) => ({ name: formatMonth(m.month, dateTag), total: m.ttc, count: m.count }))} margin={{ top: 5, right: 10, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke="#f1f5f9" vertical={false} />
                 <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => `${v} $`} />
+                <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} tickFormatter={(v: number) => formatCurrency(v).replace(/[.,]00/, "")} />
                 <Tooltip
                   content={(props) => (
                     <ChartTooltip {...props} formatter={(v: number) => formatCurrency(v)} />

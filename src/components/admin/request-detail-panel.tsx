@@ -119,7 +119,7 @@ export function RequestDetailPanel({
     if (!request) return;
     const ok = await confirm({
       title: t("supprimer_demande"),
-      description: `La demande "${request.title}" sera supprimée définitivement.`,
+      description: t("request_detail_panel_la_demande_p0_sera_supprimee_definitivement", { p0: request.title }),
       confirmLabel: t("supprimer"),
       variant: "destructive",
     });
@@ -155,7 +155,7 @@ export function RequestDetailPanel({
       });
       const data = await res.json();
       if (res.ok) {
-        toast.success(convertTarget === "mandate" ? t("demande_convertie_mandat") : `Devis ${data.quoteNumber} créé`);
+        toast.success(convertTarget === "mandate" ? t("demande_convertie_mandat") : t("request_detail_panel_devis_p0_cree", { p0: data.quoteNumber }));
         setConvertOpen(false);
         setConvertAmount("");
         await refresh();

@@ -1,13 +1,14 @@
 "use client";
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { MessageCircle, X, Send, Paperclip, Maximize2, Minimize2, Check, CheckCheck, Smile, FileText, Download, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Message = {
   id: number;
   sender: "client" | "vnk";
-  content: string;
+  content: string | null;
   createdAt: string;
   isRead: boolean;
 };
@@ -113,6 +114,7 @@ export function ChatWidget({
   const [sending, setSending] = useState(false);
   const [showEmojis, setShowEmojis] = useState(false);
   const [previewPdf, setPreviewPdf] = useState<string | null>(null);
+  const dateTag = useDateLocale();
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -224,7 +226,7 @@ export function ChatWidget({
 
   // ── Grouper par date ──
   const groupedMessages = messages.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
-    const date = new Date(msg.createdAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
+    const date = new Date(msg.createdAt).toLocaleDateString(dateTag, { day: "numeric", month: "long" });
     const last = acc[acc.length - 1];
     if (last && last.date === date) last.msgs.push(msg);
     else acc.push({ date, msgs: [msg] });
@@ -315,7 +317,8 @@ export function ChatWidget({
                     <div className="space-y-1.5">
                       {group.msgs.map((msg) => {
                         const isClient = msg.sender === "client";
-                        const fileMatch = msg.content.match(/^\[Fichier: (.+)\]$/);
+                        const content = msg.content ?? "";
+                        const fileMatch = content.match(/^\[Fichier: (.+)\]$/);
                         const isFile = !!fileMatch;
                         const fileName = fileMatch?.[1] ?? "";
                         const isPdf = fileName.toLowerCase().endsWith(".pdf");
@@ -366,11 +369,11 @@ export function ChatWidget({
                                   </div>
                                 </div>
                               ) : (
-                                <RichMessageContent content={msg.content} />
+                                <RichMessageContent content={content} />
                               )}
                               <div className={cn("flex items-center gap-1 mt-0.5", isClient ? "justify-end" : "")}>
                                 <time className="text-[0.5625rem] text-muted-foreground">
-                                  {new Date(msg.createdAt).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" })}
+                                  {new Date(msg.createdAt).toLocaleTimeString(dateTag, { hour: "2-digit", minute: "2-digit" })}
                                 </time>
                                 {isClient && (
                                   msg.isRead ? <CheckCheck className="h-3 w-3 text-blue-500" /> : <Check className="h-3 w-3 text-muted-foreground" />

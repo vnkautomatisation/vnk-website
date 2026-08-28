@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { GraduationCap, BadgeCheck, AlertTriangle, Plus, Edit, Trash2, CheckCircle2 } from "lucide-react";
@@ -41,6 +42,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
   const [trainingDialog, setTrainingDialog] = useState<{ open: boolean; existing: Training | null }>({ open: false, existing: null });
   const [confirmDelLic, setConfirmDelLic] = useState<License | null>(null);
   const [confirmDelTr, setConfirmDelTr] = useState<Training | null>(null);
+  const dateTag = useDateLocale();
 
   const TABS: TabItem<"licenses" | "trainings">[] = [
     { key: "licenses", label: t("permis_certifications"), icon: BadgeCheck, count: licenses.length },
@@ -84,7 +86,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                   </div>
                   <p className="text-xs text-muted-foreground">{l.issuer ?? "—"}{l.number && ` · n° ${l.number}`}</p>
                   {l.expiresAt && (
-                    <p className="text-[11px] text-muted-foreground mt-1">Expire le {new Date(l.expiresAt).toLocaleDateString("fr-CA")}</p>
+                    <p className="text-[11px] text-muted-foreground mt-1">Expire le {new Date(l.expiresAt).toLocaleDateString(dateTag)}</p>
                   )}
                 </div>
                 <div className="flex gap-1">
@@ -117,7 +119,7 @@ export function TrainingsView({ adminId, licenses, trainings }: { adminId: numbe
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {training.provider ?? "—"}
-                    {training.completedAt && ` · Complétée le ${new Date(training.completedAt).toLocaleDateString("fr-CA")}`}
+                    {training.completedAt && t("trainings_view_completee_le_p0", { p0: new Date(training.completedAt).toLocaleDateString(dateTag) })}
                     {training.hoursCount && ` · ${Number(training.hoursCount)}h`}
                   </p>
                   {training.completedAt && (

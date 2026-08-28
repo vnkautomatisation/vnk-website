@@ -21,11 +21,11 @@ import {
 import type { PortalBadges } from "./portal-sidebar";
 
 const BOTTOM_ITEMS = [
-  { key: "dashboard", icon: LayoutDashboard, href: "/portail", label: "Accueil" },
-  { key: "mandates", icon: Briefcase, href: "/portail/mandats", label: "Mandats" },
-  { key: "new", icon: Plus, href: "/portail/demandes", primary: true, label: "" },
-  { key: "appointments", icon: Calendar, href: "/portail/rendez-vous", label: "RDV" },
-  { key: "more", icon: Menu, href: "#", label: "Plus" },
+  { key: "dashboard", icon: LayoutDashboard, href: "/portail", labelKey: "dashboard" },
+  { key: "mandates", icon: Briefcase, href: "/portail/mandats", labelKey: "mandates" },
+  { key: "new", icon: Plus, href: "/portail/demandes", primary: true, labelKey: "" },
+  { key: "appointments", icon: Calendar, href: "/portail/rendez-vous", labelKey: "appointments" },
+  { key: "more", icon: Menu, href: "#", labelKey: "more" },
 ];
 
 const MORE_ITEMS = [
@@ -55,7 +55,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
       {/* Bottom nav bar */}
       <nav
         className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-card border-t h-14 pb-safe flex items-center justify-around"
-        aria-label="Navigation mobile"
+        aria-label={t("nav_mobile")}
       >
         {BOTTOM_ITEMS.map((item) => {
           const Icon = item.icon;
@@ -100,7 +100,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                     <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-red-500" />
                   )}
                 </div>
-                <span className={cn("text-[0.65rem]", moreActive ? "font-semibold" : "font-medium")}>{item.label}</span>
+                <span className={cn("text-[0.65rem]", moreActive ? "font-semibold" : "font-medium")}>{item.labelKey ? t(item.labelKey as "dashboard") : ""}</span>
               </button>
             );
           }
@@ -120,7 +120,7 @@ export function PortalBottomNav({ badges }: { badges?: PortalBadges }) {
                 <span className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-8 rounded-full bg-[#0F2D52]" />
               )}
               <Icon className={cn("h-5 w-5", active && "mt-0.5")} />
-              <span className={cn("text-[0.65rem]", active ? "font-semibold" : "font-medium")}>{item.label}</span>
+              <span className={cn("text-[0.65rem]", active ? "font-semibold" : "font-medium")}>{item.labelKey ? t(item.labelKey as "dashboard") : ""}</span>
             </Link>
           );
         })}

@@ -7,6 +7,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { generateT4SummaryPdf, generateReleve1Pdf } from "@/lib/services/pdf-hr";
+import { localeToDocLang } from "@/lib/services/pdf";
 import { uploadBuffer } from "@/lib/storage/object-storage";
 import { unauthorized, forbidden } from "@/lib/refusals";
 
@@ -61,7 +62,7 @@ export async function issueTaxDocumentAction(input: z.infer<typeof issueDocSchem
       recipientId: parsed.data.adminId,
       type: "info",
       title: "Nouveau document fiscal",
-      body: `${parsed.data.title} disponible dans Mon espace > Documents`,
+      body: t("hr_tax_docs_p0_disponible_dans_mon_espace_documents", { p0: parsed.data.title }),
       link: "/admin/mon-espace/documents",
       icon: "file-text",
     },
@@ -98,7 +99,7 @@ export async function generateAnnualTaxDocAction(
 
     const admin = await prisma.admin.findUnique({
       where: { id: adminId },
-      select: { fullName: true, email: true },
+      select: { fullName: true, email: true, locale: true },
     });
     if (!admin) return { success: false, error: t("employe_introuvable") };
 
@@ -112,7 +113,7 @@ export async function generateAnnualTaxDocAction(
     });
 
     if (stubs.length === 0) {
-      return { success: false, error: `Aucun bulletin publié en ${year} pour cet employé` };
+      return { success: false, error: t("hr_tax_docs_aucun_bulletin_publie_en_p0_pour_cet_employe", { p0: year }) };
     }
 
     const totals = stubs.reduce(
@@ -131,8 +132,9 @@ export async function generateAnnualTaxDocAction(
     );
 
     const buf = type === "t4"
-      ? await generateT4SummaryPdf({ admin, year, totals, stubCount: stubs.length })
-      : await generateReleve1Pdf({ admin, year, totals, stubCount: stubs.length });
+      // Le document suit la langue de la fiche de l'employe, pas celle des RH.
+      ? await generateT4SummaryPdf({ admin, year, totals, stubCount: stubs.length, lang: localeToDocLang(admin.locale) })
+      : await generateReleve1Pdf({ admin, year, totals, stubCount: stubs.length, lang: localeToDocLang(admin.locale) });
 
     const upload = await uploadBuffer({
       buffer: buf,
@@ -144,7 +146,7 @@ export async function generateAnnualTaxDocAction(
 
     const title = type === "t4"
       ? `T4 ${year} — Sommaire`
-      : `Relevé 1 ${year} — Sommaire`;
+      : t("hr_tax_docs_releve_1_p0_sommaire", { p0: year });
 
     const row = await prisma.taxDocument.create({
       data: {
@@ -154,7 +156,7 @@ export async function generateAnnualTaxDocAction(
         title,
         fileUrl,
         issuedBy,
-        notes: `Résumé non officiel généré automatiquement à partir de ${stubs.length} bulletin(s) publié(s).`,
+        notes: t("hr_tax_docs_resume_non_officiel_genere_automatiquement_a_partir_de", { p0: stubs.length }),
       },
       select: { id: true },
     });
@@ -166,7 +168,7 @@ export async function generateAnnualTaxDocAction(
         recipientId: adminId,
         type: "info",
         title: "Nouveau document fiscal",
-        body: `${title} disponible dans Mon espace > Documents`,
+        body: t("hr_tax_docs_p0_disponible_dans_mon_espace_documents", { p0: title }),
         link: "/admin/mon-espace/documents",
         icon: "file-text",
       },
@@ -267,7 +269,7 @@ export async function requestEmploymentLetterAction(input: z.infer<typeof reques
       data: {
         recipientType: "admin", recipientId: hr.id,
         type: "info", title: t("demande_de_lettre_d_emploi"),
-        body: `Nouvelle demande à traiter (${parsed.data.purpose})`,
+        body: t("hr_tax_docs_nouvelle_demande_a_traiter_p0", { p0: parsed.data.purpose }),
         link: "/admin/employes/lettres",
         icon: "mail",
       },

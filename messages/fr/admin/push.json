@@ -26,6 +26,7 @@
   "ordinateur": "Ordinateur",
   "permission_refusee": "Permission refusée",
   "push_view_definissez": "Définissez",
+  "push_view_derniere_notif_p0": "· Dernière notif {p0}",
   "pushmanager": "PushManager",
   "recevoir_alertes_temps_reel_appareils": "Recevoir des alertes en temps réel sur vos appareils",
   "safari": "Safari",

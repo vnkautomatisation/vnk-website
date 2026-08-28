@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Calendar, Video, Phone, MapPin, ChevronRight } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -24,6 +25,7 @@ export function UpcomingAppointments({
   appointments: UpcomingAppointment[];
 }) {
   const t = useTranslations("admin.ui");
+  const dateTag = useDateLocale();
   return (
     <Card>
       <CardContent className="p-5">
@@ -50,7 +52,7 @@ export function UpcomingAppointments({
               const meeting = MEETING_ICONS[apt.meetingType] ?? MEETING_ICONS.video;
               const MeetIcon = meeting.icon;
               const dateStr = new Date(apt.appointmentDate).toLocaleDateString(
-                "fr-CA",
+                dateTag,
                 { weekday: "short", day: "numeric", month: "short" }
               );
               return (

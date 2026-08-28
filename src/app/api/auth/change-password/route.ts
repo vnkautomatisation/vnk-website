@@ -1,6 +1,6 @@
 // API · Changement de mot de passe (client ou admin) — avec HIBP check
 import { NextRequest, NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
@@ -10,6 +10,7 @@ import { logAudit } from "@/lib/audit";
 import { checkPasswordBreached } from "@/lib/security/hibp";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 const schema = z.object({
   currentPassword: z.string().min(1, "mot_de_passe_actuel_requis"),
@@ -23,6 +24,7 @@ const schema = z.object({
 
 export async function POST(request: NextRequest) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   try {
     const session = await auth();
     if (!session?.user) {
@@ -82,7 +84,7 @@ export async function POST(request: NextRequest) {
           {
             error: "breach_detected",
             breachCount: breach.count,
-            message: `Ce mot de passe a ete vu dans ${breach.count.toLocaleString("fr-CA")} fuites de donnees publiques. Choisissez-en un autre ou confirmez l'utilisation a vos risques.`,
+            message: t("route_ce_mot_de_passe_a_ete_vu_dans", { p0: breach.count.toLocaleString(dateTag) }),
           },
           { status: 422 }
         );

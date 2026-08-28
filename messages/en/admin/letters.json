@@ -26,6 +26,7 @@
   "emise": "Issued",
   "emises": "Issued:",
   "emises_2": "Issued",
+  "emises_au_total": "{count, plural, one {# issued in total} other {# issued in total}}",
   "emises_mois": "Issued this month",
   "fichier_pdf": "PDF file",
   "filtre_lettres": "Letter filter",

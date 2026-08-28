@@ -9,6 +9,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function TaxDeclarationsPage() {
+  const t = await getTranslations("admin.tax_decl");
   const now = new Date();
   const year = now.getFullYear();
   const yearStart = new Date(year, 0, 1);
@@ -43,7 +44,8 @@ export default async function TaxDeclarationsPage() {
       periodEndInclusive.setDate(periodEndInclusive.getDate() - 1);
       return {
         quarter: q + 1,
-        label: `T${q + 1} ${year}`,
+        // "T" en francais (trimestre), "Q" en anglais (quarter).
+        label: `${t("quarter_prefix")}${q + 1} ${year}`,
         from: qStart.toISOString().slice(0, 10),
         to: periodEndInclusive.toISOString().slice(0, 10),
         invoiceCount: invAgg._count._all,

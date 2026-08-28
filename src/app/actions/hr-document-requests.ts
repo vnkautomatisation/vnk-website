@@ -5,12 +5,13 @@
 // le fichier (la demande passe en "uploaded"), puis le RH valide ou rejette.
 // Si validé : crée un EmployeePersonalDocument officiel rattaché à la demande.
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> =
   | ({ success: true } & (T extends void ? object : { data: T }))
@@ -121,6 +122,7 @@ export async function createUploadRequestAction(
   input: z.infer<typeof createSchema>,
 ): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const parsed = createSchema.safeParse(input);
   if (!parsed.success) return { success: false, error: t(parsed.error.errors[0].message) };
 
@@ -176,7 +178,7 @@ export async function createUploadRequestAction(
         body:
           parsed.data.title
           + (parsed.data.description ? ` — ${parsed.data.description}` : "")
-          + (dueDate ? ` (avant le ${dueDate.toLocaleDateString("fr-CA")})` : ""),
+          + (dueDate ? t("hr_document_requests_avant_le_p0", { p0: dueDate.toLocaleDateString(dateTag) }) : ""),
         link: "/admin/mon-espace/documents",
         icon: "file-text",
       },
@@ -226,7 +228,7 @@ export async function cancelUploadRequestAction(id: number): Promise<Result> {
         recipientId: req.targetAdminId,
         type: "info",
         title: t("demande_annulee"),
-        body: `La demande « ${req.title} » a été annulée.`,
+        body: t("hr_document_requests_la_demande_p0_a_ete_annulee", { p0: req.title }),
         link: "/admin/mon-espace/documents",
         icon: "x-circle",
       },
@@ -378,7 +380,7 @@ export async function approveUploadRequestAction(
         recipientId: req.targetAdminId,
         type: "success",
         title: t("document_approuve"),
-        body: `Le document « ${req.title} » a été validé par les RH.`,
+        body: t("hr_document_requests_le_document_p0_a_ete_valide_par_les", { p0: req.title }),
         link: "/admin/mon-espace/documents",
         icon: "check-circle",
       },
@@ -458,7 +460,7 @@ export async function rejectUploadRequestAction(
         recipientId: req.targetAdminId,
         type: "error",
         title: t("document_refuse"),
-        body: `« ${req.title} » : ${parsed.data.notes}. Veuillez en téléverser un nouveau.`,
+        body: t("hr_document_requests_p0_p1_veuillez_en_televerser_un_nouveau", { p0: req.title, p1: parsed.data.notes }),
         link: "/admin/mon-espace/documents",
         icon: "x-circle",
       },
@@ -540,7 +542,7 @@ export async function submitUploadResponseAction(
             recipientId: reqWithRequester.requestedById,
             type: "info",
             title: t("document_televerse"),
-            body: `${empName} a téléversé « ${reqWithRequester.title} ». À valider.`,
+            body: t("hr_document_requests_p0_a_televerse_p1_a_valider", { p0: empName, p1: reqWithRequester.title }),
             link: "/admin/employes/documents",
             icon: "upload",
           },

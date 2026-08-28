@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   FileText, Download, Calendar, TrendingUp, RotateCcw, AlertTriangle, Eye, Search,
@@ -10,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { getStatusDisplay, TYPE_META, TYPE_LABEL_KEYS } from "@/lib/payment-status";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
@@ -153,6 +155,7 @@ export function SettlementsView({
   typeFilter: string;
 }) {
   const t = useTranslations("admin.settlements");
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
   const [from, setFrom] = useState(dateRange.from);
@@ -164,6 +167,7 @@ export function SettlementsView({
 
   const [sortKey, setSortKey] = useState<SortKey>(filterBy);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const formatCurrency = useCurrency();
 
 
   const PAGESIZE_KEY = "vnk-pagesize-settlements";
@@ -648,7 +652,7 @@ export function SettlementsView({
           </tbody>
         </table>
         <div className="flex items-center justify-between px-3 py-2 border-t bg-muted/20 text-xs flex-wrap gap-2">
-          <span className="text-muted-foreground">{sortedRows.length} transaction{sortedRows.length > 1 ? "s" : ""} affichées</span>
+          <span className="text-muted-foreground">{tc("transactions_shown", { count: sortedRows.length })}</span>
           <div className="flex items-center gap-2">
             <label className="inline-flex items-center gap-1.5 text-muted-foreground">
               {t("lignes")}

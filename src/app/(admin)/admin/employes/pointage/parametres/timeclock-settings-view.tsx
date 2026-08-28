@@ -2,7 +2,8 @@
 // Settings rows (label + hint left, control right), grouped in sections,
 // with a save bar that only shows when something changed.
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -90,6 +91,8 @@ export function TimeclockSettingsView({
   pinList: PinList;
 }) {
   const t = useTranslations("admin.timeclock_settings");
+  const locale = useLocale();
+  const dateTag = useDateLocale();
   const tc = useTranslations("common");
   const router = useRouter();
   const pathname = usePathname();
@@ -129,7 +132,7 @@ export function TimeclockSettingsView({
   const issuePin = async (emp: EmployeePin) => {
     if (emp.hasPin) {
       const ok = await confirmDialog({
-        title: `Remplacer le NIP de ${emp.name}`,
+        title: t("timeclock_settings_view_remplacer_le_nip_de_p0", { p0: emp.name }),
         description: t("nip_actuel_cessera_fonctionner"),
         confirmLabel: t("remplacer"),
       });
@@ -146,7 +149,7 @@ export function TimeclockSettingsView({
 
   const removePin = async (emp: EmployeePin) => {
     const ok = await confirmDialog({
-      title: `Retirer le NIP de ${emp.name}`,
+      title: t("timeclock_settings_view_retirer_le_nip_de_p0", { p0: emp.name }),
       description: t("personne_ne_pourra_plus_poinconner"),
       confirmLabel: t("retirer"),
       variant: "destructive",
@@ -268,7 +271,9 @@ export function TimeclockSettingsView({
                 <SelectTrigger className="h-9 w-[150px] text-sm"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {[35, 37.5, 38, 40, 44, 48].map((h) => (
-                    <SelectItem key={h} value={String(Math.round(h * 60))}>{String(h).replace(".", ",")} h / semaine</SelectItem>
+                    <SelectItem key={h} value={String(Math.round(h * 60))}>
+                      {t("n_h_par_semaine", { hours: new Intl.NumberFormat(locale).format(h) })}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -461,7 +466,7 @@ export function TimeclockSettingsView({
                       {emp.requestedAt && (
                         <Badge variant="outline" className="text-[10px] text-amber-800 border-amber-300 bg-amber-50">
                           <AlertTriangle className="h-2.5 w-2.5 mr-1" />
-                          Demande le {new Date(emp.requestedAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}
+                          Demande le {new Date(emp.requestedAt).toLocaleDateString(dateTag, { day: "numeric", month: "long" })}
                         </Badge>
                       )}
                     </div>
@@ -470,7 +475,13 @@ export function TimeclockSettingsView({
                         ? t("employe_ne_peut_pas_afficher")
                         : emp.hasPin
                           ? emp.setAt
-                            ? `NIP remis le ${new Date(emp.setAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}`
+                            ? t("nip_remis_le", {
+                                date: new Date(emp.setAt).toLocaleDateString(dateTag, {
+                                  day: "numeric",
+                                  month: "long",
+                                  year: "numeric",
+                                }),
+                              })
                             : t("nip_actif")
                           : emp.email}
                     </p>

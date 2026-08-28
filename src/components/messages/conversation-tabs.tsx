@@ -2,6 +2,7 @@
 // Onglets Messages / Fichiers / Liens dans une conversation
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { MessageSquare, Paperclip, Link as LinkIcon, FileText, Image as ImageIcon, Music } from "lucide-react";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
@@ -100,6 +101,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
   const t = useTranslations("admin.messages");
   const [pdfPreview, setPdfPreview] = useState<AttachmentLite | null>(null);
   const [imgPreview, setImgPreview] = useState<AttachmentLite | null>(null);
+  const dateTag = useDateLocale();
 
   const allAtts = useMemo(() => {
     const out: { att: AttachmentLite; msgId: number; date: string; sender: string }[] = [];
@@ -140,7 +142,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
                 type="button"
                 onClick={() => setImgPreview(att)}
                 className="aspect-square rounded-lg overflow-hidden border hover:opacity-90 transition-opacity"
-                title={`${att.name} · ${new Date(date).toLocaleDateString("fr-CA")}`}
+                title={`${att.name} · ${new Date(date).toLocaleDateString(dateTag)}`}
               >
                 <img src={att.dataUrl} alt={att.name} className="h-full w-full object-cover" />
               </button>
@@ -173,7 +175,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-medium truncate">{att.name}</p>
                       <p className="text-[10px] text-muted-foreground">
-                        {fmtSize(att.size)} · {sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(date).toLocaleDateString("fr-CA")}
+                        {fmtSize(att.size)} · {sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(date).toLocaleDateString(dateTag)}
                       </p>
                     </div>
                     {att.kind !== "pdf" && (
@@ -226,6 +228,7 @@ export function ConversationFilesTab({ messages }: { messages: MsgLite[] }) {
 
 export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: MsgLite[]; onJumpToMessage: (id: number) => void }) {
   const t = useTranslations("admin.messages");
+  const dateTag = useDateLocale();
   const links = useMemo(() => extractLinks(messages), [messages]);
 
   if (links.length === 0) {
@@ -260,7 +263,7 @@ export function ConversationLinksTab({ messages, onJumpToMessage }: { messages: 
                     {l.url}
                   </a>
                   <p className="text-[10px] text-muted-foreground">
-                    {host} · {l.sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(l.date).toLocaleDateString("fr-CA")}
+                    {host} · {l.sender === "vnk" ? t("vous_seul") : t("client")} · {new Date(l.date).toLocaleDateString(dateTag)}
                   </p>
                 </div>
                 <button

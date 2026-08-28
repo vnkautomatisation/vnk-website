@@ -8,6 +8,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { CalendarRange, Loader2, Users } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,6 +64,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
   const [holidays, setHolidays] = useState<HolidayInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPending, setShowPending] = useState(true);
+  const dateTag = useDateLocale();
 
 
   const range = useMemo(() => {
@@ -164,7 +166,7 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
             <p className="text-sm font-semibold text-[#0F2D52]">{t("absences_venir_4_semaines")}</p>
             <p className="text-[11px] text-muted-foreground">
               {typeof teamScopeCount === "number"
-                ? `${teamScopeCount} collègue${teamScopeCount > 1 ? "s" : ""} dans votre périmètre`
+                ? t("team_leaves_heatmap_p0_collegue_p1_dans_votre_perimetre", { p0: teamScopeCount, p1: teamScopeCount > 1 ? "s" : "" })
                 : t("collegues_directs")}
             </p>
           </div>
@@ -252,12 +254,12 @@ export function TeamLeavesHeatmap({ teamScopeCount }: { teamScopeCount?: number 
                 let headerBg = "bg-muted/30";
                 if (holiday) headerBg = "bg-purple-100 text-purple-900";
                 else if (isWeekend) headerBg = "bg-slate-100 text-slate-500";
-                const tooltipLabel = `${date.toLocaleDateString("fr-CA", {
+                const tooltipLabel = t("team_leaves_heatmap_p0_p1", { p0: date.toLocaleDateString(dateTag, {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
                   year: "numeric",
-                })}${holiday ? ` — Férié : ${holiday.name}` : ""}`;
+                }), p1: holiday ? ` — Férié : ${holiday.name}` : "" });
                 return (
                   <ActionTooltip key={i} label={tooltipLabel}>
                     <div
@@ -308,6 +310,7 @@ function EmployeeHeatmapRow({
   absByDate: Map<string, CalendarAbsence[]>;
 }) {
   const t = useTranslations("admin.ui");
+  const dateTag = useDateLocale();
   return (
     <>
       <ActionTooltip label={emp.fullName} side="right">
@@ -358,18 +361,18 @@ function EmployeeHeatmapRow({
         const tooltip = abs
           ? `${emp.fullName} — ${label}${abs.halfDay ? ` (½ ${abs.halfDay})` : ""}${
               isPending ? t("attente") : ""
-            } · ${date.toLocaleDateString("fr-CA", {
+            } · ${date.toLocaleDateString(dateTag, {
               weekday: "long",
               day: "numeric",
               month: "long",
             })}`
           : holiday
-            ? `${date.toLocaleDateString("fr-CA", {
+            ? t("team_leaves_heatmap_p0_ferie_p1", { p0: date.toLocaleDateString(dateTag, {
                 weekday: "long",
                 day: "numeric",
                 month: "long",
-              })} — Férié : ${holiday.name}`
-            : date.toLocaleDateString("fr-CA", {
+              }), p1: holiday.name })
+            : date.toLocaleDateString(dateTag, {
                 weekday: "long",
                 day: "numeric",
                 month: "long",

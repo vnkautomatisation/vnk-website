@@ -10,6 +10,7 @@
 // Clic "Téléverser" → onUpload(requestId) ouvre UploadDocumentResponseDialog.
 // ─────────────────────────────────────────────────────────
 import { useMemo } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import {
   FileText, AlertTriangle, Clock, Upload,
@@ -57,11 +58,11 @@ function daysUntil(iso: string | null): number | null {
   return Math.floor((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function formatDate(iso: string | null): string | null {
+function formatDate(iso: string | null, tag: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short" });
 }
 
 export function MyUploadRequestsBanner({
@@ -75,6 +76,7 @@ export function MyUploadRequestsBanner({
 }) {
   const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const sorted = useMemo(() => {
     return [...requests].sort((a, b) => {
 
@@ -137,7 +139,7 @@ export function MyUploadRequestsBanner({
         <p className={cn("text-sm font-bold", palette.title)}>
           {requests.length === 1
             ? t("1_document_televerser")
-            : `${requests.length} documents à téléverser`}
+            : t("my_upload_requests_p0_documents_a_televerser", { p0: requests.length })}
           {isUrgent && urgentCount > 0 && (
             <span className="ml-2 text-xs font-medium">
               · {urgentCount} urgent{urgentCount > 1 ? "s" : ""}
@@ -154,7 +156,7 @@ export function MyUploadRequestsBanner({
         <div className="mt-2 flex flex-col gap-1.5">
           {sorted.slice(0, 4).map((r) => {
             const days = daysUntil(r.dueDate);
-            const due = formatDate(r.dueDate);
+            const due = formatDate(r.dueDate, dateTag);
             const itemUrgent = days !== null && days <= URGENT_THRESHOLD_DAYS;
             const CatIcon = getCategoryIcon(r.category);
             const catKey = getCategoryKey(r.category);

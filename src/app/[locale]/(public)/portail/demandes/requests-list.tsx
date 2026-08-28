@@ -23,13 +23,13 @@ type Request = {
 };
 
 // ── Urgency badge config ─────────────────────────────────
-const URGENCY_CONFIG: Record<string, { label: string; variant: "secondary" | "warning" | "destructive" }> = {
-  low: { label: "Faible", variant: "secondary" },
-  normal: { label: "Normale", variant: "secondary" },
-  medium: { label: "Moyenne", variant: "warning" },
-  urgent: { label: "Urgente", variant: "destructive" },
-  high: { label: "Elevee", variant: "destructive" },
-  critical: { label: "Critique", variant: "destructive" },
+const URGENCY_CONFIG: Record<string, { labelKey: string; variant: "secondary" | "warning" | "destructive" }> = {
+  low: { labelKey: "urgency_low", variant: "secondary" },
+  normal: { labelKey: "urgency_normal", variant: "secondary" },
+  medium: { labelKey: "urgency_medium", variant: "warning" },
+  urgent: { labelKey: "urgency_urgent", variant: "destructive" },
+  high: { labelKey: "urgency_high", variant: "destructive" },
+  critical: { labelKey: "urgency_critical", variant: "destructive" },
 };
 
 // ── Service type labels ──────────────────────────────────
@@ -90,7 +90,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
             variant={config.variant}
             className={r.urgencyLevel === "critical" ? "font-bold" : ""}
           >
-            {config.label}
+            {t(config.labelKey)}
           </Badge>
         );
       },
@@ -123,7 +123,7 @@ export function PortalRequestsList({ requests }: { requests: Request[] }) {
                   variant={urgencyConfig.variant}
                   className={req.urgencyLevel === "critical" ? "font-bold" : ""}
                 >
-                  {urgencyConfig.label}
+                  {t(urgencyConfig.labelKey)}
                 </Badge>
               )}
               <StatusBadge status={req.status} />

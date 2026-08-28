@@ -60,7 +60,9 @@ export async function POST(
   await createWorkflowEvent({
     clientId: appointment.clientId,
     eventType: "appointment_cancelled",
-    eventLabel: `Rendez-vous annulé par ${appointment.client?.fullName ?? "client"} — ${appointment.subject || appointment.startTime}`,
+    eventLabel: t("route_rendez_vous_annule_par_p0_p1", { p0: appointment.client?.fullName ?? "client", p1: appointment.subject || appointment.startTime }),
+    labelKey: "api_errors.route_rendez_vous_annule_par_p0_p1",
+    labelParams: { p0: appointment.client?.fullName ?? "client", p1: appointment.subject || appointment.startTime },
     triggeredBy: "client",
     metadata: { appointmentId },
   });

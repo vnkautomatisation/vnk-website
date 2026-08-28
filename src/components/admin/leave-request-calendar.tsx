@@ -11,7 +11,7 @@
 //
 // Theme VNK navy partout, pas de dependance externe.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useMonthNames, useWeekdayNames, useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import {
   CalendarDays, ChevronLeft, ChevronRight, Sun, Bandage, Baby, Home,
@@ -133,6 +133,7 @@ export function LeaveRequestCalendar({
   const DAYS_FR_SHORT = useWeekdayNames("narrow");
   const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
 
   const initialMonth = useMemo(() => {
@@ -583,8 +584,8 @@ export function LeaveRequestCalendar({
 
 
   const headerTitle = title ?? (
-    adminMode && mode === "create" ? `Créer un congé${employeeName ? ` — ${employeeName}` : ""}`
-    : adminMode && mode === "edit" ? `Modifier le congé${employeeName ? ` — ${employeeName}` : ""}`
+    adminMode && mode === "create" ? t("leave_request_calendar_creer_un_conge_p0", { p0: employeeName ? ` — ${employeeName}` : "" })
+    : adminMode && mode === "edit" ? t("leave_request_calendar_modifier_le_conge_p0", { p0: employeeName ? ` — ${employeeName}` : "" })
     : mode === "edit" ? t("modifier_demande")
     : t("demander_conge")
   );
@@ -790,11 +791,11 @@ export function LeaveRequestCalendar({
               ) : (
                 <>
                   <p className="font-medium">
-                    Du <strong className="text-[#0F2D52]">{parseISO(start).toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" })}</strong>
+                    Du <strong className="text-[#0F2D52]">{parseISO(start).toLocaleDateString(dateTag, { weekday: "short", day: "2-digit", month: "short" })}</strong>
                     {end && start !== end && (
                       <>
                         {" au "}
-                        <strong className="text-[#0F2D52]">{parseISO(end).toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" })}</strong>
+                        <strong className="text-[#0F2D52]">{parseISO(end).toLocaleDateString(dateTag, { weekday: "short", day: "2-digit", month: "short" })}</strong>
                       </>
                     )}
                   </p>
@@ -892,11 +893,11 @@ export function LeaveRequestCalendar({
                       className="rounded border border-emerald-300 bg-white hover:bg-emerald-100 px-2 py-1.5 text-left text-emerald-900 transition flex items-center justify-between gap-2"
                     >
                       <span className="font-medium tabular-nums">
-                        {parseISO(s.start).toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" })}
+                        {parseISO(s.start).toLocaleDateString(dateTag, { weekday: "short", day: "2-digit", month: "short" })}
                         {s.start !== s.end && (
                           <>
                             {" → "}
-                            {parseISO(s.end).toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short" })}
+                            {parseISO(s.end).toLocaleDateString(dateTag, { weekday: "short", day: "2-digit", month: "short" })}
                           </>
                         )}
                       </span>

@@ -84,6 +84,7 @@ export function VacationWindowBanner({ windows }: { windows: OpenWindow[] }) {
 // ─── Card adaptative selon state ─────────────────────────────────
 function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: OpenWindow; onOpenSubmit: () => void; onOpenPeek: () => void }) {
   const t = useTranslations("admin.leave_windows");
+  const dateTag = useDateLocale();
   const status = w.status;
   const submitted = w.myPreferences.length > 0;
 
@@ -97,7 +98,7 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
       if (diff <= 0) { setRemaining(t("periode_fermee")); return; }
       const days = Math.floor(diff / (1000 * 60 * 60 * 24));
       const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-      if (days > 0) setRemaining(`${days} jour${days > 1 ? "s" : ""} restant${days > 1 ? "s" : ""}`);
+      if (days > 0) setRemaining(t("vacation_window_banner_p0_jour_p1_restant_p2", { p0: days, p1: days > 1 ? "s" : "", p2: days > 1 ? "s" : "" }));
       else setRemaining(`${hours}h restantes`);
     };
     update();
@@ -131,12 +132,12 @@ function WindowBannerCard({ window: w, onOpenSubmit, onOpenPeek }: { window: Ope
             </div>
             <p className="text-[11px] sm:text-xs text-muted-foreground mt-0.5">
               <span className="hidden sm:inline">{t("periode_couverte")} </span>
-              {new Date(w.coversFrom).toLocaleDateString("fr-CA")} → {new Date(w.coversTo).toLocaleDateString("fr-CA")}
+              {new Date(w.coversFrom).toLocaleDateString(dateTag)} → {new Date(w.coversTo).toLocaleDateString(dateTag)}
               {" · "}max {w.maxDaysPerEmployee} j
             </p>
             {status === "open" && (
               <div className="text-[11px] text-muted-foreground mt-1 flex items-center gap-x-2 gap-y-1 flex-wrap">
-                <span>{t("avant")} <strong>{new Date(w.closingDate).toLocaleDateString("fr-CA")}</strong></span>
+                <span>{t("avant")} <strong>{new Date(w.closingDate).toLocaleDateString(dateTag)}</strong></span>
                 {remaining && (
                   <span className="inline-flex items-center gap-1 text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
                     <Clock className="h-3 w-3" />
@@ -218,6 +219,7 @@ function PreferenceAllocatedRow({
   const router = useRouter();
   const [appealOpen, setAppealOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const dateTag = useDateLocale();
 
   const canAppeal = pref.id != null
     && (pref.status === "denied" || (pref.status === "granted" && pref.rank > 1))
@@ -240,7 +242,7 @@ function PreferenceAllocatedRow({
       <div className="text-[11px] flex items-center gap-2 flex-wrap">
         <span className="font-bold text-[#0F2D52]">#{pref.rank}</span>
         <span className="text-muted-foreground tabular-nums">
-          {new Date(pref.startDate).toLocaleDateString("fr-CA")} → {new Date(pref.endDate).toLocaleDateString("fr-CA")} ({pref.daysCount}j)
+          {new Date(pref.startDate).toLocaleDateString(dateTag)} → {new Date(pref.endDate).toLocaleDateString(dateTag)} ({pref.daysCount}j)
         </span>
         {pref.status === "granted" ? (
           <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-800 border border-emerald-200">
@@ -353,6 +355,7 @@ const ABS_TYPE_KEYS: Record<string, string> = {
 function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onClose: () => void }) {
   const t = useTranslations("admin.leave_windows");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   type AnonHeat = { date: string; count: number };
   const [prefByDate, setPrefByDate] = useState<Map<string, number>>(new Map());
   const [submittedCount, setSubmittedCount] = useState<number | null>(null);
@@ -460,9 +463,9 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <Users className="h-4 w-4" />{t("vacation_window_banner_mes_collegues_sur_cette_fenetre")}</DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              {w.name} · {coversFrom.toLocaleDateString("fr-CA")} → {coversTo.toLocaleDateString("fr-CA")}
+              {w.name} · {coversFrom.toLocaleDateString(dateTag)} → {coversTo.toLocaleDateString(dateTag)}
               {submittedCount !== null && (
-                <span> · {submittedCount} collègue{submittedCount > 1 ? "s" : ""} ayant soumis</span>
+                <span> · {t("collegues_ayant_soumis", { count: submittedCount })}</span>
               )}
             </DialogDescription>
           </DialogHeader>
@@ -516,7 +519,7 @@ function PeekColleaguesDialog({ window: w, onClose }: { window: OpenWindow; onCl
               <ChevronLeft className="h-3.5 w-3.5" />
             </Button>
             <p className="text-sm font-semibold text-[#0F2D52] capitalize">
-              {viewMonth.toLocaleDateString("fr-CA", { month: "long", year: "numeric" })}
+              {viewMonth.toLocaleDateString(dateTag, { month: "long", year: "numeric" })}
             </p>
             <Button
               variant="outline"
@@ -626,6 +629,7 @@ function ColleaguesMonthTable({
   holidays: HolidayInfo[];
 }) {
   const t = useTranslations("admin.leave_windows");
+  const dateTag = useDateLocale();
   const today = new Date(); today.setHours(0, 0, 0, 0);
   const todayISO = today.toISOString().slice(0, 10);
 
@@ -707,7 +711,7 @@ function ColleaguesMonthTable({
             if (!inWindow) headerBg = "bg-slate-100 text-muted-foreground/50";
             else if (holiday) headerBg = "bg-purple-100 text-purple-900";
             else if (isWeekend) headerBg = "bg-slate-100 text-slate-500";
-            const tooltipLabel = `${date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}${holiday ? ` — Férié : ${holiday.name}` : ""}${!inWindow ? " (hors période)" : ""}`;
+            const tooltipLabel = t("vacation_window_banner_p0_p1_p2", { p0: date.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long", year: "numeric" }), p1: holiday ? ` — Férié : ${holiday.name}` : "", p2: !inWindow ? " (hors période)" : "" });
             return (
               <ActionTooltip key={i} label={tooltipLabel}>
                 <div className={`border-r border-b px-0.5 py-1 text-center text-[9px] font-semibold ${headerBg} ${isToday ? "ring-1 ring-[#0F2D52] ring-inset" : ""}`}>
@@ -758,7 +762,7 @@ function ColleaguesMonthTable({
                 else if (count > 0) {
                   bg = ratio >= 0.66 ? "bg-amber-400" : ratio >= 0.33 ? "bg-amber-200" : "bg-amber-100";
                 }
-                const tooltip = `${date.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" })} — ${count} préférence${count > 1 ? "s" : ""} soumise${count > 1 ? "s" : ""} (anonyme)`;
+                const tooltip = t("vacation_window_banner_p0_p1_preference_p2_soumise_p3_anonyme", { p0: date.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long" }), p1: count, p2: count > 1 ? "s" : "", p3: count > 1 ? "s" : "" });
                 return (
                   <ActionTooltip key={i} label={tooltip}>
                     <div className={`border-r border-b border-t-2 border-t-amber-300 ${bg} flex items-center justify-center text-[9px] font-bold text-amber-900 min-h-[28px]`}>
@@ -857,6 +861,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
   const t = useTranslations("admin.leave_windows");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   type Choice = { rank: number; startDate: string; endDate: string };
   const initialChoices: Choice[] = w.myPreferences.length > 0
     ? w.myPreferences
@@ -917,8 +922,8 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
         </div>
         <div className="p-5 space-y-4 flex-1 overflow-y-auto">
           <div className="text-xs text-muted-foreground bg-muted/30 rounded-md p-2">
-            Periode autorisee : <strong>{new Date(w.coversFrom).toLocaleDateString("fr-CA")}</strong>
-            {" → "}<strong>{new Date(w.coversTo).toLocaleDateString("fr-CA")}</strong>
+            Periode autorisee : <strong>{new Date(w.coversFrom).toLocaleDateString(dateTag)}</strong>
+            {" → "}<strong>{new Date(w.coversTo).toLocaleDateString(dateTag)}</strong>
             {" · "}max <strong>{w.maxDaysPerEmployee} jours</strong>{t("vacation_window_banner_par_choix")}</div>
 
 
@@ -945,7 +950,7 @@ function PreferencesDialog({ window: w, onClose }: { window: OpenWindow; onClose
                     type="button"
                     onClick={() => removeChoice(c.rank)}
                     className="text-[10px] text-muted-foreground hover:text-destructive flex items-center gap-1"
-                    aria-label={`Supprimer le choix ${c.rank}`}
+                    aria-label={t("vacation_window_banner_supprimer_le_choix_p0", { p0: c.rank })}
                   >
                     <Trash2 className="h-3 w-3" />Retirer
                   </button>

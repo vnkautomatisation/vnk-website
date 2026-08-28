@@ -17,6 +17,7 @@
 // ─────────────────────────────────────────────────────────
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import {
   Check,
   X,
@@ -307,7 +308,7 @@ export function DocumentConformityTable({
           value={`${stats.pct}%`}
           icon={ShieldCheck}
           accent={stats.pct >= 90 ? "success" : stats.pct >= 60 ? "warning" : "danger"}
-          hint={`${stats.signedCurrent} / ${stats.total} signatures à jour`}
+          hint={t("document_conformity_table_p0_p1_signatures_a_jour", { p0: stats.signedCurrent, p1: stats.total })}
         />
         <DocumentStatsCard
           label={t("jour")}
@@ -493,7 +494,7 @@ export function DocumentConformityTable({
                     <button
                       type="button"
                       onClick={() => toggleEmp(e.id)}
-                      aria-label={`Sélectionner ${e.fullName ?? e.email}`}
+                      aria-label={t("document_conformity_table_selectionner_p0", { p0: e.fullName ?? e.email })}
                       className="h-5 w-5 inline-flex items-center justify-center rounded hover:bg-muted"
                     >
                       {selectedIds.has(e.id) ? (
@@ -592,12 +593,13 @@ function ConformityCell({
   isHandbook?: boolean;
 }) {
   const t = useTranslations("admin.hr_documents");
+  const dateTag = useDateLocale();
   if (status === "signed_current") {
     const dateLabel = signedAt
-      ? new Date(signedAt).toLocaleDateString("fr-CA")
+      ? new Date(signedAt).toLocaleDateString(dateTag)
       : "";
     return (
-      <ActionTooltip label={`Signé le ${dateLabel} (v${version})`}>
+      <ActionTooltip label={t("document_conformity_table_signe_le_p0_v_p1", { p0: dateLabel, p1: version ?? "" })}>
         <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200">
           <Check className="h-3.5 w-3.5" />
         </span>
@@ -608,7 +610,7 @@ function ConformityCell({
     return (
       <div className="inline-flex items-center gap-1">
         <ActionTooltip
-          label={`Version périmée (signé v${version}, à jour v${templateVersion})`}
+          label={t("document_conformity_table_version_perimee_signe_v_p0_a_jour_v", { p0: version ?? "", p1: templateVersion })}
         >
           <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-amber-100 text-amber-700 ring-1 ring-amber-200">
             <AlertTriangle className="h-3.5 w-3.5" />

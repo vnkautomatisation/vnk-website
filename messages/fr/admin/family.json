@@ -13,9 +13,11 @@
   "family_view_conjoint_e_et_enfants_couverts_par_votre": "Conjoint(e) et enfants couverts par votre assurance collective ou déclarés au fisc.",
   "family_view_famille_dependants": "Famille / Dépendants",
   "modifier": "Modifier",
+  "modifier_dependant": "Modifier le dépendant",
   "nom_complet": "Nom complet *",
   "nom_requis": "Nom requis",
   "nouveau": "Nouveau",
+  "nouveau_dependant": "Nouveau dépendant",
   "supprime": "Supprimé",
   "type": "Type"
 }

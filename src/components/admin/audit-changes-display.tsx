@@ -2,6 +2,7 @@
 // An AuditLog rendered for a human: { decision: "approved" } -> "Decision: Approved".
 // Users never see raw JSON.
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Badge } from "@/components/ui/badge";
 
 // ─── Mappings FR ─────────────────────────────────────────────────
@@ -32,13 +33,13 @@ function isISODate(v: unknown): v is string {
   return typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v);
 }
 
-function formatDate(v: string): string {
-  return new Date(v).toLocaleDateString("fr-CA");
+function formatDate(v: string, tag: string): string {
+  return new Date(v).toLocaleDateString(tag);
 }
 
 type T = ReturnType<typeof useTranslations>;
 
-function formatValue(key: string, value: unknown, t: T): string {
+function formatValue(key: string, value: unknown, t: T, tag: string): string {
   if (value === null || value === undefined) return "—";
   if (typeof value === "boolean") return t(value ? "yes" : "no");
   if (typeof value === "number") return value.toString();
@@ -49,14 +50,14 @@ function formatValue(key: string, value: unknown, t: T): string {
       const full = `${ns}.${value}`;
       return t.has(full) ? t(full) : value;
     }
-    if (isISODate(value)) return formatDate(value);
+    if (isISODate(value)) return formatDate(value, tag);
     return value;
   }
   // Objets : recursive humanisation
   if (typeof value === "object") {
     try {
       return Object.entries(value as Record<string, unknown>)
-        .map(([k, v]) => `${KNOWN_FIELDS.has(k) ? t(`field.${k}`) : k} : ${formatValue(k, v, t)}`)
+        .map(([k, v]) => `${KNOWN_FIELDS.has(k) ? t(`field.${k}`) : k} : ${formatValue(k, v, t, tag)}`)
         .join(" · ");
     } catch {
       return t("complex");
@@ -82,6 +83,7 @@ export function AuditChangesDisplay({
   changes: Record<string, unknown> | null | undefined;
 }) {
   const t = useTranslations("admin.audit");
+  const dateTag = useDateLocale();
   if (!changes || Object.keys(changes).length === 0) return null;
 
   // Boolean flags worth a subtitle of their own.
@@ -114,7 +116,7 @@ export function AuditChangesDisplay({
           .filter(([k]) => k !== "diff")
           .map(([k, v]) => {
             const label = KNOWN_FIELDS.has(k) ? t(`field.${k}`) : humanizeKey(k);
-            const formatted = formatValue(k, v, t);
+            const formatted = formatValue(k, v, t, dateTag);
             if (!formatted || formatted === "—") return null;
             return (
               <div key={k} className="contents">

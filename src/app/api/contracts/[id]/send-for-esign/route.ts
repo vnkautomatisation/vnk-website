@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     const result = await sendSignatureRequest({
       title: `Contrat ${contract.contractNumber}`,
-      subject: `Signature du contrat ${contract.contractNumber}`,
+      subject: t("route_signature_du_contrat_p0", { p0: contract.contractNumber }),
       message: t("veuillez_reviser_et_signer_ce_contrat_une"),
       signers: [{ email: contract.client.email, name: contract.client.fullName }],
       fileBase64,
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       adminId: session.user.adminId!,
       type: "preferences_updated",
       severity: "info",
-      message: `Contrat ${contract.contractNumber} envoyé pour signature via Dropbox Sign`,
+      message: t("route_contrat_p0_envoye_pour_signature_via_dropbox_sign", { p0: contract.contractNumber }),
     });
 
     return NextResponse.json({

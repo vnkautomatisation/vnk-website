@@ -1,6 +1,6 @@
 // Locale layout : wraps everything with NextIntlClientProvider
 import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
+import { getLocale, getMessages, setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { Toaster } from "@/components/ui/sonner";
@@ -16,13 +16,18 @@ export default async function LocaleLayout({
   children: React.ReactNode;
   params: Promise<{ locale: string }>;
 }) {
-  const { locale } = await params;
+  const { locale: segment } = await params;
 
-  if (!routing.locales.includes(locale as "fr" | "en")) {
+  if (!routing.locales.includes(segment as "fr" | "en")) {
     notFound();
   }
 
-  setRequestLocale(locale);
+  setRequestLocale(segment);
+  // Le segment n'est pas toujours la langue affichee : le portail est reecrit
+  // sur /fr quelle que soit la preference du client. Le fournisseur doit donc
+  // recevoir la langue resolue, sinon useLocale() renvoie "fr" et les montants
+  // et dates sortent en francais sous un texte anglais.
+  const locale = await getLocale();
   const messages = await getMessages();
 
   return (

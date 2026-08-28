@@ -180,7 +180,7 @@ export async function POST(req: Request) {
       clientId,
       eventType: session.user.role === "admin" ? "message_from_admin" : "message_from_client",
       eventLabel: attachmentsArray && attachmentsArray.length > 0
-        ? `Nouveau message + ${attachmentsArray.length} pièce(s) jointe(s)`
+        ? t("route_nouveau_message_p0_piece_s_jointe_s", { p0: attachmentsArray.length })
         : "Nouveau message",
       triggeredBy: session.user.role === "admin" ? "admin" : "client",
     });

@@ -10,6 +10,7 @@ import { z } from "zod";
 import { prisma } from "./prisma";
 import { logAudit } from "./audit";
 import { logLoginEvent } from "./request-context";
+import { headers } from "next/headers";
 
 // Session shape shared by both roles.
 
@@ -50,9 +51,38 @@ const credentialsSchema = z.object({
 
 
 
-const nextAuth = NextAuth({
+// Deux espaces de session distincts, pour rester connecte a l'admin ET au
+// portail client dans le meme navigateur. Un seul cookie pour les deux roles
+// faisait que la derniere connexion ecrasait l'autre.
+export const SESSION_COOKIES = {
+  admin: "authjs.session-token",
+  client: "vnk.portal-session-token",
+} as const;
+
+type AuthKind = keyof typeof SESSION_COOKIES;
+
+export const AUTH_BASE_PATHS = {
+  admin: "/api/auth",
+  client: "/api/auth/client",
+} as const;
+
+const buildAuth = (kind: AuthKind) => NextAuth({
   trustHost: true,
   secret: process.env.AUTH_SECRET,
+  basePath: AUTH_BASE_PATHS[kind],
+  cookies: {
+    // Seul le cookie de session change de nom : les deux instances partagent
+    // le meme secret, donc CSRF et callbackUrl peuvent rester communs.
+    sessionToken: {
+      name: SESSION_COOKIES[kind],
+      options: {
+        httpOnly: true,
+        sameSite: "lax",
+        path: "/",
+        secure: process.env.NODE_ENV === "production",
+      },
+    },
+  },
   session: {
     strategy: "jwt",
     maxAge: 7 * 24 * 60 * 60, // 7 days (configurable via Settings)
@@ -514,9 +544,15 @@ const nextAuth = NextAuth({
   },
 });
 
-export const handlers = nextAuth.handlers;
-export const signIn = nextAuth.signIn;
-export const signOut = nextAuth.signOut;
+const adminAuth = buildAuth("admin");
+const clientAuth = buildAuth("client");
+
+// Les handlers admin restent sur /api/auth ; le portail a les siens sous
+// /api/auth/client (voir app/api/auth/client/[...nextauth]).
+export const handlers = adminAuth.handlers;
+export const clientHandlers = clientAuth.handlers;
+export const signIn = adminAuth.signIn;
+export const signOut = adminAuth.signOut;
 
 // ─── Session type ───────────────────────────────────────────────────────────
 // Covers BOTH roles: the client portal reads session.user.clientId, and a
@@ -536,7 +572,10 @@ export type AppSession = { user: AppSessionUser; expires: string };
 // ─── Development bypass ─────────────────────────────────────────────────────
 // Signs you in as the first active admin. Needs NODE_ENV != production AND
 // AUTH_DEV_BYPASS=1; drop the line from .env.local to test the real sign-in.
-const DEV_BYPASS =
+// Lu a chaque appel, pas au chargement du module : le middleware relit
+// process.env a chaque requete, et une constante figee divergeait de lui apres
+// un changement de .env.local, ce qui bouclait entre /admin et /admin/login.
+export const devBypassOn = () =>
   process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_BYPASS === "1";
 
 type DevAdmin = { id: number; email: string; fullName: string | null; role: string | null };
@@ -575,7 +614,19 @@ async function getDevAdmin(): Promise<DevAdmin> {
 
 /** The signed-in session, or null. */
 export async function auth(): Promise<AppSession | null> {
-  if (DEV_BYPASS) {
+  // Le portail lit sa propre session ; tout le reste lit celle de l'admin.
+  // Le chemin vient de l'en-tete pose par le middleware.
+  let isPortal = false;
+  try {
+    const h = await headers();
+    const pathname = h.get("x-pathname") ?? "";
+    isPortal = pathname.startsWith("/portail");
+  } catch { /* hors requete : on reste sur l'admin */ }
+
+  // Le contournement ne vaut que pour l'admin : applique au portail, il lui
+  // rendait une session admin, que le layout rejetait en rebouclant sur la
+  // page de connexion.
+  if (devBypassOn() && !isPortal) {
     const admin = await getDevAdmin();
     return {
       user: {
@@ -589,5 +640,7 @@ export async function auth(): Promise<AppSession | null> {
       expires: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
     };
   }
-  return (await nextAuth.auth()) as AppSession | null;
+
+  const instance = isPortal ? clientAuth : adminAuth;
+  return (await instance.auth()) as AppSession | null;
 }

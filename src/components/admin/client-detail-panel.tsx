@@ -2,6 +2,7 @@
 // Client Detail Panel — slide-out right
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale, useCurrency } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -36,7 +37,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useGooglePlaces, parseAddressComponents } from "@/hooks/use-google-places";
-import { initials, formatCurrency, formatDate, cn } from "@/lib/utils";
+import { initials, formatDate, cn } from "@/lib/utils";
+
 import { AddressFields, TechPicker, COUNTRY_FORMATS } from "@/components/admin/client-form-fields";
 import {
   Mail,
@@ -262,7 +264,7 @@ export function ClientDetailPanel({
         body: JSON.stringify({ paymentMethod: paidMethod }),
       });
       if (res.ok) {
-        toast.success(`Facture ${paidDialog.num} marquée payée`);
+        toast.success(t("client_detail_panel_facture_p0_marquee_payee", { p0: paidDialog.num }));
         setPaidDialog(null);
         setPaidMethod("");
         setPaidNote("");
@@ -318,7 +320,7 @@ export function ClientDetailPanel({
     setPdfPreview(null); // ferme PDF pour eviter conflit z-index avec confirm
     const ok = await confirm({
       title: t("accepter_devis"),
-      description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
+      description: t("client_detail_panel_le_devis_p0_sera_marque_comme_accepte_et", { p0: num }),
       confirmLabel: t("accepter"),
       variant: "default",
     });
@@ -350,7 +352,7 @@ export function ClientDetailPanel({
     const meta = labelMap[entityType];
     const ok = await confirm({
       title: `Envoyer au client ?`,
-      description: `Le ${meta.fr} ${entityNumber} sera ajouté dans la catégorie "${meta.category}" du portail client + notification + message chat avec lien.`,
+      description: t("client_detail_panel_le_p0_p1_sera_ajoute_dans_la_categorie", { p0: meta.fr, p1: entityNumber, p2: meta.category }),
       confirmLabel: t("envoyer"),
       variant: "default",
     });
@@ -381,12 +383,12 @@ export function ClientDetailPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           clientId: client.id,
-          content: `Nouveau ${meta.fr} disponible : ${entityNumber}. Consultez-le dans votre portail (/portail/${meta.url}).`,
+          content: t("client_detail_panel_nouveau_p0_disponible_p1_consultez_le_dans_votre", { p0: meta.fr, p1: entityNumber, p2: meta.url }),
           channel: "chat",
           attachmentData: { entityType, entityId, entityNumber },
         }),
       });
-      toast.success(`Document ajouté au portail + notification envoyée à ${client.fullName}`);
+      toast.success(t("client_detail_panel_document_ajoute_au_portail_notification_envoyee_a_p0", { p0: client.fullName }));
       await refresh();
     } finally { setBusy(false); }
   };
@@ -422,7 +424,7 @@ export function ClientDetailPanel({
           {client?.fullName ?? t("detail_client")}
         </SheetTitle>
         <SheetDescription className="sr-only">
-          {client ? `Informations détaillées pour ${client.fullName}` : t("chargement")}
+          {client ? t("client_detail_panel_informations_detaillees_pour_p0", { p0: client.fullName }) : t("chargement")}
         </SheetDescription>
 
         {loading || !client ? (
@@ -828,6 +830,8 @@ function ClientTabs({
   const [tab, setTab] = useState("identite");
   const [activity, setActivity] = useState<AuditEvent[]>([]);
   const [activityLoading, setActivityLoading] = useState(false);
+  const dateTag = useDateLocale();
+  const formatCurrency = useCurrency();
 
 
   useEffect(() => {
@@ -965,7 +969,7 @@ function ClientTabs({
             <p className="text-[10px] uppercase tracking-wider font-semibold text-muted-foreground mb-2">Factures ({client.invoices.length})</p>
             {client.invoices.slice(0, 5).map((i) => (
               <EntityRow key={i.id} ref1={i.invoiceNumber}
-                secondary={i.dueDate ? `Échéance ${formatDate(i.dueDate)}` : undefined}
+                secondary={i.dueDate ? t("client_detail_panel_echeance_p0", { p0: formatDate(i.dueDate) }) : undefined}
                 amount={Number(i.amountTtc)} status={i.status} alert={i.status === "overdue"}
                 onClick={() => openEntity("invoice", i.id)}
                 actions={[
@@ -1050,7 +1054,7 @@ function ClientTabs({
                   <p className="text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
                     <span className="font-mono uppercase">{e.source}.{e.type}</span>
                     {e.ipAddress && <span className="font-mono">{e.ipAddress}</span>}
-                    <span>{new Date(e.createdAt).toLocaleString("fr-CA")}</span>
+                    <span>{new Date(e.createdAt).toLocaleString(dateTag)}</span>
                   </p>
                 </div>
               </div>
@@ -1163,8 +1167,8 @@ function ClientTabs({
                 <Badge variant={m.role === "owner" ? "default" : "secondary"} className="text-[10px] capitalize">{m.role}</Badge>
               </div>
               <p className="text-[10px] text-muted-foreground mt-1">
-                {m.acceptedAt ? `Membre depuis ${formatDate(m.acceptedAt)}` : `Invité ${formatDate(m.invitedAt)}`}
-                {m.lastLogin && ` · Dernière connexion ${formatDate(m.lastLogin)}`}
+                {m.acceptedAt ? `Membre depuis ${formatDate(m.acceptedAt)}` : t("client_detail_panel_invite_p0", { p0: formatDate(m.invitedAt) })}
+                {m.lastLogin && t("client_detail_panel_derniere_connexion_p0", { p0: formatDate(m.lastLogin) })}
               </p>
             </div>
           ))
@@ -1250,6 +1254,7 @@ function EntityRow({
 
   onClick?: () => void;
 }) {
+  const formatCurrency = useCurrency();
   const innerContent = (
     <>
       <div className="min-w-0 flex-1 text-left">

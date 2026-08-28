@@ -1,11 +1,13 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { FileBarChart } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type TD = {
   id: number;
@@ -29,13 +31,14 @@ export function TaxDeclarationsTable({
   summary: { revenueHt: number; tps: number; tvq: number; totalTaxes: number };
 }) {
   const t = useTranslations("admin.tax_decl");
+  const formatCurrency = useCurrency();
 
   const columns: Column<TD>[] = [
     { key: "period", header: t("periode"), accessor: (r) => r.periodLabel, sortable: true, sortBy: (r) => r.periodStart.getTime() },
     { key: "type", header: t("type"), accessor: (r) => r.periodType, hiddenOnMobile: true },
     { key: "revenue", header: t("revenus_ht"), accessor: (r) => formatCurrency(Number(r.totalRevenueHt)), hiddenOnMobile: true },
-    { key: "tps", header: "TPS", accessor: (r) => formatCurrency(Number(r.totalTps)), hiddenOnMobile: true },
-    { key: "tvq", header: "TVQ", accessor: (r) => formatCurrency(Number(r.totalTvq)), hiddenOnMobile: true },
+    { key: "tps", header: t("tps"), accessor: (r) => formatCurrency(Number(r.totalTps)), hiddenOnMobile: true },
+    { key: "tvq", header: t("tvq"), accessor: (r) => formatCurrency(Number(r.totalTvq)), hiddenOnMobile: true },
     { key: "total", header: t("total_taxes_col"), accessor: (r) => <span className="font-semibold">{formatCurrency(Number(r.totalTaxes))}</span> },
     { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     { key: "submitted", header: t("soumise"), accessor: (r) => formatDate(r.submittedAt), hiddenOnMobile: true },

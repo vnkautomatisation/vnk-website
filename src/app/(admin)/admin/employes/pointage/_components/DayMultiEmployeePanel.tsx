@@ -2,6 +2,7 @@
 // One day, every employee in scope: their punches, then those with none.
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import {
   Clock, CheckCircle2, AlertCircle, Plus, Calendar,
@@ -42,6 +43,7 @@ export function DayMultiEmployeePanel({
   const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const [data, setData] = useState<{
     entries: Entry[];
     entriesTruncated?: boolean;
@@ -137,7 +139,7 @@ export function DayMultiEmployeePanel({
   const empTo = Math.min(groupedByAdmin.length, empPage * EMP_PER_PAGE);
   const pagedAdmins = groupedByAdmin.slice((empPage - 1) * EMP_PER_PAGE, empPage * EMP_PER_PAGE);
 
-  const dayLabel = capFirst(new Date(dayDate + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dayLabel = capFirst(new Date(dayDate + "T12:00:00").toLocaleDateString(dateTag, {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }));
 
@@ -212,7 +214,7 @@ export function DayMultiEmployeePanel({
         )}
         <div>
           <p className="text-[10px] uppercase tracking-wider font-bold text-[#0F2D52] mb-2 flex items-center gap-1.5">
-            <Clock className="h-3 w-3" />Pointages du jour ({groupedByAdmin.length} employé{groupedByAdmin.length > 1 ? "s" : ""})
+            <Clock className="h-3 w-3" />{t("pointages_du_jour_count", { count: groupedByAdmin.length })}
           </p>
           {empTotalPages > 1 && (
             <div className="sticky -top-4 z-10 -mt-4 -mx-4 px-4 pt-4 pb-2 mb-2 bg-background border-b flex items-center justify-between gap-2">
@@ -258,7 +260,7 @@ export function DayMultiEmployeePanel({
                           {fmtDuration(empTotal)}
                         </span>
                         {empPendingIds.length > 0 && (
-                          <ActionTooltip label={`Approuver les ${empPendingIds.length} entrée(s) en attente`}>
+                          <ActionTooltip label={t("daymultiemployeepanel_approuver_les_p0_entree_s_en_attente", { p0: empPendingIds.length })}>
                             <Button
                               size="sm"
                               variant="outline"
@@ -330,8 +332,8 @@ export function DayMultiEmployeePanel({
               </div>
               {(data.adminsWithoutEntriesTotal ?? 0) > data.adminsWithoutEntries.length && (
                 <p className="border-t px-2.5 py-2 text-[11px] text-muted-foreground">
-                  {data.adminsWithoutEntries.length} affichés sur {data.adminsWithoutEntriesTotal}.
-                  Filtrez par équipe ou département pour cibler, ou exportez le CSV.
+                  {tc("shown_of", { count: data.adminsWithoutEntries.length, total: data.adminsWithoutEntriesTotal ?? 0 })}
+                  {t("filtrez_equipe_departement_csv")}
                 </p>
               )}
             </Card>

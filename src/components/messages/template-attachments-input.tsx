@@ -29,7 +29,7 @@ export function TemplateAttachmentsInput({
   const handleFiles = useCallback((files: FileList | File[]) => {
     const arr = Array.from(files);
     if (attachments.length + arr.length > MAX_FILES) {
-      toast.error(`Maximum ${MAX_FILES} pièces jointes`);
+      toast.error(t("template_attachments_input_maximum_p0_pieces_jointes", { p0: MAX_FILES }));
       return;
     }
     arr.forEach((file) => {

@@ -3,7 +3,7 @@
 // Couvre : creation/modif/annulation employee, revue (approve/reject) reviewer,
 // bulk actions, delegation, auto-TimeClock pour les conges payes.
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -14,6 +14,7 @@ import { getHolidaysInRange } from "@/lib/services/holidays";
 import { assertCanReviewLeave } from "@/lib/services/timesheet-scope";
 import { getLeaveBalance, syncBalanceForRequest } from "@/lib/services/leave-balance";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -62,6 +63,7 @@ async function validatePeriod(
   isHalfDay: boolean,
   excludeRequestId?: number,
 ): Promise<string | null> {
+  const dateTag = dateLocale(await getLocale());
   // 1) dates passees > 14 jours interdites (sauf super_admin)
   const me = await prisma.admin.findUnique({ where: { id: adminId }, include: { customRole: true } });
   const isSuper = me?.customRole?.name === "super_admin";
@@ -83,7 +85,7 @@ async function validatePeriod(
     select: { id: true, startDate: true, endDate: true },
   });
   if (overlap) {
-    return `Conflit avec une demande existante du ${overlap.startDate.toLocaleDateString("fr-CA")} au ${overlap.endDate.toLocaleDateString("fr-CA")}.`;
+    return `Conflit avec une demande existante du ${overlap.startDate.toLocaleDateString(dateTag)} au ${overlap.endDate.toLocaleDateString(dateTag)}.`;
   }
 
   // 3) chevauchement avec PayPeriod payee
@@ -96,7 +98,7 @@ async function validatePeriod(
     select: { startDate: true, endDate: true },
   });
   if (paidPeriod) {
-    return `La periode du ${paidPeriod.startDate.toLocaleDateString("fr-CA")} au ${paidPeriod.endDate.toLocaleDateString("fr-CA")} est deja payee.`;
+    return `La periode du ${paidPeriod.startDate.toLocaleDateString(dateTag)} au ${paidPeriod.endDate.toLocaleDateString(dateTag)} est deja payee.`;
   }
 
   // 4) preavis vacances
@@ -163,6 +165,7 @@ async function detectTeamConflict(
 
 export async function createLeaveRequestAction(input: z.infer<typeof requestSchema>): Promise<Result<{ id: number; warning?: string }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -177,9 +180,9 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
   if (!me || !me.isActive) return { success: false, error: t("compte_desactive_contactez_rh") };
   // Soumissions bloquées par un admin ?
   if (me.leaveBlockedUntil && me.leaveBlockedUntil.getTime() > Date.now()) {
-    const untilStr = me.leaveBlockedUntil.toLocaleDateString("fr-CA");
+    const untilStr = me.leaveBlockedUntil.toLocaleDateString(dateTag);
     const reason = me.leaveBlockedReason ? ` — ${me.leaveBlockedReason}` : "";
-    return { success: false, error: `Vos soumissions de congé sont bloquées jusqu'au ${untilStr}${reason}` };
+    return { success: false, error: t("hr_leaves_vos_soumissions_de_conge_sont_bloquees_jusqu_au", { p0: untilStr, p1: reason }) };
   }
 
   const start = new Date(parsed.data.startDate);
@@ -245,7 +248,7 @@ export async function createLeaveRequestAction(input: z.infer<typeof requestSche
         recipientId: s.id,
         type: conflictWarning ? "warning" : "info",
         title: t("nouvelle_demande_de_conge"),
-        body: `${parsed.data.type} · ${days} jour${days > 1 ? "s" : ""} · du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")}${conflictNote}`,
+        body: t("hr_leaves_p0_p1_jour_p2_du_p3_au_p4", { p0: parsed.data.type, p1: days, p2: days > 1 ? "s" : "", p3: start.toLocaleDateString(dateTag), p4: end.toLocaleDateString(dateTag), p5: conflictNote }),
         link: "/admin/employes/conges",
         icon: "calendar",
       })),
@@ -317,7 +320,7 @@ export async function updateLeaveRequestAction(input: z.infer<typeof updateSchem
 // Cree des TimeClock auto pour les conges payes (vacation/sick/parental/bereavement).
 // Note prefixee pour permettre la suppression ulterieure.
 function autoLeaveNote(leaveId: number): string {
-  return `[CONGÉ AUTO - LeaveRequest #${leaveId}]`;
+  return `Conge auto (LeaveRequest #${leaveId})`;
 }
 
 function isoDay(d: Date): string {
@@ -705,6 +708,7 @@ export async function cancelLeaveRequestAction(
   input: { id: number; reason?: string },
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -765,7 +769,7 @@ export async function cancelLeaveRequestAction(
   });
   const actorLabel = actor?.fullName || actor?.email || "Un utilisateur";
   const ownerLabel = owner?.fullName || owner?.email || "Un employe";
-  const periodStr = `${r.startDate.toLocaleDateString("fr-CA")} au ${r.endDate.toLocaleDateString("fr-CA")}`;
+  const periodStr = `${r.startDate.toLocaleDateString(dateTag)} au ${r.endDate.toLocaleDateString(dateTag)}`;
   const reasonSuffix = reasonClean ? ` Motif : ${reasonClean}` : "";
 
   const notifs: Array<{
@@ -785,7 +789,7 @@ export async function cancelLeaveRequestAction(
       recipientId: r.adminId,
       type: "warning",
       title: t("votre_demande_de_conge_a_ete_annulee"),
-      body: `${actorLabel} a annulé votre demande du ${periodStr}.${reasonSuffix}`,
+      body: t("hr_leaves_p0_a_annule_votre_demande_du_p1_p2", { p0: actorLabel, p1: periodStr, p2: reasonSuffix }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     });
@@ -873,6 +877,7 @@ export async function createLeaveForEmployeeAction(
   input: z.infer<typeof createForEmployeeSchema>,
 ): Promise<Result<{ id: number; status: "pending" | "approved"; warning?: string }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -920,7 +925,7 @@ export async function createLeaveForEmployeeAction(
   if (overlap) {
     return {
       success: false,
-      error: `Conflit avec une demande existante du ${overlap.startDate.toLocaleDateString("fr-CA")} au ${overlap.endDate.toLocaleDateString("fr-CA")}.`,
+      error: t("hr_leaves_conflit_avec_une_demande_existante_du_p0_au", { p0: overlap.startDate.toLocaleDateString(dateTag), p1: overlap.endDate.toLocaleDateString(dateTag) }),
     };
   }
   const paidPeriod = await prisma.payPeriod.findFirst({
@@ -930,14 +935,14 @@ export async function createLeaveForEmployeeAction(
   if (paidPeriod) {
     return {
       success: false,
-      error: `La période du ${paidPeriod.startDate.toLocaleDateString("fr-CA")} au ${paidPeriod.endDate.toLocaleDateString("fr-CA")} est déjà payée.`,
+      error: t("hr_leaves_la_periode_du_p0_au_p1_est_deja", { p0: paidPeriod.startDate.toLocaleDateString(dateTag), p1: paidPeriod.endDate.toLocaleDateString(dateTag) }),
     };
   }
   if (parsed.data.type === "vacation") {
     const balance = await getLeaveBalance(parsed.data.employeeId, "vacation");
     const effective = isHalf ? 0.5 : days;
     if (balance.vacationDaysRemaining < effective) {
-      return { success: false, error: `Solde insuffisant : ${balance.vacationDaysRemaining} jours disponibles, demande de ${effective}.` };
+      return { success: false, error: t("hr_leaves_solde_insuffisant_p0_jours_disponibles_demande_de_p1", { p0: balance.vacationDaysRemaining, p1: effective }) };
     }
   }
 
@@ -991,7 +996,7 @@ export async function createLeaveForEmployeeAction(
       recipientId: parsed.data.employeeId,
       type: autoApprove ? "success" : "info",
       title: autoApprove ? t("conge_cree_approuve_pour_vous") : t("demande_conge_creee_pour_vous"),
-      body: `${actorLabel} a ${autoApprove ? t("cree_et_approuve") : t("cree")} une demande de ${parsed.data.type} : ${days} jour${days > 1 ? "s" : ""} du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")}.`,
+      body: t("hr_leaves_p0_a_p1_une_demande_de_p2_p3", { p0: actorLabel, p1: autoApprove ? t("cree_et_approuve") : t("cree"), p2: parsed.data.type, p3: days, p4: days > 1 ? "s" : "", p5: start.toLocaleDateString(dateTag), p6: end.toLocaleDateString(dateTag) }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -1026,6 +1031,7 @@ export async function createMandatoryClosureAction(
   input: z.infer<typeof mandatoryClosureSchema>,
 ): Promise<Result<{ created: number; skipped: number; conflicts: Array<{ adminId: number; reason: string }> }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requireLeavesReview();
   if (!actorId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = mandatoryClosureSchema.safeParse(input);
@@ -1047,7 +1053,7 @@ export async function createMandatoryClosureAction(
   if (paidPeriod) {
     return {
       success: false,
-      error: `La periode du ${paidPeriod.startDate.toLocaleDateString("fr-CA")} au ${paidPeriod.endDate.toLocaleDateString("fr-CA")} est deja payee.`,
+      error: t("hr_leaves_la_periode_du_p0_au_p1_est_deja_x", { p0: paidPeriod.startDate.toLocaleDateString(dateTag), p1: paidPeriod.endDate.toLocaleDateString(dateTag) }),
     };
   }
 
@@ -1079,7 +1085,7 @@ export async function createMandatoryClosureAction(
       skipped++;
       conflicts.push({
         adminId: target.id,
-        reason: `${target.fullName || target.email} : conflit avec demande du ${overlap.startDate.toLocaleDateString("fr-CA")} au ${overlap.endDate.toLocaleDateString("fr-CA")}.`,
+        reason: t("hr_leaves_p0_conflit_avec_demande_du_p1_au_p2", { p0: target.fullName || target.email, p1: overlap.startDate.toLocaleDateString(dateTag), p2: overlap.endDate.toLocaleDateString(dateTag) }),
       });
       continue;
     }
@@ -1123,7 +1129,7 @@ export async function createMandatoryClosureAction(
         recipientId: b.id,
         type: "info",
         title: `Fermeture entreprise : ${parsed.data.reason}`,
-        body: `Du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")} (${fullDays} j ouvres).`,
+        body: t("hr_leaves_du_p0_au_p1_p2_j_ouvres", { p0: start.toLocaleDateString(dateTag), p1: end.toLocaleDateString(dateTag), p2: fullDays }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       })),
@@ -1160,6 +1166,7 @@ export async function adminUpdateLeaveRequestAction(
   input: z.infer<typeof adminUpdateSchema>,
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1215,7 +1222,7 @@ export async function adminUpdateLeaveRequestAction(
   if (overlap) {
     return {
       success: false,
-      error: `Conflit avec une demande existante du ${overlap.startDate.toLocaleDateString("fr-CA")} au ${overlap.endDate.toLocaleDateString("fr-CA")}.`,
+      error: t("hr_leaves_conflit_avec_une_demande_existante_du_p0_au", { p0: overlap.startDate.toLocaleDateString(dateTag), p1: overlap.endDate.toLocaleDateString(dateTag) }),
     };
   }
 
@@ -1226,10 +1233,10 @@ export async function adminUpdateLeaveRequestAction(
   // Construit diff pour la notif
   const diff: string[] = [];
   if (r.startDate.toDateString() !== start0.toDateString()) {
-    diff.push(`du ${r.startDate.toLocaleDateString("fr-CA")} → ${start0.toLocaleDateString("fr-CA")}`);
+    diff.push(t("hr_leaves_du_p0_p1", { p0: r.startDate.toLocaleDateString(dateTag), p1: start0.toLocaleDateString(dateTag) }));
   }
   if (r.endDate.toDateString() !== end0.toDateString()) {
-    diff.push(`au ${r.endDate.toLocaleDateString("fr-CA")} → ${end0.toLocaleDateString("fr-CA")}`);
+    diff.push(`au ${r.endDate.toLocaleDateString(dateTag)} → ${end0.toLocaleDateString(dateTag)}`);
   }
   if (r.type !== type) diff.push(`type ${r.type} → ${type}`);
   if (r.status !== statusNext) diff.push(`statut ${r.status} → ${statusNext}`);
@@ -1307,6 +1314,7 @@ export async function adminCancelApprovedLeaveAction(
   input: { id: number; reason: string },
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1375,7 +1383,7 @@ export async function adminCancelApprovedLeaveAction(
       recipientId: r.adminId,
       type: "warning",
       title: t("votre_conge_a_ete_annule"),
-      body: `${actorLabel} a annulé votre congé du ${r.startDate.toLocaleDateString("fr-CA")} au ${r.endDate.toLocaleDateString("fr-CA")} : ${input.reason}`,
+      body: t("hr_leaves_p0_a_annule_votre_conge_du_p1_au", { p0: actorLabel, p1: r.startDate.toLocaleDateString(dateTag), p2: r.endDate.toLocaleDateString(dateTag), p3: input.reason }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -1399,6 +1407,7 @@ export async function adminDeleteLeaveAction(
   input: { id: number },
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1458,7 +1467,7 @@ export async function adminDeleteLeaveAction(
       recipientId: r.adminId,
       type: "warning",
       title: t("une_de_vos_demandes_de_conge_a"),
-      body: `${actorLabel} a supprimé votre demande du ${r.startDate.toLocaleDateString("fr-CA")} au ${r.endDate.toLocaleDateString("fr-CA")} (${r.type}).`,
+      body: t("hr_leaves_p0_a_supprime_votre_demande_du_p1_au", { p0: actorLabel, p1: r.startDate.toLocaleDateString(dateTag), p2: r.endDate.toLocaleDateString(dateTag), p3: r.type }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -1700,6 +1709,7 @@ export async function duplicateLeaveAction(
   input: { id: number; newStartDate: string; newEndDate: string },
 ): Promise<Result<{ newId: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -1758,7 +1768,7 @@ export async function duplicateLeaveAction(
       recipientId: r.adminId,
       type: "info",
       title: t("demande_de_conge_dupliquee_pour_vous"),
-      body: `Nouvelle demande du ${start.toLocaleDateString("fr-CA")} au ${end.toLocaleDateString("fr-CA")} (${days} j) — en attente.`,
+      body: t("hr_leaves_nouvelle_demande_du_p0_au_p1_p2_j", { p0: start.toLocaleDateString(dateTag), p1: end.toLocaleDateString(dateTag), p2: days }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -1910,7 +1920,7 @@ export async function adjustLeaveBalanceAction(
     adminId: input.employeeId,
     type: "profile_updated",
     severity: "warning",
-    message: `Solde vacances ajusté manuellement de ${delta >= 0 ? "+" : ""}${delta} j`,
+    message: t("hr_leaves_solde_vacances_ajuste_manuellement_de_p0_p1_j", { p0: delta >= 0 ? "+" : "", p1: delta }),
     metadata: { by: actorId, delta, reason: input.reason, balanceId: bal.id },
   });
 
@@ -1921,7 +1931,7 @@ export async function adjustLeaveBalanceAction(
       recipientId: input.employeeId,
       type: "info",
       title: t("solde_de_conges_ajuste"),
-      body: `Votre solde a été ajusté manuellement de ${sign}${delta} j. Raison : ${input.reason}`,
+      body: t("hr_leaves_votre_solde_a_ete_ajuste_manuellement_de_p0", { p0: sign, p1: delta, p2: input.reason }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -1986,6 +1996,7 @@ export async function blockEmployeeLeaveAction(
   input: { employeeId: number; until: string; reason: string },
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const actorId = session.user.adminId!;
@@ -2026,7 +2037,7 @@ export async function blockEmployeeLeaveAction(
       recipientId: input.employeeId,
       type: "warning",
       title: t("vos_soumissions_de_conge_sont_bloquees"),
-      body: `Bloquées jusqu'au ${until.toLocaleDateString("fr-CA")}. Raison : ${input.reason}`,
+      body: t("hr_leaves_bloquees_jusqu_au_p0_raison_p1", { p0: until.toLocaleDateString(dateTag), p1: input.reason }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },

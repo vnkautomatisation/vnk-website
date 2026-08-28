@@ -1,10 +1,12 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { Wallet } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type E = {
   id: number;
@@ -25,6 +27,7 @@ export function ExpensesTable({
   totals: { total: number; tps: number; tvq: number };
 }) {
   const t = useTranslations("admin.expenses");
+  const formatCurrency = useCurrency();
 
   const columns: Column<E>[] = [
     { key: "date", header: t("date"), accessor: (r) => formatDate(r.expenseDate), sortable: true, sortBy: (r) => r.expenseDate.getTime() },
@@ -32,8 +35,8 @@ export function ExpensesTable({
     { key: "category", header: t("categorie"), accessor: (r) => r.category, hiddenOnMobile: true },
     { key: "vendor", header: t("fournisseur"), accessor: (r) => r.vendor ?? "—", hiddenOnMobile: true },
     { key: "amount", header: t("montant_ht"), accessor: (r) => formatCurrency(Number(r.amount)), sortable: true, sortBy: (r) => Number(r.amount) },
-    { key: "tps", header: "TPS", accessor: (r) => formatCurrency(Number(r.tpsPaid)), hiddenOnMobile: true },
-    { key: "tvq", header: "TVQ", accessor: (r) => formatCurrency(Number(r.tvqPaid)), hiddenOnMobile: true },
+    { key: "tps", header: t("tps"), accessor: (r) => formatCurrency(Number(r.tpsPaid)), hiddenOnMobile: true },
+    { key: "tvq", header: t("tvq"), accessor: (r) => formatCurrency(Number(r.tvqPaid)), hiddenOnMobile: true },
   ];
 
   return (

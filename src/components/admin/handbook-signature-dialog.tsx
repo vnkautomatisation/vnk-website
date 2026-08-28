@@ -299,7 +299,7 @@ export function HandbookSignatureDialog({
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px] sm:text-xs">
               {handbook.subtitle
-                ?? `v${handbook.version} - Manuel de l'employe VNK`}
+                ?? t("handbook_signature_dialog_v_p0_manuel_de_l_employe_vnk", { p0: handbook.version })}
             </DialogDescription>
           </DialogHeader>
         </div>

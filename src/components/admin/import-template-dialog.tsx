@@ -14,6 +14,7 @@
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   AlertCircle,
@@ -170,6 +171,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
 
 
   const [editedTitle, setEditedTitle] = useState("");
+  const dateTag = useDateLocale();
   const [editedType, setEditedType] = useState<Exclude<ImportDocumentType, "unknown">>(
     "contract"
   );
@@ -244,7 +246,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
       }
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
-        throw new Error(data?.error || `Échec de l'analyse (HTTP ${res.status})`);
+        throw new Error(data?.error || t("import_template_dialog_echec_de_l_analyse_http_p0", { p0: res.status }));
       }
       const data = (await res.json()) as ImportResult;
       setResult(data);
@@ -389,7 +391,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                       className="font-mono text-xs"
                     />
                     <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                      <span>{pasted.length.toLocaleString("fr-CA")} caractères</span>
+                      <span>{tc("chars_plain", { count: pasted.length.toLocaleString(dateTag) })}</span>
                       <span>{t("minimum_20_caracteres")}</span>
                     </div>
                   </FormSection>
@@ -498,7 +500,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
                     <Stat
                       icon={FileText}
                       label={t("mots")}
-                      value={result?.metadata.wordCount.toLocaleString("fr-CA") ?? "0"}
+                      value={result?.metadata.wordCount.toLocaleString(dateTag) ?? "0"}
                     />
                     <Stat
                       icon={Sparkles}
@@ -515,7 +517,7 @@ export function ImportTemplateDialog({ open, onClose, onImported }: Props) {
 
                 <FormSection
                   icon={Wand2}
-                  title={`Variables détectées (${totalDetected})`}
+                  title={t("import_template_dialog_variables_detectees_p0", { p0: totalDetected })}
                   description={
                     totalDetected === 0
                       ? t("aucune_valeur_remplacable_detectee_contenu")

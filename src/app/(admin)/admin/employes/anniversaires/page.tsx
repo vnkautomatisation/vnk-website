@@ -1,15 +1,16 @@
 // HR · Anniversaires (naissance + ancienneté).
 import { prisma } from "@/lib/prisma";
 import { getLocale, getTranslations } from "next-intl/server";
-import { dateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Cake, Award, Sparkles, Trophy, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { dateLocale } from "@/lib/i18n-format";
 
 export default async function BirthdaysPage() {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.hr_nav");
   const dl = dateLocale(await getLocale());
   const session = await auth();
@@ -63,7 +64,7 @@ export default async function BirthdaysPage() {
     .sort((a, b) => a.daysUntil - b.daysUntil);
 
   const formatBirthDate = (d: Date) =>
-    d.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
+    d.toLocaleDateString(dateTag, { day: "numeric", month: "long" });
 
 
   const workAnniversaries = admins

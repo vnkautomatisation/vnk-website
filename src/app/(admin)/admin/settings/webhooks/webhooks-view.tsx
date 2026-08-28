@@ -2,6 +2,7 @@
 // Vue Webhooks — sortants + entrants avec test, replay, rotation.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -66,6 +67,7 @@ export function WebhooksView({
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "outgoing" | "incoming"; id: number; label: string } | null>(null);
   const [revealedSecret, setRevealedSecret] = useState<{ id: number; secret: string } | null>(null);
   const [testing, setTesting] = useState<number | null>(null);
+  const dateTag = useDateLocale();
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -94,7 +96,7 @@ export function WebhooksView({
         if (r.data.status >= 200 && r.data.status < 300) {
           toast.success(`Test OK · ${r.data.status} en ${r.data.ms} ms`);
         } else {
-          toast.warning(`Réponse ${r.data.status} en ${r.data.ms} ms`);
+          toast.warning(t("webhooks_view_reponse_p0_en_p1_ms", { p0: r.data.status, p1: r.data.ms }));
         }
         router.refresh();
       } else {
@@ -210,7 +212,7 @@ export function WebhooksView({
                       </div>
                       {w.lastFireAt && (
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          Dernier déclenchement : {new Date(w.lastFireAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}
+                          Dernier déclenchement : {new Date(w.lastFireAt).toLocaleString(dateTag, { dateStyle: "short", timeStyle: "short" })}
                         </p>
                       )}
                     </div>
@@ -292,7 +294,7 @@ export function WebhooksView({
                           )}
                         </div>
                         <p className="text-[10px] text-muted-foreground mt-0.5">
-                          {new Date(log.receivedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
+                          {new Date(log.receivedAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}
                         </p>
                         {log.error && (
                           <p className="text-xs text-red-600 mt-1 font-mono">{log.error}</p>

@@ -2,6 +2,7 @@
 // Vue RH Équipement — 2 onglets (Actifs / Retournés), assignation + retour.
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -174,7 +175,7 @@ export function EquipmentView({
       <ConfirmDialog
         open={!!returnDialog}
         onOpenChange={(o) => !o && setReturnDialog(null)}
-        title={`Marquer comme retourné ?`}
+        title={t("equipment_view_marquer_comme_retourne")}
         description={returnDialog ? `${returnDialog.name} — ${returnDialog.admin.fullName || returnDialog.admin.email}` : ""}
         confirmLabel={t("marquer_retourne")}
         variant="default"
@@ -202,8 +203,8 @@ export function EquipmentView({
       <ConfirmDialog
         open={!!deleteConfirm}
         onOpenChange={(o) => !o && setDeleteConfirm(null)}
-        title={`Supprimer cet équipement ?`}
-        description={deleteConfirm ? `${deleteConfirm.name} — supprimera l'enregistrement définitivement.` : ""}
+        title={t("equipment_view_supprimer_cet_equipement")}
+        description={deleteConfirm ? t("equipment_view_p0_supprimera_l_enregistrement_definitivement", { p0: deleteConfirm.name }) : ""}
         confirmLabel={tc("delete")}
         variant="destructive"
         onConfirm={async () => {
@@ -229,6 +230,7 @@ function EquipmentCard({
 }) {
   const t = useTranslations("admin.equipment");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const meta = CAT_META[eq.category] ?? CAT_META.other;
   const Icon = meta.icon;
   const isReturned = !!eq.returnedAt;
@@ -266,12 +268,12 @@ function EquipmentCard({
             <p className="text-[11px] font-mono text-muted-foreground">S/N : {eq.serialNumber}</p>
           )}
           <p className="text-[11px] text-muted-foreground">
-            Assigné le {new Date(eq.assignedAt).toLocaleDateString("fr-CA")}
+            Assigné le {new Date(eq.assignedAt).toLocaleDateString(dateTag)}
           </p>
           {isReturned && (
             <div className="flex items-center gap-1.5 flex-wrap">
               <Badge variant="outline" className="text-[10px] text-muted-foreground">
-                Retourné {new Date(eq.returnedAt!).toLocaleDateString("fr-CA")}
+                Retourné {new Date(eq.returnedAt!).toLocaleDateString(dateTag)}
               </Badge>
               {eq.conditionOnReturn && (
                 <Badge variant="outline" className={`text-[10px] ${

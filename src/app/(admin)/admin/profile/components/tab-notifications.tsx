@@ -123,8 +123,8 @@ export function TabNotifications({ admin }: { admin: AdminProfile }) {
         readView={
           <div>
             <ReadField label={t("cadence_label")} value={t(`digest_${digest}` as "digest_instant")} />
-            <ReadField label={t("quiet_start").replace(" — début", "").replace(" — start", "") + " / " + t("quiet_end").replace(" — fin", "").replace(" — end", "")} value={`${quietStart} → ${quietEnd}`} />
-            <ReadField label={t("login_alerts_title")} value={loginAlerts ? tCommon("saved").includes("saved") ? "On" : "Activées" : "Off"} />
+            <ReadField label={t("quiet_hours")} value={`${quietStart} – ${quietEnd}`} />
+            <ReadField label={t("login_alerts_title")} value={loginAlerts ? tCommon("enabled") : tCommon("disabled")} />
           </div>
         }
         editView={

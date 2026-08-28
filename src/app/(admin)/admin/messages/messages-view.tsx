@@ -120,12 +120,12 @@ function formatTime(iso: string, justNow: string, locale: string): string {
   return d.toLocaleDateString(locale, { day: "numeric", month: "short" });
 }
 
-function formatMsgTime(iso: string): string {
-  return new Date(iso).toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+function formatMsgTime(iso: string, tag: string): string {
+  return new Date(iso).toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit" });
 }
 
-function formatMsgDate(iso: string): string {
-  return new Date(iso).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" });
+function formatMsgDate(iso: string, tag: string): string {
+  return new Date(iso).toLocaleDateString(tag, { weekday: "long", day: "numeric", month: "long" });
 }
 
 function getAttachments(msg: Message | ReplyToSummary): MessageAttachment[] {
@@ -285,7 +285,7 @@ export function MessagesView({
     }
     setPendingAtts((prev) => {
       if (prev.length >= MAX_ATTACHMENTS) {
-        toast.error(`Maximum ${MAX_ATTACHMENTS} pièces jointes par message`);
+        toast.error(t("messages_view_maximum_p0_pieces_jointes_par_message", { p0: MAX_ATTACHMENTS }));
         return prev;
       }
       return prev;
@@ -395,7 +395,7 @@ export function MessagesView({
       const conv = conversations.find((c) => c.id === msg.clientId);
       const name = conv?.fullName ?? t("client");
       playMessageSound();
-      showDesktopNotification(`Message de ${name}`, msg.content?.slice(0, 80) ?? t("piece_jointe"), () => {
+      showDesktopNotification(t("messages_view_message_de_p0", { p0: name }), msg.content?.slice(0, 80) ?? t("piece_jointe"), () => {
         setSelectedId(msg.clientId);
       });
       router.refresh();
@@ -440,7 +440,7 @@ export function MessagesView({
         const existingNames = new Set(prev.map((a) => a.name));
         return [...prev, ...newAtts.filter((a) => !existingNames.has(a.name))];
       });
-      toast.success(`${newAtts.length} pièce(s) jointe(s) ajoutée(s) du template`);
+      toast.success(t("messages_view_p0_piece_s_jointe_s_ajoutee_s_du", { p0: newAtts.length }));
     }
     setTemplatePickerOpen(false);
     fetch(`/api/message-templates/${tpl.id}`, { method: "POST" }).catch(() => {});
@@ -493,7 +493,7 @@ export function MessagesView({
     });
     if (res.ok) {
       const data = await res.json();
-      toast.success(`${data.count ?? 0} message(s) marqué(s) lus`);
+      toast.success(t("messages_view_p0_message_s_marque_s_lus", { p0: data.count ?? 0 }));
       router.refresh();
     } else { toast.error(t("erreur")); }
   };
@@ -589,18 +589,7 @@ export function MessagesView({
         </div>
       `;
     }).join("");
-    w.document.write(`
-      <!DOCTYPE html><html><head><title>${t("conversation")} ${selected.fullName}</title>
-      <style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:800px;margin:auto;color:#1e293b}
-      h1{font-size:18px;color:#0F2D52;margin-bottom:4px}
-      .meta{font-size:11px;color:#64748b;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #e2e8f0}
-      @media print{body{padding:0}}</style></head><body>
-      <h1>${t("conversation")} — ${selected.fullName}</h1>
-      <div class="meta">${selected.companyName ?? selected.email} · ${t("messages_exporte_le", { count: messages.filter((m) => !m.deletedAt).length, date: new Date().toLocaleDateString(dateTag) })}</div>
-      ${rows}
-      <script>window.onload=()=>setTimeout(window.print,300)</script>
-      </body></html>
-    `);
+    w.document.write(`<!DOCTYPE html><html><head><title>${t("conversation")} ${selected.fullName}</title> <style>body{font-family:system-ui,-apple-system,sans-serif;padding:24px;max-width:800px;margin:auto;color:#1e293b} h1{font-size:18px;color:#0F2D52;margin-bottom:4px} .meta{font-size:11px;color:#64748b;margin-bottom:24px;padding-bottom:12px;border-bottom:1px solid #e2e8f0} @media print{body{padding:0}}</style></head><body> <h1>${t("conversation")} — ${selected.fullName}</h1> <div class="meta">${selected.companyName ?? selected.email} · ${t("messages_exporte_le", { count: messages.filter((m) => !m.deletedAt).length, date: new Date().toLocaleDateString(dateTag) })}</div> ${rows} <script>window.onload=()=>setTimeout(window.print,300)</script> </body></html>`);
     w.document.close();
     toast.success(t("pdf_pret_imprimer"));
   }, [selected, messages]);
@@ -623,7 +612,7 @@ export function MessagesView({
 
   const groupedMessages = useMemo(() => {
     return visibleMessages.reduce<{ date: string; msgs: Message[] }[]>((acc, msg) => {
-      const date = formatMsgDate(msg.createdAt);
+      const date = formatMsgDate(msg.createdAt, dateTag);
       const last = acc[acc.length - 1];
       if (last && last.date === date) last.msgs.push(msg);
       else acc.push({ date, msgs: [msg] });
@@ -637,7 +626,7 @@ export function MessagesView({
     const out: VirtItem[] = [];
     let lastDate = "";
     for (const msg of visibleMessages) {
-      const d = formatMsgDate(msg.createdAt);
+      const d = formatMsgDate(msg.createdAt, dateTag);
       if (d !== lastDate) {
         out.push({ type: "date", key: `date-${d}`, date: d });
         lastDate = d;
@@ -727,7 +716,7 @@ export function MessagesView({
       )}>
         <StatCard label={t("conversations")} value={kpis.totalConversations} icon={Users} accent="bg-indigo-500" />
         <StatCard label={t("total_messages")} value={kpis.totalMessages} icon={MessageSquare} accent="bg-blue-500" />
-        <StatCard label="Aujourd'hui" value={kpis.todayMessages} icon={Calendar} accent="bg-emerald-500" />
+        <StatCard label={t("aujourd_hui")} value={kpis.todayMessages} icon={Calendar} accent="bg-emerald-500" />
         <StatCard label={t("non_lus")} value={kpis.totalUnread} icon={Inbox} accent="bg-red-500" />
       </div>
 
@@ -1367,6 +1356,7 @@ function MessageBubble({
   allMessages: Message[];
 }) {
   const t = useTranslations("admin.messages");
+  const dateTag = useDateLocale();
   const isAdmin = msg.sender === "vnk";
   const isInternal = msg.isInternalNote;
   const channelInfo = CHANNEL_BADGE[msg.channel];
@@ -1401,7 +1391,7 @@ function MessageBubble({
               >
                 <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
                 <span className="opacity-60 shrink-0">·</span>
-                <span className="shrink-0">{formatMsgTime(msg.createdAt)}</span>
+                <span className="shrink-0">{formatMsgTime(msg.createdAt, dateTag)}</span>
                 <span className="opacity-60 shrink-0">{systemExpanded ? "−" : "+"}</span>
               </button>
             ) : (
@@ -1409,7 +1399,7 @@ function MessageBubble({
               <span className="inline-flex items-center gap-1.5 min-w-0 max-w-full">
                 <span className="font-semibold text-[#0F2D52] break-words [overflow-wrap:anywhere]">{summary}</span>
                 <span className="opacity-60 shrink-0">·</span>
-                <span className="shrink-0">{formatMsgTime(msg.createdAt)}</span>
+                <span className="shrink-0">{formatMsgTime(msg.createdAt, dateTag)}</span>
               </span>
             )}
             {action && (
@@ -1438,7 +1428,7 @@ function MessageBubble({
       <div className={cn("flex mb-0.5 min-w-0", isAdmin ? "justify-end" : "justify-start")}>
         <div className="max-w-[85%] md:max-w-[480px] rounded-2xl px-2.5 py-1.5 bg-muted/40 border border-dashed">
           <p className="text-xs italic text-muted-foreground">{t("message_supprime")}</p>
-          <span className="text-[10px] text-muted-foreground">{formatMsgTime(msg.createdAt)}</span>
+          <span className="text-[10px] text-muted-foreground">{formatMsgTime(msg.createdAt, dateTag)}</span>
         </div>
       </div>
     );
@@ -1457,7 +1447,7 @@ function MessageBubble({
         )}
         {isScheduled && (
           <div className="text-[10px] font-semibold text-blue-700 mb-0.5 self-end flex items-center gap-1">
-            <Clock className="h-3 w-3" />Programmé pour {new Date(msg.scheduledFor!).toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            <Clock className="h-3 w-3" />{t("programme_pour", { date: new Date(msg.scheduledFor!).toLocaleString(dateTag, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
           </div>
         )}
         <div className="flex items-end gap-1">
@@ -1513,7 +1503,7 @@ function MessageBubble({
                 : isAdmin ? "text-white/60"
                 : "text-muted-foreground"
               )}>
-                {formatMsgTime(msg.createdAt)}
+                {formatMsgTime(msg.createdAt, dateTag)}
                 {msg.editedAt && t("modifie")}
               </span>
               {channelInfo && !isInternal && (

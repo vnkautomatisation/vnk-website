@@ -12,6 +12,7 @@
 // =============================================================
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
@@ -161,11 +162,11 @@ function typeLabel(value: string | null | undefined, autre: string, t: (k: strin
   return key ? t(key) : value;
 }
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function daysUntil(iso: string | null | undefined): number | null {
@@ -175,9 +176,9 @@ function daysUntil(iso: string | null | undefined): number | null {
   return Math.floor((d.getTime() - Date.now()) / 86400000);
 }
 
-function fmtMoney(v: number | null | undefined): string | null {
+function fmtMoney(v: number | null | undefined, tag: string): string | null {
   if (v == null) return null;
-  return `${Number(v).toLocaleString("fr-CA", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} $`;
+  return `${Number(v).toLocaleString(tag, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} $`;
 }
 
 // ================================================================
@@ -374,7 +375,7 @@ export function ContractsView({
           value={kpis.active}
           icon={CheckCircle2}
           accent="success"
-          hint={`${contracts.length} contrat${contracts.length > 1 ? "s" : ""} au total`}
+          hint={t("contrats_au_total", { count: contracts.length })}
           onClick={() => setTab("contracts")}
         />
         <DocumentStatsCard
@@ -801,6 +802,7 @@ function OverviewTab({
   onOpenPdf: (c: Contract) => void;
 }) {
   const t = useTranslations("admin.contracts");
+  const dateTag = useDateLocale();
   const pendingContracts = useMemo(
     () =>
       contracts
@@ -912,7 +914,7 @@ function OverviewTab({
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium truncate">{c.title}</span>
                     <span className="block text-[10px] text-muted-foreground truncate">
-                      {c.admin.fullName ?? c.admin.email} - fin {formatDate(c.endDate)}
+                      {c.admin.fullName ?? c.admin.email} - fin {formatDate(c.endDate, dateTag)}
                     </span>
                   </span>
                   <ToneBadge tone={urgent ? "danger" : "warning"}>
@@ -1235,6 +1237,7 @@ function ContractRichCard({
 }) {
   const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const c = contract;
   const status = STATUS_TONE[c.status];
   const canSignEmployee = mine && c.status === "sent" && !c.employeeSignedAt;
@@ -1267,7 +1270,7 @@ function ContractRichCard({
               <ToneBadge tone="info">{typeLabel(c.contractType, t("autre"), t)}</ToneBadge>
               {endingSoon && (
                 <ToneBadge tone="danger" icon={AlertTriangle}>
-                  Fin {formatDate(c.endDate)}
+                  Fin {formatDate(c.endDate, dateTag)}
                 </ToneBadge>
               )}
             </div>
@@ -1276,10 +1279,10 @@ function ContractRichCard({
 
 
         <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2">
-          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate)} />
-          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate)} />}
+          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate, dateTag)} />
+          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate, dateTag)} />}
           {c.salaryAnnual != null && (
-            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual) ?? "-"} />
+            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual, dateTag) ?? "-"} />
           )}
           {c.hourlyRate != null && (
             <InfoRow icon={Coins} label={t("taux_h")} value={`${Number(c.hourlyRate).toFixed(2)} $`} />
@@ -1503,8 +1506,9 @@ function TemplateCard({
 }) {
   const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const meta: string[] = [];
-  if (tpl.defaultSalary != null) meta.push(`${Number(tpl.defaultSalary).toLocaleString("fr-CA")} $/an`);
+  if (tpl.defaultSalary != null) meta.push(`${Number(tpl.defaultSalary).toLocaleString(dateTag)} $/an`);
   if (tpl.defaultRate != null) meta.push(`${Number(tpl.defaultRate).toFixed(2)} $/h`);
   if (tpl.defaultHoursPerWeek != null) meta.push(`${tpl.defaultHoursPerWeek} h/sem`);
   if (tpl.defaultVacationPct != null) meta.push(`${tpl.defaultVacationPct}% vac.`);
@@ -1608,6 +1612,7 @@ function SignDialog({
   const [pending, setPending] = useState(false);
 
   const [padKey, setPadKey] = useState(0);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (open) {
@@ -1676,8 +1681,8 @@ function SignDialog({
               {typeLabel(contract.contractType, t("autre"), t)}
             </p>
             <p className="text-xs text-muted-foreground">
-              Debut : {formatDate(contract.startDate)}
-              {contract.endDate ? ` - Fin : ${formatDate(contract.endDate)}` : ""}
+              Debut : {formatDate(contract.startDate, dateTag)}
+              {contract.endDate ? ` - Fin : ${formatDate(contract.endDate, dateTag)}` : ""}
             </p>
           </div>
 

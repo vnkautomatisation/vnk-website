@@ -33,6 +33,7 @@
   "code_expire_dans": "Ce code expire dans {minutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
   "compte_pret_active": "Votre compte employé est prêt à être activé",
   "demande_depuis_ip": "Demande effectuée depuis l'adresse IP {ip}",
+  "email_message_template_npieces_jointes_n_p0_nconnectez_vous_au_portail": "\\nPièces jointes :\\n{p0}\\nConnectez-vous au portail pour les télécharger.",
   "invitation_toujours_active": "Votre invitation à rejoindre VNK Automatisation est toujours active. Voici votre lien d'activation :",
   "login_alert_ce_n_etait_pas_moi": "Ce n'était pas moi",
   "login_alert_cliquez_sur_le_bouton_ci_dessous_pour": "Cliquez sur le bouton ci-dessous pour révoquer immédiatement cette session et signaler la tentative comme suspecte.",
@@ -46,6 +47,7 @@
   "sujet_invitation": "Invitation à rejoindre VNK Automatisation",
   "sujet_reinitialisation": "Réinitialisation de votre mot de passe — VNK Automatisation",
   "titre_reinitialisation": "Réinitialisation de mot de passe",
+  "users_invitation_envoyee_a_p0": "Invitation envoyée à {p0}",
   "users_vnk_automatisation_inc_securite_geree_par_le": "VNK Automatisation Inc. · Sécurité gérée par le portail admin",
   "vous_avez_demande_reinitialiser": "Vous avez demandé à réinitialiser votre mot de passe. Voici votre code de sécurité :",
   "x_vous_invite": "{inviteur} vous invite à rejoindre le portail admin de VNK Automatisation."

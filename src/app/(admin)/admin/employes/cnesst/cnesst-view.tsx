@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { AlertTriangle, Plus, Edit, FileText, Calendar, MapPin, Trash2, Send, CheckCircle2 } from "lucide-react";
@@ -38,6 +39,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
   const tc = useTranslations("common");
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Incident | null }>({ open: false, existing: null });
+  const dateTag = useDateLocale();
 
   const totalDaysAbsent = incidents.reduce((s, i) => s + (i.daysAbsent ?? 0), 0);
   const active = incidents.filter((i) => i.status === "declared" || i.status === "accepted").length;
@@ -86,7 +88,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
     else toast.error(r.error || "");
   };
 
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString("fr-CA", { day: "2-digit", month: "2-digit", year: "numeric" });
+  const fmtDate = (d: string) => new Date(d).toLocaleDateString(dateTag, { day: "2-digit", month: "2-digit", year: "numeric" });
 
   return (
     <div className="space-y-5">
@@ -127,7 +129,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                       {i.cnesstFileNumber && <Badge variant="outline" className="text-[10px]">N° dossier : {i.cnesstFileNumber}</Badge>}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(i.incidentDate).toLocaleString("fr-CA", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="inline-flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(i.incidentDate).toLocaleString(dateTag, { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })}</span>
                       <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{i.location}</span>
                     </p>
                     <p className="text-sm mt-2">{i.description}</p>
@@ -143,7 +145,7 @@ export function CnesstView({ incidents, employees }: { incidents: Incident[]; em
                     <div className="flex items-center gap-1.5 flex-wrap mt-2">
                       {i.reportedToCnesstAt ? (
                         <Badge variant="outline" className="text-[10px] border-emerald-300 text-emerald-700 bg-emerald-50">
-                          <Send className="h-3 w-3 mr-1" />Envoyé le {fmtDate(i.reportedToCnesstAt)}
+                          <Send className="h-3 w-3 mr-1" />{tc("sent_on", { date: fmtDate(i.reportedToCnesstAt) })}
                         </Badge>
                       ) : (
                         <Button

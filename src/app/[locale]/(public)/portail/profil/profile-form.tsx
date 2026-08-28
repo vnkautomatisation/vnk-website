@@ -225,7 +225,7 @@ export function ProfileForm({ client, stats }: { client: ClientData; stats: Stat
           <div className="grid sm:grid-cols-3 gap-3 text-sm">
             <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("membre_depuis")}</p><p className="font-medium">{formatDate(client.createdAt)}</p></div></div>
             <div className="flex items-center gap-2"><Calendar className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("derniere_connexion")}</p><p className="font-medium">{client.lastLogin ? formatDate(client.lastLogin) : "—"}</p></div></div>
-            <div className="flex items-center gap-2"><HardDrive className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("stockage")}</p><p className="font-medium">{(client.storageQuotaMb / 1024).toFixed(1)} Go</p></div></div>
+            <div className="flex items-center gap-2"><HardDrive className="h-3.5 w-3.5 text-muted-foreground shrink-0" /><div><p className="text-xs text-muted-foreground">{t("stockage")}</p><p className="font-medium">{t("stockage_go", { size: (client.storageQuotaMb / 1024).toFixed(1) })}</p></div></div>
           </div>
         </CardContent>
       </Card>

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
   const [status, setStatus] = useState(meeting.status);
   const [pending, setPending] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const dateTag = useDateLocale();
 
 
   useEffect(() => {
@@ -115,7 +117,7 @@ export function OneOnOneEditor({ meeting, isManager, isEmployee, currentAdminId 
           </h1>
           <p className="text-sm text-muted-foreground mt-0.5 inline-flex items-center gap-2 flex-wrap">
             <Clock className="h-3.5 w-3.5" />
-            {scheduledDate.toLocaleString("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+            {scheduledDate.toLocaleString(dateTag, { weekday: "long", day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
             <span>·</span>
             <span>{meeting.durationMin} min</span>
             <span>·</span>

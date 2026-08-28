@@ -63,7 +63,7 @@ export async function POST(req: Request) {
   let receiptUrl: string | undefined;
   if (parsed.data.receiptData) {
     if (parsed.data.receiptData.length > MAX_DATAURL_BYTES) {
-      return NextResponse.json({ error: `Reçu trop volumineux (max ${MAX_UPLOAD_MB} Mo)` }, { status: 413 });
+      return NextResponse.json({ error: t("route_recu_trop_volumineux_max_p0_mo", { p0: MAX_UPLOAD_MB }) }, { status: 413 });
     }
     receiptUrl = parsed.data.receiptData;
   }

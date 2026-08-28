@@ -1,7 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
-import { useCountryName } from "@/lib/i18n-format";
+import { useCountryName, useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -20,7 +20,8 @@ import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { PaymentDetailDialog } from "@/app/(admin)/admin/transactions/payment-detail-dialog";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 import { INBOUND_TYPES, getStatusDisplay, TYPE_META } from "@/lib/payment-status";
 
 type Payment = {
@@ -199,6 +200,7 @@ export function PaymentsView({
   kpis: Kpis;
 }) {
   const t = useTranslations("admin.payments");
+  const formatCurrency = useCurrency();
   const countryName = useCountryName();
   const tc = useTranslations("common");
   const router = useRouter();
@@ -398,7 +400,7 @@ export function PaymentsView({
       a.download = `paiements_${format}_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success(`Export ${format.toUpperCase()} téléchargé (${ids.length} entrées)`);
+      toast.success(t("payments_view_export_p0_telecharge_p1_entrees", { p0: format.toUpperCase(), p1: ids.length }));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("erreur"));
     }
@@ -541,7 +543,7 @@ export function PaymentsView({
             </span>
             {p.refundedStatus === "full" && (
               <span
-                title={`Cette vente a été entièrement remboursée (${p.refundedAmount.toFixed(2)} ${p.currency})`}
+                title={t("payments_view_cette_vente_a_ete_entierement_remboursee_p0_p1", { p0: p.refundedAmount.toFixed(2), p1: p.currency })}
                 className="inline-flex items-center gap-1 text-[9px] text-red-700 bg-red-50 px-1.5 py-0.5 rounded"
               >
                 <RotateCcw className="h-2.5 w-2.5" />
@@ -550,7 +552,7 @@ export function PaymentsView({
             )}
             {p.refundedStatus === "partial" && (
               <span
-                title={`Cette vente a été partiellement remboursée (${p.refundedAmount.toFixed(2)} / ${Math.abs(p.amount).toFixed(2)} ${p.currency})`}
+                title={t("payments_view_cette_vente_a_ete_partiellement_remboursee_p0_p1", { p0: p.refundedAmount.toFixed(2), p1: Math.abs(p.amount).toFixed(2), p2: p.currency })}
                 className="inline-flex items-center gap-1 text-[9px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded"
               >
                 <RotateCcw className="h-2.5 w-2.5" />
@@ -560,7 +562,7 @@ export function PaymentsView({
 
             {isInbound && p.reconciledAt && (
               <span
-                title={`Confirmé reçu en banque le ${formatDate(new Date(p.reconciledAt))} — vérification que le paiement a bien été crédité (utile pour audit comptable)`}
+                title={t("payments_view_confirme_recu_en_banque_le_p0_verification_que", { p0: formatDate(new Date(p.reconciledAt)) })}
                 className="inline-flex items-center gap-1 text-[9px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded"
               >
                 <CheckCircle2 className="h-2.5 w-2.5" />
@@ -569,7 +571,7 @@ export function PaymentsView({
             )}
             {p.exportedAt && (
               <span
-                title={`Déjà exporté vers la comptabilité (${p.exportFormat ?? t("format_inconnu")}) le ${formatDate(new Date(p.exportedAt))}`}
+                title={t("payments_view_deja_exporte_vers_la_comptabilite_p0_le_p1", { p0: p.exportFormat ?? t("format_inconnu"), p1: formatDate(new Date(p.exportedAt)) })}
                 className="inline-flex items-center gap-1 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded"
               >
                 <FolderInput className="h-2.5 w-2.5" />
@@ -613,7 +615,7 @@ export function PaymentsView({
             <button
               onClick={() => setPdfPreview({
                 url: `/api/payments/${p.id}/receipt`,
-                title: `Reçu paiement #${p.id}`,
+                title: t("payments_view_recu_paiement_p0", { p0: p.id }),
                 downloadName: `recu-${p.id}`,
               })}
               className="inline-flex items-center justify-center h-7 w-7 rounded hover:bg-muted text-muted-foreground hover:text-foreground"
@@ -706,7 +708,7 @@ export function PaymentsView({
             <RotateCcw className="h-3.5 w-3.5 text-amber-500" />
           </div>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</p>
-          <p className="text-[10px] text-muted-foreground">{kpis.byType.refund?.count ?? 0} entrée{(kpis.byType.refund?.count ?? 0) > 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">{tc("entries_count", { count: kpis.byType.refund?.count ?? 0 })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
@@ -714,7 +716,7 @@ export function PaymentsView({
             <AlertTriangle className="h-3.5 w-3.5 text-red-500" />
           </div>
           <p className="text-lg font-bold text-red-600 tabular-nums">{formatCurrency(Math.abs(kpis.byType.chargeback?.total ?? 0))}</p>
-          <p className="text-[10px] text-muted-foreground">{kpis.byType.chargeback?.count ?? 0} entrée{(kpis.byType.chargeback?.count ?? 0) > 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">{tc("entries_count", { count: kpis.byType.chargeback?.count ?? 0 })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-center justify-between mb-1">
@@ -722,7 +724,7 @@ export function PaymentsView({
             <Coins className="h-3.5 w-3.5 text-blue-500" />
           </div>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{formatCurrency(kpis.totalNet)}</p>
-          <p className="text-[10px] text-muted-foreground">après {formatCurrency(kpis.totalFees)} de frais</p>
+          <p className="text-[10px] text-muted-foreground">{t("apres_frais", { amount: formatCurrency(kpis.totalFees) })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3" title={t("paiements_verifies_comme_recus_banque")}>
           <div className="flex items-center justify-between mb-1">
@@ -731,7 +733,7 @@ export function PaymentsView({
           </div>
           <p className="text-lg font-bold text-[#0F2D52] tabular-nums">{kpis.reconciledCount}/{kpis.total}</p>
           <p className="text-[10px] text-muted-foreground">
-            {kpis.unreconciledCount > 0 ? `${kpis.unreconciledCount} à vérifier` : t("tout_verifie")}
+            {kpis.unreconciledCount > 0 ? t("payments_view_p0_a_verifier", { p0: kpis.unreconciledCount }) : t("tout_verifie")}
           </p>
         </div>
       </div>
@@ -746,7 +748,7 @@ export function PaymentsView({
               <CreditCard className="h-4 w-4" />
               {t("tous_paiements")}
             </span>
-            <span className="font-semibold text-[#0F2D52]">{filtered.length} affichés</span>
+            <span className="font-semibold text-[#0F2D52]">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("ventes")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.byType.charge?.total ?? 0)}</span></span>
             <span className="text-muted-foreground">{t("remb")} <span className="font-semibold text-amber-600">{formatCurrency(Math.abs(kpis.byType.refund?.total ?? 0))}</span></span>
             <span className="text-muted-foreground">{t("net")} <span className="font-semibold">{formatCurrency(kpis.totalNet)}</span></span>
@@ -960,7 +962,7 @@ export function PaymentsView({
         open={assignDialogOpen}
         onOpenChange={setAssignDialogOpen}
         title={t("assigner_comptable")}
-        description={`Assigner les ${selectedIds.size} paiement(s) sélectionné(s) à un membre de l'équipe pour suivi comptable.`}
+        description={t("payments_view_assigner_les_p0_paiement_s_selectionne_s_a", { p0: selectedIds.size })}
         confirmLabel={t("assigner")}
         variant="default"
         onConfirm={bulkAssign}
@@ -984,7 +986,7 @@ export function PaymentsView({
         open={categoryDialogOpen}
         onOpenChange={setCategoryDialogOpen}
         title={t("categorie_comptable")}
-        description={`Appliquer une catégorie comptable sur ${selectedIds.size} paiement(s) — utile pour les exports vers QuickBooks/Sage/Acomba.`}
+        description={t("payments_view_appliquer_une_categorie_comptable_sur_p0_paiement_s", { p0: selectedIds.size })}
         confirmLabel={t("appliquer")}
         variant="default"
         onConfirm={bulkSetCategory}

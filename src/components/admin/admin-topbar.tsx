@@ -49,7 +49,7 @@ export function AdminTopbar({
       await fetch("/api/locale", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale: otherLocale }),
+        body: JSON.stringify({ locale: otherLocale, scope: "admin" }),
       });
       window.location.reload();
     });

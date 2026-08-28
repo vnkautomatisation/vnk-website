@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
     const message =
       err instanceof Error ? err.message : "Erreur lors de l'import";
     return NextResponse.json(
-      { error: `Échec de l'analyse : ${message}` },
+      { error: t("route_echec_de_l_analyse_p0", { p0: message }) },
       { status: 500 },
     );
   }

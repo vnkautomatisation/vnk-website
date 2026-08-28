@@ -121,7 +121,7 @@ export async function submitAppealAction(
         recipientId: rid,
         type: "warning",
         title: `Appel d'attribution : ${pref.window!.name}`,
-        body: `${ownerLabel} fait appel sur sa preference rang ${pref.rank} (${pref.status}). Motif : ${parsed.data.reason.slice(0, 200)}`,
+        body: t("hr_vacation_appeals_p0_fait_appel_sur_sa_preference_rang_p1", { p0: ownerLabel, p1: pref.rank, p2: pref.status, p3: parsed.data.reason.slice(0, 200) }),
         link: "/admin/employes/conges/fenetres",
         icon: "alert-triangle",
       })),
@@ -140,7 +140,7 @@ export async function submitAppealAction(
     adminId: actorId,
     type: "profile_updated",
     severity: "info",
-    message: `Appel soumis sur la preference de vacances #${pref.id}`,
+    message: t("hr_vacation_appeals_appel_soumis_sur_la_preference_de_vacances_p0", { p0: pref.id }),
     metadata: { preferenceId: pref.id, windowId: pref.windowId, reason: parsed.data.reason.slice(0, 200) },
   }).catch(() => null);
 
@@ -278,8 +278,8 @@ export async function reviewAppealAction(
         ? `Appel approuve : ${pref.window.name}`
         : `Appel refuse : ${pref.window.name}`,
       body: notesClean
-        ? `${reviewerLabel} a ${parsed.data.decision === "approved" ? "approuve" : "refuse"} votre appel. Notes : ${notesClean}`
-        : `${reviewerLabel} a ${parsed.data.decision === "approved" ? "approuve" : "refuse"} votre appel.`,
+        ? t("hr_vacation_appeals_p0_a_p1_votre_appel_notes_p2", { p0: reviewerLabel, p1: parsed.data.decision === "approved" ? "approuve" : "refuse", p2: notesClean })
+        : t("hr_vacation_appeals_p0_a_p1_votre_appel", { p0: reviewerLabel, p1: parsed.data.decision === "approved" ? "approuve" : "refuse" }),
       link: "/admin/mon-espace/conges",
       icon: "calendar",
     },
@@ -296,7 +296,7 @@ export async function reviewAppealAction(
     adminId: pref.adminId,
     type: "profile_updated",
     severity: parsed.data.decision === "approved" ? "success" : "info",
-    message: `Appel sur vacances ${parsed.data.decision === "approved" ? "approuve" : "refuse"}`,
+    message: t("hr_vacation_appeals_appel_sur_vacances_p0", { p0: parsed.data.decision === "approved" ? "approuve" : "refuse" }),
     metadata: { preferenceId: pref.id, windowId: pref.windowId, by: actorId },
   }).catch(() => null);
 

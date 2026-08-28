@@ -2,7 +2,6 @@
 import { useState, useEffect } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import { usePathname, Link } from "@/i18n/routing";
-import NextLink from "next/link";
 import { cn } from "@/lib/utils";
 import { Menu, X, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -35,8 +34,21 @@ export function PublicNav() {
 
   const otherLocale = currentLocale === "fr" ? "en" : "fr";
   const otherLabel = otherLocale === "fr" ? "FR" : "EN";
+  // Passe par la route serveur : elle pose le cookie puis redirige. Changer
+  // seulement l'URL ne suffit pas, le middleware compare les deux et renverrait
+  // sur l'ancienne langue. Un lien, pas un bouton : il marche sans hydratation.
+  // Ancre native et non NextLink : celui-ci tente une navigation RSC, a laquelle
+  // une route API repond 503, et le clic restait alors sans effet.
+  // Le portail partage cet en-tete mais n'a pas de prefixe de langue dans ses
+  // URL et lit sa propre preference : il lui faut sa portee, sinon le bouton
+  // ecrit le cookie du site public et l'ecran ne bouge pas.
+  const isPortal = pathname.startsWith("/portail");
+  const switcherTarget = isPortal
+    ? pathname
+    : otherLocale === "en" ? `/en${pathname === "/" ? "" : pathname}` : pathname || "/";
   const switcherHref =
-    otherLocale === "en" ? `/en${pathname || ""}` : pathname || "/";
+    `/api/locale/switch?to=${otherLocale}&next=${encodeURIComponent(switcherTarget || "/")}` +
+    (isPortal ? "&scope=portal" : "");
 
   return (
     <header
@@ -103,24 +115,24 @@ export function PublicNav() {
           </Button>
 
 
-          <NextLink
+          <a
             href={switcherHref}
-            aria-label={`Changer vers ${otherLabel}`}
+            aria-label={t("switch_to", { lang: otherLabel })}
             className="ml-2 inline-flex items-center justify-center h-9 w-12 rounded-md border border-white/20 text-xs font-bold tracking-wider text-white hover:bg-white/10 transition-colors"
           >
             {otherLabel}
-          </NextLink>
+          </a>
         </nav>
 
 
         <div className="lg:hidden flex items-center gap-2 shrink-0">
-          <NextLink
+          <a
             href={switcherHref}
-            aria-label={`Changer vers ${otherLabel}`}
+            aria-label={t("switch_to", { lang: otherLabel })}
             className="inline-flex items-center justify-center h-9 w-11 sm:h-10 sm:w-12 rounded-md border border-white/20 text-xs font-bold text-white hover:bg-white/10"
           >
             {otherLabel}
-          </NextLink>
+          </a>
           <button
             type="button"
             onClick={() => setOpen(true)}

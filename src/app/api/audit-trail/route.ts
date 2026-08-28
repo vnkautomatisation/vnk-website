@@ -8,6 +8,7 @@
 //  - geoIp + deviceType (pour LoginEvent)
 import { NextResponse } from "next/server";
 import { getTranslations } from "next-intl/server";
+import { workflowEventLabel } from "@/lib/workflow-label";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
@@ -172,6 +173,7 @@ const EMAIL_KEYS: Record<string, string> = {
 
 export async function GET(req: Request) {
   const t = await getTranslations("api_errors");
+  const tRoot = await getTranslations();
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -272,7 +274,7 @@ export async function GET(req: Request) {
     });
     sigs.forEach((s) => events.push({
       id: `sig-${s.id}`, source: "signature", type: `${s.entityType}_signed`,
-      label: `Signature ${s.entityType} #${s.entityId} par ${s.signedBy}${s.rfc3161Token ? " (RFC 3161)" : ""}`,
+      label: t("route_signature_p0_p1_par_p2_p3", { p0: s.entityType, p1: s.entityId, p2: s.signedBy, p3: s.rfc3161Token ? " (RFC 3161)" : "" }),
       severity: "success", result: "success", anomalies: [],
       clientId: s.clientId, clientName: clientMap.get(s.clientId) ?? null,
       ipAddress: s.ipAddress, userAgent: s.userAgent,
@@ -288,7 +290,7 @@ export async function GET(req: Request) {
     });
     consents.forEach((c) => events.push({
       id: `consent-${c.id}`, source: "consent", type: c.consentType,
-      label: `Consentement ${c.consentType} ${c.granted ? "accepté" : "refusé"} v${c.version}`,
+      label: t("route_consentement_p0_p1_v_p2", { p0: c.consentType, p1: c.granted ? "accepté" : "refusé", p2: c.version }),
       severity: c.granted ? "success" : "warning",
       result: c.granted ? "success" : "neutral",
       anomalies: [],
@@ -338,17 +340,17 @@ export async function GET(req: Request) {
       const actor = a.admin?.email ?? clientNameFromChanges ?? (auditClientId ? clientMap.get(auditClientId) ?? null : null);
       let prettyLabel: string;
       if (typeFromChanges === "document_read_by_client") {
-        prettyLabel = `Document "${titleFromChanges ?? `#${a.entityId}`}" lu par ${clientNameFromChanges ?? "client"}`;
+        prettyLabel = t("route_document_p0_lu_par_p1", { p0: titleFromChanges ?? `#${a.entityId}`, p1: clientNameFromChanges ?? "client" });
       } else if (typeFromChanges === "password_changed") {
-        prettyLabel = `Mot de passe modifié${actor ? ` par ${actor}` : ""}`;
+        prettyLabel = t("route_mot_de_passe_modifie_p0", { p0: actor ? t("route_par_acteur", { actor }) : "" });
       } else if (typeFromChanges === "2fa_enabled") {
-        prettyLabel = `2FA activée${actor ? ` par ${actor}` : ""}`;
+        prettyLabel = t("route_2fa_activee_p0", { p0: actor ? t("route_par_acteur", { actor }) : "" });
       } else if (typeFromChanges === "2fa_disabled") {
-        prettyLabel = `2FA désactivée${actor ? ` par ${actor}` : ""}`;
+        prettyLabel = t("route_2fa_desactivee_p0", { p0: actor ? t("route_par_acteur", { actor }) : "" });
       } else if (typeFromChanges) {
-        prettyLabel = `${typeFromChanges}${a.entityId ? ` #${a.entityId}` : ""}${actor ? ` par ${actor}` : ""}`;
+        prettyLabel = t("route_p0_p1_p2", { p0: typeFromChanges, p1: a.entityId ? ` #${a.entityId}` : "", p2: actor ? t("route_par_acteur", { actor }) : "" });
       } else {
-        prettyLabel = `${a.action} ${a.entityType}${a.entityId ? ` #${a.entityId}` : ""}${actor ? ` par ${actor}` : ""}`;
+        prettyLabel = t("route_p0_p1_p2_p3", { p0: a.action, p1: a.entityType, p2: a.entityId ? ` #${a.entityId}` : "", p3: actor ? t("route_par_acteur", { actor }) : "" });
       }
       const { sev, result } = auditSeverity(a.action);
       events.push({
@@ -375,14 +377,14 @@ export async function GET(req: Request) {
       const name = clientId ? clientMap.get(clientId) : null;
       if (!name) return label;
       return label
-        .replace(/\bpar le client\b/gi, `par ${name}`)
-        .replace(/\bau client\b/gi, `à ${name}`)
-        .replace(/\bdu client\b/gi, `de ${name}`)
-        .replace(/\bpar client\b/gi, `par ${name}`);
+        .replace(/\bpar le client\b/gi, t("route_par_p0", { p0: name }))
+        .replace(/\bau client\b/gi, t("route_a_p0", { p0: name }))
+        .replace(/\bdu client\b/gi, t("route_de_p0", { p0: name }))
+        .replace(/\bpar client\b/gi, t("route_par_p0", { p0: name }));
     };
     workflow.forEach((w) => events.push({
       id: `wf-${w.id}`, source: "workflow", type: w.eventType,
-      label: humanizeLabel(w.eventLabel, w.clientId) || w.eventType,
+      label: humanizeLabel(workflowEventLabel(tRoot, w), w.clientId) || w.eventType,
       severity: "info", result: "neutral", anomalies: [],
       clientId: w.clientId, clientName: clientMap.get(w.clientId) ?? null,
       ipAddress: null, metadata: w.metadata as Record<string, unknown> | null,

@@ -12,6 +12,7 @@
 // définit le type localement.
 // ─────────────────────────────────────────────────────────
 import { useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import {
   BadgeCheck,
@@ -84,11 +85,11 @@ export type PersonalDocCardData = {
   verifiedBy?: { id: number; fullName?: string | null } | null;
 };
 
-function formatDate(iso?: string | null): string | null {
+function formatDate(iso: string | null | undefined, tag: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("fr-CA", { year: "numeric", month: "short", day: "numeric" });
+  return d.toLocaleDateString(tag, { year: "numeric", month: "short", day: "numeric" });
 }
 
 function daysUntil(iso?: string | null): number | null {
@@ -122,10 +123,11 @@ export function PersonalDocCard({
 }) {
   const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const meta = CATEGORY_META[doc.category] ?? CATEGORY_META.other;
   const Icon = meta.icon;
-  const issued = formatDate(doc.issuedAt);
-  const expires = formatDate(doc.expiresAt);
+  const issued = formatDate(doc.issuedAt, dateTag);
+  const expires = formatDate(doc.expiresAt, dateTag);
   const expiresInDays = daysUntil(doc.expiresAt);
   const isExpired = expiresInDays !== null && expiresInDays < 0;
   const isExpiringSoon =
@@ -316,7 +318,7 @@ export function PersonalDocCard({
           {isAdmin && doc.verifiedAt && doc.verifiedBy && (
             <p className="text-[10px] text-muted-foreground border-t pt-2">
               Vérifié par {doc.verifiedBy.fullName ?? `#${doc.verifiedBy.id}`} le{" "}
-              {formatDate(doc.verifiedAt)}
+              {formatDate(doc.verifiedAt, dateTag)}
             </p>
           )}
         </CardContent>

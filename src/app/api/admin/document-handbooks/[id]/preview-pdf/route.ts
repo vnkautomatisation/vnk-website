@@ -23,6 +23,8 @@ import {
   renderHandbookHtmlToPdf,
   type SignatureScope,
 } from "@/lib/services/pdf-html-renderer";
+import { getLocale } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -116,6 +118,7 @@ async function buildHandbookPdf(
   employeeIdStr: string | null,
   live: LiveState,
 ): Promise<{ buffer: Buffer; filename: string } | { error: string; status: number }> {
+  const dateTag = dateLocale(await getLocale());
   const handbook = await prisma.documentHandbook.findUnique({
     where: { id: handbookId },
     include: {
@@ -167,7 +170,7 @@ async function buildHandbookPdf(
   }
   if (live.employeeName) employeeName = live.employeeName;
   if (!context["date.todayFr"]) {
-    context["date.todayFr"] = new Date().toLocaleDateString("fr-CA", {
+    context["date.todayFr"] = new Date().toLocaleDateString(dateTag, {
       day: "2-digit",
       month: "long",
       year: "numeric",

@@ -8,6 +8,7 @@
 //  5. Footer : créer une demande
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -106,11 +107,11 @@ type LeaveRow = {
 
 type Policy = { id: number; name: string; isDefault?: boolean };
 
-function fmtShort(s: string) {
-  return new Date(s).toLocaleDateString("fr-CA", { day: "2-digit", month: "short" });
+function fmtShort(s: string, tag: string) {
+  return new Date(s).toLocaleDateString(tag, { day: "2-digit", month: "short" });
 }
-function fmtDate(s: string) {
-  return new Date(s).toLocaleDateString("fr-CA");
+function fmtDate(s: string, tag: string) {
+  return new Date(s).toLocaleDateString(tag);
 }
 
 export function EmployeeDrillDownPanel({
@@ -148,6 +149,7 @@ export function EmployeeDrillDownPanel({
   const [historyDialogReq, setHistoryDialogReq] = useState<LeaveRow | null>(null);
 
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (!open || !employeeId) return;
@@ -223,7 +225,7 @@ export function EmployeeDrillDownPanel({
     markBusy(r.id, true);
     const res = await cancelLeaveRequestAction({
       id: r.id,
-      reason: `Annulé par l'administrateur : ${reason}`,
+      reason: t("employee_drill_down_annule_par_l_administrateur_p0", { p0: reason }),
     });
     markBusy(r.id, false);
     if (res.success) { toast.success(t("demande_annulee")); refresh(); }
@@ -305,13 +307,13 @@ export function EmployeeDrillDownPanel({
           .map((p) => ({
             id: p.adminId,
             name: p.fullName,
-            period: `${fmtShort(p.startDate)} → ${fmtShort(p.endDate)}`,
+            period: `${fmtShort(p.startDate, dateTag)} → ${fmtShort(p.endDate, dateTag)}`,
             type: p.type,
           }));
         if (matches.length > 0) {
           out.push({
             requestId: r.id,
-            period: `${fmtShort(r.startDate)} → ${fmtShort(r.endDate)}`,
+            period: `${fmtShort(r.startDate, dateTag)} → ${fmtShort(r.endDate, dateTag)}`,
             peers: matches,
           });
         }
@@ -375,7 +377,7 @@ export function EmployeeDrillDownPanel({
                       <Ban className="h-4 w-4 text-red-600 mt-0.5 shrink-0" />
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-red-700">
-                          Soumissions bloquées jusqu&apos;au {fmtDate(employee.leaveBlockedUntil)}
+                          Soumissions bloquées jusqu&apos;au {fmtDate(employee.leaveBlockedUntil, dateTag)}
                         </p>
                         {employee.leaveBlockedReason && (
                           <p className="text-[11px] text-red-700/80 mt-0.5">{employee.leaveBlockedReason}</p>
@@ -468,7 +470,7 @@ export function EmployeeDrillDownPanel({
                     className="h-7 text-[11px]"
                     onClick={() => setPdfPreview({
                       url: `/api/admin/leaves/employee/${employee.id}/annual-report-pdf`,
-                      title: `Relevé annuel — ${employee.fullName || employee.email}`,
+                      title: t("employee_drill_down_releve_annuel_p0", { p0: employee.fullName || employee.email }),
                       description: t("periode_courante_1er_mai_30"),
                       filename: `releve-annuel-${employee.id}.pdf`,
                     })}
@@ -530,8 +532,8 @@ export function EmployeeDrillDownPanel({
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
                             {sameDay
-                              ? `Le ${fmtShort(r.startDate)}`
-                              : `Du ${fmtShort(r.startDate)} au ${fmtShort(r.endDate)}`}
+                              ? t("employee_drill_down_le_p0", { p0: fmtShort(r.startDate, dateTag) })
+                              : t("employee_drill_down_du_p0_au_p1", { p0: fmtShort(r.startDate, dateTag), p1: fmtShort(r.endDate, dateTag) })}
                             {" · "}
                             <strong className="text-foreground tabular-nums">{r.daysCount}</strong> j
                           </p>
@@ -602,7 +604,7 @@ export function EmployeeDrillDownPanel({
                             <AddToCalendarMenu
                               event={{
                                 leaveId: r.id,
-                                title: `Congé : ${t(TYPE_META[r.type]?.labelKey ?? "type_other")} — ${employee?.fullName || employee?.email || ""}`.trim(),
+                                title: t("employee_drill_down_conge_p0_p1", { p0: t(TYPE_META[r.type]?.labelKey ?? "type_other"), p1: employee?.fullName || employee?.email || "" }).trim(),
                                 startDate: r.startDate,
                                 endDate: r.endDate,
                                 description: r.reason || undefined,
@@ -616,7 +618,7 @@ export function EmployeeDrillDownPanel({
                                 className="h-7 text-[11px]"
                                 onClick={() => setPdfPreview({
                                   url: `/api/admin/leaves/${r.id}/pdf-letter`,
-                                  title: `Lettre de confirmation — Demande #${r.id}`,
+                                  title: t("employee_drill_down_lettre_de_confirmation_demande_p0", { p0: r.id }),
                                   description: employee ? `${employee.fullName || employee.email}` : undefined,
                                   filename: `lettre-conge-${r.id}.pdf`,
                                 })}
@@ -726,7 +728,7 @@ export function EmployeeDrillDownPanel({
               requests={requests}
               onPdfPreview={() => setPdfPreview({
                 url: `/api/admin/leaves/employee/${employee.id}/annual-report-pdf`,
-                title: `Relevé annuel — ${employee.fullName || employee.email}`,
+                title: t("employee_drill_down_releve_annuel_p0", { p0: employee.fullName || employee.email }),
                 description: t("periode_courante_1er_mai_30"),
                 filename: `releve-annuel-${employee.id}.pdf`,
               })}
@@ -1097,6 +1099,7 @@ function AnnualReportDialog({
 }) {
   const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
 
   const now = new Date();
   const refYear = now.getMonth() + 1 >= 5 ? now.getFullYear() : now.getFullYear() - 1;
@@ -1124,7 +1127,7 @@ function AnnualReportDialog({
               Rapport annuel — {employee.fullName || employee.email}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
-              Période {periodStart.toLocaleDateString("fr-CA")} → {periodEnd.toLocaleDateString("fr-CA")}
+              Période {periodStart.toLocaleDateString(dateTag)} → {periodEnd.toLocaleDateString(dateTag)}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -1363,6 +1366,7 @@ function HistoryDialog({
   const tc = useTranslations("common");
   const [logs, setLogs] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  const dateTag = useDateLocale();
   useEffect(() => {
     if (!req) return;
     setLoading(true);
@@ -1396,7 +1400,7 @@ function HistoryDialog({
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     <AuditActionBadge action={l.action} />
                     <span className="text-[10px] text-muted-foreground tabular-nums">
-                      {new Date(l.createdAt).toLocaleString("fr-CA")}
+                      {new Date(l.createdAt).toLocaleString(dateTag)}
                     </span>
                   </div>
                   <p className="text-xs text-foreground mt-1">{t("employee_drill_down_par")}<strong>{l.actor ? (l.actor.fullName || l.actor.email) : t("systeme")}</strong>

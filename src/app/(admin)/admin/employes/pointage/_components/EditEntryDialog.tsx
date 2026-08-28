@@ -72,7 +72,7 @@ export function EditEntryDialog({
     if (!startDate || durationMin <= 0) return null;
     const end = new Date(startDate.getTime() + (durationMin + breakMin) * 60_000);
     const sameDay = end.getDate() === startDate.getDate();
-    return `${pad(end.getHours())}:${pad(end.getMinutes())}${sameDay ? "" : " (+1 jour)"}`;
+    return t("editentrydialog_p0_p1_p2", { p0: pad(end.getHours()), p1: pad(end.getMinutes()), p2: sameDay ? "" : " (+1 jour)" });
   }, [startDate, durationMin, breakMin]);
 
   const submit = async () => {

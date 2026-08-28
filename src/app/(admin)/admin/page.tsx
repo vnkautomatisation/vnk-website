@@ -2,6 +2,7 @@
 import { getLocale, getTranslations } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { monthNames, dateLocale } from "@/lib/i18n-format";
 import { DashboardView } from "@/components/admin/dashboard/dashboard-view";
 import type { Metadata } from "next";
 
@@ -110,7 +111,8 @@ export default async function AdminDashboard() {
   ]);
 
   // Revenus 6 derniers mois pour le graphique
-  const monthNames = ["Jan", "Fev", "Mar", "Avr", "Mai", "Jun", "Jul", "Aou", "Sep", "Oct", "Nov", "Dec"];
+  // Les mois viennent d'Intl : un nouveau locale n'ajoute aucun tableau.
+  const chartMonths = monthNames(dateLocale(await getLocale()), "short");
   const revenueByMonth: { month: string; revenue: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const mStart = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -120,7 +122,7 @@ export default async function AdminDashboard() {
       where: { status: "paid", paidAt: { gte: mStart, lt: mEnd } },
     });
     revenueByMonth.push({
-      month: monthNames[mStart.getMonth()],
+      month: chartMonths[mStart.getMonth()],
       revenue: Number(agg._sum.amountTtc ?? 0),
     });
   }
@@ -172,6 +174,7 @@ export default async function AdminDashboard() {
           id: ev.id,
           eventType: ev.eventType,
           eventLabel: ev.eventLabel,
+          metadata: ev.metadata,
           clientName: ev.client.fullName,
           companyName: ev.client.companyName,
           createdAt: ev.createdAt.toISOString(),

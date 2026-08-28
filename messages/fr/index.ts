@@ -14,6 +14,7 @@ import portal from "./portal.json";
 import services from "./services.json";
 import settings from "./settings.json";
 import status from "./status.json";
+import workflow_events from "./workflow_events.json";
 import admin from "./admin";
 
 export default {
@@ -30,5 +31,6 @@ export default {
   services,
   settings,
   status,
+  workflow_events,
   admin,
 };

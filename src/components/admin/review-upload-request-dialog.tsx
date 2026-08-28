@@ -9,6 +9,7 @@
 //             Rejeter (motif obligatoire).
 // ─────────────────────────────────────────────────────────
 import { useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -53,11 +54,11 @@ export type ReviewableRequest = {
   targetAdmin: { id: number; fullName: string | null; email: string };
 };
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 const CATEGORY_KEYS: Record<string, string> = {
@@ -88,6 +89,7 @@ export function ReviewUploadRequestDialog({
   const [alsoCreate, setAlsoCreate] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const dateTag = useDateLocale();
 
   if (!request) return null;
 
@@ -173,7 +175,7 @@ export function ReviewUploadRequestDialog({
               {request.uploadedAt && (
                 <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/15 text-white border border-white/30">
                   <CalendarClock className="h-2.5 w-2.5" />
-                  Téléversé le {formatDate(request.uploadedAt)}
+                  Téléversé le {formatDate(request.uploadedAt, dateTag)}
                 </span>
               )}
               {request.isRequired && (

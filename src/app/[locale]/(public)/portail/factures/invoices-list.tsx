@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Receipt, CreditCard, Eye, FileText, AlertTriangle, CheckCircle, Clock, Download } from "lucide-react";
@@ -11,7 +12,8 @@ import { StripePaymentModal } from "./stripe-payment-modal";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type Invoice = {
   id: number;
@@ -34,11 +36,11 @@ const STATUS_BAR_COLORS: Record<string, string> = {
   cancelled: "bg-gray-400",
 };
 
-const filterOptions: FilterOption[] = [
-  { value: "unpaid", label: "Non payee" },
-  { value: "paid", label: "Payee" },
-  { value: "overdue", label: "En retard" },
-  { value: "cancelled", label: "Annulee" },
+const FILTER_OPTIONS: { value: string; labelKey: string }[] = [
+  { value: "unpaid", labelKey: "opt_non_payee" },
+  { value: "paid", labelKey: "opt_payee" },
+  { value: "overdue", labelKey: "opt_en_retard" },
+  { value: "cancelled", labelKey: "opt_annulee" },
 ];
 
 export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
@@ -48,6 +50,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
   const [showPayment, setShowPayment] = useState(false);
   const [paid, setPaid] = useState(false);
   const [pdfKey, setPdfKey] = useState(0);
+  const formatCurrency = useCurrency();
 
   const invoiceKpis = useMemo(() => {
     const totalCount = invoices.length;
@@ -100,7 +103,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         <div>
           <span className="font-mono text-xs text-muted-foreground">{r.invoiceNumber}</span>
           <p className="font-medium text-sm">{r.title}</p>
-          <p className="text-[11px] text-muted-foreground">Emise le {formatDate(new Date(r.createdAt))}</p>
+          <p className="text-[11px] text-muted-foreground">{t("emise_le", { date: formatDate(new Date(r.createdAt)) })}</p>
         </div>
       ),
       sortable: true,
@@ -190,13 +193,13 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
 
 
           <p className="text-[11px] text-muted-foreground leading-relaxed">
-            {formatCurrency(inv.amountHt)} HT + TPS {formatCurrency(inv.tpsAmount)} + TVQ {formatCurrency(inv.tvqAmount)}
+            {formatCurrency(inv.amountHt)} {t("ht")} + {t("tps")} {formatCurrency(inv.tpsAmount)} + {t("tvq")} {formatCurrency(inv.tvqAmount)}
           </p>
 
 
           <div className="space-y-1">
             <p className="text-xs text-muted-foreground">
-              Emise le {formatDate(new Date(inv.createdAt))}
+              {t("emise_le", { date: formatDate(new Date(inv.createdAt)) })}
             </p>
             {inv.dueDate && (
               <p className={`text-xs flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
@@ -304,7 +307,7 @@ export function PortalInvoicesList({ invoices }: { invoices: Invoice[] }) {
         storageKey="portal-invoices"
         searchPlaceholder={t("rechercher_facture")}
         searchFn={(r) => `${r.invoiceNumber} ${r.title}`}
-        filterOptions={filterOptions}
+        filterOptions={FILTER_OPTIONS.map((o) => ({ value: o.value, label: t(o.labelKey) }))}
         filterFn={(r) => r.status}
         exportFilename="factures"
         emptyMessage={t("aucune_facture")}

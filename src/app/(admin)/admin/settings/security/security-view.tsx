@@ -2,6 +2,7 @@
 // Vue Sécurité — politique globale + events critiques + verrouillage comptes.
 import React, { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -59,6 +60,7 @@ export function SecurityView({
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("policy");
+  const dateTag = useDateLocale();
   const [pending, startTransition] = useTransition();
 
 
@@ -110,7 +112,7 @@ export function SecurityView({
     startTransition(async () => {
       const r = await forceLogoutAllAction();
       if (r.success && "data" in r) {
-        toast.success(`${r.data.count} session(s) terminée(s)`);
+        toast.success(t("security_view_p0_session_s_terminee_s", { p0: r.data.count }));
         router.refresh();
       } else if (!r.success) {
         toast.error(r.error);
@@ -321,7 +323,7 @@ export function SecurityView({
                       </div>
                       <p className="text-sm font-medium mt-1">{e.message}</p>
                       <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
-                        <span>{new Date(e.createdAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}</span>
+                        <span>{new Date(e.createdAt).toLocaleString(dateTag, { dateStyle: "short", timeStyle: "short" })}</span>
                         {e.ipAddress && <span className="font-mono">{e.ipAddress}</span>}
                         {e.city && <span>{e.city}, {e.country}</span>}
                       </div>
@@ -364,8 +366,8 @@ export function SecurityView({
                       {a.failedLoginAttempts >= 3 && <Badge variant="outline" className="text-[10px] text-amber-700">{a.failedLoginAttempts} tentatives</Badge>}
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {a.email} · {a.lastLogin ? `Dernière connexion ${new Date(a.lastLogin).toLocaleDateString("fr-CA")}` : t("jamais_connecte")}
-                      {isLocked && a.lockedUntil && ` · Bloqué jusqu'au ${new Date(a.lockedUntil).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}`}
+                      {a.email} · {a.lastLogin ? t("security_view_derniere_connexion_p0", { p0: new Date(a.lastLogin).toLocaleDateString(dateTag) }) : t("jamais_connecte")}
+                      {isLocked && a.lockedUntil && t("security_view_bloque_jusqu_au_p0", { p0: new Date(a.lockedUntil).toLocaleString(dateTag, { dateStyle: "short", timeStyle: "short" }) })}
                     </p>
                   </div>
                   {isSuperAdmin && !isMe && (
@@ -450,6 +452,7 @@ type Passkey = {
 function PasskeysSection() {
   const t = useTranslations("admin.security");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const [passkeys, setPasskeys] = React.useState<Passkey[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [registering, setRegistering] = React.useState(false);
@@ -555,8 +558,8 @@ function PasskeysSection() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">{p.deviceLabel || t("appareil_sans_nom")}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    Ajoutée le {new Date(p.createdAt).toLocaleDateString("fr-CA")}
-                    {p.lastUsedAt && ` · Dernière utilisation ${new Date(p.lastUsedAt).toLocaleDateString("fr-CA")}`}
+                    Ajoutée le {new Date(p.createdAt).toLocaleDateString(dateTag)}
+                    {p.lastUsedAt && t("security_view_derniere_utilisation_p0", { p0: new Date(p.lastUsedAt).toLocaleDateString(dateTag) })}
                     {p.transports && ` · ${p.transports}`}
                   </p>
                 </div>

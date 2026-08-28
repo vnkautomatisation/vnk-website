@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { ArrowRight, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { Card } from "@/components/ui/card";
@@ -36,6 +37,7 @@ export function EvaluationsList({ reviews }: { reviews: Review[] }) {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [page, setPage] = useState(0);
+  const dateTag = useDateLocale();
 
   const years = useMemo(() => {
     const s = new Set<string>();
@@ -110,7 +112,7 @@ export function EvaluationsList({ reviews }: { reviews: Review[] }) {
                     <div className="flex-1 min-w-0">
                       <h3 className="font-bold text-sm">{r.admin.fullName || r.admin.email}</h3>
                       <p className="text-xs text-muted-foreground">
-                        Évalué par {r.reviewer.fullName || r.reviewer.email} · {new Date(r.periodStart).toLocaleDateString("fr-CA")} → {new Date(r.periodEnd).toLocaleDateString("fr-CA")}
+                        Évalué par {r.reviewer.fullName || r.reviewer.email} · {new Date(r.periodStart).toLocaleDateString(dateTag)} → {new Date(r.periodEnd).toLocaleDateString(dateTag)}
                       </p>
                       {r.rating !== null && <p className="text-xs mt-0.5">{t("note")} <strong>{r.rating}/10</strong></p>}
                     </div>

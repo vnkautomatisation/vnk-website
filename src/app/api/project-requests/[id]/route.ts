@@ -96,6 +96,8 @@ export async function PATCH(
       clientId: updated.clientId,
       eventType: "project_request_received",
       eventLabel: `Demande "${updated.title}" — ${STATUS_LABELS[parsed.data.status] ?? parsed.data.status}`,
+      labelKey: "workflow_events.demande_statut",
+      labelParams: { title: updated.title, status: STATUS_LABELS[parsed.data.status] ?? parsed.data.status },
       triggeredBy: "admin",
       metadata: { requestId: updated.id, from: existing.status, to: parsed.data.status },
     });

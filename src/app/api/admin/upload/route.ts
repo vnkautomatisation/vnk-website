@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: t("aucun_fichier_recu") }, { status: 400 });
     }
     if (!ALLOWED_MIME.includes(file.type)) {
-      return NextResponse.json({ error: `Type non autorisé (${file.type})` }, { status: 415 });
+      return NextResponse.json({ error: t("route_type_non_autorise_p0", { p0: file.type }) }, { status: 415 });
     }
     if (file.size > MAX_BYTES) {
       return NextResponse.json({ error: `Fichier trop volumineux (max ${MAX_BYTES / 1024 / 1024} MB)` }, { status: 413 });

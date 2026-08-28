@@ -1,6 +1,6 @@
 // POST /api/webhooks/stripe — Stripe webhook (signature HMAC vérifiée)
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { markInvoicePaid, createWorkflowEvent } from "@/lib/workflow";
 import { getSetting } from "@/lib/settings";
@@ -8,9 +8,11 @@ import { logOrderEvent } from "@/lib/request-context";
 import { verifyWebhookSignature, getEnrichedChargeData, getPayoutData } from "@/lib/services/stripe";
 import { notifyInvoicePaid } from "@/lib/integrations/slack";
 import { triggerZap } from "@/lib/integrations/zapier";
+import { dateLocale } from "@/lib/i18n-format";
 
 export async function POST(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const signature = req.headers.get("stripe-signature");
   const rawBody = await req.text();
 
@@ -344,7 +346,7 @@ export async function POST(req: Request) {
                 stripeDisputeId: dispute.id,
                 stripeReason: dispute.reason ?? null,
                 title: `Chargeback Stripe — ${dispute.reason ?? "raison inconnue"}`,
-                description: `Litige ouvert automatiquement par Stripe le ${new Date().toLocaleDateString("fr-CA")}. Référence Stripe : ${dispute.id}.`,
+                description: t("route_litige_ouvert_automatiquement_par_stripe_le_p0_reference", { p0: new Date().toLocaleDateString(dateTag), p1: dispute.id }),
                 type: "chargeback",
                 status: "open",
                 priority: "urgent",
@@ -358,6 +360,8 @@ export async function POST(req: Request) {
               clientId,
               eventType: "dispute_opened",
               eventLabel: `Chargeback Stripe ouvert : ${dispute.reason ?? "raison inconnue"} — ${amountDisputed.toFixed(2)} ${currency}`,
+              labelKey: "workflow_events.chargeback_ouvert",
+              labelParams: { reason: dispute.reason ?? "raison inconnue", amount: `${amountDisputed.toFixed(2)} ${currency}` },
               triggeredBy: "stripe_webhook",
               metadata: { disputeId: created.id, stripeDisputeId: dispute.id, source: "stripe_webhook" },
             }).catch(() => {});

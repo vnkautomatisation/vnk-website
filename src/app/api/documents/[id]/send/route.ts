@@ -58,6 +58,8 @@ export async function POST(
     clientId: doc.clientId,
     eventType: "message_from_admin",
     eventLabel: `Document ${doc.title} envoyé à ${doc.client?.fullName ?? "client"}`,
+    labelKey: "workflow_events.document_envoye",
+    labelParams: { title: doc.title, name: doc.client?.fullName ?? "client" },
     triggeredBy: "admin",
     metadata: { documentId: doc.id, action: "sent_to_client" },
   });

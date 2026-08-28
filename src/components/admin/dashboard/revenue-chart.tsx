@@ -10,7 +10,8 @@ import {
 } from "recharts";
 import { Card, CardContent } from "@/components/ui/card";
 import { useTranslations } from "next-intl";
-import { formatCurrency } from "@/lib/utils";
+import { useCurrency } from "@/lib/i18n-format";
+
 
 type MonthData = {
   month: string;
@@ -19,6 +20,7 @@ type MonthData = {
 
 export function RevenueChart({ data }: { data: MonthData[] }) {
   const t = useTranslations("admin.ui");
+  const formatCurrency = useCurrency();
   return (
     <Card>
       <CardContent className="p-5">

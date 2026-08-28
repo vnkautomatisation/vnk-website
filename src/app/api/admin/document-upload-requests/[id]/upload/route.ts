@@ -130,7 +130,7 @@ export async function POST(
     if (!ALLOWED_MIME.includes(file.type)) {
       console.warn("[upload-doc-req] disallowed mime", { reqId, mime: file.type });
       return NextResponse.json(
-        { error: `Type non autorisé (${file.type || "inconnu"})` },
+        { error: t("route_type_non_autorise_p0", { p0: file.type || "inconnu" }) },
         { status: 415 },
       );
     }
@@ -202,7 +202,7 @@ export async function POST(
       return NextResponse.json(
         {
           error: dbErr instanceof Error
-            ? `Base de données : ${dbErr.message}`
+            ? t("route_base_de_donnees_p0", { p0: dbErr.message })
             : t("erreur_base_de_donnees"),
         },
         { status: 500 },
@@ -238,7 +238,7 @@ export async function POST(
           recipientId: docReq.requestedById,
           type: "info",
           title: t("document_televerse"),
-          body: `${empName} a téléversé « ${docReq.title} ». À valider.`,
+          body: t("route_p0_a_televerse_p1_a_valider", { p0: empName, p1: docReq.title }),
           link: "/admin/employes/documents",
           icon: "upload",
         },

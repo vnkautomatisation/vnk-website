@@ -3,6 +3,7 @@
 // EmployeeWeekPanelRemote fetches; EmployeeWeekPanel is pure presentation.
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -74,7 +75,7 @@ export function EmployeeWeekPanelRemote({
     setPending(true);
     const r = await approveTimeClockAction({ ids });
     setPending(false);
-    if (r.success) { toast.success(`${r.data.approved} entrée(s) approuvée(s)`); reload(); }
+    if (r.success) { toast.success(t("employeeweekpanel_p0_entree_s_approuvee_s", { p0: r.data.approved })); reload(); }
     else toast.error(r.error || "");
   }, [reload]);
 
@@ -111,21 +112,21 @@ export function EmployeeWeekPanelRemote({
     setPending(true);
     const r = await unapproveTimeClockAction({ ids, reason: reason || undefined });
     setPending(false);
-    if (r.success) { toast.success(`${r.data.unapproved} approbation(s) annulée(s)`); reload(); }
+    if (r.success) { toast.success(t("employeeweekpanel_p0_approbation_s_annulee_s", { p0: r.data.unapproved })); reload(); }
     else toast.error(r.error || "");
   }, [reload]);
 
   const approveWeek = useCallback(async (name: string) => {
     const ok = await confirmDialog({
       title: t("approuver_semaine_cours"),
-      description: `Approuver toutes les entrées non approuvées de la semaine en cours pour ${name} ?`,
+      description: t("employeeweekpanel_approuver_toutes_les_entrees_non_approuvees_de_la", { p0: name }),
       confirmLabel: t("approuver"),
     });
     if (!ok) return;
     setPending(true);
     const r = await approveWeekTimeClockAction({ adminId });
     setPending(false);
-    if (r.success) { toast.success(`${r.data.approved} entrée(s) approuvée(s)`); reload(); }
+    if (r.success) { toast.success(t("employeeweekpanel_p0_entree_s_approuvee_s", { p0: r.data.approved })); reload(); }
     else toast.error(r.error || "");
   }, [adminId, reload]);
 
@@ -188,6 +189,7 @@ export function EmployeeWeekPanel({
 }) {
   const t = useTranslations("admin.timeclock");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const entries = employee.entries;
 
 
@@ -321,7 +323,7 @@ export function EmployeeWeekPanel({
         {groupedDays.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-8">{t("aucune_entree_periode")}</p>
         ) : pagedDays.map((day) => {
-          const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
+          const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString(dateTag, {
             weekday: "long", day: "numeric", month: "long",
           }));
           const isFocus = focusDate === day.date;

@@ -132,6 +132,7 @@ export function SettingsView({
   overview?: OverviewMetrics;
 }) {
   const t = useTranslations("settings");
+  const tc = useTranslations("common");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -241,7 +242,7 @@ export function SettingsView({
             icon={Users}
             label={t("equipe")}
             value={overview.adminsActive}
-            hint={`${overview.roles} rôle${overview.roles > 1 ? "s" : ""} · ${overview.positions} poste${overview.positions > 1 ? "s" : ""}`}
+            hint={t("settings_view_p0_role_p1_p2_poste_p3", { p0: overview.roles, p1: overview.roles > 1 ? "s" : "", p2: overview.positions, p3: overview.positions > 1 ? "s" : "" })}
           />
           <OverviewCard
             href="/admin/settings/branding"
@@ -262,7 +263,7 @@ export function SettingsView({
             icon={Newspaper}
             label={t("contenu")}
             value={overview.contentPublished}
-            hint={`${overview.posts} blog · ${overview.faqs} FAQ · ${overview.testimonials} avis`}
+            hint={t("apercu_contenu", { posts: overview.posts, faqs: overview.faqs, testimonials: overview.testimonials })}
           />
           <OverviewCard
             href="/admin/settings/templates"
@@ -276,7 +277,7 @@ export function SettingsView({
             icon={Receipt}
             label={t("conformite")}
             value={`${(overview.fiscalDone ? 1 : 0) + (overview.rprpDone ? 1 : 0)}/2`}
-            hint={`${overview.fiscalDone ? "✓" : "○"} fiscal · ${overview.rprpDone ? "✓" : "○"} Loi 25`}
+            hint={`${overview.fiscalDone ? "✓" : "○"} ${t("fiscal")} · ${overview.rprpDone ? "✓" : "○"} ${t("loi_25")}`}
           />
         </div>
       )}
@@ -290,7 +291,7 @@ export function SettingsView({
               <SettingsIcon className="h-4 w-4" />
               {t("page_title")}
             </span>
-            <span className="text-muted-foreground">{filteredCategories.length} catégorie{filteredCategories.length > 1 ? "s" : ""}</span>
+            <span className="text-muted-foreground">{tc("categories_count", { count: filteredCategories.length })}</span>
             {searchQuery && <span className="text-muted-foreground">{t("recherche")} <span className="font-semibold">«&nbsp;{searchQuery}&nbsp;»</span></span>}
           </div>
         </div>

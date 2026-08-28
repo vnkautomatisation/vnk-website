@@ -1475,370 +1475,7 @@ export function TemplateRichEditor({
       </div>
 
 
-      <style jsx global>{`
-        .tpl-richeditor .ProseMirror {
-          min-height: ${minHeight};
-          outline: none;
-        }
-        .tpl-richeditor .ProseMirror p {
-          margin: 0.5em 0;
-        }
-        .tpl-richeditor .ProseMirror h1 {
-          font-size: 1.25rem;
-          font-weight: 700;
-          margin: 0.8em 0 0.4em;
-          color: #0f2d52;
-        }
-        .tpl-richeditor .ProseMirror h2 {
-          font-size: 1.05rem;
-          font-weight: 700;
-          margin: 0.7em 0 0.35em;
-          color: #0f2d52;
-        }
-        .tpl-richeditor .ProseMirror h3 {
-          font-size: 0.95rem;
-          font-weight: 600;
-          margin: 0.6em 0 0.3em;
-        }
-
-           coherente avec le rendu PDF (data-numbering="auto" sur le wrapper). */
-        [data-numbering="auto"] .tpl-richeditor .ProseMirror {
-          counter-reset: tpl-h2 tpl-h3;
-        }
-        [data-numbering="auto"] .tpl-richeditor .ProseMirror h2 {
-          counter-reset: tpl-h3;
-        }
-        [data-numbering="auto"] .tpl-richeditor .ProseMirror h2::before {
-          counter-increment: tpl-h2;
-          content: counter(tpl-h2) ". ";
-          color: #0f2d52;
-          font-weight: 700;
-          margin-right: 0.35em;
-        }
-        [data-numbering="auto"] .tpl-richeditor .ProseMirror h3::before {
-          counter-increment: tpl-h3;
-          content: counter(tpl-h2) "." counter(tpl-h3) " ";
-          color: #334155;
-          font-weight: 600;
-          margin-right: 0.35em;
-        }
-        .tpl-richeditor .ProseMirror ul {
-          list-style: disc;
-          padding-left: 1.5rem;
-          margin: 0.5em 0;
-        }
-        .tpl-richeditor .ProseMirror ol {
-          list-style: decimal;
-          padding-left: 1.5rem;
-          margin: 0.5em 0;
-        }
-        .tpl-richeditor .ProseMirror li {
-          margin: 0.15em 0;
-        }
-
-           natif pour le tiret, on simule). */
-        .tpl-richeditor .ProseMirror ul.tpl-list-dash {
-          list-style: none;
-          padding-left: 1.5rem;
-        }
-        .tpl-richeditor .ProseMirror ul.tpl-list-dash > li {
-          position: relative;
-        }
-        .tpl-richeditor .ProseMirror ul.tpl-list-dash > li::before {
-          content: "\\2014";
-          position: absolute;
-          left: -1.1rem;
-          color: #0F2D52;
-          font-weight: 600;
-        }
-
-           gérés via CSS counters. Niveau 1 = decimal, niveau 2 = a.b,
-           niveau 3 = a.b.c. Indentation via Tab/Shift+Tab sur les listes. */
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel {
-          counter-reset: lvl1;
-          list-style: none;
-          padding-left: 1.5rem;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel > li {
-          counter-increment: lvl1;
-          position: relative;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel > li::before {
-          content: counter(lvl1) ".";
-          position: absolute;
-          left: -1.5rem;
-          color: #0F2D52;
-          font-weight: 600;
-          min-width: 1.4rem;
-          text-align: right;
-          padding-right: 0.25rem;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol.tpl-list-multilevel,
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol {
-          counter-reset: lvl2;
-          padding-left: 1.5rem;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol > li {
-          counter-increment: lvl2;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol > li::before {
-          content: counter(lvl1) "." counter(lvl2);
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol {
-          counter-reset: lvl3;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol > li {
-          counter-increment: lvl3;
-        }
-        .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol > li::before {
-          content: counter(lvl1) "." counter(lvl2) "." counter(lvl3);
-        }
-        .tpl-richeditor .ProseMirror ul[data-type="taskList"] {
-          list-style: none;
-          padding-left: 0.25rem;
-          margin: 0.5em 0;
-        }
-        .tpl-richeditor .ProseMirror ul[data-type="taskList"] li {
-          display: flex;
-          align-items: flex-start;
-          gap: 8px;
-          margin: 0.25em 0;
-        }
-        .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > label {
-          flex: 0 0 auto;
-          margin-top: 3px;
-          user-select: none;
-        }
-        .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > div {
-          flex: 1 1 auto;
-          min-width: 0;
-        }
-        .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > div > p {
-          margin: 0;
-        }
-        .tpl-richeditor
-          .ProseMirror
-          ul[data-type="taskList"]
-          input[type="checkbox"] {
-          appearance: none;
-          -webkit-appearance: none;
-          width: 14px;
-          height: 14px;
-          border: 1.5px solid #0f2d52;
-          border-radius: 2px;
-          background: #ffffff;
-          cursor: pointer;
-          display: inline-grid;
-          place-content: center;
-          margin: 0;
-          vertical-align: middle;
-        }
-        .tpl-richeditor
-          .ProseMirror
-          ul[data-type="taskList"]
-          input[type="checkbox"]:checked {
-          background: #0f2d52;
-        }
-        .tpl-richeditor
-          .ProseMirror
-          ul[data-type="taskList"]
-          input[type="checkbox"]:checked::after {
-          content: "";
-          width: 8px;
-          height: 4px;
-          border-left: 1.5px solid #ffffff;
-          border-bottom: 1.5px solid #ffffff;
-          transform: rotate(-45deg) translate(1px, -1px);
-        }
-        .tpl-richeditor
-          .ProseMirror
-          ul[data-type="taskList"]
-          li[data-checked="true"] > div > p {
-          color: #64748b;
-        }
-        .tpl-richeditor .ProseMirror strong {
-          font-weight: 600;
-          color: #0F2D52;
-        }
-        .tpl-richeditor .ProseMirror em {
-          font-style: italic;
-        }
-        .tpl-richeditor .ProseMirror u {
-          text-decoration: underline;
-          text-decoration-color: #0F2D52;
-          text-underline-offset: 2px;
-        }
-        .tpl-richeditor .ProseMirror s {
-          text-decoration: line-through;
-          text-decoration-color: #DC2626;
-        }
-        .tpl-richeditor .ProseMirror code {
-          background: #f1f5f9;
-          color: #0F2D52;
-          padding: 1px 5px;
-          border-radius: 3px;
-          font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-          font-size: 0.88em;
-          border: 1px solid #e2e8f0;
-        }
-        .tpl-richeditor .ProseMirror mark {
-          padding: 0 2px;
-          border-radius: 2px;
-        }
-        .tpl-richeditor
-          .ProseMirror
-          p.is-editor-empty:first-child::before {
-          content: attr(data-placeholder);
-          float: left;
-          color: #9ca3af;
-          pointer-events: none;
-          height: 0;
-        }
-        .tpl-pill {
-          display: inline-flex;
-          align-items: center;
-          gap: 2px;
-          padding: 1px 6px;
-          margin: 0 2px;
-          border-radius: 4px;
-          font-size: 0.8em;
-          font-weight: 600;
-          line-height: 1.4;
-          vertical-align: baseline;
-          cursor: pointer;
-          user-select: none;
-          border: 1px solid;
-          transition: filter 0.12s ease;
-        }
-        .tpl-pill:hover {
-          filter: brightness(0.95);
-        }
-        .tpl-pill-known {
-          background: #dbeafe;
-          color: #1e3a8a;
-          border-color: #93c5fd;
-        }
-        .tpl-pill-unknown {
-          background: #fee2e2;
-          color: #7f1d1d;
-          border-color: #fca5a5;
-        }
-        .tpl-pill.ProseMirror-selectednode {
-          outline: 2px solid #0f2d52;
-          outline-offset: 1px;
-        }
-
-           applique un fond bleu cohérent avec le ::selection texte navigateur,
-           car les atoms contenteditable=false sont normalement sautes. */
-        .tpl-pill.is-selected {
-          background: #3b82f6 !important;
-          color: #ffffff !important;
-          border-color: #1d4ed8 !important;
-        }
-        .tpl-pagebreak {
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 1.2em 0;
-          padding: 6px 0;
-          border: none;
-          border-top: 2px dashed #94a3b8;
-          border-bottom: 2px dashed #94a3b8;
-          color: #475569;
-          user-select: none;
-          position: relative;
-          background: linear-gradient(180deg, transparent, #f1f5f9 50%, transparent);
-        }
-        .tpl-pagebreak-label {
-          background: #ffffff;
-          border: 1px solid #cbd5e1;
-          border-radius: 9999px;
-          padding: 1px 10px;
-          font-size: 10px;
-          font-weight: 600;
-          text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #475569;
-        }
-        .tpl-pagebreak.ProseMirror-selectednode {
-          outline: 2px solid #0f2d52;
-          outline-offset: 2px;
-        }
-        .tpl-richeditor .ProseMirror table {
-          border-collapse: collapse;
-          margin: 0.6em 0;
-          width: 100%;
-          table-layout: fixed;
-          overflow: hidden;
-          border: 1px solid #e2e8f0;
-        }
-        .tpl-richeditor .ProseMirror table th,
-        .tpl-richeditor .ProseMirror table td {
-          border: 1px solid #e2e8f0;
-          padding: 6px 9px;
-          vertical-align: top;
-          position: relative;
-          min-width: 1em;
-        }
-        .tpl-richeditor .ProseMirror table th {
-          background: #0F2D52;
-          color: #ffffff;
-          font-weight: 600;
-          text-align: left;
-        }
-        .tpl-richeditor .ProseMirror table th p,
-        .tpl-richeditor .ProseMirror table td p {
-          margin: 0;
-        }
-        .tpl-richeditor .ProseMirror table tr:nth-child(even) td {
-          background: #F8FAFC;
-        }
-        .tpl-richeditor .ProseMirror table .selectedCell {
-          background: rgba(15, 45, 82, 0.12);
-        }
-        .tpl-richeditor .ProseMirror a {
-          color: #0F2D52;
-          text-decoration: underline;
-        }
-        .tpl-richeditor .ProseMirror blockquote {
-          margin: 0.75em 0;
-          padding: 0.5em 0.9em;
-          border-left: 3px solid #0F2D52;
-          background: #f1f5f9;
-          color: #334155;
-          font-style: italic;
-          border-radius: 0 4px 4px 0;
-        }
-        .tpl-richeditor .ProseMirror blockquote p {
-          margin: 0.2em 0;
-        }
-        .tpl-richeditor .ProseMirror hr {
-          border: none;
-          height: 1px;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            #cbd5e1 20%,
-            #cbd5e1 80%,
-            transparent
-          );
-          margin: 1.2em 0;
-        }
-        .tpl-richeditor .ProseMirror hr.ProseMirror-selectednode {
-          outline: 2px solid #0f2d52;
-          outline-offset: 4px;
-          background: #0F2D52;
-        }
-        .tpl-richeditor .ProseMirror [style*="text-align: center"] {
-          text-align: center;
-        }
-        .tpl-richeditor .ProseMirror [style*="text-align: right"] {
-          text-align: right;
-        }
-        .tpl-richeditor .ProseMirror [style*="text-align: justify"] {
-          text-align: justify;
-        }
-      `}</style>
+      <style jsx global>{`.tpl-richeditor .ProseMirror { min-height: ${minHeight}; outline: none; } .tpl-richeditor .ProseMirror p { margin: 0.5em 0; } .tpl-richeditor .ProseMirror h1 { font-size: 1.25rem; font-weight: 700; margin: 0.8em 0 0.4em; color: #0f2d52; } .tpl-richeditor .ProseMirror h2 { font-size: 1.05rem; font-weight: 700; margin: 0.7em 0 0.35em; color: #0f2d52; } .tpl-richeditor .ProseMirror h3 { font-size: 0.95rem; font-weight: 600; margin: 0.6em 0 0.3em; } coherente avec le rendu PDF (data-numbering="auto" sur le wrapper). */ [data-numbering="auto"] .tpl-richeditor .ProseMirror { counter-reset: tpl-h2 tpl-h3; } [data-numbering="auto"] .tpl-richeditor .ProseMirror h2 { counter-reset: tpl-h3; } [data-numbering="auto"] .tpl-richeditor .ProseMirror h2::before { counter-increment: tpl-h2; content: counter(tpl-h2) ". "; color: #0f2d52; font-weight: 700; margin-right: 0.35em; } [data-numbering="auto"] .tpl-richeditor .ProseMirror h3::before { counter-increment: tpl-h3; content: counter(tpl-h2) "." counter(tpl-h3) " "; color: #334155; font-weight: 600; margin-right: 0.35em; } .tpl-richeditor .ProseMirror ul { list-style: disc; padding-left: 1.5rem; margin: 0.5em 0; } .tpl-richeditor .ProseMirror ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5em 0; } .tpl-richeditor .ProseMirror li { margin: 0.15em 0; } natif pour le tiret, on simule). */ .tpl-richeditor .ProseMirror ul.tpl-list-dash { list-style: none; padding-left: 1.5rem; } .tpl-richeditor .ProseMirror ul.tpl-list-dash > li { position: relative; } .tpl-richeditor .ProseMirror ul.tpl-list-dash > li::before { content: "\\2014"; position: absolute; left: -1.1rem; color: #0F2D52; font-weight: 600; } gérés via CSS counters. Niveau 1 = decimal, niveau 2 = a.b, niveau 3 = a.b.c. Indentation via Tab/Shift+Tab sur les listes. */ .tpl-richeditor .ProseMirror ol.tpl-list-multilevel { counter-reset: lvl1; list-style: none; padding-left: 1.5rem; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel > li { counter-increment: lvl1; position: relative; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel > li::before { content: counter(lvl1) "."; position: absolute; left: -1.5rem; color: #0F2D52; font-weight: 600; min-width: 1.4rem; text-align: right; padding-right: 0.25rem; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol.tpl-list-multilevel, .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol { counter-reset: lvl2; padding-left: 1.5rem; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol > li { counter-increment: lvl2; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol > li::before { content: counter(lvl1) "." counter(lvl2); } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol { counter-reset: lvl3; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol > li { counter-increment: lvl3; } .tpl-richeditor .ProseMirror ol.tpl-list-multilevel ol ol > li::before { content: counter(lvl1) "." counter(lvl2) "." counter(lvl3); } .tpl-richeditor .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 0.25rem; margin: 0.5em 0; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] li { display: flex; align-items: flex-start; gap: 8px; margin: 0.25em 0; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > label { flex: 0 0 auto; margin-top: 3px; user-select: none; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; min-width: 0; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] li > div > p { margin: 0; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] input[type="checkbox"] { appearance: none; -webkit-appearance: none; width: 14px; height: 14px; border: 1.5px solid #0f2d52; border-radius: 2px; background: #ffffff; cursor: pointer; display: inline-grid; place-content: center; margin: 0; vertical-align: middle; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked { background: #0f2d52; } .tpl-richeditor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked::after { content: ""; width: 8px; height: 4px; border-left: 1.5px solid #ffffff; border-bottom: 1.5px solid #ffffff; transform: rotate(-45deg) translate(1px, -1px); } .tpl-richeditor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p { color: #64748b; } .tpl-richeditor .ProseMirror strong { font-weight: 600; color: #0F2D52; } .tpl-richeditor .ProseMirror em { font-style: italic; } .tpl-richeditor .ProseMirror u { text-decoration: underline; text-decoration-color: #0F2D52; text-underline-offset: 2px; } .tpl-richeditor .ProseMirror s { text-decoration: line-through; text-decoration-color: #DC2626; } .tpl-richeditor .ProseMirror code { background: #f1f5f9; color: #0F2D52; padding: 1px 5px; border-radius: 3px; font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 0.88em; border: 1px solid #e2e8f0; } .tpl-richeditor .ProseMirror mark { padding: 0 2px; border-radius: 2px; } .tpl-richeditor .ProseMirror p.is-editor-empty:first-child::before { content: attr(data-placeholder); float: left; color: #9ca3af; pointer-events: none; height: 0; } .tpl-pill { display: inline-flex; align-items: center; gap: 2px; padding: 1px 6px; margin: 0 2px; border-radius: 4px; font-size: 0.8em; font-weight: 600; line-height: 1.4; vertical-align: baseline; cursor: pointer; user-select: none; border: 1px solid; transition: filter 0.12s ease; } .tpl-pill:hover { filter: brightness(0.95); } .tpl-pill-known { background: #dbeafe; color: #1e3a8a; border-color: #93c5fd; } .tpl-pill-unknown { background: #fee2e2; color: #7f1d1d; border-color: #fca5a5; } .tpl-pill.ProseMirror-selectednode { outline: 2px solid #0f2d52; outline-offset: 1px; } applique un fond bleu cohérent avec le ::selection texte navigateur, car les atoms contenteditable=false sont normalement sautes. */ .tpl-pill.is-selected { background: #3b82f6 !important; color: #ffffff !important; border-color: #1d4ed8 !important; } .tpl-pagebreak { display: flex; align-items: center; justify-content: center; margin: 1.2em 0; padding: 6px 0; border: none; border-top: 2px dashed #94a3b8; border-bottom: 2px dashed #94a3b8; color: #475569; user-select: none; position: relative; background: linear-gradient(180deg, transparent, #f1f5f9 50%, transparent); } .tpl-pagebreak-label { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 9999px; padding: 1px 10px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; } .tpl-pagebreak.ProseMirror-selectednode { outline: 2px solid #0f2d52; outline-offset: 2px; } .tpl-richeditor .ProseMirror table { border-collapse: collapse; margin: 0.6em 0; width: 100%; table-layout: fixed; overflow: hidden; border: 1px solid #e2e8f0; } .tpl-richeditor .ProseMirror table th, .tpl-richeditor .ProseMirror table td { border: 1px solid #e2e8f0; padding: 6px 9px; vertical-align: top; position: relative; min-width: 1em; } .tpl-richeditor .ProseMirror table th { background: #0F2D52; color: #ffffff; font-weight: 600; text-align: left; } .tpl-richeditor .ProseMirror table th p, .tpl-richeditor .ProseMirror table td p { margin: 0; } .tpl-richeditor .ProseMirror table tr:nth-child(even) td { background: #F8FAFC; } .tpl-richeditor .ProseMirror table .selectedCell { background: rgba(15, 45, 82, 0.12); } .tpl-richeditor .ProseMirror a { color: #0F2D52; text-decoration: underline; } .tpl-richeditor .ProseMirror blockquote { margin: 0.75em 0; padding: 0.5em 0.9em; border-left: 3px solid #0F2D52; background: #f1f5f9; color: #334155; font-style: italic; border-radius: 0 4px 4px 0; } .tpl-richeditor .ProseMirror blockquote p { margin: 0.2em 0; } .tpl-richeditor .ProseMirror hr { border: none; height: 1px; background: linear-gradient( 90deg, transparent, #cbd5e1 20%, #cbd5e1 80%, transparent ); margin: 1.2em 0; } .tpl-richeditor .ProseMirror hr.ProseMirror-selectednode { outline: 2px solid #0f2d52; outline-offset: 4px; background: #0F2D52; } .tpl-richeditor .ProseMirror [style*="text-align: center"] { text-align: center; } .tpl-richeditor .ProseMirror [style*="text-align: right"] { text-align: right; } .tpl-richeditor .ProseMirror [style*="text-align: justify"] { text-align: justify; }`}</style>
     </div>
   );
 }
@@ -2973,25 +2610,17 @@ function TablePopover({ editor }: { editor: Editor }) {
 // ─────────────────────────────────────────────────────────
 //   Popover : insertion d'une SECTION TYPE (préambule / signatures / conformité)
 // ─────────────────────────────────────────────────────────
-const SECTION_TEMPLATES: Array<{
+const SECTION_TEMPLATES = (tv: (k: string) => string): Array<{
   key: string;
   labelKey: string;
   descriptionKey: string;
   markdown: string;
-}> = [
+}> => [
   {
     key: "preamble",
     labelKey: "preambule_contrat",
     descriptionKey: "bloc_introduction_standard_entre_parties",
-    markdown: `**Entre les parties soussignées :**
-
-{{company.fullName}}, personne morale légalement constituée ayant son siège social au {{company.address}}, ci-après désignée « l'Employeur »,
-
-ET
-
-{{employee.fullName}}, domicilié(e) au {{employee.address}}, ci-après désigné(e) « l'Employé(e) ».
-
-**Les parties conviennent de ce qui suit :**`,
+    markdown: tv("template_rich_editor_entre_les_parties_soussignees_company_fullname_personne_morale"),
   },
   {
     key: "signatures",
@@ -3007,23 +2636,13 @@ ET
     key: "compliance",
     labelKey: "section_conformite_qc",
     descriptionKey: "references_legales_code_civil_qc",
-    markdown: `## Conformité légale
-
-Le présent document est rédigé conformément aux lois en vigueur au Québec, notamment :
-
-- **Code civil du Québec** (articles applicables au contrat de travail, art. 2085 et suivants)
-- **Loi sur les normes du travail** (LNT, RLRQ c. N-1.1)
-- **Loi sur la santé et la sécurité du travail** (LSST, RLRQ c. S-2.1)
-- **Loi modernisant des dispositions législatives en matière de protection des renseignements personnels** (Loi 25)
-- **Charte de la langue française** (Loi 96, RLRQ c. C-11)`,
+    markdown: tv("template_rich_editor_conformite_legale_le_present_document_est_redige_conformement"),
   },
   {
     key: "section",
     labelKey: "section_numerotee",
     descriptionKey: "squelette_x_titre_paragraphe_vide",
-    markdown: `## X. Titre de section
-
-Contenu à compléter.`,
+    markdown: tv("template_rich_editor_x_titre_de_section_contenu_a_completer"),
   },
   {
     key: "table",
@@ -3078,7 +2697,7 @@ function SectionInsertPopover({ editor }: { editor: Editor }) {
           </div>
         </div>
         <div className="py-1 max-h-[60vh] overflow-y-auto">
-          {SECTION_TEMPLATES.map((s) => (
+          {SECTION_TEMPLATES(tv).map((s) => (
             <button
               key={s.key}
               type="button"

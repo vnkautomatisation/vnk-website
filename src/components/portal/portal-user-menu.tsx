@@ -42,7 +42,7 @@ export function PortalUserMenu({ name, initials }: { name: string; initials: str
               className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
             >
               <User className="h-4 w-4 text-muted-foreground" />
-              Profil
+              {tc("sidebar.profile")}
             </Link>
             <Link
               href="/portail/parametres"
@@ -50,7 +50,7 @@ export function PortalUserMenu({ name, initials }: { name: string; initials: str
               className="flex items-center gap-2.5 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors"
             >
               <Settings className="h-4 w-4 text-muted-foreground" />
-              Parametres
+              {tc("sidebar.settings")}
             </Link>
             <button
               type="button"

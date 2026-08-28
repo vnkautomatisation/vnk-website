@@ -85,7 +85,9 @@ export async function PATCH(
         clientId: updated.clientId,
         contractId: updated.id,
         eventType: "contract_cancelled",
-        eventLabel: `Contrat ${updated.contractNumber} annulé`,
+        eventLabel: t("route_contrat_p0_annule", { p0: updated.contractNumber }),
+        labelKey: "api_errors.route_contrat_p0_annule",
+        labelParams: { p0: updated.contractNumber },
         triggeredBy: "admin",
       });
     }

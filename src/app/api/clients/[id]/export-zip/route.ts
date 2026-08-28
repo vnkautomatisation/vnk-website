@@ -13,6 +13,8 @@
 //   10-audit-events.pdf + 10-audit-events.csv
 //   11-pieces-jointes-messages/<nom>
 import { NextResponse } from "next/server";
+import { getTranslations } from "next-intl/server";
+import { workflowEventLabel } from "@/lib/workflow-label";
 import JSZip from "jszip";
 import { auth } from "@/lib/auth";
 import { adminApiForbidden } from "@/lib/permissions";
@@ -541,6 +543,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   ]);
 
   type UnifiedEvt = { createdAt: Date; source: string; type: string; label: string; ipAddress: string | null; userAgent: string | null; metadata?: unknown };
+  // L'archive part au client : ses evenements sortent dans SA langue.
+  const tRoot = await getTranslations({ locale: client.locale?.split("-")[0] === "en" ? "en" : "fr" });
   // Substitue retroactivement "par (le )?client" -> nom client dans les vieux labels
   const humanizeWfLabel = (label: string | null): string => {
     const fallback = label ?? "";
@@ -554,7 +558,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
   const unified: UnifiedEvt[] = [
     ...client.workflowEvents.map((w) => ({
       createdAt: w.createdAt, source: "workflow", type: w.eventType,
-      label: humanizeWfLabel(w.eventLabel) || w.eventType, ipAddress: null, userAgent: null,
+      label: humanizeWfLabel(workflowEventLabel(tRoot, w)) || w.eventType, ipAddress: null, userAgent: null,
       metadata: w.metadata as unknown,
     })),
     ...logins.map((l) => ({

@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { FileSignature, PenLine, Eye, ClipboardList, CheckCircle, DollarSign, X, ShieldCheck, Download } from "lucide-react";
 import { toast } from "sonner";
@@ -11,7 +12,8 @@ import { SignatureCanvas } from "@/components/signature/signature-canvas";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type Contract = {
   id: number;
@@ -56,6 +58,7 @@ export function PortalContractsList({ contracts }: { contracts: Contract[] }) {
   const [pdfContract, setPdfContract] = useState<Contract | null>(null);
   const [showSignature, setShowSignature] = useState(false);
   const [signing, setSigning] = useState(false);
+  const formatCurrency = useCurrency();
   const [, startTransition] = useTransition();
 
   const contractKpis = useMemo(() => {

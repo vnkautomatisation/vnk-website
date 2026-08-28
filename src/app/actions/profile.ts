@@ -189,7 +189,7 @@ export async function revokeSessionAction(sessionId: string): Promise<ActionResu
 
     await prisma.adminSession.delete({ where: { id: sessionId } });
     await logAudit({ adminId, action: "delete", entityType: "admin_session", entityId: null, changes: { sessionId, ip: target.ipAddress } });
-    await logSecurityEvent({ adminId, type: "session_revoked", message: `Session révoquée (${target.userAgent?.slice(0, 40) ?? "appareil inconnu"})` });
+    await logSecurityEvent({ adminId, type: "session_revoked", message: t("profile_session_revoquee_p0", { p0: target.userAgent?.slice(0, 40) ?? "appareil inconnu" }) });
 
     revalidatePath("/admin/profile");
     return { success: true };
@@ -258,6 +258,7 @@ export async function renameSessionAction(sessionId: string, label: string): Pro
 const TRUSTED_DEVICE_DAYS = 30;
 
 export async function trustSessionDeviceAction(sessionId: string): Promise<ActionResult> {
+  const t = await getTranslations("admin.profile");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
 
@@ -267,7 +268,7 @@ export async function trustSessionDeviceAction(sessionId: string): Promise<Actio
 
     const { deviceFingerprint } = await import("@/lib/security/ua-parser");
     const fingerprint = await deviceFingerprint(target.userAgent ?? "", target.ipAddress);
-    const label = target.label ?? `${target.browser ?? "Appareil"} sur ${target.os ?? "Inconnu"}`;
+    const label = target.label ?? t("profile_p0_sur_p1", { p0: target.browser ?? "Appareil", p1: target.os ?? "Inconnu" });
     const expiresAt = new Date(Date.now() + TRUSTED_DEVICE_DAYS * 24 * 60 * 60 * 1000);
 
     await prisma.adminTrustedDevice.upsert({
@@ -280,7 +281,7 @@ export async function trustSessionDeviceAction(sessionId: string): Promise<Actio
       adminId,
       type: "trusted_device_added",
       severity: "warning",
-      message: `Appareil de confiance ajouté : ${label}`,
+      message: t("profile_appareil_de_confiance_ajoute_p0", { p0: label }),
       metadata: { sessionId, fingerprint: fingerprint.slice(0, 16) },
     });
 
@@ -338,13 +339,14 @@ export async function reportSuspiciousSessionAction(sessionId: string): Promise<
 // 5. TRUSTED DEVICES — list / remove
 // ═════════════════════════════════════════════════════════════
 export async function removeTrustedDeviceAction(deviceId: number): Promise<ActionResult> {
+  const t = await getTranslations("admin.profile");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   try {
     const target = await prisma.adminTrustedDevice.findUnique({ where: { id: deviceId } });
     if (!target || target.adminId !== adminId) return { success: false, error: "Appareil introuvable" };
     await prisma.adminTrustedDevice.delete({ where: { id: deviceId } });
-    await logSecurityEvent({ adminId, type: "trusted_device_removed", message: `Appareil de confiance retiré : ${target.label}` });
+    await logSecurityEvent({ adminId, type: "trusted_device_removed", message: t("profile_appareil_de_confiance_retire_p0", { p0: target.label }) });
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {
@@ -399,7 +401,7 @@ export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>
       adminId,
       type: "api_token_created",
       severity: "warning",
-      message: `Token API créé : ${parsed.data.name}`,
+      message: t("profile_token_api_cree_p0", { p0: parsed.data.name }),
       metadata: { scopes: parsed.data.scopes },
     });
 
@@ -411,13 +413,14 @@ export async function createApiTokenAction(input: z.infer<typeof apiTokenSchema>
 }
 
 export async function revokeApiTokenAction(tokenId: number): Promise<ActionResult> {
+  const t = await getTranslations("admin.profile");
   const adminId = await requireAdmin();
   if (!adminId) return unauthorized();
   try {
     const target = await prisma.adminApiToken.findUnique({ where: { id: tokenId } });
     if (!target || target.adminId !== adminId) return { success: false, error: "Token introuvable" };
     await prisma.adminApiToken.update({ where: { id: tokenId }, data: { revokedAt: new Date() } });
-    await logSecurityEvent({ adminId, type: "api_token_revoked", message: `Token API révoqué : ${target.name}` });
+    await logSecurityEvent({ adminId, type: "api_token_revoked", message: t("profile_token_api_revoque_p0", { p0: target.name }) });
     revalidatePath("/admin/profile");
     return { success: true };
   } catch {

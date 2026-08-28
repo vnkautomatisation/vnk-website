@@ -261,7 +261,7 @@ export function SignatureRequestDialog({
     }
     if (!allInlineFilled) {
       toast.error(
-        `Complétez les ${missingInlineFields.length} champ(s) restant(s) avant l'envoi`,
+        t("signature_request_dialog_completez_les_p0_champ_s_restant_s_avant", { p0: missingInlineFields.length }),
       );
       return;
     }
@@ -311,7 +311,7 @@ export function SignatureRequestDialog({
         const { createdCount, skipped } = r.data;
         toast.success(
           t("demandes_creees", { count: createdCount }) +
-            (skipped > 0 ? ` · ${skipped} ignorée${skipped > 1 ? "s" : ""}` : "")
+            (skipped > 0 ? t("signature_request_dialog_p0_ignoree_p1", { p0: skipped, p1: skipped > 1 ? "s" : "" }) : "")
         );
         onCreated();
         onClose();
@@ -404,7 +404,7 @@ export function SignatureRequestDialog({
           {inlinePlaceholders.length > 0 && (
             <FormSection
               icon={ListChecks}
-              title={`Compléter les champs du document (${inlinePlaceholders.length})`}
+              title={t("signature_request_dialog_completer_les_champs_du_document_p0", { p0: inlinePlaceholders.length })}
               description={t("champs_apparaissent_comme_nom_modele")}
             >
               <div className="grid grid-cols-1 gap-3">

@@ -1,12 +1,13 @@
 "use server";
 // Offboarding wizard complet : checklist IT, retour matériel, RE, exit interview.
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -52,6 +53,7 @@ const startSchema = z.object({
 
 export async function startOffboardingAction(input: z.infer<typeof startSchema>): Promise<Result<{ id: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const actorId = await requireHrWrite();
   if (!actorId) return unauthorized();
   const parsed = startSchema.safeParse(input);
@@ -96,7 +98,7 @@ export async function startOffboardingAction(input: z.infer<typeof startSchema>)
         recipientId: parsed.data.adminId,
         type: "info",
         title: t("processus_de_depart_demarre"),
-        body: `Votre dernier jour est fixé au ${new Date(parsed.data.lastDay).toLocaleDateString("fr-CA")}. Consultez les étapes restantes.`,
+        body: t("hr_offboarding_votre_dernier_jour_est_fixe_au_p0_consultez", { p0: new Date(parsed.data.lastDay).toLocaleDateString(dateTag) }),
         link: "/admin/mon-espace",
         icon: "log-out",
       },
@@ -227,7 +229,7 @@ export async function completeOffboardingAction(input: { id: number }): Promise<
       where: { isActive: true, customRole: { name: "super_admin" } },
       select: { id: true },
     });
-    const targetLabel = offboarding.admin.fullName || offboarding.admin.email || `Employé #${offboarding.adminId}`;
+    const targetLabel = offboarding.admin.fullName || offboarding.admin.email || t("hr_offboarding_employe_p0", { p0: offboarding.adminId });
     await Promise.all(
       superAdmins.map((sa) =>
         prisma.notification
@@ -236,8 +238,8 @@ export async function completeOffboardingAction(input: { id: number }): Promise<
               recipientType: "admin",
               recipientId: sa.id,
               type: "success",
-              title: `Offboarding complété pour ${targetLabel}`,
-              body: `Le compte a été désactivé et toutes les étapes du processus de départ sont terminées.`,
+              title: t("hr_offboarding_offboarding_complete_pour_p0", { p0: targetLabel }),
+              body: t("hr_offboarding_le_compte_a_ete_desactive_et_toutes_les"),
               link: "/admin/employes/offboarding",
               icon: "log-out",
             },

@@ -1,11 +1,12 @@
 import { prisma } from "@/lib/prisma";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { Briefcase, Laptop, Smartphone, Wrench, HardHat, Car, CreditCard } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { dateLocale } from "@/lib/i18n-format";
 
 const CAT_META: Record<string, { labelKey: string; icon: typeof Briefcase }> = {
   laptop: { labelKey: "cat_laptop", icon: Laptop },
@@ -19,6 +20,7 @@ const CAT_META: Record<string, { labelKey: string; icon: typeof Briefcase }> = {
 };
 
 export default async function MyEquipmentPage() {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.equipment");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
@@ -65,7 +67,7 @@ export default async function MyEquipmentPage() {
                       {(eq.brand || eq.model) && <p className="text-xs text-muted-foreground">{[eq.brand, eq.model].filter(Boolean).join(" · ")}</p>}
                       {eq.serialNumber && <p className="text-[11px] font-mono text-muted-foreground">S/N : {eq.serialNumber}</p>}
                       <p className="text-[11px] text-muted-foreground mt-1">
-                        Assigné le {new Date(eq.assignedAt).toLocaleDateString("fr-CA")}
+                        Assigné le {new Date(eq.assignedAt).toLocaleDateString(dateTag)}
                       </p>
                       {eq.notes && <p className="text-[11px] italic text-muted-foreground mt-0.5">{eq.notes}</p>}
                     </div>
@@ -92,7 +94,7 @@ export default async function MyEquipmentPage() {
                     <Icon className="h-4 w-4 text-muted-foreground" />
                     <span className="flex-1 line-through text-muted-foreground">{eq.name}</span>
                     <Badge variant="outline" className="text-[10px]">
-                      Retourné {new Date(eq.returnedAt!).toLocaleDateString("fr-CA")}
+                      Retourné {new Date(eq.returnedAt!).toLocaleDateString(dateTag)}
                     </Badge>
                   </div>
                 );

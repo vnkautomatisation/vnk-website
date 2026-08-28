@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -23,7 +24,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 import {
   Select,
   SelectContent,
@@ -124,6 +126,7 @@ export function TransactionsView({
   const [detailId, setDetailId] = useState<number | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
+  const formatCurrency = useCurrency();
 
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -203,7 +206,7 @@ export function TransactionsView({
         throw new Error(err.error || t("erreur"));
       }
       const data = await res.json();
-      toast.success(`${data.count} paiement(s) mis à jour`);
+      toast.success(t("transactions_view_p0_paiement_s_mis_a_jour", { p0: data.count }));
       setSelectedIds(new Set());
       router.refresh();
     } catch (err) {
@@ -385,7 +388,7 @@ export function TransactionsView({
 
       {selectedIds.size > 0 && (
         <div className="bg-[#0F2D52] text-white rounded-md p-2 flex items-center gap-2 flex-wrap shadow-md">
-          <span className="text-sm font-medium px-2">{selectedIds.size} sélectionnée(s)</span>
+          <span className="text-sm font-medium px-2">{tc("selected_f", { count: selectedIds.size })}</span>
           <div className="flex-1" />
           <Button size="sm" variant="secondary" className="bg-white/10 hover:bg-white/20 text-white border-white/20 h-7 text-xs" disabled={bulkBusy} onClick={() => bulkAction("reconcile")}>
             <CheckCircle2 className="h-3 w-3 mr-1" />{t("transactions_view_confirmer_recus")}</Button>
@@ -436,7 +439,7 @@ export function TransactionsView({
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2"><CreditCard className="h-5 w-5" />{t("transactions")}</h1>
             <p className="text-white/70 text-xs mt-0.5">
-              {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {kpis.toReconcileCount} à vérifier
+              {kpis.count} transactions · {formatCurrency(kpis.totalPaid)} encaissés au total · {tc("to_check", { count: kpis.toReconcileCount })}
             </p>
           </div>
           <div className="flex gap-2 flex-wrap">
@@ -484,11 +487,11 @@ export function TransactionsView({
               <CreditCard className="h-4 w-4" />
               {t("transactions")}
             </span>
-            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="font-semibold">{tc("shown_f", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("encaisse")} <span className="font-semibold text-[#0F2D52]">{formatCurrency(filteredTotalPaid)}</span></span>
             <span className="text-muted-foreground">{t("rembourse")} <span className="font-semibold text-red-600">{formatCurrency(filteredTotalRefunded)}</span></span>
             <span className="text-muted-foreground">{t("net")} <span className="font-semibold text-emerald-700">{formatCurrency(filteredNet)}</span></span>
-            <span className="ml-auto text-muted-foreground">{kpis.toReconcileCount} à vérifier</span>
+            <span className="ml-auto text-muted-foreground">{tc("to_check", { count: kpis.toReconcileCount })}</span>
           </div>
         </div>
       )}

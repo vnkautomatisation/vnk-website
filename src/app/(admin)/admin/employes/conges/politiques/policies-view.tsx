@@ -142,7 +142,7 @@ export function PoliciesView({ policies, admins }: { policies: Policy[]; admins:
               onDelete={async () => {
                 const ok = await confirm({
                   title: `Supprimer "${p.name}" ?`,
-                  description: `Les employes lies repasseront sur la politique par defaut. Cette action est definitive.`,
+                  description: t("policies_view_les_employes_lies_repasseront_sur_la_politique_par"),
                   variant: "destructive",
                   confirmLabel: t("supprimer"),
                 });

@@ -10,6 +10,7 @@
 //   - Modal SignDialog (header navy + pad + accuse reception)
 // =============================================================
 import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -83,16 +84,16 @@ function typeLabel(value: string | null | undefined, autre: string, t: (k: strin
   return key ? t(key) : value;
 }
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function fmtMoney(v: number | null | undefined): string | null {
+function fmtMoney(v: number | null | undefined, tag: string): string | null {
   if (v == null) return null;
-  return `${Number(v).toLocaleString("fr-CA", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} $`;
+  return `${Number(v).toLocaleString(tag, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} $`;
 }
 
 // ================================================================
@@ -384,6 +385,7 @@ function UrgentSignBanner({
   onSign: (c: EmployeeContract) => void;
 }) {
   const t = useTranslations("admin.my_contracts");
+  const dateTag = useDateLocale();
   return (
     <div
       className="rounded-lg border border-amber-300 bg-amber-50 p-4 flex flex-col sm:flex-row sm:items-center gap-3"
@@ -411,7 +413,7 @@ function UrgentSignBanner({
               <span className="text-xs font-medium truncate flex-1">{c.title}</span>
               <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded border font-medium bg-muted text-muted-foreground border-input">
                 <Clock className="h-2.5 w-2.5" />
-                Debut {formatDate(c.startDate)}
+                Debut {formatDate(c.startDate, dateTag)}
               </span>
               <Button
                 type="button"
@@ -483,6 +485,7 @@ function EmployeeContractCard({
   onSign: () => void;
 }) {
   const t = useTranslations("admin.my_contracts");
+  const dateTag = useDateLocale();
   const c = contract;
   const status = STATUS_TONE[c.status] ?? { labelKey: "", tone: "neutral" as const };
   const canSign = c.status === "sent" && !c.employeeSignedAt;
@@ -511,10 +514,10 @@ function EmployeeContractCard({
 
 
         <div className="grid grid-cols-2 gap-2 text-xs border-t pt-2">
-          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate)} />
-          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate)} />}
+          <InfoRow icon={CalendarIcon} label={t("debut")} value={formatDate(c.startDate, dateTag)} />
+          {c.endDate && <InfoRow icon={CalendarIcon} label={t("fin")} value={formatDate(c.endDate, dateTag)} />}
           {c.salaryAnnual != null && (
-            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual) ?? "-"} />
+            <InfoRow icon={Coins} label={t("salaire_an")} value={fmtMoney(c.salaryAnnual, dateTag) ?? "-"} />
           )}
           {c.hourlyRate != null && (
             <InfoRow icon={Coins} label={t("taux_h")} value={`${Number(c.hourlyRate).toFixed(2)} $`} />
@@ -606,6 +609,7 @@ function SignDialog({
   const [acknowledged, setAcknowledged] = useState(false);
   const [pending, setPending] = useState(false);
   const [padKey, setPadKey] = useState(0);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (open) {
@@ -666,15 +670,15 @@ function SignDialog({
             <p className="text-sm font-semibold">{contract.title}</p>
             <p className="text-xs text-muted-foreground">
               {typeLabel(contract.contractType, t("autre"), t)} - Debut{" "}
-              {formatDate(contract.startDate)}
-              {contract.endDate ? ` - Fin ${formatDate(contract.endDate)}` : ""}
+              {formatDate(contract.startDate, dateTag)}
+              {contract.endDate ? ` - Fin ${formatDate(contract.endDate, dateTag)}` : ""}
             </p>
             {(contract.salaryAnnual != null ||
               contract.hourlyRate != null ||
               contract.hoursPerWeek != null) && (
               <p className="text-xs text-muted-foreground mt-1">
                 {contract.salaryAnnual != null && (
-                  <>Salaire annuel : {fmtMoney(contract.salaryAnnual)} </>
+                  <>Salaire annuel : {fmtMoney(contract.salaryAnnual, dateTag)} </>
                 )}
                 {contract.hourlyRate != null && (
                   <>- Taux horaire : {Number(contract.hourlyRate).toFixed(2)} $ </>

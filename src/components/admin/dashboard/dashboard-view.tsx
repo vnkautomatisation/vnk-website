@@ -5,8 +5,9 @@ import {
   AlertCircle,
   DollarSign,
 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { StatCard } from "@/components/admin/stat-card";
 import { WelcomeBanner } from "./welcome-banner";
 import { QuickActions } from "./quick-actions";
@@ -36,6 +37,7 @@ type WorkflowEvent = {
   id: number;
   eventType: string;
   eventLabel: string | null;
+  metadata?: unknown;
   clientName: string;
   companyName: string | null;
   createdAt: string;
@@ -60,6 +62,8 @@ export type DashboardData = {
 
 export function DashboardView({ data }: { data: DashboardData }) {
   const t = useTranslations("admin.ui");
+  const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   return (
     <div className="space-y-6">
       <WelcomeBanner
@@ -77,7 +81,7 @@ export function DashboardView({ data }: { data: DashboardData }) {
           value={data.activeClientsCount}
           icon={Users}
           accent="bg-blue-500"
-          deltaLabel={data.newClientsThisMonth > 0 ? `+${data.newClientsThisMonth} ce mois` : undefined}
+          deltaLabel={data.newClientsThisMonth > 0 ? tc("this_month_count", { count: data.newClientsThisMonth }) : undefined}
           href="/admin/clients"
         />
         <StatCard

@@ -25,6 +25,7 @@
 // TemplateFieldsDialog, TemplateRichEditorDialog, etc.
 // ─────────────────────────────────────────────────────────
 import { useMemo, useState, useCallback } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -145,11 +146,11 @@ type RowItem = {
 
 // ─── Helpers ───────────────────────────────────────────────
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short" });
 }
 
 const CATEGORY_KEY: Record<string, string> = {
@@ -198,6 +199,7 @@ export function DocumentsAdminViewV2({
   const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   void isSuper;
 
 
@@ -245,7 +247,7 @@ export function DocumentsAdminViewV2({
         category: "legal",
         destinataire: r.targetAdmin?.fullName ?? r.targetAdmin?.email ?? (r.targetAll ? t("tous") : t("equipe")),
         status: "pending",
-        statusLabel: r.dueDate ? t("echeance_date", { date: formatDate(r.dueDate) }) : t("attente_2"),
+        statusLabel: r.dueDate ? t("echeance_date", { date: formatDate(r.dueDate, dateTag) }) : t("attente_2"),
         updatedAt: r.requestedAt,
         templateId: r.templateId,
         pendingRequest: r,
@@ -261,7 +263,7 @@ export function DocumentsAdminViewV2({
         category: u.category,
         destinataire: u.targetAdmin.fullName ?? u.targetAdmin.email,
         status: "pending",
-        statusLabel: u.dueDate ? `Échéance ${formatDate(u.dueDate)}` : t("upload_demande"),
+        statusLabel: u.dueDate ? t("documents_admin_view_echeance_p0", { p0: formatDate(u.dueDate, dateTag) }) : t("upload_demande"),
         updatedAt: u.createdAt,
         uploadRequest: u,
       });
@@ -486,7 +488,7 @@ export function DocumentsAdminViewV2({
 
           {selectedRowIds.size > 0 && (
             <div className="sticky top-0 z-[5] bg-[#0F2D52] text-white px-4 py-2 flex items-center gap-3 shadow-md">
-              <span className="text-sm">{selectedRowIds.size} sélectionné{selectedRowIds.size > 1 ? "s" : ""}</span>
+              <span className="text-sm">{tc("selected_m", { count: selectedRowIds.size })}</span>
               <div className="flex-1" />
               <Button
                 size="sm"

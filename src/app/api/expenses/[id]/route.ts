@@ -77,7 +77,7 @@ export async function PATCH(
 
   // Validation taille recu si fourni
   if (parsed.data.receiptData && parsed.data.receiptData.length > MAX_DATAURL_BYTES) {
-    return NextResponse.json({ error: `Reçu trop volumineux (max ${MAX_UPLOAD_MB} Mo)` }, { status: 413 });
+    return NextResponse.json({ error: t("route_recu_trop_volumineux_max_p0_mo", { p0: MAX_UPLOAD_MB }) }, { status: 413 });
   }
 
   const { receiptData, ...rest } = parsed.data;

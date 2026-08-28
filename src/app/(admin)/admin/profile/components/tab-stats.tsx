@@ -1,6 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -8,10 +9,11 @@ import {
 } from "lucide-react";
 import type { LoginEventRow, PersonalKpis } from "../profile-view";
 
-const fmtCAD = (n: number) => new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD" }).format(n);
+const fmtCAD = (n: number, tag: string) => new Intl.NumberFormat(tag, { style: "currency", currency: "CAD" }).format(n);
 
 export function TabStats({ kpis, loginEvents }: { kpis: PersonalKpis; loginEvents: LoginEventRow[] }) {
   const t = useTranslations("admin.profile.stats");
+  const dateTag = useDateLocale();
   // ── Heatmap d'activite hebdomadaire (28 dernier jours)
   // Compte les login_success par jour, normalise sur max
   const heatmap = useMemo(() => {
@@ -36,7 +38,7 @@ export function TabStats({ kpis, loginEvents }: { kpis: PersonalKpis; loginEvent
   const kpiCards = [
     { label: t("requests_handled"), value: kpis.requestsHandled, icon: ClipboardList, color: "text-blue-600 bg-blue-50" },
     { label: t("invoices_issued"), value: kpis.invoicesIssued, icon: FileText, color: "text-emerald-600 bg-emerald-50" },
-    { label: t("revenue_generated"), value: fmtCAD(kpis.revenue30), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
+    { label: t("revenue_generated"), value: fmtCAD(kpis.revenue30, dateTag), icon: DollarSign, color: "text-purple-600 bg-purple-50" },
     { label: t("payments_assigned"), value: kpis.paymentsAssigned, icon: CheckCircle2, color: "text-amber-600 bg-amber-50" },
   ];
 
@@ -95,11 +97,11 @@ export function TabStats({ kpis, loginEvents }: { kpis: PersonalKpis; loginEvent
                 <div
                   key={i}
                   className={`${bgClass} h-12 w-7 rounded flex-shrink-0 relative group cursor-default`}
-                  title={`${d.date.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })} — ${d.count} connexion${d.count > 1 ? "s" : ""}`}
+                  title={`${d.date.toLocaleDateString(dateTag, { day: "numeric", month: "short" })} — ${d.count} connexion${d.count > 1 ? "s" : ""}`}
                   data-count={d.count}
                 >
                   <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-[9px] text-muted-foreground opacity-0 group-hover:opacity-100 transition whitespace-nowrap">
-                    {d.date.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
+                    {d.date.toLocaleDateString(dateTag, { day: "numeric", month: "short" })}
                   </span>
                 </div>
               );

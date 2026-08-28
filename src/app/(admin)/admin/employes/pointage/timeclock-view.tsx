@@ -863,7 +863,7 @@ function TimeclockEmployeeView({
           ) : (
             <span>
               <span className="font-semibold">{t("attention")}</span> {fmtDuration(weekOvertime.totalMin)}{" "}
-              cette semaine — le seuil de temps supplémentaire (40 h) approche.
+              {t("seuil_overtime_approche")}
             </span>
           )}
         </div>
@@ -874,11 +874,10 @@ function TimeclockEmployeeView({
           <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5 text-amber-700" />
           <div className="min-w-0 flex-1">
             <p className="font-semibold">
-              Pointage du {capFirst(new Date(openEntry.clockIn).toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long" }))} jamais fermé
+              {t("pointage_jamais_ferme", { date: capFirst(new Date(openEntry.clockIn).toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long" })) })}
             </p>
             <p className="mt-0.5">
-              Il tourne encore depuis {fmtTime(openEntry.clockIn)}. Tant qu&apos;il reste ouvert, vous ne pouvez pas soumettre votre semaine —
-              arrêtez-le et corrigez l&apos;heure de fin si besoin.
+              {t("pointage_ouvert_explication", { time: fmtTime(openEntry.clockIn) })}
             </p>
           </div>
           <Button size="sm" variant="destructive" className="h-8 text-xs shrink-0" onClick={handleClockOut}>
@@ -970,7 +969,7 @@ function TimeclockEmployeeView({
           pagedDays.map((day) => {
             const isOpen = expanded.has(day.date);
             const isToday = day.date === TODAY;
-            const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString("fr-CA", {
+            const dateLabel = capFirst(new Date(day.date + "T12:00:00").toLocaleDateString(dateTag, {
               weekday: "long", day: "numeric", month: "long",
             }));
             const canMerge = day.mergeableCount >= 2;
@@ -1312,6 +1311,7 @@ function MyKioskPinCard({
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [revealed, setRevealed] = useState<string | null>(null);
+  const dateTag = useDateLocale();
 
   // PIN request. Acts as a ticket: HR sees it in the time clock settings.
   const requestPin = async () => {
@@ -1361,7 +1361,7 @@ function MyKioskPinCard({
               {hasPin ? (
                 <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
                   NIP actif
-                  {pinSetAt ? ` · ${capFirst(new Date(pinSetAt).toLocaleDateString("fr-CA", { day: "numeric", month: "long" }))}` : ""}
+                  {pinSetAt ? ` · ${capFirst(new Date(pinSetAt).toLocaleDateString(dateTag, { day: "numeric", month: "long" }))}` : ""}
                 </Badge>
               ) : (
                 <Badge variant="outline" className="text-[10px] text-slate-500 border-slate-200 bg-slate-50">
@@ -1719,7 +1719,7 @@ function TimeclockReviewView({
               {editRequests.map((req) => {
                 const empName = req.admin?.fullName || req.admin?.email || `Admin#${req.adminId}`;
                 const ids = Array.isArray(req.entryIds) ? (req.entryIds as number[]) : [];
-                const when = new Date(req.createdAt).toLocaleDateString("fr-CA");
+                const when = new Date(req.createdAt).toLocaleDateString(dateTag);
                 return (
                   <div key={req.id} className="flex items-start gap-3 py-2.5">
                     <div className="flex-1 min-w-0">
@@ -2108,6 +2108,7 @@ function OverviewTab({
   onGoToApprove: () => void;
 }) {
   const t = useTranslations("admin.timeclock");
+  const tc = useTranslations("common");
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
@@ -2183,7 +2184,7 @@ function OverviewTab({
                   <div className="min-w-0">
                     <p className="text-sm font-semibold truncate">{team.teamName}</p>
                     <p className="text-[11px] text-muted-foreground">
-                      {team.memberCount} membre{team.memberCount > 1 ? "s" : ""}
+                      {tc("members_count", { count: team.memberCount })}
                     </p>
                   </div>
                   {team.toApproveCount > 0 && (
@@ -2329,9 +2330,9 @@ function ByEmployeeTab({
                       </Badge>
                     )}
                     {emp.toApprove > 0 && (
-                      <span className="text-[10px] text-amber-800">{emp.toApprove} à approuver</span>
+                      <span className="text-[10px] text-amber-800">{tc("to_approve_count", { count: emp.toApprove })}</span>
                     )}
-                    <span className="text-[10px] text-muted-foreground">{emp.approved} approuvées</span>
+                    <span className="text-[10px] text-muted-foreground">{tc("approved_count_f", { count: emp.approved })}</span>
                   </div>
                   {emp.toApprove > 0 && (
                     <div
@@ -2523,6 +2524,7 @@ function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: str
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const dateTag = useDateLocale();
 
   const base = periodFrom ? new Date(periodFrom) : new Date();
   const ws = startOfWeek(base);
@@ -2556,11 +2558,11 @@ function WeekNav({ periodFrom, periodTo }: { periodFrom?: string; periodTo?: str
   };
 
   const label = isWeekPeriod
-    ? `Semaine du ${ws.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })} au ${we.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`
+    ? t("timeclock_view_semaine_du_p0_au_p1", { p0: ws.toLocaleDateString(dateTag, { day: "numeric", month: "long" }), p1: we.toLocaleDateString(dateTag, { day: "numeric", month: "long" }) })
     : t("periode_personnalisee");
   // Compact label for mobile.
   const labelShort = isWeekPeriod
-    ? `${ws.getDate()} – ${we.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}`
+    ? `${ws.getDate()} – ${we.toLocaleDateString(dateTag, { day: "numeric", month: "short" })}`
     : t("personnalisee");
 
   return (
@@ -2918,7 +2920,7 @@ function ToApproveTab(props: {
                   <Clock className="h-4 w-4 text-slate-500 shrink-0" />
                   <span className="text-sm text-slate-700 flex-1 min-w-0">
                     {t("attente_soumission")}
-                    <span className="text-muted-foreground"> · {awaiting.length} employé{awaiting.length > 1 ? "s" : ""}</span>
+                    <span className="text-muted-foreground"> · {tc("employees_count", { count: awaiting.length })}</span>
                   </span>
                 </button>
                 {awaiting.some((e) => !remindedIds.has(e.adminId)) && (
@@ -2982,7 +2984,7 @@ function ToApproveTab(props: {
                 <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
                 <span className="text-sm text-slate-700 flex-1">
                   {t("jour")}
-                  <span className="text-muted-foreground"> · {upToDateRows.length} employé{upToDateRows.length > 1 ? "s" : ""} tout approuvé</span>
+                  <span className="text-muted-foreground"> · {t("employes_tout_approuve", { count: upToDateRows.length })}</span>
                 </span>
               </button>
               {showUpToDate && (
@@ -3039,6 +3041,7 @@ function WeekNavBackButton({ periodFrom, targetWeek }: { periodFrom?: string; ta
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
+  const dateTag = useDateLocale();
   const go = () => {
     let target: Date;
     if (targetWeek) {
@@ -3059,7 +3062,7 @@ function WeekNavBackButton({ periodFrom, targetWeek }: { periodFrom?: string; ta
   const label = targetWeek
     ? (() => {
         const [y, m, d] = targetWeek.split("-").map(Number);
-        return `Semaine du ${new Date(y, m - 1, d).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
+        return t("timeclock_view_semaine_du_p0", { p0: new Date(y, m - 1, d).toLocaleDateString(dateTag, { day: "numeric", month: "long" }) });
       })()
     : t("semaine_precedente");
   return (
@@ -3237,8 +3240,9 @@ function DayOnlyRow({
   onClick: () => void;
 }) {
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const isToday = bucket.date === todayKey();
-  const dateLabel = capFirst(new Date(bucket.date + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dateLabel = capFirst(new Date(bucket.date + "T12:00:00").toLocaleDateString(dateTag, {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }));
   const hasPending = bucket.pendingIds.length > 0;

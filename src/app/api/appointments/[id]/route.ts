@@ -196,6 +196,8 @@ export async function PATCH(
         clientId: existing.clientId,
         eventType: meta.type,
         eventLabel: t("rdv_statut_sujet", { statut: t(meta.labelKey), sujet: existing.subject || existing.startTime }),
+        labelKey: "api_errors.rdv_statut_sujet",
+        labelParams: { statut: t(meta.labelKey), sujet: existing.subject || existing.startTime },
         triggeredBy: "admin",
         metadata: { appointmentId },
       });

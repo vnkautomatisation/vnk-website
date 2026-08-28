@@ -1,6 +1,8 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { workflowEventLabel } from "@/lib/workflow-label";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -48,7 +50,8 @@ import { StatCard } from "@/components/admin/stat-card";
 import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { useConfirm } from "@/hooks/use-confirm";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type ClientData = {
   id: number;
@@ -66,6 +69,7 @@ type EventData = {
   id: number;
   eventType: string;
   eventLabel: string | null;
+  metadata?: unknown;
   triggeredBy: string;
   createdAt: string;
   clientId: number;
@@ -210,7 +214,9 @@ function timeAgo(iso: string, t: (k: string) => string): string {
 
 export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]; events?: EventData[] }) {
   const t = useTranslations("admin.workflow");
+  const tRoot = useTranslations();
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
   const [searchQuery, setSearchQuery] = useState("");
@@ -349,7 +355,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const acceptQuote = async (clientId: number, quoteId: number, num: string) => {
     const ok = await confirm({
       title: t("accepter_devis"),
-      description: `Le devis ${num} sera marqué comme accepté et un contrat sera généré automatiquement.`,
+      description: t("workflow_kanban_le_devis_p0_sera_marque_comme_accepte_et", { p0: num }),
       confirmLabel: t("accepter"),
     });
     if (!ok) return;
@@ -375,7 +381,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
   const markInvoicePaid = async (clientId: number, invoiceId: number, num: string) => {
     const ok = await confirm({
       title: t("marquer_comme_payee"),
-      description: `La facture ${num} sera marquée comme payée.`,
+      description: t("workflow_kanban_la_facture_p0_sera_marquee_comme_payee", { p0: num }),
       confirmLabel: t("marquer_payee"),
     });
     if (!ok) return;
@@ -451,7 +457,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     if (fromStep === "prospect" && targetStep === "mandate_active") {
       const ok = await confirm({
         title: t("creer_mandat_2"),
-        description: `Vous allez ouvrir la création d'un nouveau mandat pour ${c.fullName} (passage Prospect → Mandat).`,
+        description: t("workflow_kanban_vous_allez_ouvrir_la_creation_d_un_nouveau", { p0: c.fullName }),
         confirmLabel: t("continuer"),
       });
       if (!ok) return;
@@ -462,7 +468,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
     if (fromStep === "mandate_active" && targetStep === "quote_pending") {
       const ok = await confirm({
         title: t("creer_devis_2"),
-        description: `Vous allez ouvrir la création d'un nouveau devis pour ${c.fullName} (passage Mandat → Devis).`,
+        description: t("workflow_kanban_vous_allez_ouvrir_la_creation_d_un_nouveau_x", { p0: c.fullName }),
         confirmLabel: t("continuer"),
       });
       if (!ok) return;
@@ -475,7 +481,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       if (!quote) { toast.error(t("aucun_devis_attente")); return; }
       const ok = await confirm({
         title: t("accepter_devis_2"),
-        description: `Le devis ${quote.quoteNumber} sera accepté (passage Devis → Contrat).`,
+        description: t("workflow_kanban_le_devis_p0_sera_accepte_passage_devis_contrat", { p0: quote.quoteNumber }),
         confirmLabel: t("accepter"),
       });
       if (!ok) return;
@@ -505,7 +511,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
       if (!unpaid) { toast.error(t("aucune_facture_impayee")); return; }
       const ok = await confirm({
         title: t("marquer_payee_2"),
-        description: `La facture ${unpaid.invoiceNumber} sera marquée comme payée (passage Paiement → Complété).`,
+        description: t("workflow_kanban_la_facture_p0_sera_marquee_comme_payee_passage", { p0: unpaid.invoiceNumber }),
         confirmLabel: t("marquer_payee"),
       });
       if (!ok) return;
@@ -1018,7 +1024,7 @@ export function WorkflowKanban({ clients, events = [] }: { clients: ClientData[]
                     <Icon className="h-4 w-4" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-medium line-clamp-2">{e.eventLabel ?? e.eventType}</p>
+                    <p className="text-xs font-medium line-clamp-2">{workflowEventLabel(tRoot, e)}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5 truncate">
                       {e.clientName}{e.clientCompany ? ` · ${e.clientCompany}` : ""}
                     </p>

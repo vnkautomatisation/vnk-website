@@ -10,6 +10,7 @@
 //   PdfPreviewModal.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -249,25 +250,25 @@ const CONTRACT_STATUS_LABEL: Record<string, { labelKey: string; tone: "success" 
   expired: { labelKey: "cs_expired", tone: "neutral" },
 };
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
 
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
-function formatPeriod(start: string, end: string): string {
+function formatPeriod(start: string, end: string, tag: string): string {
   const a = new Date(start);
   const b = new Date(end);
   if (Number.isNaN(a.getTime()) || Number.isNaN(b.getTime())) return "-";
-  return `${a.toLocaleDateString("fr-CA", { day: "numeric", month: "short" })} - ${b.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" })}`;
+  return `${a.toLocaleDateString(tag, { day: "numeric", month: "short" })} - ${b.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" })}`;
 }
 
-function formatMoney(v: string | number): string {
+function formatMoney(v: string | number, tag: string): string {
   const n = typeof v === "number" ? v : Number(v);
   if (Number.isNaN(n)) return "-";
-  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD" }).format(n);
+  return new Intl.NumberFormat(tag, { style: "currency", currency: "CAD" }).format(n);
 }
 
 function isThisMonth(iso: string | null | undefined): boolean {
@@ -318,6 +319,7 @@ export function MyDocumentsView({
   const t = useTranslations("admin.my_documents");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
 
 
   const signedMap = useMemo(() => {
@@ -583,7 +585,7 @@ export function MyDocumentsView({
           value={activeContracts}
           icon={FileCheck}
           accent="info"
-          hint={`${contracts.length} contrat${contracts.length > 1 ? "s" : ""} au total`}
+          hint={t("contrats_au_total", { count: contracts.length })}
           onClick={() => setTab("contracts")}
         />
         <DocumentStatsCard
@@ -814,7 +816,7 @@ export function MyDocumentsView({
             setPreviewPdf({
               url: c.pdfUrl,
               title: c.title,
-              description: `${c.contractType} - du ${formatDate(c.startDate)}${c.endDate ? ` au ${formatDate(c.endDate)}` : ""}`,
+              description: t("my_documents_view_p0_du_p1_p2", { p0: c.contractType, p1: formatDate(c.startDate, dateTag), p2: c.endDate ? ` au ${formatDate(c.endDate, dateTag)}` : "" }),
               filename: `${c.title}.pdf`,
             });
           }}
@@ -829,8 +831,8 @@ export function MyDocumentsView({
             const url = s.pdfUrl ?? `/api/admin/pay-stubs/${s.id}/pdf`;
             setPreviewPdf({
               url,
-              title: `Bulletin ${formatPeriod(s.period.startDate, s.period.endDate)}`,
-              description: `Net : ${formatMoney(s.netPay)} - Brut : ${formatMoney(s.grossPay)}`,
+              title: `Bulletin ${formatPeriod(s.period.startDate, s.period.endDate, dateTag)}`,
+              description: `Net : ${formatMoney(s.netPay, dateTag)} - Brut : ${formatMoney(s.grossPay, dateTag)}`,
               filename: `bulletin-${s.id}.pdf`,
             });
           }}
@@ -998,6 +1000,7 @@ function ToSignTab({
   onSign: (templateId: number) => void;
 }) {
   const t = useTranslations("admin.my_documents");
+  const dateTag = useDateLocale();
 
 
 
@@ -1059,12 +1062,12 @@ function ToSignTab({
                 <ToSignCard
                   key={request.id}
                   doc={doc}
-                  subtitle={`Demande par ${request.requestedBy.fullName ?? request.requestedBy.email}`}
+                  subtitle={t("my_documents_view_demande_par_p0", { p0: request.requestedBy.fullName ?? request.requestedBy.email })}
                   iconTone={urgent ? "danger" : "warning"}
                   badge={
                     request.dueDate
                       ? {
-                          label: urgent ? `Echeance J-${days}` : `Avant ${formatDate(request.dueDate)}`,
+                          label: urgent ? `Echeance J-${days}` : `Avant ${formatDate(request.dueDate, dateTag)}`,
                           tone: urgent ? "danger" : "warning",
                         }
                       : undefined
@@ -1092,6 +1095,7 @@ function ContractsTab({
   onPreview: (c: Contract) => void;
 }) {
   const t = useTranslations("admin.my_documents");
+  const dateTag = useDateLocale();
   if (contracts.length === 0) {
     return (
       <Card className="p-10 text-center text-sm text-muted-foreground">
@@ -1104,8 +1108,8 @@ function ContractsTab({
       {contracts.map((c) => {
         const meta = CONTRACT_STATUS_LABEL[c.status] ?? { labelKey: "", tone: "neutral" as const };
         const subtitle = c.endDate
-          ? t("contrat_du_au", { type: c.contractType, from: formatDate(c.startDate), to: formatDate(c.endDate) })
-          : t("contrat_du", { type: c.contractType, from: formatDate(c.startDate) });
+          ? t("contrat_du_au", { type: c.contractType, from: formatDate(c.startDate, dateTag), to: formatDate(c.endDate, dateTag) })
+          : t("contrat_du", { type: c.contractType, from: formatDate(c.startDate, dateTag) });
         return (
           <div key={c.id} className="space-y-1.5">
             <DocumentCard
@@ -1114,7 +1118,7 @@ function ContractsTab({
               subtitle={subtitle}
               iconTone="info"
               status={{ label: meta.labelKey ? t(meta.labelKey) : c.status, tone: meta.tone }}
-              date={formatDate(c.createdAt)}
+              date={formatDate(c.createdAt, dateTag)}
               onPreview={c.pdfUrl ? () => onPreview(c) : undefined}
 
 
@@ -1189,6 +1193,7 @@ function PayrollTab({
   onPreviewTax: (d: TaxDoc) => void;
 }) {
   const t = useTranslations("admin.my_documents");
+  const dateTag = useDateLocale();
   return (
     <div className="space-y-5">
       <section className="space-y-2">
@@ -1206,10 +1211,10 @@ function PayrollTab({
               <DocumentCard
                 key={s.id}
                 icon={CreditCard}
-                title={`Bulletin ${formatPeriod(s.period.startDate, s.period.endDate)}`}
-                subtitle={`Net : ${formatMoney(s.netPay)} - Brut : ${formatMoney(s.grossPay)}`}
+                title={`Bulletin ${formatPeriod(s.period.startDate, s.period.endDate, dateTag)}`}
+                subtitle={`Net : ${formatMoney(s.netPay, dateTag)} - Brut : ${formatMoney(s.grossPay, dateTag)}`}
                 iconTone="info"
-                date={s.releasedAt ? `Emis le ${formatDate(s.releasedAt)}` : undefined}
+                date={s.releasedAt ? t("my_documents_view_emis_le_p0", { p0: formatDate(s.releasedAt, dateTag) }) : undefined}
                 onPreview={() => onPreviewStub(s)}
               />
             ))}
@@ -1233,7 +1238,7 @@ function PayrollTab({
                 title={d.title}
                 subtitle={`${TAX_TYPE_LABEL[d.type] ?? d.type}${d.taxYear ? ` - ${d.taxYear}` : ""}`}
                 iconTone="success"
-                date={`Emis le ${formatDate(d.issuedAt)}`}
+                date={t("my_documents_view_emis_le_p0", { p0: formatDate(d.issuedAt, dateTag) })}
                 onPreview={() => onPreviewTax(d)}
 
 
@@ -1260,6 +1265,7 @@ function LettersTab({
   onPreview: (l: LetterRequest) => void;
 }) {
   const t = useTranslations("admin.my_documents");
+  const dateTag = useDateLocale();
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1300,11 +1306,11 @@ function LettersTab({
                 subtitle={
                   l.recipient
                     ? `Destinataire : ${l.recipient}`
-                    : `Demandee le ${formatDate(l.createdAt)}`
+                    : t("my_documents_view_demandee_le_p0", { p0: formatDate(l.createdAt, dateTag) })
                 }
                 iconTone={l.status === "issued" ? "success" : "warning"}
                 status={statusBadge}
-                date={l.issuedAt ? `Emise le ${formatDate(l.issuedAt)}` : `Demande le ${formatDate(l.createdAt)}`}
+                date={l.issuedAt ? t("my_documents_view_emise_le_p0", { p0: formatDate(l.issuedAt, dateTag) }) : t("my_documents_view_demande_le_p0", { p0: formatDate(l.createdAt, dateTag) })}
                 onPreview={l.letterUrl ? () => onPreview(l) : undefined}
 
                 onDownload={l.letterUrl ? () => onPreview(l) : undefined}
@@ -1337,6 +1343,7 @@ function PersonalTab({
 }) {
   const t = useTranslations("admin.my_documents");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   void employeeId;
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string>("all");
@@ -1367,7 +1374,7 @@ function PersonalTab({
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {pendingUploadRequests.map((r) => {
-              const due = r.dueDate ? formatDate(r.dueDate) : null;
+              const due = r.dueDate ? formatDate(r.dueDate, dateTag) : null;
               const days = r.dueDate ? Math.floor((new Date(r.dueDate).getTime() - Date.now()) / 86400000) : null;
               const urgent = days !== null && days <= 3;
               return (
@@ -1393,7 +1400,7 @@ function PersonalTab({
                   <div className="flex items-center justify-between gap-2 pt-1">
                     <div className="text-[11px] text-muted-foreground flex items-center gap-1.5">
                       <CalendarClock className="h-3 w-3" />
-                      {due ? (urgent && days! >= 0 ? `Échéance J-${days}` : `Avant le ${due}`) : t("sans_echeance")}
+                      {due ? (urgent && days! >= 0 ? t("my_documents_view_echeance_j_p0", { p0: days }) : t("my_documents_view_avant_le_p0", { p0: due })) : t("sans_echeance")}
                     </div>
                     <Button
                       size="sm"
@@ -1531,6 +1538,7 @@ function SignedTab({
 }) {
   const t = useTranslations("admin.my_documents");
   const router = useRouter();
+  const dateTag = useDateLocale();
 
 
 
@@ -1579,7 +1587,7 @@ function SignedTab({
         key: `legal-${sig.id}`,
         type: "Politique",
         title,
-        description: `v${sig.version} - Signe le ${formatDate(sig.signedAt)}`,
+        description: t("my_documents_view_v_p0_signe_le_p1", { p0: sig.version, p1: formatDate(sig.signedAt, dateTag) }),
         date: sig.signedAt,
         pdfUrl: sig.finalPdfUrl,
         filename: `${keySuffix}-signe.pdf`,
@@ -1595,7 +1603,7 @@ function SignedTab({
         key: `handbook-${hs.id}`,
         type: "Cahier",
         title,
-        description: `v${hs.version} - Signe le ${formatDate(hs.signedAt)}`,
+        description: t("my_documents_view_v_p0_signe_le_p1", { p0: hs.version, p1: formatDate(hs.signedAt, dateTag) }),
         date: hs.signedAt,
         pdfUrl: hs.finalPdfUrl,
         filename: `${keySuffix}-signe.pdf`,
@@ -1612,8 +1620,8 @@ function SignedTab({
         type: "Contrat",
         title: c.title,
         description: fullySigned
-          ? `${c.contractType} - Signe le ${formatDate(c.employeeSignedAt)} (contresigne)`
-          : `${c.contractType} - Signe le ${formatDate(c.employeeSignedAt)} (en attente RH)`,
+          ? t("my_documents_view_p0_signe_le_p1_contresigne", { p0: c.contractType, p1: formatDate(c.employeeSignedAt, dateTag) })
+          : t("my_documents_view_p0_signe_le_p1_en_attente_rh", { p0: c.contractType, p1: formatDate(c.employeeSignedAt, dateTag) }),
         date: c.employeeSignedAt,
         pdfUrl: c.pdfUrl,
         filename: `${c.title.replace(/\s+/g, "-").toLowerCase()}.pdf`,
@@ -1681,7 +1689,7 @@ function SignedTab({
                 tone: item.pdfUrl ? "success" : "neutral",
               }}
               badges={[{ label: t(`type_${item.type.toLowerCase()}`), tone: "info" }]}
-              date={formatDate(item.date)}
+              date={formatDate(item.date, dateTag)}
               onPreview={item.pdfUrl ? () => onOpenPdf(item) : undefined}
               onDownload={item.pdfUrl ? () => onOpenPdf(item) : undefined}
             />

@@ -1,4 +1,5 @@
 {
+  "a_verifier": "{count} à vérifier",
   "attente": "En attente :",
   "au": "Au",
   "aucun_paiement_ne_correspond_filtres": "Aucun paiement ne correspond aux filtres",
@@ -27,8 +28,10 @@
   "recherche": "Recherche",
   "rechercher": "Rechercher...",
   "reconciliation_view_1_filtrer_par_methode_ex_carte_pour": "1. Filtrer par méthode (ex : carte pour matcher le relevé de la plateforme de paiement) · 2. Vérifier que la somme correspond au virement reçu en banque · 3. Cocher les paiements vérifiés et cliquer",
+  "reconciliation_view_confirmer_la_reception_de_p0_paiement_s": "Confirmer la réception de {p0} paiement(s) ?",
   "reconciliation_view_confirmer_la_selection": "Confirmer la sélection",
   "reconciliation_view_confirmer_recu": "Confirmer reçu",
+  "reconciliation_view_p0_paiement_s_confirme_s_recu_s": "{p0} paiement(s) confirmé(s) reçu(s)",
   "reference": "Référence",
   "sel": "Sél. :",
   "tous_paiements_confirmes_recus": "Tous les paiements sont confirmés reçus",

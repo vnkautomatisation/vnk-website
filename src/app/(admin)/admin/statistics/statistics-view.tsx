@@ -2,6 +2,7 @@
 // Vue Statistiques — KPIs + graphiques Recharts.
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import {
   BarChart3, TrendingUp, TrendingDown, DollarSign, FileText,
@@ -49,21 +50,24 @@ const RANGES = [
   { key: "all", labelKey: "tout" },
 ];
 
-function fmtMoney(n: number, compact = false): string {
-  if (compact && n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)} M$`;
-  if (compact && n >= 1_000) return `${(n / 1_000).toFixed(1)} k$`;
-  return n.toLocaleString("fr-CA", { style: "currency", currency: "CAD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+function fmtMoney(n: number, compact: boolean, tag: string): string {
+  // La notation compacte vient d'Intl : "$20.0K" en anglais, "20,0 k$" en
+  // francais. Les suffixes ecrits a la main sortaient en francais partout.
+  return n.toLocaleString(tag, {
+    style: "currency",
+    currency: "CAD",
+    ...(compact && n >= 1_000
+      ? { notation: "compact" as const, maximumFractionDigits: 1 }
+      : { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+  });
 }
-function fmtMonth(iso: string): string {
+function fmtMonth(iso: string, tag: string): string {
   const [year, month] = iso.split("-");
   const d = new Date(Number(year), Number(month) - 1, 1);
-  return d.toLocaleDateString("fr-CA", { month: "short", year: "2-digit" });
+  return d.toLocaleDateString(tag, { month: "short", year: "2-digit" });
 }
 
 // Wrappers pour types Recharts qui acceptent ValueType | undefined
-const moneyFormatter = (v: unknown): string => fmtMoney(Number(v ?? 0));
-const moneyCompactFormatter = (v: unknown): string => fmtMoney(Number(v ?? 0), true);
-const monthLabelFormatter = (label: unknown): string => fmtMonth(String(label ?? ""));
 
 export function StatisticsView({
   range, kpis, seriesInvoices, seriesClients, topClients, statusBreakdown, serviceBreakdown,
@@ -83,6 +87,12 @@ export function StatisticsView({
 }) {
   const t = useTranslations("admin.statistics");
   const router = useRouter();
+  const dateTag = useDateLocale();
+  // Enveloppes pour les types Recharts, qui n'acceptent qu'un argument.
+  const moneyFormatter = (v: unknown): string => fmtMoney(Number(v ?? 0), false, dateTag);
+  const moneyCompactFormatter = (v: unknown): string => fmtMoney(Number(v ?? 0), true, dateTag);
+  const monthLabelFormatter = (label: unknown): string => fmtMonth(String(label ?? ""), dateTag);
+  const monthTickFormatter = (v: unknown): string => fmtMonth(String(v ?? ""), dateTag);
 
   return (
     <div className="space-y-6">
@@ -117,10 +127,10 @@ export function StatisticsView({
 
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <Kpi icon={DollarSign} label={t("revenus_encaisses")} value={fmtMoney(kpis.revenue)} accent="text-emerald-600" subline={`${kpis.paidInvoices} factures payées`} />
-        <Kpi icon={AlertCircle} label={t("creances_clients")} value={fmtMoney(kpis.outstanding)} accent="text-amber-600" subline={t("non_payees_retards")} />
-        <Kpi icon={Receipt} label={t("taux_paiement")} value={`${kpis.paymentRate}%`} accent={kpis.paymentRate >= 80 ? "text-emerald-600" : kpis.paymentRate >= 50 ? "text-amber-600" : "text-red-600"} subline={`${kpis.paidInvoices}/${kpis.totalInvoices} factures`} trend={kpis.paymentRate >= 70 ? "up" : "down"} />
-        <Kpi icon={FileText} label={t("conversion_devis")} value={`${kpis.conversionRate}%`} accent={kpis.conversionRate >= 60 ? "text-emerald-600" : kpis.conversionRate >= 30 ? "text-amber-600" : "text-red-600"} subline={`${kpis.acceptedQuotes}/${kpis.totalQuotes} acceptés`} trend={kpis.conversionRate >= 50 ? "up" : "down"} />
+        <Kpi icon={DollarSign} label={t("revenus_encaisses")} value={fmtMoney(kpis.revenue, false, dateTag)} accent="text-emerald-600" subline={t("statistics_view_p0_factures_payees", { p0: kpis.paidInvoices })} />
+        <Kpi icon={AlertCircle} label={t("creances_clients")} value={fmtMoney(kpis.outstanding, false, dateTag)} accent="text-amber-600" subline={t("non_payees_retards")} />
+        <Kpi icon={Receipt} label={t("taux_paiement")} value={`${kpis.paymentRate}%`} accent={kpis.paymentRate >= 80 ? "text-emerald-600" : kpis.paymentRate >= 50 ? "text-amber-600" : "text-red-600"} subline={t("n_sur_m_factures", { paid: kpis.paidInvoices, total: kpis.totalInvoices })} trend={kpis.paymentRate >= 70 ? "up" : "down"} />
+        <Kpi icon={FileText} label={t("conversion_devis")} value={`${kpis.conversionRate}%`} accent={kpis.conversionRate >= 60 ? "text-emerald-600" : kpis.conversionRate >= 30 ? "text-amber-600" : "text-red-600"} subline={t("statistics_view_p0_p1_acceptes", { p0: kpis.acceptedQuotes, p1: kpis.totalQuotes })} trend={kpis.conversionRate >= 50 ? "up" : "down"} />
         <Kpi icon={Users} label={t("nouveaux_clients")} value={kpis.totalClients.toString()} accent="text-blue-600" subline={t("sur_periode")} />
         <Kpi icon={Briefcase} label={t("mandats_actifs")} value={kpis.activeMandates.toString()} accent="text-violet-600" subline={t("cours_execution")} />
         <Kpi icon={Receipt} label={t("factures_emises")} value={kpis.totalInvoices.toString()} accent="text-cyan-600" subline={t("sur_periode")} />
@@ -135,7 +145,7 @@ export function StatisticsView({
               <h2 className="text-base font-semibold">{t("revenus_mensuels")}</h2>
               <p className="text-xs text-muted-foreground">{t("factures_payees_mois")}</p>
             </div>
-            <Badge variant="outline" className="text-[10px]">{seriesInvoices.length} mois</Badge>
+            <Badge variant="outline" className="text-[10px]">{t("n_mois", { count: seriesInvoices.length })}</Badge>
           </div>
           {seriesInvoices.length > 0 ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -147,7 +157,7 @@ export function StatisticsView({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="month" tickFormatter={fmtMonth} fontSize={11} stroke="#6b7280" />
+                <XAxis dataKey="month" tickFormatter={monthTickFormatter} fontSize={11} stroke="#6b7280" />
                 <YAxis tickFormatter={moneyCompactFormatter} fontSize={11} stroke="#6b7280" />
                 <Tooltip
                   formatter={moneyFormatter}
@@ -172,7 +182,7 @@ export function StatisticsView({
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={seriesClients} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                  <XAxis dataKey="month" tickFormatter={fmtMonth} fontSize={11} stroke="#6b7280" />
+                  <XAxis dataKey="month" tickFormatter={monthTickFormatter} fontSize={11} stroke="#6b7280" />
                   <YAxis allowDecimals={false} fontSize={11} stroke="#6b7280" />
                   <Tooltip
                     labelFormatter={monthLabelFormatter}
@@ -210,7 +220,7 @@ export function StatisticsView({
                       ))}
                     </Pie>
                     <Tooltip
-                      formatter={(v: unknown, name: unknown) => [String(v), STATUS_KEYS[String(name)] ?? String(name)]}
+                      formatter={(v: unknown, name: unknown) => [String(v), STATUS_KEYS[String(name)] ? t(STATUS_KEYS[String(name)]) : String(name)]}
                       contentStyle={{ fontSize: 12, borderRadius: 8 }}
                     />
                   </PieChart>
@@ -219,9 +229,9 @@ export function StatisticsView({
                   {statusBreakdown.map((s) => (
                     <div key={s.status} className="flex items-center gap-2 text-xs">
                       <div className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: STATUS_COLORS[s.status] ?? "#6b7280" }} />
-                      <span className="flex-1">{STATUS_KEYS[s.status] ?? s.status}</span>
+                      <span className="flex-1">{STATUS_KEYS[s.status] ? t(STATUS_KEYS[s.status]) : s.status}</span>
                       <span className="font-semibold tabular-nums">{s.count}</span>
-                      <span className="text-muted-foreground tabular-nums text-[10px]">{fmtMoney(s.total, true)}</span>
+                      <span className="text-muted-foreground tabular-nums text-[10px]">{fmtMoney(s.total, true, dateTag)}</span>
                     </div>
                   ))}
                 </div>
@@ -252,7 +262,7 @@ export function StatisticsView({
                         <span className="text-[10px] font-bold text-muted-foreground w-5">#{idx + 1}</span>
                         <span className="text-sm font-medium flex-1 truncate group-hover:underline">{c.name}</span>
                         {c.company && <span className="text-[10px] text-muted-foreground truncate max-w-[100px]">{c.company}</span>}
-                        <span className="text-sm font-bold tabular-nums">{fmtMoney(c.total)}</span>
+                        <span className="text-sm font-bold tabular-nums">{fmtMoney(c.total, false, dateTag)}</span>
                       </div>
                       <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                         <div className="h-full bg-gradient-to-r from-[#0F2D52] to-[#1A5FB4]" style={{ width: `${pct}%` }} />
@@ -303,11 +313,11 @@ export function StatisticsView({
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={seriesInvoices} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                <XAxis dataKey="month" tickFormatter={fmtMonth} fontSize={11} stroke="#6b7280" />
+                <XAxis dataKey="month" tickFormatter={monthTickFormatter} fontSize={11} stroke="#6b7280" />
                 <YAxis yAxisId="left" tickFormatter={moneyCompactFormatter} fontSize={11} stroke="#26A269" />
                 <YAxis yAxisId="right" orientation="right" allowDecimals={false} fontSize={11} stroke="#1A5FB4" />
                 <Tooltip
-                  formatter={(v: unknown, name: unknown) => name === "revenue" ? fmtMoney(Number(v ?? 0)) : String(v ?? "")}
+                  formatter={(v: unknown, name: unknown) => name === "revenue" ? fmtMoney(Number(v ?? 0), false, dateTag) : String(v ?? "")}
                   labelFormatter={monthLabelFormatter}
                   contentStyle={{ fontSize: 12, borderRadius: 8 }}
                 />

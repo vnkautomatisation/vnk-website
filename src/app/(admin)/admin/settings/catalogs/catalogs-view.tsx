@@ -4,6 +4,7 @@
 // Modes de paiement · Modes de contact.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -82,6 +83,7 @@ export function CatalogsView({
   const [promoDialog, setPromoDialog] = useState<{ open: boolean; promo: PromoRow | null }>({ open: false, promo: null });
   const [catalogDialog, setCatalogDialog] = useState<{ open: boolean; item: CatalogItemRow | null; type: string }>({ open: false, item: null, type: "" });
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "service" | "promo" | "catalog"; id: number; label: string } | null>(null);
+  const dateTag = useDateLocale();
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -91,7 +93,7 @@ export function CatalogsView({
     else if (kind === "promo") result = await deletePromoAction({ id });
     else result = await deleteCatalogItemAction({ id });
     if (result.success) {
-      toast.success(`${label} supprimé`);
+      toast.success(t("catalogs_view_p0_supprime", { p0: label }));
       router.refresh();
     } else {
       toast.error(result.error || t("erreur"));
@@ -217,7 +219,7 @@ export function CatalogsView({
                     {s.description && <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{s.description}</p>}
                   </div>
                   <div className="hidden md:block text-right shrink-0">
-                    <p className="font-semibold text-sm">{Number(s.basePrice).toLocaleString("fr-CA", { style: "currency", currency: s.currency })}</p>
+                    <p className="font-semibold text-sm">{Number(s.basePrice).toLocaleString(dateTag, { style: "currency", currency: s.currency })}</p>
                     <p className="text-[10px] text-muted-foreground">{t("par_unite", { unit: s.priceUnit === "hour" ? t("heure") : s.priceUnit === "day" ? t("jour") : s.priceUnit === "fixed" ? t("forfait") : s.priceUnit === "month" ? t("mois") : t("annee") })}</p>
                   </div>
                   <DropdownMenu>
@@ -265,7 +267,7 @@ export function CatalogsView({
                     </div>
                     <div className="hidden md:block text-right shrink-0">
                       <p className="font-semibold text-sm">
-                        {p.discountType === "percent" ? `-${Number(p.value)}%` : `-${Number(p.value).toLocaleString("fr-CA", { style: "currency", currency: "CAD" })}`}
+                        {p.discountType === "percent" ? `-${Number(p.value)}%` : `-${Number(p.value).toLocaleString(dateTag, { style: "currency", currency: "CAD" })}`}
                       </p>
                       <p className="text-[10px] text-muted-foreground">
                         {p.maxUses ? `${p.currentUses}/${p.maxUses}` : `${p.currentUses} utilisations`}

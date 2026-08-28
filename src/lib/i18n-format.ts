@@ -1,4 +1,5 @@
 import { useLocale } from "next-intl";
+import { formatCurrency } from "@/lib/utils";
 
 // Dates and numbers follow the reader's locale, never the language of the source.
 export function dateLocale(locale: string): string {
@@ -46,4 +47,12 @@ export function countryName(code: string, locale: string): string {
 export function useCountryName(): (code: string) => string {
   const locale = useDateLocale();
   return (code: string) => countryName(code, locale);
+}
+
+// Les montants suivent le lecteur : "75 731,74 $" en francais, "$75,731.74"
+// en anglais. Le hook remplace formatCurrency dans la portee du composant,
+// donc les appels existants n'ont pas a changer.
+export function useCurrency(): (amount: number | string, currency?: string) => string {
+  const tag = useDateLocale();
+  return (amount, currency = "CAD") => formatCurrency(amount, currency, tag);
 }

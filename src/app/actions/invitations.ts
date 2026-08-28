@@ -43,7 +43,7 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
   if (!rl.ok) {
     return {
       success: false,
-      error: `Trop de tentatives. Réessayez dans ${Math.ceil(rl.retryAfterMs / 60000)} minute(s).`,
+      error: t("invitations_trop_de_tentatives_reessayez_dans_p0_minute_s", { p0: Math.ceil(rl.retryAfterMs / 60000) }),
     };
   }
 
@@ -108,7 +108,7 @@ export async function acceptInvitationAction(input: z.infer<typeof schema>): Pro
     adminId: result.id,
     type: "user_created",
     severity: "success",
-    message: `Compte activé via invitation`,
+    message: t("invitations_compte_active_via_invitation"),
     metadata: { invitationId: invitation.id, invitedBy: invitation.invitedById, ip },
   });
 

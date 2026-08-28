@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -15,7 +16,8 @@ import { StatusBadge } from "@/components/admin/status-badge";
 import { DetailPanelBase, PanelStatBox, PanelEmptyState } from "@/components/admin/detail-panel-base";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useConfirm } from "@/hooks/use-confirm";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type MandateFull = {
   id: number;
@@ -65,6 +67,7 @@ export function MandateDetailPanel({
   const t = useTranslations("admin.mandates");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
   const [mandate, setMandate] = useState<MandateFull | null>(null);
@@ -134,7 +137,7 @@ export function MandateDetailPanel({
     if (!mandate) return;
     const ok = await confirm({
       title: t("marquer_comme_termine"),
-      description: `Le mandat "${mandate.title}" sera marqué comme complété (100%).`,
+      description: t("mandate_detail_panel_le_mandat_p0_sera_marque_comme_complete_100", { p0: mandate.title }),
       confirmLabel: t("marquer_termine"),
     });
     if (!ok) return;
@@ -339,7 +342,7 @@ export function MandateDetailPanel({
           </PanelSection>
 
 
-          <PanelSection icon={ListChecks} title={`Activité (${mandate.logs.length})`}>
+          <PanelSection icon={ListChecks} title={t("mandate_detail_panel_activite_p0", { p0: mandate.logs.length })}>
             {mandate.logs.length === 0 ? (
               <PanelEmptyState text={t("aucune_activite_enregistree")} icon={ListChecks} />
             ) : (

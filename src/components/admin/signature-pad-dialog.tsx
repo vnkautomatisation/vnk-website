@@ -425,7 +425,7 @@ export function SignaturePadDialog({
                 ) : pdfBlobUrl ? (
                   <iframe
                     src={pdfBlobUrl}
-                    title={`Aperçu : ${doc.title}`}
+                    title={t("signature_pad_dialog_apercu_p0", { p0: doc.title })}
                     className="w-full h-full border-0 bg-white"
                   />
                 ) : null}

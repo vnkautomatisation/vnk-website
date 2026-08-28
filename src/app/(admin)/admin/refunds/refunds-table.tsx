@@ -1,10 +1,12 @@
 "use client";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { RotateCcw } from "lucide-react";
 import { PageHeader } from "@/components/admin/page-header";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type R = {
   id: number;
@@ -19,6 +21,7 @@ type R = {
 
 export function RefundsTable({ refunds }: { refunds: R[] }) {
   const t = useTranslations("admin.refunds");
+  const formatCurrency = useCurrency();
 
   const columns: Column<R>[] = [
     { key: "number", header: t("ref"), accessor: (r) => r.refundNumber, sortable: true, sortBy: (r) => r.refundNumber },

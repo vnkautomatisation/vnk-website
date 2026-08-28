@@ -15,6 +15,8 @@ import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { getLocale } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +34,7 @@ function authorize(req: Request): boolean {
 }
 
 export async function GET(req: Request) {
+  const dateTag = dateLocale(await getLocale());
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -55,6 +58,8 @@ export async function GET(req: Request) {
       invoiceId: inv.id,
       eventType: "invoice_overdue",
       eventLabel: `Facture ${inv.invoiceNumber} marquée en retard automatiquement`,
+      labelKey: "workflow_events.facture_en_retard_auto",
+      labelParams: { number: inv.invoiceNumber },
       triggeredBy: "system",
     });
     await prisma.notification.create({
@@ -90,7 +95,7 @@ export async function GET(req: Request) {
     });
 
     for (const inv of candidates) {
-      const dueLabel = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString("fr-CA") : "—";
+      const dueLabel = inv.dueDate ? new Date(inv.dueDate).toLocaleDateString(dateTag) : "—";
       const stage = rule.max === 0 ? "1er rappel" : rule.max === 1 ? "2e rappel" : "rappel final";
 
       await prisma.message.create({
@@ -124,6 +129,8 @@ export async function GET(req: Request) {
         invoiceId: inv.id,
         eventType: "invoice_reminded",
         eventLabel: `${stage} envoyé à ${inv.client.fullName} — ${inv.invoiceNumber}`,
+        labelKey: "workflow_events.relance_envoyee",
+        labelParams: { stage, name: inv.client.fullName, number: inv.invoiceNumber },
         triggeredBy: "system",
       });
 

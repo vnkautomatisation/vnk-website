@@ -4,7 +4,8 @@
 // 4-6 digit PIN, sees their name and punches in/out. Auto-resets after a
 // few seconds so the next employee can punch.
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import {
   Clock, Delete, LogIn, LogOut, Loader2, CheckCircle2, AlertCircle,
   Coffee, Play, Maximize,
@@ -41,6 +42,18 @@ function fmtMin(min: number): string {
 
 export default function KioskPage() {
   const t = useTranslations("admin.timeclock");
+  const locale = useLocale();
+  const dateTag = useDateLocale();
+
+  // Poste partage sans compte : la langue vit dans le cookie de l'appareil.
+  const toggleLocale = async () => {
+    await fetch("/api/locale", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ locale: locale === "fr" ? "en" : "fr", scope: "kiosk" }),
+    });
+    window.location.reload();
+  };
   const [screen, setScreen] = useState<Screen>({ step: "pin" });
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -189,7 +202,7 @@ export default function KioskPage() {
     : 0;
 
   const hour = clock?.getHours() ?? 12;
-  const greeting = hour < 12 ? "Bonjour" : hour < 18 ? "Bon après-midi" : "Bonsoir";
+  const greeting = hour < 12 ? t("bonjour") : hour < 18 ? t("bon_apres_midi") : t("bonsoir");
 
   const toggleFullscreen = () => {
     if (typeof document === "undefined") return;
@@ -203,7 +216,7 @@ export default function KioskPage() {
     ? `${pad2(clock.getHours())}:${pad2(clock.getMinutes())}:${pad2(clock.getSeconds())}`
     : "--:--:--";
   const rawDate = clock
-    ? clock.toLocaleDateString("fr-CA", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
+    ? clock.toLocaleDateString(dateTag, { weekday: "long", day: "numeric", month: "long", year: "numeric" })
     : "";
   const dateStr = rawDate ? rawDate.charAt(0).toUpperCase() + rawDate.slice(1) : " ";
 
@@ -225,14 +238,24 @@ export default function KioskPage() {
             Automatisation Inc.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={toggleFullscreen}
-          className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition shrink-0"
-          aria-label={t("kiosk_plein_ecran")}
-        >
-          <Maximize className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="h-10 sm:h-11 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-white/80 hover:text-white text-sm font-semibold tracking-wider transition"
+            aria-label={t("kiosk_changer_langue")}
+          >
+            {locale === "fr" ? "EN" : "FR"}
+          </button>
+          <button
+            type="button"
+            onClick={toggleFullscreen}
+            className="h-10 w-10 sm:h-11 sm:w-11 rounded-xl bg-white/10 hover:bg-white/20 text-white/70 hover:text-white flex items-center justify-center transition shrink-0"
+            aria-label={t("kiosk_plein_ecran")}
+          >
+            <Maximize className="h-5 w-5" />
+          </button>
+        </div>
       </header>
 
       {/* Two columns only when there is room for both: wide enough, tall enough
@@ -337,7 +360,7 @@ export default function KioskPage() {
                       return `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
                     })()}
                     {screen.status.open.totalBreakMin > 0
-                      ? ` · ${screen.status.open.totalBreakMin} min de pause`
+                      ? t("page_p0_min_de_pause", { p0: screen.status.open.totalBreakMin })
                       : ""}
                   </p>
                   {/* Running shift counter, frozen while on break */}
@@ -354,7 +377,7 @@ export default function KioskPage() {
               ) : (
                 <p className="text-xs text-slate-500 mt-0.5">
                   {screen.status.todayMin > 0
-                    ? `Déjà ${fmtMin(screen.status.todayMin)} aujourd'hui`
+                    ? t("page_deja_p0_aujourd_hui", { p0: fmtMin(screen.status.todayMin) })
                     : "Aucun pointage ouvert"}
                 </p>
               )}

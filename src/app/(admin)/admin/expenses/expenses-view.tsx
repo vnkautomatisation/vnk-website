@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -46,7 +47,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { DataTable, type Column } from "@/components/data-table/data-table";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Expense = {
   id: number;
@@ -165,6 +167,7 @@ export function ExpensesView({
   const t = useTranslations("admin.expenses");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const [view, setView] = useViewMode("expenses", "list");
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
@@ -485,13 +488,13 @@ export function ExpensesView({
     },
     {
       key: "tps",
-      header: "TPS",
+      header: t("tps"),
       accessor: (r) => <span className="text-xs">{formatCurrency(r.tpsPaid)}</span>,
       hiddenOnMobile: true,
     },
     {
       key: "tvq",
-      header: "TVQ",
+      header: t("tvq"),
       accessor: (r) => <span className="text-xs">{formatCurrency(r.tvqPaid)}</span>,
       hiddenOnMobile: true,
     },
@@ -725,11 +728,11 @@ export function ExpensesView({
               <Wallet className="h-4 w-4" />
               {t("depenses")}
             </span>
-            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="font-semibold">{tc("shown_f", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("total")} <span className="font-semibold">{formatCurrency(filteredTotal)}</span></span>
             <span className="text-muted-foreground">TPS <span className="font-semibold text-blue-600">{formatCurrency(filteredTps)}</span></span>
             <span className="text-muted-foreground">TVQ <span className="font-semibold text-indigo-600">{formatCurrency(filteredTvq)}</span></span>
-            <span className="ml-auto text-muted-foreground">{filteredWithReceipt}/{filtered.length} avec reçu</span>
+            <span className="ml-auto text-muted-foreground">{t("avec_recu_ratio", { count: filteredWithReceipt, total: filtered.length })}</span>
           </div>
         </div>
       )}
@@ -830,7 +833,7 @@ export function ExpensesView({
               ]}
               stats={[
                 { label: t("montant_ht"), value: formatCurrency(e.amount) },
-                { label: "TTC", value: formatCurrency(e.amount + e.tpsPaid + e.tvqPaid) },
+                { label: t("ttc"), value: formatCurrency(e.amount + e.tpsPaid + e.tvqPaid) },
               ]}
               actions={getActions(e)}
               footer={
@@ -893,7 +896,7 @@ export function ExpensesView({
         open={!!deleteExpense}
         onOpenChange={(o) => { if (!o) setDeleteExpense(null); }}
         title={t("supprimer_depense_2")}
-        description={`La dépense "${deleteExpense?.title}" sera supprimée définitivement.`}
+        description={t("expenses_view_la_depense_p0_sera_supprimee_definitivement", { p0: (deleteExpense?.title ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -932,7 +935,7 @@ export function ExpensesView({
           open={!!previewExpense}
           onClose={() => setPreviewExpense(null)}
           pdfUrl={previewExpense.receiptUrl}
-          title={`Reçu — ${previewExpense.title}`}
+          title={t("expenses_view_recu_p0", { p0: previewExpense.title })}
           date={formatDate(new Date(previewExpense.expenseDate))}
           downloadName={`recu-${previewExpense.id}`}
         />
@@ -988,6 +991,7 @@ function ExpenseFormDialog({
 }) {
   const t = useTranslations("admin.expenses");
   const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   const [pending, startTransition] = useTransition();
   const isCreate = mode === "create";
 

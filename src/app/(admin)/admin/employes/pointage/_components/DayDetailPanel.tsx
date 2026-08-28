@@ -2,6 +2,7 @@
 // DayDetailPanel - audit drill-down of a single day's sub-entries.
 import { Clock, Pencil } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { SheetHeader, SheetTitle } from "@/components/ui/sheet";
@@ -24,7 +25,8 @@ export function DayDetailPanel({
 }) {
   const tc = useTranslations("common");
   const t = useTranslations("admin.timeclock");
-  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString("fr-CA", {
+  const dateTag = useDateLocale();
+  const dateLabel = capFirst(new Date(date + "T12:00:00").toLocaleDateString(dateTag, {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   }));
   return (

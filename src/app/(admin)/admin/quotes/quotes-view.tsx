@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -29,7 +30,8 @@ import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { FormSection } from "@/components/admin/client-form-fields";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Quote = {
   id: number;
@@ -98,6 +100,7 @@ export function QuotesView({
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const formatCurrency = useCurrency();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("quotes", "list");
@@ -249,7 +252,7 @@ export function QuotesView({
   const handleAccept = async (q: Quote) => {
     const ok = await confirm({
       title: t("accepter_devis"),
-      description: `Le devis ${q.quoteNumber} sera marqué comme accepté et un contrat sera généré automatiquement.`,
+      description: t("quotes_view_le_devis_p0_sera_marque_comme_accepte_et", { p0: q.quoteNumber }),
       confirmLabel: t("accepter"),
     });
     if (!ok) return;
@@ -261,7 +264,7 @@ export function QuotesView({
   const handleSetStatus = async (q: Quote, status: string, label: string) => {
     const ok = await confirm({
       title: `${label} ce devis ?`,
-      description: `Le devis ${q.quoteNumber} passera au statut « ${status === "declined" ? t("refuse") : status === "expired" ? t("expire") : status === "pending" ? t("attente") : status} ».`,
+      description: t("quotes_view_le_devis_p0_passera_au_statut_p1", { p0: q.quoteNumber, p1: status === "declined" ? t("refuse") : status === "expired" ? t("expire") : status === "pending" ? t("attente") : status }),
       confirmLabel: label,
       variant: status === "declined" ? "destructive" : "default",
     });
@@ -283,7 +286,7 @@ export function QuotesView({
   const handleSendToClient = async (q: Quote) => {
     const ok = await confirm({
       title: t("envoyer_devis_client"),
-      description: `Le devis ${q.quoteNumber} sera ajouté dans la catégorie t("devis") du portail client + message chat + notification.`,
+      description: t("quotes_view_le_devis_p0_sera_ajoute_dans_la_categorie", { p0: q.quoteNumber }),
       confirmLabel: t("envoyer"),
     });
     if (!ok) return;
@@ -291,7 +294,7 @@ export function QuotesView({
       const res = await fetch(`/api/quotes/${q.id}/send`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        toast.success(`Devis envoyé à ${data.clientName ?? q.clientName} (portail + chat + notification)`);
+        toast.success(t("quotes_view_devis_envoye_a_p0_portail_chat_notification", { p0: data.clientName ?? q.clientName }));
         router.refresh();
       } else {
         const d = await res.json();
@@ -306,7 +309,7 @@ export function QuotesView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} devis ?`,
+      title: tc("confirm_delete_quotes", { count: selectedIds.size }),
       description: t("devis_acceptes_lies_contrats_refuses"),
       confirmLabel: t("supprimer_tous"),
       variant: "destructive",
@@ -317,7 +320,7 @@ export function QuotesView({
       const res = await fetch(`/api/quotes/${id}`, { method: "DELETE" });
       if (res.ok) success++; else if (res.status === 409) blocked++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimé(s)${blocked > 0 ? ` · ${blocked} bloqué(s)` : ""}`);
+    toast.success(t("quotes_view_p0_p1_supprime_s_p2", { p0: success, p1: selectedIds.size, p2: blocked > 0 ? tc("blocked_count", { count: blocked }) : "" }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -420,7 +423,7 @@ export function QuotesView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.quoteNumber}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("quotes_view_selectionner_p0", { p0: r.quoteNumber })} />
       ),
     },
     { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.quoteNumber}</span>, sortable: true, sortBy: (r) => r.quoteNumber },
@@ -444,8 +447,8 @@ export function QuotesView({
       ),
       sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true,
     },
-    { key: "ht", header: "HT", accessor: (r) => formatCurrency(r.amountHt), sortable: true, sortBy: (r) => r.amountHt, hiddenOnMobile: true },
-    { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
+    { key: "ht", header: t("ht"), accessor: (r) => formatCurrency(r.amountHt), sortable: true, sortBy: (r) => r.amountHt, hiddenOnMobile: true },
+    { key: "ttc", header: t("ttc"), accessor: (r) => <span className="font-semibold">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
     { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     { key: "expiry", header: t("expiration"), accessor: (r) => r.expiryDate ? formatDate(new Date(r.expiryDate)) : "—", hiddenOnMobile: true },
     {
@@ -522,7 +525,7 @@ export function QuotesView({
               <FileText className="h-4 w-4" />
               {t("devis")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{pendingCount}</span></span>
             <span className="text-muted-foreground">{t("acceptes")} <span className="font-semibold text-emerald-600">{acceptedCount}</span></span>
             <span className="ml-auto text-muted-foreground">{t("pipeline")} <span className="font-semibold text-violet-600">{formatCurrency(totalPendingTtc + totalAcceptedTtc)}</span></span>
@@ -607,7 +610,7 @@ export function QuotesView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -633,13 +636,13 @@ export function QuotesView({
                 { label: q.status === "pending" ? t("attente") : q.status === "accepted" ? t("accepte") : q.status === "declined" ? t("refuse") : q.status === "expired" ? t("expire") : q.status, variant: q.status === "accepted" ? "secondary" : "outline" },
                 ...(q.serviceType ? [{ label: (() => { const st = SERVICE_TYPES.find((s) => s.value === q.serviceType); return st ? t(st.labelKey) : q.serviceType; })(), variant: "outline" as const }] : []),
               ]}
-              stats={[{ label: "TTC", value: formatCurrency(q.amountTtc) }]}
+              stats={[{ label: t("ttc"), value: formatCurrency(q.amountTtc) }]}
               actions={getActions(q)}
               onClick={() => openPdf(q)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(q.amountHt)} HT</span>
-                  <span>{q.expiryDate ? `Expire le ${formatDate(new Date(q.expiryDate))}` : t("pas_expiration")}</span>
+                  <span>{q.expiryDate ? t("quotes_view_expire_le_p0", { p0: formatDate(new Date(q.expiryDate)) }) : t("pas_expiration")}</span>
                 </div>
               }
             />
@@ -707,7 +710,7 @@ export function QuotesView({
         open={!!deleteQuote}
         onOpenChange={(o) => { if (!o) setDeleteQuote(null); }}
         title={t("supprimer_devis")}
-        description={`Le devis "${deleteQuote?.quoteNumber}" sera supprimé définitivement.`}
+        description={t("quotes_view_le_devis_p0_sera_supprime_definitivement", { p0: (deleteQuote?.quoteNumber ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -757,6 +760,7 @@ function QuoteFormDialog({
 }) {
   const t = useTranslations("admin.quotes");
   const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
   const tps = amountNum * 0.05;

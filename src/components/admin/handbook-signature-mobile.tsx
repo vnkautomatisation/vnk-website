@@ -251,7 +251,7 @@ export function HandbookSignatureMobile({
               </span>
             </DialogTitle>
             <DialogDescription className="text-white/80 text-[11px]">
-              {handbook.subtitle ?? `Manuel de l'employe VNK · v${handbook.version}`}
+              {handbook.subtitle ?? t("handbook_signature_mobile_manuel_de_l_employe_vnk_v_p0", { p0: handbook.version })}
             </DialogDescription>
           </DialogHeader>
         </div>

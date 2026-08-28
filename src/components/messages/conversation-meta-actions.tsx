@@ -2,6 +2,7 @@
 // Dropdown actions sur une conversation : pin, archive, snooze, labels, export
 import { useState } from "react";
 import { useTranslations, useLocale } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Pin, PinOff, Archive, ArchiveRestore, BellOff, Tag, Download, MoreVertical, Bell, FileText } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -61,6 +62,7 @@ export function ConversationMetaActions({
   const [labelsOpen, setLabelsOpen] = useState(false);
   const [labelInput, setLabelInput] = useState("");
   const [localLabels, setLocalLabels] = useState<string[]>(labels);
+  const dateTag = useDateLocale();
 
   const patch = async (body: object, msg: string) => {
     const res = await fetch(`/api/clients/${clientId}/chat-meta`, {
@@ -76,7 +78,7 @@ export function ConversationMetaActions({
   const toggleArchive = () => patch({ chatArchive: !archived }, archived ? t("desarchivee") : t("conversation_archivee"));
   const snooze = (preset: typeof SNOOZE_PRESETS[number]) => {
     const d = preset.hours === -1 ? tomorrow9am() : new Date(Date.now() + preset.hours * 3600 * 1000);
-    patch({ chatSnoozedUntil: d.toISOString() }, `Snooze jusqu'au ${d.toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`);
+    patch({ chatSnoozedUntil: d.toISOString() }, `Snooze jusqu'au ${d.toLocaleString(dateTag, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`);
   };
   const unsnooze = () => patch({ chatSnoozedUntil: null }, t("snooze_annule"));
 

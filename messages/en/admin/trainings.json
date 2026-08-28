@@ -42,6 +42,7 @@
   "titre": "Title *",
   "titre_requis": "Title required",
   "trainings_view_completee": "Completed",
+  "trainings_view_completee_le_p0": "· Completed on {p0}",
   "type": "Type *",
   "type_requis": "Type required",
   "url_certificat": "Certificate URL",

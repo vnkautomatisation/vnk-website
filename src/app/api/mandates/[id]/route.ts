@@ -115,6 +115,8 @@ export async function PATCH(
         mandateId: updated.id,
         eventType: meta.eventType,
         eventLabel: t("mandat_titre_statut", { titre: updated.title, statut: t(meta.labelKey).toLowerCase() }),
+        labelKey: "api_errors.mandat_titre_statut",
+        labelParams: { titre: updated.title, statut: t(meta.labelKey).toLowerCase() },
         triggeredBy: "admin",
       });
       await prisma.mandateLog.create({
@@ -144,6 +146,8 @@ export async function PATCH(
         mandateId: updated.id,
         eventType: "mandate_progress_update",
         eventLabel: `Mandat ${updated.title} — progression ${updated.progress}%`,
+        labelKey: "workflow_events.mandat_progression",
+        labelParams: { title: updated.title, progress: updated.progress },
         triggeredBy: "admin",
       });
     }
@@ -157,7 +161,7 @@ export async function PATCH(
         data: {
           mandateId: updated.id,
           action: "UPDATED",
-          description: `Champs modifiés : ${fieldsChanged.join(", ")}`,
+          description: t("route_champs_modifies_p0", { p0: fieldsChanged.join(", ") }),
           createdBy: "admin",
         },
       });

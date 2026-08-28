@@ -2,6 +2,7 @@
 // Vue Contenu — 3 sous-onglets : Blog · FAQ · Témoignages.
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -65,6 +66,7 @@ export function ContentView({
   const [faqDialog, setFaqDialog] = useState<{ open: boolean; faq: FaqRow | null }>({ open: false, faq: null });
   const [testimonialDialog, setTestimonialDialog] = useState<{ open: boolean; t: TestimonialRow | null }>({ open: false, t: null });
   const [confirmDelete, setConfirmDelete] = useState<{ kind: "post" | "faq" | "testimonial"; id: number; label: string } | null>(null);
+  const dateTag = useDateLocale();
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -199,7 +201,7 @@ export function ContentView({
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">/{p.slug}</p>
                     {p.excerpt && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{p.excerpt}</p>}
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                      <span>{new Date(p.updatedAt).toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" })}</span>
+                      <span>{new Date(p.updatedAt).toLocaleDateString(dateTag, { day: "numeric", month: "short", year: "numeric" })}</span>
                       <span>{p.viewCount} vue{p.viewCount > 1 ? "s" : ""}</span>
                       {p.tags.length > 0 && <span>{p.tags.length} tag{p.tags.length > 1 ? "s" : ""}</span>}
                     </div>

@@ -35,7 +35,7 @@ export function DemoView({
     startTransition(async () => {
       const r = await enableDemoModeAction();
       if (r.success && "data" in r) {
-        toast.success(`Mode démo activé · ${r.data.created.clients} clients, ${r.data.created.quotes} devis, ${r.data.created.invoices} factures`);
+        toast.success(t("demo_view_mode_demo_active_p0_clients_p1_devis_p2", { p0: r.data.created.clients, p1: r.data.created.quotes, p2: r.data.created.invoices }));
         router.refresh();
       } else if (!r.success) {
         toast.error(r.error);
@@ -56,7 +56,7 @@ export function DemoView({
     startTransition(async () => {
       const r = await purgeDemoDataAction();
       if (r.success && "data" in r) {
-        toast.success(`${r.data.deleted.clients + r.data.deleted.quotes + r.data.deleted.invoices} entrées démo supprimées`);
+        toast.success(t("demo_view_p0_entrees_demo_supprimees", { p0: r.data.deleted.clients + r.data.deleted.quotes + r.data.deleted.invoices }));
         router.refresh();
       } else if (!r.success) {
         toast.error(r.error);
@@ -130,7 +130,7 @@ export function DemoView({
               <div className="rounded-lg border p-3">
                 <Users className="h-4 w-4 text-blue-500 mb-1" />
                 <p className="text-xl font-bold">{counts.clients}</p>
-                <p className="text-[10px] text-muted-foreground">client{counts.clients > 1 ? "s" : ""} démo</p>
+                <p className="text-[10px] text-muted-foreground">{t("clients_demo", { count: counts.clients })}</p>
               </div>
               <div className="rounded-lg border p-3">
                 <FileText className="h-4 w-4 text-amber-500 mb-1" />
@@ -140,7 +140,7 @@ export function DemoView({
               <div className="rounded-lg border p-3">
                 <Receipt className="h-4 w-4 text-emerald-500 mb-1" />
                 <p className="text-xl font-bold">{counts.invoices}</p>
-                <p className="text-[10px] text-muted-foreground">facture{counts.invoices > 1 ? "s" : ""} démo</p>
+                <p className="text-[10px] text-muted-foreground">{t("factures_demo", { count: counts.invoices })}</p>
               </div>
             </div>
             {isSuperAdmin && (
@@ -182,7 +182,7 @@ export function DemoView({
         open={confirmPurge}
         onOpenChange={setConfirmPurge}
         title={t("supprimer_toutes_donnees_demo_2")}
-        description={`${counts.clients} clients, ${counts.quotes} devis et ${counts.invoices} factures seront supprimés définitivement. Cette action est irréversible.`}
+        description={t("demo_view_p0_clients_p1_devis_et_p2_factures_seront", { p0: counts.clients, p1: counts.quotes, p2: counts.invoices })}
         confirmLabel={t("supprimer_definitivement")}
         variant="destructive"
         onConfirm={handlePurge}

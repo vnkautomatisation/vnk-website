@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -45,7 +46,8 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type TaxDeclaration = {
   id: number;
@@ -138,6 +140,7 @@ export function TaxView({
   const t = useTranslations("admin.tax_decl");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const [view, setView] = useViewMode("tax-declarations", "list");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -248,7 +251,7 @@ export function TaxView({
     try {
       const res = await fetch(`/api/tax-declarations/${recalcDecl.id}/recalculate`, { method: "POST" });
       if (res.ok) {
-        toast.success(`Montants recalculés pour "${recalcDecl.periodLabel}"`);
+        toast.success(t("tax_view_montants_recalcules_pour_p0", { p0: recalcDecl.periodLabel }));
         setRecalcDecl(null);
         router.refresh();
       } else {
@@ -414,13 +417,13 @@ export function TaxView({
     },
     {
       key: "tps",
-      header: "TPS",
+      header: t("tps"),
       accessor: (r) => <span className="tabular-nums text-blue-600">{formatCurrency(r.totalTps)}</span>,
       hiddenOnMobile: true,
     },
     {
       key: "tvq",
-      header: "TVQ",
+      header: t("tvq"),
       accessor: (r) => <span className="tabular-nums text-indigo-600">{formatCurrency(r.totalTvq)}</span>,
       hiddenOnMobile: true,
     },
@@ -579,17 +582,17 @@ export function TaxView({
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("revenu_brut_ht")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{formatCurrency(kpis.revenueHt)}</p>
-          <p className="text-[10px] text-muted-foreground">factures payées {kpis.year}</p>
+          <p className="text-[10px] text-muted-foreground">{t("factures_payees_annee", { year: kpis.year })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("taxes_collectees")}</p>
           <p className="text-lg font-bold text-amber-600 tabular-nums">{formatCurrency(kpis.totalTaxesCollected)}</p>
-          <p className="text-[10px] text-muted-foreground">TPS {formatCurrency(kpis.tpsCollected)} · TVQ {formatCurrency(kpis.tvqCollected)}</p>
+          <p className="text-[10px] text-muted-foreground">{t("tps")} {formatCurrency(kpis.tpsCollected)} · {t("tvq")} {formatCurrency(kpis.tvqCollected)}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("taxes_payees_depenses")}</p>
           <p className="text-lg font-bold text-blue-600 tabular-nums">{formatCurrency(kpis.tpsPaid + kpis.tvqPaid)}</p>
-          <p className="text-[10px] text-muted-foreground">TPS {formatCurrency(kpis.tpsPaid)} · TVQ {formatCurrency(kpis.tvqPaid)}</p>
+          <p className="text-[10px] text-muted-foreground">{t("tps")} {formatCurrency(kpis.tpsPaid)} · {t("tvq")} {formatCurrency(kpis.tvqPaid)}</p>
         </div>
         <div className={cn(
           "rounded-lg border p-3",
@@ -619,7 +622,7 @@ export function TaxView({
               <FileBarChart className="h-4 w-4" />
               {t("declarations_fiscales")}
             </span>
-            <span className="font-semibold">{filtered.length} affichée{filtered.length > 1 ? "s" : ""}</span>
+            <span className="font-semibold">{tc("shown_f", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("revenu_ht")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.revenueHt)}</span></span>
             <span className="text-muted-foreground">{t("collectees")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.totalTaxesCollected)}</span></span>
             <span className={cn("text-muted-foreground ml-auto", kpis.netToRemit >= 0 ? "" : "")}>
@@ -663,7 +666,7 @@ export function TaxView({
               <SelectItem value="all">{t("tous_statuts")}</SelectItem>
               <SelectItem value="draft">Brouillon ({kpis.countDraft})</SelectItem>
               <SelectItem value="submitted">Soumise ({kpis.countSubmitted})</SelectItem>
-              <SelectItem value="confirmed">Confirmée ({kpis.countConfirmed})</SelectItem>
+              <SelectItem value="confirmed">{t("confirmee_count", { count: kpis.countConfirmed })}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -689,8 +692,8 @@ export function TaxView({
               actions={getActions(d)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                  <span>TPS {formatCurrency(d.totalTps)}</span>
-                  <span>TVQ {formatCurrency(d.totalTvq)}</span>
+                  <span>{t("tps")} {formatCurrency(d.totalTps)}</span>
+                  <span>{t("tvq")} {formatCurrency(d.totalTvq)}</span>
                 </div>
               }
             />
@@ -754,7 +757,7 @@ export function TaxView({
         open={!!deleteDecl}
         onOpenChange={(o) => { if (!o) setDeleteDecl(null); }}
         title={t("supprimer_declaration_2")}
-        description={`La déclaration "${deleteDecl?.periodLabel}" sera supprimée définitivement.`}
+        description={t("tax_view_la_declaration_p0_sera_supprimee_definitivement", { p0: (deleteDecl?.periodLabel ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -767,7 +770,7 @@ export function TaxView({
         title={t("marquer_comme_soumise")}
         description={
           submitDecl
-            ? `"${submitDecl.periodLabel}" sera verrouillée et ne pourra plus être modifiée ni supprimée. Total à remettre : ${formatCurrency(submitDecl.totalTaxes)}.`
+            ? t("tax_view_p0_sera_verrouillee_et_ne_pourra_plus_etre", { p0: submitDecl.periodLabel, p1: formatCurrency(submitDecl.totalTaxes) })
             : ""
         }
         confirmLabel={submitting ? t("soumission") : t("confirmer_soumission")}
@@ -783,7 +786,7 @@ export function TaxView({
         title={t("recalculer_montants")}
         description={
           recalcDecl
-            ? `Revenu HT, TPS et TVQ seront recalculés depuis les factures payées entre le ${shortDate(recalcDecl.periodStart)} et le ${shortDate(recalcDecl.periodEnd)}.`
+            ? t("tax_view_revenu_ht_tps_et_tvq_seront_recalcules_depuis", { p0: shortDate(recalcDecl.periodStart), p1: shortDate(recalcDecl.periodEnd) })
             : ""
         }
         confirmLabel={recalculating ? t("recalcul") : t("recalculer")}
@@ -805,12 +808,13 @@ function QuarterPreviewSection({
   onCreate: (q: QuarterPreview) => void;
 }) {
   const t = useTranslations("admin.tax_decl");
+  const formatCurrency = useCurrency();
   return (
     <div className="rounded-lg border bg-card p-4">
       <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
         <h3 className="text-sm font-semibold flex items-center gap-1.5">
           <Calendar className="h-4 w-4 text-[#0F2D52]" />
-          Aperçu trimestres {year}
+          {t("apercu_trimestres", { year })}
         </h3>
         <p className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
           <Info className="h-3 w-3" />
@@ -836,7 +840,7 @@ function QuarterPreviewSection({
             >
               <div className="flex items-baseline justify-between mb-1">
                 <span className="text-xs font-bold text-[#0F2D52]">{q.label}</span>
-                <span className="text-[9px] text-muted-foreground">{q.invoiceCount} facture{q.invoiceCount > 1 ? "s" : ""}</span>
+                <span className="text-[9px] text-muted-foreground">{t("n_factures", { count: q.invoiceCount })}</span>
               </div>
               <p className="text-base font-bold tabular-nums">{formatCurrency(q.revenueHt)}</p>
               <p className="text-[9px] text-muted-foreground">{t("revenu_ht")}</p>
@@ -883,6 +887,7 @@ function TaxFormDialog({
 }) {
   const t = useTranslations("admin.tax_decl");
   const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [previewing, setPreviewing] = useState(false);
@@ -1113,7 +1118,7 @@ function TaxFormDialog({
                       {formatCurrency(Math.abs(preview.netToRemit.total))}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      TPS net {formatCurrency(preview.netToRemit.tps)} · TVQ net {formatCurrency(preview.netToRemit.tvq)}
+                      {t("tps")} net {formatCurrency(preview.netToRemit.tps)} · {t("tvq")} net {formatCurrency(preview.netToRemit.tvq)}
                     </p>
                   </div>
                 </div>

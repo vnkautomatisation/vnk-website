@@ -66,7 +66,7 @@ export function FileUploadInput({
               reject(new Error(t("reponse_json_invalide")));
             }
           } else {
-            reject(new Error(`Upload échoué (${xhr.status})`));
+            reject(new Error(t("file_upload_input_upload_echoue_p0", { p0: xhr.status })));
           }
         };
         xhr.onerror = () => reject(new Error(t("erreur_reseau")));
@@ -77,7 +77,7 @@ export function FileUploadInput({
       toast.success(t("fichier_televerse"));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t("erreur_inconnue");
-      toast.error(`Échec du téléversement : ${msg}`);
+      toast.error(t("file_upload_input_echec_du_televersement_p0", { p0: msg }));
 
       setMode("url");
     } finally {
@@ -124,7 +124,7 @@ export function FileUploadInput({
             >
               <Upload className={`h-5 w-5 text-muted-foreground ${uploading ? "animate-pulse" : ""}`} />
               <span className="text-xs font-medium">
-                {uploading ? `Téléversement… ${progress}%` : t("cliquez_choisir_fichier")}
+                {uploading ? t("file_upload_input_televersement_p0", { p0: progress }) : t("cliquez_choisir_fichier")}
               </span>
               <span className="text-[10px] text-muted-foreground">
                 {accept === "application/pdf" ? "PDF" : accept} · max {maxSizeMB} MB

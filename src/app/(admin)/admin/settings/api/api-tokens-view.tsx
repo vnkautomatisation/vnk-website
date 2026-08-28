@@ -2,6 +2,7 @@
 // Vue API Tokens — création + révocation + scopes cochables.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -47,6 +48,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
   const t = useTranslations("admin.api_tokens");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const [pending, startTransition] = useTransition();
   const [creating, setCreating] = useState(false);
 
@@ -179,10 +181,10 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
                       ))}
                     </div>
                     <div className="flex items-center gap-3 mt-1.5 text-[10px] text-muted-foreground">
-                      <span>Créé {new Date(token.createdAt).toLocaleDateString("fr-CA")}</span>
-                      {token.expiresAt && <span>Expire {new Date(token.expiresAt).toLocaleDateString("fr-CA")}</span>}
+                      <span>{tc("created_on", { date: new Date(token.createdAt).toLocaleDateString(dateTag) })}</span>
+                      {token.expiresAt && <span>Expire {new Date(token.expiresAt).toLocaleDateString(dateTag)}</span>}
                       {token.lastUsedAt ? (
-                        <span>Utilisé {new Date(token.lastUsedAt).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" })}{token.lastUsedIp && ` depuis ${token.lastUsedIp}`}</span>
+                        <span>{tc("used_on", { date: new Date(token.lastUsedAt).toLocaleString(dateTag, { dateStyle: "short", timeStyle: "short" }) })}{token.lastUsedIp && ` ${t("depuis_ip", { ip: token.lastUsedIp })}`}</span>
                       ) : (
                         <span>{t("jamais_utilise")}</span>
                       )}
@@ -303,7 +305,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
       <ConfirmDialog
         open={!!confirmRevoke}
         onOpenChange={(o) => !o && setConfirmRevoke(null)}
-        title={`Révoquer ${confirmRevoke?.name} ?`}
+        title={t("api_tokens_view_revoquer_p0", { p0: (confirmRevoke?.name ?? "") })}
         description={t("token_cessera_immediatement_fonctionner_historique")}
         confirmLabel={t("revoquer")}
         variant="destructive"
@@ -312,7 +314,7 @@ export function ApiTokensView({ tokens }: { tokens: TokenRow[] }) {
       <ConfirmDialog
         open={!!confirmDelete}
         onOpenChange={(o) => !o && setConfirmDelete(null)}
-        title={`Supprimer définitivement ${confirmDelete?.name} ?`}
+        title={t("api_tokens_view_supprimer_definitivement_p0", { p0: (confirmDelete?.name ?? "") })}
         description={t("historique_sera_perdu_preferez_revocation")}
         confirmLabel={tc("delete")}
         variant="destructive"

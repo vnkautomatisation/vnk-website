@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -28,7 +29,8 @@ import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { FormSection } from "@/components/admin/client-form-fields";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Dispute = {
   id: number;
@@ -163,6 +165,7 @@ export function DisputesView({
   const t = useTranslations("admin.disputes");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -351,7 +354,7 @@ export function DisputesView({
       const r = await fetch(`/api/disputes/${id}`, { method: "DELETE" });
       if (r.ok) success++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimé(s)`);
+    toast.success(t("disputes_view_p0_p1_supprime_s", { p0: success, p1: selectedIds.size }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -566,7 +569,7 @@ export function DisputesView({
               <Scale className="h-4 w-4" />
               {t("litiges")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             {kpis.open > 0 && <span className="text-muted-foreground">{t("ouverts")} <span className="font-semibold text-amber-600">{kpis.open}</span></span>}
             <span className="text-muted-foreground">{t("gagnes")} <span className="font-semibold text-emerald-600">{kpis.won}</span></span>
             {kpis.lost > 0 && <span className="text-muted-foreground">{t("perdus")} <span className="font-semibold text-red-600">{kpis.lost}</span></span>}
@@ -659,7 +662,7 @@ export function DisputesView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -756,7 +759,7 @@ export function DisputesView({
         open={!!deleteDispute}
         onOpenChange={(o) => { if (!o) setDeleteDispute(null); }}
         title={t("supprimer_litige")}
-        description={`Le litige "${deleteDispute?.title}" sera supprimé définitivement.`}
+        description={t("disputes_view_le_litige_p0_sera_supprime_definitivement", { p0: (deleteDispute?.title ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -807,6 +810,7 @@ function DisputeFormDialog({
 }) {
   const t = useTranslations("admin.disputes");
   const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   const isCreate = mode === "create";
   const isChargeback = values.type === "chargeback";
   const isLegal = values.type === "legal" || !!values.tribunal || !!values.lawFirmInvolved || !!values.caseNumber;

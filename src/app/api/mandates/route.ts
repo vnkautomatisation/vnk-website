@@ -78,6 +78,8 @@ export async function POST(req: Request) {
     mandateId: mandate.id,
     eventType: "mandate_created",
     eventLabel: `Mandat ouvert — ${mandate.title}`,
+    labelKey: "workflow_events.mandat_ouvert",
+    labelParams: { title: mandate.title },
     triggeredBy: "admin",
   });
 
@@ -86,7 +88,7 @@ export async function POST(req: Request) {
     data: {
       mandateId: mandate.id,
       action: "CREATED",
-      description: `Mandat créé pour ${parsed.data.title}`,
+      description: t("route_mandat_cree_pour_p0", { p0: parsed.data.title }),
       createdBy: "admin",
     },
   });

@@ -11,10 +11,10 @@
 // Appel attendu : Railway cron une fois par jour.
 // ─────────────────────────────────────────────────────────
 import { NextResponse } from "next/server";
-import { dateLocale } from "@/lib/i18n-format";
 import { getLocale, getTranslations } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -80,6 +80,7 @@ async function notifyOnce(data: {
 
 export async function POST(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const dl = dateLocale(await getLocale());
   const secret = process.env.CRON_SECRET;
   if (!secret) return NextResponse.json({ error: "CRON_SECRET non configure" }, { status: 500 });
@@ -112,8 +113,8 @@ export async function POST(req: Request) {
     for (const lic of licenses) {
       if (!lic.admin?.isActive) continue;
       const label = lic.type + (lic.number ? ` #${lic.number}` : "");
-      const titleEmp = `Permis expire dans ${days} jour${days > 1 ? "s" : ""}`;
-      const bodyEmp = `${label} arrive à échéance le ${lic.expiresAt?.toLocaleDateString("fr-CA")}.`;
+      const titleEmp = t("route_permis_expire_dans_p0_jour_p1", { p0: days, p1: days > 1 ? "s" : "" });
+      const bodyEmp = t("route_p0_arrive_a_echeance_le_p1", { p0: label, p1: (lic.expiresAt?.toLocaleDateString(dateTag) ?? "") });
       const created = await notifyOnce({
         recipientId: lic.adminId,
         type: days <= 7 ? "warning" : "info",
@@ -127,7 +128,7 @@ export async function POST(req: Request) {
 
       if (days === NOTIFY_SUPER_ADMIN_AT) {
         for (const sa of superAdmins) {
-          const titleSa = `Permis employé expire dans 7 jours`;
+          const titleSa = t("route_permis_employe_expire_dans_7_jours");
           const bodySa = t("licence_echeance", { nom: lic.admin.fullName ?? t("employe"), libelle: label, date: lic.expiresAt?.toLocaleDateString(dl) ?? "" });
           const ok = await notifyOnce({
             recipientId: sa.id,
@@ -151,8 +152,8 @@ export async function POST(req: Request) {
 
     for (const tr of trainings) {
       if (!tr.admin?.isActive) continue;
-      const titleEmp = `Formation expire dans ${days} jour${days > 1 ? "s" : ""}`;
-      const bodyEmp = `${tr.title} arrive à échéance le ${tr.expiresAt?.toLocaleDateString("fr-CA")}.`;
+      const titleEmp = t("route_formation_expire_dans_p0_jour_p1", { p0: days, p1: days > 1 ? "s" : "" });
+      const bodyEmp = t("route_p0_arrive_a_echeance_le_p1", { p0: (tr.title ?? ""), p1: (tr.expiresAt?.toLocaleDateString(dateTag) ?? "") });
       const created = await notifyOnce({
         recipientId: tr.adminId,
         type: days <= 7 ? "warning" : "info",
@@ -166,7 +167,7 @@ export async function POST(req: Request) {
 
       if (days === NOTIFY_SUPER_ADMIN_AT) {
         for (const sa of superAdmins) {
-          const titleSa = `Formation employé expire dans 7 jours`;
+          const titleSa = t("route_formation_employe_expire_dans_7_jours");
           const bodySa = t("licence_echeance", { nom: tr.admin.fullName ?? t("employe"), libelle: tr.title, date: tr.expiresAt?.toLocaleDateString(dl) ?? "" });
           const ok = await notifyOnce({
             recipientId: sa.id,

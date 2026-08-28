@@ -19,14 +19,15 @@
 // =============================================================
 import { CheckCircle2, Clock, AlertCircle, Ban } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { ToneBadge } from "@/components/admin/tone-badge";
 
-function fmt(iso: Date | string | null | undefined): string {
+function fmt(iso: Date | string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = typeof iso === "string" ? new Date(iso) : iso;
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export interface SignatureStatusBadgeProps {
@@ -46,11 +47,12 @@ export function SignatureStatusBadge({
   className,
 }: SignatureStatusBadgeProps) {
   const t = useTranslations("admin.ui");
+  const dateTag = useDateLocale();
 
   if (terminatedAt) {
-    const date = fmt(terminatedAt);
+    const date = fmt(terminatedAt, dateTag);
     return (
-      <ActionTooltip label={`Resilie le ${date}`}>
+      <ActionTooltip label={t("signature_status_badge_resilie_le_p0", { p0: date })}>
         <span className="inline-flex">
           <ToneBadge tone="danger" icon={Ban} className={className}>
             {variant === "full" ? `Resilie - ${date}` : t("resilie")}
@@ -65,12 +67,12 @@ export function SignatureStatusBadge({
 
 
   if (emp && emr) {
-    const tip = `Signe par employe le ${fmt(employeeSignedAt)} - employeur le ${fmt(employerSignedAt)}`;
+    const tip = t("signature_status_badge_signe_par_employe_le_p0_employeur_le_p1", { p0: fmt(employeeSignedAt, dateTag), p1: fmt(employerSignedAt, dateTag) });
     return (
       <ActionTooltip label={tip}>
         <span className="inline-flex">
           <ToneBadge tone="success" icon={CheckCircle2} className={className}>
-            {variant === "full" ? `Actif - ${fmt(employerSignedAt)}` : t("actif")}
+            {variant === "full" ? `Actif - ${fmt(employerSignedAt, dateTag)}` : t("actif")}
           </ToneBadge>
         </span>
       </ActionTooltip>
@@ -80,10 +82,10 @@ export function SignatureStatusBadge({
 
   if (emp || emr) {
     const waitingFor = emp ? "employeur" : "employe";
-    const signedDate = emp ? fmt(employeeSignedAt) : fmt(employerSignedAt);
+    const signedDate = emp ? fmt(employeeSignedAt, dateTag) : fmt(employerSignedAt, dateTag);
     const tip = emp
-      ? `Signe par employe le ${signedDate} - en attente de l'employeur`
-      : `Signe par employeur le ${signedDate} - en attente de l'employe`;
+      ? t("signature_status_badge_signe_par_employe_le_p0_en_attente_de", { p0: signedDate })
+      : t("signature_status_badge_signe_par_employeur_le_p0_en_attente_de", { p0: signedDate });
     const label = variant === "full"
       ? `En attente ${waitingFor} (${signedDate})`
       : `En attente ${waitingFor}`;

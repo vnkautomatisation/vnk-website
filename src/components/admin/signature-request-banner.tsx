@@ -15,6 +15,7 @@
 // /api/admin/signature-requests).
 // ─────────────────────────────────────────────────────────
 import { useMemo } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { FileSignature, AlertTriangle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -36,11 +37,11 @@ function daysUntil(iso: string | null): number | null {
   return Math.floor((d.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
 }
 
-function formatDate(iso: string | null): string | null {
+function formatDate(iso: string | null, tag: string): string | null {
   if (!iso) return null;
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return null;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short" });
 }
 
 export function SignatureRequestBanner({
@@ -54,6 +55,7 @@ export function SignatureRequestBanner({
   className?: string;
 }) {
   const t = useTranslations("admin.ui");
+  const dateTag = useDateLocale();
   const { isUrgent, urgentCount } = useMemo(() => {
     const urgent = requests.filter((r) => {
       const days = daysUntil(r.dueDate);
@@ -108,7 +110,7 @@ export function SignatureRequestBanner({
         <p className={cn("text-sm font-bold", palette.title)}>
           {requests.length === 1
             ? t("1_document_signer")
-            : `${requests.length} documents à signer`}
+            : t("signature_request_banner_p0_documents_a_signer", { p0: requests.length })}
           {isUrgent && urgentCount > 0 && (
             <span className="ml-2 text-xs font-medium">
               · {urgentCount} urgent{urgentCount > 1 ? "s" : ""}
@@ -125,7 +127,7 @@ export function SignatureRequestBanner({
         <div className="mt-2 flex flex-col gap-1.5">
           {requests.slice(0, 4).map((r) => {
             const days = daysUntil(r.dueDate);
-            const due = formatDate(r.dueDate);
+            const due = formatDate(r.dueDate, dateTag);
             const itemUrgent =
               days !== null && days <= URGENT_THRESHOLD_DAYS;
             return (

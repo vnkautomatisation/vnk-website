@@ -32,6 +32,12 @@
   "mois_2": "Ce mois :",
   "montants_cad_figes_taux_jour": "Les montants en CAD sont figés au taux du jour de la transaction (audit IFRS / ARC).",
   "moyens_paiement": "Moyens de paiement",
+  "n_derniers_jours_vs_precedente": "{count} derniers jours · vs période précédente",
+  "n_devises_actives": "{count, plural, one {# devise active} other {# devises actives}}",
+  "n_factures": "{count, plural, one {# facture} other {# factures}}",
+  "n_factures_payees_total": "{count, plural, one {# facture payée au total} other {# factures payées au total}}",
+  "n_juridictions": "{count, plural, one {# juridiction} other {# juridictions}}",
+  "n_villes": "{count, plural, one {# ville} other {# villes}}",
   "non_categorise": "Non catégorisé",
   "nouveaux": "Nouveaux",
   "nouveaux_vs_clients_reguliers": "Nouveaux vs clients réguliers",
@@ -57,5 +63,6 @@
   "ventes_ville": "Ventes par ville",
   "versements": "Versements",
   "virement_bancaire": "Virement bancaire",
-  "voir_tous": "Voir tous"
+  "voir_tous": "Voir tous",
+  "vue_90_derniers_jours": "Vue 90 derniers jours"
 }

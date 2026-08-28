@@ -7,6 +7,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { generatePersonalTimesheetPdf } from "@/lib/services/pdf-hr";
+import { localeToDocLang } from "@/lib/services/pdf";
 import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
 
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
 
   const admin = await prisma.admin.findUnique({
     where: { id: adminId },
-    select: { fullName: true, email: true, title: true, position: { select: { name: true } } },
+    select: { fullName: true, email: true, title: true, locale: true, position: { select: { name: true } } },
   });
   if (!admin) return NextResponse.json({ error: "Introuvable" }, { status: 404 });
 
@@ -45,7 +46,9 @@ export async function GET(req: NextRequest) {
     },
   });
 
+  // La feuille de temps suit la langue de la fiche de l'employe.
   const pdf = await generatePersonalTimesheetPdf({
+    lang: localeToDocLang(admin.locale),
     admin: {
       fullName: admin.fullName,
       email: admin.email,

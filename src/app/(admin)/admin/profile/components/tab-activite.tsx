@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ActivityTimeline } from "@/components/admin/activity-timeline";
 import { Badge } from "@/components/ui/badge";
@@ -58,6 +59,7 @@ export function TabActivite({
   const [severityFilter, setSeverityFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(0);
+  const dateTag = useDateLocale();
   const PAGE_SIZE = 20;
 
   const filteredSecurity = useMemo(() => {
@@ -182,7 +184,7 @@ export function TabActivite({
                           <Badge className={`text-[10px] ${style.bg} ${style.text} border-0`}>{e.severity}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-muted-foreground">
-                          <span>{new Date(e.createdAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}</span>
+                          <span>{new Date(e.createdAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}</span>
                           {e.ipAddress && <span>IP {e.ipAddress}</span>}
                           {(e.city || e.country) && <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" /> {[e.city, e.country].filter(Boolean).join(", ")}</span>}
                         </div>
@@ -218,7 +220,7 @@ export function TabActivite({
                           <Badge className={`text-[10px] ${style.bg} ${style.text} border-0`}>{isSuccess ? "OK" : isFailed ? t("echec") : t("info")}</Badge>
                         </div>
                         <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-0.5 text-[11px] text-muted-foreground">
-                          <span>{new Date(e.createdAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}</span>
+                          <span>{new Date(e.createdAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}</span>
                           {e.ipAddress && <span>IP {e.ipAddress}</span>}
                           {(e.city || e.country) && <span className="flex items-center gap-0.5"><MapPin className="h-2.5 w-2.5" /> {[e.city, e.country].filter(Boolean).join(", ")}</span>}
                           {e.deviceType && <span className="capitalize">{e.deviceType}</span>}

@@ -113,7 +113,9 @@ export async function POST(req: Request) {
     clientId: invoice.clientId,
     invoiceId: invoice.id,
     eventType: "invoice_created",
-    eventLabel: `Facture ${invoiceNumber} créée — ${taxes.ttc.toFixed(2)} $ TTC`,
+    eventLabel: t("route_facture_p0_creee_p1_ttc", { p0: invoiceNumber, p1: taxes.ttc.toFixed(2) }),
+    labelKey: "api_errors.route_facture_p0_creee_p1_ttc",
+    labelParams: { p0: invoiceNumber, p1: taxes.ttc.toFixed(2) },
     triggeredBy: "admin",
   });
 

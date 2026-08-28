@@ -245,7 +245,7 @@ export function PortalMandatesList({ mandates }: { mandates: Mandate[] }) {
           <span className="font-medium">{r.title}</span>
           {isLate(r) && (
             <span className="ml-2 inline-flex items-center gap-0.5 text-[10px] font-semibold text-red-600">
-              <AlertTriangle className="h-3 w-3" /> Retard
+              <AlertTriangle className="h-3 w-3" /> {t("retard")}
             </span>
           )}
           {r.description && (

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import {
   DollarSign,
   FileText,
@@ -11,11 +12,13 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
+import { workflowEventLabel } from "@/lib/workflow-label";
 
 type WorkflowEvent = {
   id: number;
   eventType: string;
   eventLabel: string | null;
+  metadata?: unknown;
   clientName: string;
   companyName: string | null;
   createdAt: string;
@@ -40,7 +43,7 @@ const EVENT_CONFIG: Record<string, { icon: React.ComponentType<{ className?: str
   client_created: { icon: UserPlus, dotColor: "bg-blue-500" },
 };
 
-function formatRelative(iso: string, justNow: string): string {
+function formatRelative(iso: string, justNow: string, dateTag: string): string {
   const diff = Date.now() - new Date(iso).getTime();
   const min = Math.floor(diff / 60000);
   if (min < 1) return justNow;
@@ -49,11 +52,13 @@ function formatRelative(iso: string, justNow: string): string {
   if (h < 24) return `${h}h`;
   const d = Math.floor(h / 24);
   if (d < 7) return `${d}j`;
-  return new Date(iso).toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+  return new Date(iso).toLocaleDateString(dateTag, { day: "numeric", month: "short" });
 }
 
 export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
   const t = useTranslations("admin.ui");
+  const tRoot = useTranslations();
+  const dateTag = useDateLocale();
   return (
     <Card>
       <CardContent className="p-5">
@@ -94,10 +99,10 @@ export function RecentActivity({ events }: { events: WorkflowEvent[] }) {
                   <div className="pb-4 min-w-0 flex-1">
                     <div className="flex items-baseline justify-between gap-2">
                       <p className="text-sm font-medium truncate">
-                        {ev.eventLabel || ev.eventType}
+                        {workflowEventLabel(tRoot, ev)}
                       </p>
                       <time className="text-[10px] text-muted-foreground shrink-0">
-                        {formatRelative(ev.createdAt, t("instant"))}
+                        {formatRelative(ev.createdAt, t("instant"), dateTag)}
                       </time>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">

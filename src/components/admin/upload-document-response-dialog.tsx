@@ -7,6 +7,7 @@
 // → serveur appelle submitUploadResponseAction → passe à "uploaded".
 // ─────────────────────────────────────────────────────────
 import { useEffect, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -113,11 +114,11 @@ export type UploadResponseRequest = {
   requestedBy?: { id: number; fullName: string | null; email: string } | null;
 };
 
-function formatDate(iso: string | null): string {
+function formatDate(iso: string | null, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 export function UploadDocumentResponseDialog({
@@ -133,6 +134,7 @@ export function UploadDocumentResponseDialog({
 }) {
   const t = useTranslations("admin.documents");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -239,7 +241,7 @@ export function UploadDocumentResponseDialog({
               resolve();
             }
           } else {
-            let errMsg = `Échec (${xhr.status})`;
+            let errMsg = t("upload_document_response_echec_p0", { p0: xhr.status });
             try {
               const data = JSON.parse(xhr.responseText || "{}");
               if (data?.error) errMsg = data.error;
@@ -298,7 +300,7 @@ export function UploadDocumentResponseDialog({
                 {request.dueDate && (
                   <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-white/15 text-white border border-white/30">
                     <CalendarClock className="h-2.5 w-2.5" />
-                    Avant le {formatDate(request.dueDate)}
+                    Avant le {formatDate(request.dueDate, dateTag)}
                   </span>
                 )}
                 {request.requestedBy && (

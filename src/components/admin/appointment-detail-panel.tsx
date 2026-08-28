@@ -106,7 +106,7 @@ export function AppointmentDetailPanel({
     if (!appt) return;
     const ok = await confirm({
       title: t("annuler_rendez_vous"),
-      description: `${appt.clientName} sera prévenu et le créneau sera libéré.`,
+      description: t("appointment_detail_panel_p0_sera_prevenu_et_le_creneau_sera_libere", { p0: appt.clientName }),
       confirmLabel: t("annuler_rdv"),
       variant: "destructive",
     });
@@ -118,7 +118,7 @@ export function AppointmentDetailPanel({
     if (!appt) return;
     const ok = await confirm({
       title: t("marquer_comme_complete"),
-      description: `Le rendez-vous avec ${appt.clientName} sera marqué comme complété.`,
+      description: t("appointment_detail_panel_le_rendez_vous_avec_p0_sera_marque_comme", { p0: appt.clientName }),
       confirmLabel: t("marquer_complete"),
     });
     if (!ok) return;

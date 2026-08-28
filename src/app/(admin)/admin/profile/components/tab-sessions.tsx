@@ -2,6 +2,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
   const t = useTranslations("admin.profile.sessions");
   const tCommon = useTranslations("admin.profile.common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const [pending, startTransition] = useTransition();
   const [confirmAllOpen, setConfirmAllOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState<SessionRow | null>(null);
@@ -162,7 +164,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
             {orderedSessions.map((s) => {
               const isExpired = new Date(s.expiresAt) <= now;
               const parsed = s.browser
-                ? { browser: s.browser, os: s.os ?? t("inconnu"), deviceType: (s.deviceType as "desktop" | "mobile" | "tablet") ?? "desktop", label: `${s.browser} sur ${s.os ?? t("inconnu")}` }
+                ? { browser: s.browser, os: s.os ?? t("inconnu"), deviceType: (s.deviceType as "desktop" | "mobile" | "tablet") ?? "desktop", label: t("tab_sessions_p0_sur_p1", { p0: s.browser, p1: s.os ?? t("inconnu") }) }
                 : parseUserAgent(s.userAgent);
               const Icon = parsed.deviceType === "mobile" ? Smartphone : parsed.deviceType === "tablet" ? Tablet : Monitor;
               const lastActive = s.lastActiveAt ? new Date(s.lastActiveAt) : new Date(s.createdAt);
@@ -170,7 +172,7 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
 
 
               const lastActiveLabel = isExpired
-                ? `dernier accès ${lastActive.toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}`
+                ? t("tab_sessions_dernier_acces_p0", { p0: lastActive.toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" }) })
                 : minutesAgo < 2 ? t("actif_maintenant")
                 : minutesAgo < 60 ? `il y a ${minutesAgo} min`
                 : minutesAgo < 1440 ? `il y a ${Math.floor(minutesAgo / 60)} h`
@@ -229,8 +231,8 @@ export function TabSessions({ sessions }: { sessions: SessionRow[] }) {
                         <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {lastActiveLabel}</span>
                       </div>
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5">
-                        Première connexion {new Date(s.createdAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
-                        {isExpired && s.lastActiveAt && ` · Dernière activité ${new Date(s.lastActiveAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}`}
+                        Première connexion {new Date(s.createdAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}
+                        {isExpired && s.lastActiveAt && t("tab_sessions_derniere_activite_p0", { p0: new Date(s.lastActiveAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" }) })}
                       </p>
                     </div>
 

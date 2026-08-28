@@ -2,6 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { FileText, Eye, CheckCircle, PenLine, Clock, Hash, DollarSign, AlertTriangle, Calendar, X, Download } from "lucide-react";
@@ -11,7 +12,8 @@ import { SignatureCanvas } from "@/components/signature/signature-canvas";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type Q = {
   id: number;
@@ -50,6 +52,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
   const [accepting, setAccepting] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [pdfKey, setPdfKey] = useState(0);
+  const formatCurrency = useCurrency();
   const [, startTransition] = useTransition();
 
   const openPdf = (q: Q, e?: React.MouseEvent) => {
@@ -223,15 +226,15 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
 
           <div className="grid grid-cols-3 gap-2 text-xs text-muted-foreground border-t pt-2">
             <div>
-              <span className="block text-[10px] uppercase tracking-wide font-medium">HT</span>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">{t("ht")}</span>
               <span className="font-semibold text-foreground">{formatCurrency(q.amountHt)}</span>
             </div>
             <div>
-              <span className="block text-[10px] uppercase tracking-wide font-medium">TPS</span>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">{t("tps")}</span>
               <span className="font-semibold text-foreground">{formatCurrency(q.tpsAmount)}</span>
             </div>
             <div>
-              <span className="block text-[10px] uppercase tracking-wide font-medium">TVQ</span>
+              <span className="block text-[10px] uppercase tracking-wide font-medium">{t("tvq")}</span>
               <span className="font-semibold text-foreground">{formatCurrency(q.tvqAmount)}</span>
             </div>
           </div>
@@ -369,7 +372,7 @@ export function PortalQuotesList({ quotes }: { quotes: Q[] }) {
           refreshKey={pdfKey}
           title={pdfQuote.title}
           documentNumber={pdfQuote.quoteNumber}
-          date={pdfQuote.expiryDate ? `Expire le ${formatDate(new Date(pdfQuote.expiryDate))}` : undefined}
+          date={pdfQuote.expiryDate ? t("quotes_list_expire_le_p0", { p0: formatDate(new Date(pdfQuote.expiryDate)) }) : undefined}
           downloadName={`devis-${pdfQuote.quoteNumber}`}
           actions={pdfActions}
         />

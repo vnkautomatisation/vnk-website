@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -36,7 +37,8 @@ import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Refund = {
   id: number;
@@ -93,6 +95,7 @@ export function RefundsView({
   const t = useTranslations("admin.refunds");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("refunds", "list");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -451,7 +454,7 @@ export function RefundsView({
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("montant_filtre")}</p>
           <p className="text-lg font-bold tabular-nums">{formatCurrency(totalAmount)}</p>
-          <p className="text-[10px] text-muted-foreground">{filtered.length} affiché{filtered.length > 1 ? "s" : ""}</p>
+          <p className="text-[10px] text-muted-foreground">{tc("shown_m", { count: filtered.length })}</p>
         </div>
       </div>
 
@@ -466,7 +469,7 @@ export function RefundsView({
               <RotateCcw className="h-4 w-4" />
               {t("remboursements")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{kpis.pending}</span></span>
             <span className="text-muted-foreground">{t("traites")} <span className="font-semibold text-emerald-600">{kpis.processed}</span></span>
             <span className="ml-auto text-muted-foreground">{tc("amount")} <span className="font-semibold">{formatCurrency(totalAmount)}</span></span>
@@ -578,7 +581,7 @@ export function RefundsView({
         open={!!deleteRefund}
         onOpenChange={(o) => { if (!o) setDeleteRefund(null); }}
         title={t("supprimer_remboursement")}
-        description={`Le remboursement "${deleteRefund?.refundNumber}" sera supprimé définitivement.`}
+        description={t("refunds_view_le_remboursement_p0_sera_supprime_definitivement", { p0: (deleteRefund?.refundNumber ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -589,7 +592,7 @@ export function RefundsView({
         title={t("emettre_remboursement")}
         description={
           stripeRefund
-            ? `${formatCurrency(stripeRefund.totalAmount)} sera remboursé sur la carte du client (facture ${stripeRefund.invoiceNumber ?? "—"}). Délai bancaire de 5 à 10 jours ouvrables avant que le client voie le crédit.`
+            ? t("refunds_view_p0_sera_rembourse_sur_la_carte_du_client", { p0: formatCurrency(stripeRefund.totalAmount), p1: stripeRefund.invoiceNumber ?? "—" })
             : ""
         }
         confirmLabel={processingStripe ? t("emission_cours") : t("emettre")}

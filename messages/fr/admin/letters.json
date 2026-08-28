@@ -26,6 +26,7 @@
   "emise": "Emise",
   "emises": "Emises :",
   "emises_2": "Emises",
+  "emises_au_total": "{count, plural, one {# émise au total} other {# émises au total}}",
   "emises_mois": "Emises ce mois",
   "fichier_pdf": "Fichier PDF",
   "filtre_lettres": "Filtre lettres",

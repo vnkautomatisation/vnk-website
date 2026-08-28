@@ -108,7 +108,9 @@ export async function POST(req: Request) {
   await createWorkflowEvent({
     clientId: document.clientId,
     eventType: "message_from_admin",
-    eventLabel: `Document ${document.title} déposé`,
+    eventLabel: t("route_document_p0_depose", { p0: document.title }),
+    labelKey: "api_errors.route_document_p0_depose",
+    labelParams: { p0: document.title },
     triggeredBy: "admin",
     metadata: { documentId: document.id, category: document.category ?? null },
   });

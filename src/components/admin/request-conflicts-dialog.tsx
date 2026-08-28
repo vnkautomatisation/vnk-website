@@ -7,6 +7,7 @@
 //   { conflicts: [{ id, fullName, type, startDate, endDate, status }], count }
 
 import { useEffect, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { Loader2, Users, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,13 +47,13 @@ const TYPE_COLORS: Record<string, string> = {
   other: "bg-amber-100 text-amber-900 border-amber-300",
 };
 
-function formatDate(iso: string): string {
+function formatDate(iso: string, tag: string): string {
   if (!iso) return "—";
   const d = /^\d{4}-\d{2}-\d{2}$/.test(iso)
     ? new Date(Number(iso.slice(0, 4)), Number(iso.slice(5, 7)) - 1, Number(iso.slice(8, 10)))
     : new Date(iso);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "long" });
 }
 
 export function RequestConflictsDialog({
@@ -71,6 +72,7 @@ export function RequestConflictsDialog({
   const [conflicts, setConflicts] = useState<Conflict[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (!open) return;
@@ -147,7 +149,7 @@ export function RequestConflictsDialog({
                     <div className="min-w-0">
                       <p className="text-sm font-semibold text-[#0F2D52] truncate">{c.fullName}</p>
                       <p className="text-[11px] text-muted-foreground tabular-nums">
-                        {formatDate(c.startDate)} → {formatDate(c.endDate)}
+                        {formatDate(c.startDate, dateTag)} → {formatDate(c.endDate, dateTag)}
                       </p>
                     </div>
                     <div className="flex items-center gap-1.5 shrink-0">

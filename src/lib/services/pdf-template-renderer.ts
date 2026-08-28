@@ -92,6 +92,8 @@ export interface PdfRenderOptions {
   title: string;
   /** Type de document — influence le footer et badges. */
   documentType: TemplateDocumentType;
+  /** Langue des libelles generes (defaut fr). */
+  lang?: "fr" | "en";
   /** Metadonnees optionnelles (version, employe, numero…). */
   metadata?: {
     version?: string;
@@ -335,7 +337,10 @@ function splitTableCells(line: string): string[] {
   return inner.split("|").map((c) => c.trim());
 }
 
-function parseBlocks(markdown: string): Block[] {
+function parseBlocks(markdown: string, lang?: "fr" | "en"): Block[] {
+  // Les roles de signature sont rendus tels quels dans le PDF.
+  const roleEmployee = lang === "en" ? "Employee" : "Employé";
+  const roleEmployer = lang === "en" ? "Employer" : "Employeur";
   const lines = markdown.replace(/\r\n/g, "\n").split("\n");
   const blocks: Block[] = [];
   let inSignatureSection = false;
@@ -390,12 +395,12 @@ function parseBlocks(markdown: string): Block[] {
     if (inSignatureSection) {
       // Lignes de placeholders connus dans la section signatures
       if (SIG_EMP_RE.test(line)) {
-        blocks.push({ kind: "signatureLine", role: "Employé" });
+        blocks.push({ kind: "signatureLine", role: roleEmployee });
         i++;
         continue;
       }
       if (SIG_EMR_RE.test(line)) {
-        blocks.push({ kind: "signatureLine", role: "Employeur" });
+        blocks.push({ kind: "signatureLine", role: roleEmployer });
         i++;
         continue;
       }
@@ -456,12 +461,12 @@ function parseBlocks(markdown: string): Block[] {
 
     // Detection inline d'un placeholder signature dans un paragraphe
     if (SIG_EMP_RE.test(line)) {
-      blocks.push({ kind: "signatureLine", role: "Employé" });
+      blocks.push({ kind: "signatureLine", role: roleEmployee });
       i++;
       continue;
     }
     if (SIG_EMR_RE.test(line)) {
-      blocks.push({ kind: "signatureLine", role: "Employeur" });
+      blocks.push({ kind: "signatureLine", role: roleEmployer });
       i++;
       continue;
     }
@@ -1076,7 +1081,7 @@ export async function renderTemplateToPdf(opts: PdfRenderOptions): Promise<Buffe
   const renderedWithPlaceholders = substituteUnresolvedPlaceholders(rendered);
 
   const isEmpty = renderedWithPlaceholders.trim().length === 0;
-  const blocks = parseBlocks(renderedWithPlaceholders);
+  const blocks = parseBlocks(renderedWithPlaceholders, opts.lang);
   const todayFr = safeContext["date.todayFr"]
     || new Date().toLocaleDateString("fr-CA", { day: "2-digit", month: "long", year: "numeric" });
   const docNumber = opts.metadata?.documentNumber

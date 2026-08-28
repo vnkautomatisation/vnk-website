@@ -848,7 +848,7 @@ export function BibliothequeView({
           value={kpis.total}
           icon={Library}
           accent="navy"
-          hint={`${grouped.legal.length + grouped.contract.length + grouped.policy.length} affichés`}
+          hint={t("bibliotheque_view_p0_affiches", { p0: grouped.legal.length + grouped.contract.length + grouped.policy.length })}
         />
         <DocumentStatsCard
           label={t("starters_vnk")}
@@ -1278,7 +1278,7 @@ export function BibliothequeView({
                 className="h-8 text-xs"
               >
                 <Building2 className="h-3.5 w-3.5 mr-1.5" />
-                Départements
+                {t("departements")}
                 {deptFilter.length > 0 && (
                   <Badge
                     variant="secondary"
@@ -1635,7 +1635,7 @@ export function BibliothequeView({
             void generatePreviewPdf(employeeId);
           }}
           employees={pickEmployees}
-          title={`Aperçu PDF : ${pickPreview.title}`}
+          title={t("bibliotheque_view_apercu_pdf_p0", { p0: pickPreview.title })}
           description={t("selectionnez_employe_resoudre_variables_nom")}
           confirmLabel={t("generer_apercu")}
         />
@@ -1662,7 +1662,7 @@ export function BibliothequeView({
       <PdfPreviewModal
         open={previewOpen}
         url={previewBlobUrl}
-        title={`Aperçu : ${previewTitle}`}
+        title={t("bibliotheque_view_apercu_p0", { p0: previewTitle })}
         downloadFilename={`${previewTitle
           .normalize("NFD")
           .replace(/[̀-ͯ]/g, "")

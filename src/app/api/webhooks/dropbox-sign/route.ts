@@ -85,6 +85,8 @@ export async function POST(req: Request) {
       contractId: contract.id,
       eventType: "contract_signed_both",
       eventLabel: `Contrat ${contract.contractNumber} signé via Dropbox Sign`,
+      labelKey: "workflow_events.contrat_signe_dropbox",
+      labelParams: { number: contract.contractNumber },
       triggeredBy: "client",
       metadata: { provider: "dropbox_sign", requestId: sigReq.signature_request_id },
     });

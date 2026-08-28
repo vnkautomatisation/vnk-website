@@ -1,6 +1,7 @@
 "use client";
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
   const [exporting, setExporting] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState("");
+  const dateTag = useDateLocale();
   const [deletePending, startDelete] = useTransition();
   const [marketingOptIn, setMarketingOptIn] = useState(admin.marketingOptIn);
   const [analyticsOptIn, setAnalyticsOptIn] = useState(admin.analyticsOptIn);
@@ -82,7 +84,7 @@ export function TabConfidentialite({ admin }: { admin: AdminProfile }) {
   };
 
   const exportRequested = admin.dataExportRequestedAt
-    ? new Date(admin.dataExportRequestedAt).toLocaleString("fr-CA", { dateStyle: "long", timeStyle: "short" })
+    ? new Date(admin.dataExportRequestedAt).toLocaleString(dateTag, { dateStyle: "long", timeStyle: "short" })
     : null;
 
   return (

@@ -187,12 +187,12 @@ export function PostDialog({
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("titre_seo_balise_lt_title")}</Label>
                 <Input value={seoTitle} onChange={(e) => setSeoTitle(e.target.value)} maxLength={120} placeholder={title || t("herite_du_titre")} className="mt-1" />
-                <p className="text-[10px] text-muted-foreground mt-1">{seoTitle.length}/60 caractères recommandés</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{tc("chars_recommended", { count: seoTitle.length, max: 60 })}</p>
               </div>
               <div>
                 <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("description_seo_meta_description")}</Label>
                 <Textarea value={seoDescription} onChange={(e) => setSeoDescription(e.target.value)} rows={3} maxLength={300} placeholder={excerpt || t("description_courte_moteurs_recherche")} className="mt-1 text-sm" />
-                <p className="text-[10px] text-muted-foreground mt-1">{seoDescription.length}/160 caractères recommandés</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{tc("chars_recommended", { count: seoDescription.length, max: 160 })}</p>
               </div>
 
 

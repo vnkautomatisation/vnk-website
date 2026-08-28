@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useRef, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Banknote,
@@ -75,11 +76,11 @@ function csvEscape(v: string | number | null): string {
 }
 
 // Format date ISO "2026-05-09" → "9 mai 2026"
-function formatDateFr(iso: string | null): string {
+function formatDateFr(iso: string | null, tag: string): string {
   if (!iso) return "—";
   const d = new Date(iso + "T00:00:00");
   if (isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "long", year: "numeric" });
 }
 
 function sourceKey(s: string | null | undefined): string | null {
@@ -104,6 +105,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
   const [convDirection, setConvDirection] = useState<"to-cad" | "from-cad">("to-cad");
   const [convResult, setConvResult] = useState<{ amount: number; rate: number; source: string; date: string } | null>(null);
   const [converting, setConverting] = useState(false);
+  const dateTag = useDateLocale();
 
 
   useEffect(() => {
@@ -132,7 +134,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
       const data = await res.json();
       const failures = Object.values(data.rates ?? {}).filter((q) => q === null).length;
       if (failures > 0) {
-        toast.warning(`Taux rafraîchis (${failures} indisponible${failures > 1 ? "s" : ""})`);
+        toast.warning(t("fx_view_taux_rafraichis_p0_indisponible_p1", { p0: failures, p1: failures > 1 ? "s" : "" }));
       } else {
         toast.success(t("taux_rafraichis"));
       }
@@ -212,7 +214,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `taux-de-change_${new Date().toISOString().slice(0, 10)}.csv`;
+    a.download = t("fx_view_taux_de_change_p0_csv", { p0: new Date().toISOString().slice(0, 10) });
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -231,8 +233,8 @@ export function FxView({ rates }: { rates: FxRate[] }) {
               {t("taux_change_fx")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Source : Banque du Canada (officielle) + Banque centrale européenne (fallback)
-              {lastUpdated ? ` · Dernière mise à jour : ${formatDateFr(lastUpdated)}` : t("chargement")}
+              {t("source_taux")}
+              {lastUpdated ? t("fx_view_derniere_mise_a_jour_p0", { p0: formatDateFr(lastUpdated, dateTag) }) : t("chargement")}
             </p>
           </div>
           <div className="flex items-center gap-2 flex-wrap">
@@ -283,7 +285,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("derniere_maj")}</p>
           <p className="text-sm font-bold tabular-nums truncate" title={lastUpdated ?? "—"}>
-            {lastUpdated ? formatDateFr(lastUpdated) : "—"}
+            {lastUpdated ? formatDateFr(lastUpdated, dateTag) : "—"}
           </p>
           <p className={cn("text-[10px]", kpis.unavailable > 0 ? "text-amber-600" : "text-muted-foreground")}>
             {kpis.unavailable > 0 ? `${kpis.unavailable} indisponible${kpis.unavailable > 1 ? "s" : ""}` : "Toutes à jour"}
@@ -305,7 +307,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
             {lastUpdated && (
               <span className="inline-flex items-center gap-1 text-muted-foreground">
                 <Clock className="h-3 w-3" />
-                <span className="font-semibold">{formatDateFr(lastUpdated)}</span>
+                <span className="font-semibold">{formatDateFr(lastUpdated, dateTag)}</span>
               </span>
             )}
             {kpis.unavailable > 0 && (
@@ -335,7 +337,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
           {convResult && (
             <span className="text-[10px] text-muted-foreground inline-flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3 text-emerald-500" />
-              {t("source")} : {sourceKey(convResult.source) ? t(sourceKey(convResult.source)!) : (convResult.source ?? "—")} · {formatDateFr(convResult.date)}
+              {t("source")} : {sourceKey(convResult.source) ? t(sourceKey(convResult.source)!) : (convResult.source ?? "—")} · {formatDateFr(convResult.date, dateTag)}
             </span>
           )}
         </div>
@@ -354,7 +356,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                   : "bg-background text-muted-foreground hover:text-foreground hover:border-foreground"
               )}
             >
-              {amt.toLocaleString("fr-CA")}
+              {amt.toLocaleString(dateTag)}
             </button>
           ))}
         </div>
@@ -442,10 +444,10 @@ export function FxView({ rates }: { rates: FxRate[] }) {
         {convResult && (
           <div className="mt-3 p-3 rounded-md bg-emerald-50 border border-emerald-200">
             <p className="text-2xl font-bold text-emerald-700 tabular-nums">
-              {convResult.amount.toLocaleString("fr-CA", { style: "currency", currency: targetCurrency, maximumFractionDigits: 2 })}
+              {convResult.amount.toLocaleString(dateTag, { style: "currency", currency: targetCurrency, maximumFractionDigits: 2 })}
             </p>
             <p className="text-xs text-emerald-800 mt-0.5">
-              {Number(convAmount).toLocaleString("fr-CA")} {sourceCurrency}
+              {Number(convAmount).toLocaleString(dateTag)} {sourceCurrency}
               {convDirection === "to-cad" ? " × " : " ÷ "}
               {convResult.rate.toFixed(decimalsFor(convCurrency))}
               {" = "}
@@ -513,7 +515,7 @@ export function FxView({ rates }: { rates: FxRate[] }) {
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
                     </td>
-                    <td className="p-2.5 text-xs text-muted-foreground whitespace-nowrap">{formatDateFr(r.date)}</td>
+                    <td className="p-2.5 text-xs text-muted-foreground whitespace-nowrap">{formatDateFr(r.date, dateTag)}</td>
                   </tr>
                 );
               })}

@@ -410,7 +410,7 @@ export function TabSecurite({
           <CardHeader className="pb-4">
             <CardTitle className="text-base flex items-center gap-2">
               <UserPlus className="h-4 w-4" />
-              Délégation d&apos;approbation
+              {t("delegation_approbation")}
               {currentDelegate && (
                 <Badge className="ml-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">{t("active")}</Badge>
               )}

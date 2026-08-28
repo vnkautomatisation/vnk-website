@@ -46,6 +46,7 @@
   "webhook_enregistre": "Webhook enregistré",
   "webhook_http_sortant_signe_hmac": "Webhook HTTP sortant signé HMAC-SHA256",
   "webhooks": "Webhooks",
+  "webhooks_view_reponse_p0_en_p1_ms": "Réponse {p0} en {p1} ms",
   "wh_client_archive": "Client archivé",
   "wh_client_modifie": "Client modifié",
   "wh_contrat_annule": "Contrat annulé",

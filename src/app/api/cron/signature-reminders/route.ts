@@ -9,9 +9,10 @@
 // Setup Railway : chainer avec les autres crons quotidiens
 //   curl -fsS -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/signature-reminders
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -28,6 +29,7 @@ const ESCALATE_AFTER_MS = 5 * 24 * 60 * 60 * 1000; // escalade manager après 5 
 
 async function run(): Promise<NextResponse> {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const now = new Date();
   const soonLimit = new Date(now.getTime() + SOON_MS);
 
@@ -90,7 +92,7 @@ async function run(): Promise<NextResponse> {
     const due = new Date(req.dueDate as Date);
     const isOverdue = due.getTime() < now.getTime();
     const overdueMs = now.getTime() - due.getTime();
-    const dueFr = due.toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" });
+    const dueFr = due.toLocaleDateString(dateTag, { day: "numeric", month: "long", year: "numeric" });
 
     // Rappel aux retardataires.
     await Promise.all(
@@ -102,8 +104,8 @@ async function run(): Promise<NextResponse> {
             type: isOverdue ? "warning" : "info",
             title: isOverdue ? t("signature_en_retard") : t("signature_bientot"),
             body: isOverdue
-              ? `« ${req.template.title} » devait être signé avant le ${dueFr}. Merci de signer dès que possible.`
-              : `« ${req.template.title} » doit être signé avant le ${dueFr}.`,
+              ? t("route_p0_devait_etre_signe_avant_le_p1_merci", { p0: req.template.title, p1: dueFr })
+              : t("route_p0_doit_etre_signe_avant_le_p1", { p0: req.template.title, p1: dueFr }),
             link: "/admin/mon-espace/documents",
             icon: "file-signature",
           },
@@ -133,7 +135,7 @@ async function run(): Promise<NextResponse> {
               recipientId: managerId,
               type: "warning",
               title: t("signature_s_en_retard_dans_votre_equipe"),
-              body: `« ${req.template.title} » (échéance ${dueFr}) n'est pas signé par : ${names.join(", ")}.`,
+              body: t("route_p0_echeance_p1_n_est_pas_signe_par", { p0: req.template.title, p1: dueFr, p2: names.join(", ") }),
               link: "/admin/employes/documents",
               icon: "alert-triangle",
             },
@@ -147,7 +149,7 @@ async function run(): Promise<NextResponse> {
           recipientId: req.requestedById,
           type: "warning",
           title: t("demande_de_signature_en_retard"),
-          body: `« ${req.template.title} » (échéance ${dueFr}) : ${pendingIds.length} signature(s) manquante(s).`,
+          body: t("route_p0_echeance_p1_p2_signature_s_manquante_s", { p0: req.template.title, p1: dueFr, p2: pendingIds.length }),
           link: "/admin/employes/documents",
           icon: "alert-triangle",
         },

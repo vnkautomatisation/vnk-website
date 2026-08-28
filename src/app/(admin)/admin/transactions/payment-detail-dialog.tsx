@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { useCountryName } from "@/lib/i18n-format";
+import { useCountryName, useCurrency } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -37,7 +37,8 @@ import {
   Edit3,
   Save,
 } from "lucide-react";
-import { formatCurrency, formatDate, formatDateTime, cn } from "@/lib/utils";
+import { formatDate, formatDateTime, cn } from "@/lib/utils";
+
 import { StatusBadge } from "@/components/admin/status-badge";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 
@@ -172,6 +173,7 @@ export function PaymentDetailDialog({
   onOpenChange: (o: boolean) => void;
 }) {
   const t = useTranslations("admin.transactions");
+  const formatCurrency = useCurrency();
   const countryName = useCountryName();
   const tc = useTranslations("common");
   const [data, setData] = useState<PaymentDetail | null>(null);
@@ -343,7 +345,7 @@ export function PaymentDetailDialog({
         <DialogHeader className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white p-5 space-y-1">
           <DialogTitle className="text-lg font-bold flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Détail paiement
+            {t("detail_paiement")}
             {p && <span className="text-white/60 text-xs font-mono ml-2">#{p.id}</span>}
           </DialogTitle>
           <DialogDescription className="text-white/70 text-xs inline-flex items-center flex-wrap gap-1.5">
@@ -436,7 +438,7 @@ export function PaymentDetailDialog({
                   </p>
                   <p className="text-[10px] text-muted-foreground mt-0.5">
                     {hasFees && p.processingFee != null
-                      ? `après ${Number(p.processingFee).toFixed(2)} de frais`
+                      ? t("payment_detail_dialog_apres_p0_de_frais", { p0: Number(p.processingFee).toFixed(2) })
                       : t("aucun_frais")}
                   </p>
                 </div>
@@ -709,7 +711,7 @@ export function PaymentDetailDialog({
 
 
               {data.orderEvents.length > 0 && (
-                <Section title={`Timeline événements (${data.orderEvents.length})`} icon={Clock}>
+                <Section title={t("payment_detail_dialog_timeline_evenements_p0", { p0: data.orderEvents.length })} icon={Clock}>
                   {data.orderEvents.map((e) => (
                     <div key={e.id} className="flex items-start gap-2 px-3 py-2 text-xs">
                       <span className={eventColor(e.type)}>{eventIcon(e.type)}</span>
@@ -737,7 +739,7 @@ export function PaymentDetailDialog({
                           <p className="text-xs text-muted-foreground truncate">{r.reason}</p>
                           <p className="text-[10px] text-muted-foreground mt-1">
                             {formatDate(new Date(r.createdAt))}
-                            {r.processedAt && ` · Traité ${formatDate(new Date(r.processedAt))}`}
+                            {r.processedAt && t("payment_detail_dialog_traite_p0", { p0: formatDate(new Date(r.processedAt)) })}
                             {r.stripeRefundId && ` · Stripe ${r.stripeRefundId.slice(0, 14)}…`}
                           </p>
                         </div>
@@ -782,7 +784,7 @@ export function PaymentDetailDialog({
                   className="flex-1 min-w-[140px]"
                   onClick={() => setPdfPreview({
                     url: `/api/payments/${p.id}/receipt`,
-                    title: `Reçu de paiement #${p.id}`,
+                    title: t("payment_detail_dialog_recu_de_paiement_p0", { p0: p.id }),
                     downloadName: `recu-${p.id}`,
                   })}
                 >

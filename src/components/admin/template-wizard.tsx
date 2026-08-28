@@ -318,7 +318,7 @@ export function TemplateWizard({
     setStep(2);
     toast.success(
       data.acceptedSubstitutions > 0
-        ? `Document importe avec ${data.acceptedSubstitutions} champ${data.acceptedSubstitutions > 1 ? "s" : ""} dynamique${data.acceptedSubstitutions > 1 ? "s" : ""}`
+        ? t("template_wizard_document_importe_avec_p0_champ_p1_dynamique_p2", { p0: data.acceptedSubstitutions, p1: data.acceptedSubstitutions > 1 ? "s" : "", p2: data.acceptedSubstitutions > 1 ? "s" : "" })
         : t("document_importe")
     );
   };

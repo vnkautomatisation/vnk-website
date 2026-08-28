@@ -1,4 +1,5 @@
 {
+  "a_verifier": "{count} to check",
   "attente": "Pending:",
   "au": "To",
   "aucun_paiement_ne_correspond_filtres": "No payment matches the filters",
@@ -27,8 +28,10 @@
   "recherche": "Search",
   "rechercher": "Search...",
   "reconciliation_view_1_filtrer_par_methode_ex_carte_pour": "1. Filter by method (e.g. card, to match the payment platform statement) · 2. Check the total against the transfer received in the bank · 3. Tick the verified payments and click",
+  "reconciliation_view_confirmer_la_reception_de_p0_paiement_s": "Confirm receipt of {p0} payment(s)?",
   "reconciliation_view_confirmer_la_selection": "Confirm the selection",
   "reconciliation_view_confirmer_recu": "Confirm received",
+  "reconciliation_view_p0_paiement_s_confirme_s_recu_s": "{p0} payment(s) confirmed received",
   "reference": "Reference",
   "sel": "Sel.:",
   "tous_paiements_confirmes_recus": "Every payment is confirmed received",

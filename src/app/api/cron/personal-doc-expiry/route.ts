@@ -14,6 +14,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { getLocale } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -103,6 +105,7 @@ async function getHrRecipients(): Promise<Array<{ id: number }>> {
 }
 
 export async function POST(req: Request) {
+  const dateTag = dateLocale(await getLocale());
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json({ error: "CRON_SECRET non configure" }, { status: 500 });
@@ -131,7 +134,7 @@ export async function POST(req: Request) {
     for (const doc of docs) {
       if (!doc.admin?.isActive) continue;
       const label = doc.title + (doc.referenceNumber ? ` (#${doc.referenceNumber})` : "");
-      const dueStr = doc.expiresAt?.toLocaleDateString("fr-CA") ?? "";
+      const dueStr = doc.expiresAt?.toLocaleDateString(dateTag) ?? "";
 
       // ── Notif employé ───────────────────────────────────
       const titleEmp = t.days === 1

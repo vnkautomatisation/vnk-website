@@ -3,13 +3,14 @@
 // Auth: admin with payroll/users write permission.
 // Optional query: ?from=YYYY-MM-DD&to=YYYY-MM-DD
 import "server-only";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { getTimesheetScope, timeClockScopeWhere } from "@/lib/services/timesheet-scope";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +24,7 @@ function csv(v: string | number): string {
 
 export async function GET(req: NextRequest) {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") {
     return unauthorizedJson();
@@ -74,10 +76,10 @@ export async function GET(req: NextRequest) {
   for (const e of entries) {
     const row = [
       csv(e.admin.fullName || e.admin.email),
-      e.clockIn.toLocaleDateString("fr-CA"),
-      e.clockIn.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }),
-      e.clockOut ? e.clockOut.toLocaleDateString("fr-CA") : "",
-      e.clockOut ? e.clockOut.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" }) : "",
+      e.clockIn.toLocaleDateString(dateTag),
+      e.clockIn.toLocaleTimeString(dateTag, { hour: "2-digit", minute: "2-digit" }),
+      e.clockOut ? e.clockOut.toLocaleDateString(dateTag) : "",
+      e.clockOut ? e.clockOut.toLocaleTimeString(dateTag, { hour: "2-digit", minute: "2-digit" }) : "",
       String(e.durationMin ?? ""),
       e.category,
       e.approver ? (e.approver.fullName || e.approver.email) : "",

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { BarChart, Plus, Gift, TrendingUp, ChevronLeft, ChevronRight } from "lucide-react";
@@ -46,6 +47,7 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
   const [bonusType, setBonusType] = useState<string>("all");
   const [bonusYear, setBonusYear] = useState<string>("all");
   const [bonusPage, setBonusPage] = useState(0);
+  const dateTag = useDateLocale();
 
   const salYears = useMemo(() => {
     const s = new Set<string>();
@@ -151,10 +153,10 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
                   </div>
                   <div className="text-right">
                     <p className="font-mono text-sm">
-                      {s.salaryAnnual && `${Number(s.salaryAnnual).toLocaleString("fr-CA")} $/an`}
+                      {s.salaryAnnual && `${Number(s.salaryAnnual).toLocaleString(dateTag)} $/an`}
                       {s.hourlyRate && ` · ${Number(s.hourlyRate).toFixed(2)} $/h`}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">{new Date(s.effectiveDate).toLocaleDateString("fr-CA")}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(s.effectiveDate).toLocaleDateString(dateTag)}</p>
                   </div>
                 </div>
               ))}
@@ -211,7 +213,7 @@ export function CompensationView({ employees, salaryHistory, bonuses }: { employ
                   </div>
                   <div className="text-right">
                     <p className="font-mono font-bold text-sm">{Number(b.amount).toFixed(2)} $</p>
-                    <p className="text-[10px] text-muted-foreground">{new Date(b.awardedAt).toLocaleDateString("fr-CA")}</p>
+                    <p className="text-[10px] text-muted-foreground">{new Date(b.awardedAt).toLocaleDateString(dateTag)}</p>
                   </div>
                 </div>
               ))}

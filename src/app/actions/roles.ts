@@ -64,7 +64,7 @@ export async function createRoleAction(input: z.infer<typeof createSchema>): Pro
   });
 
   await logAudit({ adminId, action: "create", entityType: "role", entityId: created.id, changes: { after: parsed.data } });
-  await logSecurityEvent({ adminId, type: "role_created", message: `Rôle créé : ${parsed.data.name}`, metadata: { roleId: created.id } });
+  await logSecurityEvent({ adminId, type: "role_created", message: t("roles_role_cree_p0", { p0: parsed.data.name }), metadata: { roleId: created.id } });
 
   revalidatePath("/admin/settings");
   return { success: true, data: { id: created.id } };
@@ -108,7 +108,7 @@ export async function updateRoleAction(input: z.infer<typeof updateSchema>): Pro
   });
 
   await logAudit({ adminId, action: "update", entityType: "role", entityId: id, changes: { before, after: rest } });
-  await logSecurityEvent({ adminId, type: "role_updated", message: `Rôle mis à jour : ${before.name}` });
+  await logSecurityEvent({ adminId, type: "role_updated", message: t("roles_role_mis_a_jour_p0", { p0: before.name }) });
 
   revalidatePath("/admin/settings");
   return { success: true };
@@ -131,12 +131,12 @@ export async function deleteRoleAction(input: z.infer<typeof deleteSchema>): Pro
   });
   if (!role) return { success: false, error: t("role_introuvable") };
   if (role.isSystem) return { success: false, error: t("les_roles_systeme_ne_peuvent_etre_supprimes") };
-  if (role._count.admins > 0) return { success: false, error: `Ce rôle est attribué à ${role._count.admins} utilisateur(s). Réassignez-les avant de supprimer.` };
-  if (role._count.positions > 0) return { success: false, error: `Ce rôle est utilisé par défaut pour ${role._count.positions} poste(s).` };
+  if (role._count.admins > 0) return { success: false, error: t("roles_ce_role_est_attribue_a_p0_utilisateur_s", { p0: role._count.admins }) };
+  if (role._count.positions > 0) return { success: false, error: t("roles_ce_role_est_utilise_par_defaut_pour_p0", { p0: role._count.positions }) };
 
   await prisma.role.delete({ where: { id: parsed.data.id } });
   await logAudit({ adminId, action: "delete", entityType: "role", entityId: parsed.data.id });
-  await logSecurityEvent({ adminId, type: "role_deleted", message: `Rôle supprimé : ${role.name}` });
+  await logSecurityEvent({ adminId, type: "role_deleted", message: t("roles_role_supprime_p0", { p0: role.name }) });
 
   revalidatePath("/admin/settings");
   return { success: true };
@@ -166,7 +166,7 @@ export async function duplicateRoleAction(input: z.infer<typeof duplicateSchema>
   const created = await prisma.role.create({
     data: {
       name: parsed.data.newName,
-      description: source.description ? `${source.description} (copie de ${source.name})` : `Copie de ${source.name}`,
+      description: source.description ? t("roles_p0_copie_de_p1", { p0: source.description, p1: source.name }) : t("roles_copie_de_p0", { p0: source.name }),
       permissions: source.permissions as never,
       color: source.color,
       sortOrder: 1000,
@@ -179,7 +179,7 @@ export async function duplicateRoleAction(input: z.infer<typeof duplicateSchema>
     adminId, action: "create", entityType: "role", entityId: created.id,
     changes: { duplicatedFrom: source.id, sourceName: source.name },
   });
-  await logSecurityEvent({ adminId, type: "role_created", message: `Rôle dupliqué : ${source.name} → ${parsed.data.newName}` });
+  await logSecurityEvent({ adminId, type: "role_created", message: t("roles_role_duplique_p0_p1", { p0: source.name, p1: parsed.data.newName }) });
 
   revalidatePath("/admin/settings/team");
   return { success: true, data: { id: created.id } };

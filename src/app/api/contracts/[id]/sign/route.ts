@@ -89,7 +89,9 @@ export async function POST(
     clientId: contract.clientId,
     contractId: contract.id,
     eventType: session.user.role === "admin" ? "contract_signed_admin" : "contract_signed_client",
-    eventLabel: `Contrat ${contract.contractNumber} signé par ${signerName}`,
+    eventLabel: t("route_contrat_p0_signe_par_p1", { p0: contract.contractNumber, p1: signerName }),
+    labelKey: "api_errors.route_contrat_p0_signe_par_p1",
+    labelParams: { p0: contract.contractNumber, p1: signerName },
     triggeredBy: session.user.role,
   });
 

@@ -10,7 +10,7 @@
 //      d'attribuer le choix #1, sinon #2, sinon #3 ; cree une LeaveRequest
 //      approuvee pour chaque preference granted ; passe le status a "allocated"
 import { z } from "zod";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,6 +18,7 @@ import { logAudit } from "@/lib/audit";
 import { logSecurityEvent } from "@/lib/security/security-events";
 import { calculateWorkingDays } from "@/lib/services/leave-days";
 import { unauthorized, forbidden } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type Result<T = void> = ({ success: true } & (T extends void ? object : { data: T })) | { success: false; error: string };
 
@@ -86,6 +87,7 @@ export type VacationWindowStatus = "draft" | "open" | "closed" | "in_review" | "
 
 export async function updateVacationWindowStatusAction(input: { id: number; status: VacationWindowStatus }): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const adminId = await requireAdminWrite();
   if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const w = await prisma.vacationSelectionWindow.findUnique({ where: { id: input.id } });
@@ -122,8 +124,8 @@ export async function updateVacationWindowStatusAction(input: { id: number; stat
           recipientType: "admin",
           recipientId: a.id,
           type: "info",
-          title: `Fenetre de vacances ouverte : ${w.name}`,
-          body: `Soumettez vos preferences avant le ${w.closingDate.toLocaleDateString("fr-CA")}.`,
+          title: t("hr_vacation_windows_fenetre_de_vacances_ouverte_p0", { p0: w.name }),
+          body: t("hr_vacation_windows_soumettez_vos_preferences_avant_le_p0", { p0: w.closingDate.toLocaleDateString(dateTag) }),
           link: "/admin/mon-espace/conges",
           icon: "calendar",
         })),
@@ -186,6 +188,7 @@ const submitPreferencesSchema = z.object({
 
 export async function submitPreferencesAction(input: z.infer<typeof submitPreferencesSchema>): Promise<Result<{ count: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") return unauthorized();
   const adminId = session.user.adminId!;
@@ -208,12 +211,12 @@ export async function submitPreferencesAction(input: z.infer<typeof submitPrefer
     if (isNaN(s.getTime()) || isNaN(e.getTime())) return { success: false, error: `Choix #${c.rank} : dates invalides.` };
     if (e < s) return { success: false, error: `Choix #${c.rank} : fin avant debut.` };
     if (s < w.coversFrom || e > w.coversTo) {
-      return { success: false, error: `Choix #${c.rank} doit etre dans la periode ${w.coversFrom.toLocaleDateString("fr-CA")} -> ${w.coversTo.toLocaleDateString("fr-CA")}.` };
+      return { success: false, error: t("hr_vacation_windows_choix_p0_doit_etre_dans_la_periode_p1", { p0: c.rank, p1: w.coversFrom.toLocaleDateString(dateTag), p2: w.coversTo.toLocaleDateString(dateTag) }) };
     }
     const days = await calculateWorkingDays(s, e);
-    if (days <= 0) return { success: false, error: `Choix #${c.rank} : aucun jour ouvre.` };
+    if (days <= 0) return { success: false, error: t("hr_vacation_windows_choix_p0_aucun_jour_ouvre", { p0: c.rank }) };
     if (days > w.maxDaysPerEmployee) {
-      return { success: false, error: `Choix #${c.rank} depasse le plafond ${w.maxDaysPerEmployee} jours.` };
+      return { success: false, error: t("hr_vacation_windows_choix_p0_depasse_le_plafond_p1_jours", { p0: c.rank, p1: w.maxDaysPerEmployee }) };
     }
     parsedChoices.push({ rank: c.rank, start: s, end: e, days });
   }
@@ -250,6 +253,7 @@ export async function submitPreferencesAction(input: z.infer<typeof submitPrefer
 // ─── Bulk transitions (ouvrir/fermer toutes les fenetres eligibles) ──
 export async function bulkOpenWindowsAction(): Promise<Result<{ opened: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const adminId = await requireAdminWrite();
   if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const drafts = await prisma.vacationSelectionWindow.findMany({
@@ -269,8 +273,8 @@ export async function bulkOpenWindowsAction(): Promise<Result<{ opened: number }
         recipientType: "admin" as const,
         recipientId: a.id,
         type: "info",
-        title: `Fenetre de vacances ouverte : ${w.name}`,
-        body: `Soumettez vos preferences avant le ${w.closingDate.toLocaleDateString("fr-CA")}.`,
+        title: t("hr_vacation_windows_fenetre_de_vacances_ouverte_p0", { p0: w.name }),
+        body: t("hr_vacation_windows_soumettez_vos_preferences_avant_le_p0", { p0: w.closingDate.toLocaleDateString(dateTag) }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       })),
@@ -398,7 +402,7 @@ export async function simulateAllocationAction(input: { id: number }): Promise<R
         (l) => l.adminId === adId && l.startDate <= pref.endDate && l.endDate >= pref.startDate,
       );
       if (overlap) {
-        reasons.push(`Rang #${pref.rank} chevauche un conge existant.`);
+        reasons.push(t("hr_vacation_windows_rang_p0_chevauche_un_conge_existant", { p0: pref.rank }));
         continue;
       }
       granted.push({
@@ -436,7 +440,7 @@ export async function simulateAllocationAction(input: { id: number }): Promise<R
     conflicts.push({
       adminId: 0,
       fullName: "",
-      reason: `${date} : ${n} employe${n > 1 ? "s" : ""} simultanement absents (>30% du scope).`,
+      reason: t("hr_vacation_windows_p0_p1_employe_p2_simultanement_absents_30_du", { p0: date, p1: n, p2: n > 1 ? "s" : "" }),
     });
   }
 
@@ -454,6 +458,7 @@ export async function allocateVacationsAction(
   input: { id: number },
 ): Promise<Result<{ granted: number; denied: number; round1Granted?: number; round2Granted?: number; round3Granted?: number }>> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const adminId = await requireAdminWrite();
   if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
 
@@ -630,7 +635,7 @@ export async function allocateVacationsAction(
         recipientId: adId,
         type: "success",
         title: `Vacances attribuees : ${w.name}`,
-        body: `Choix #${allocated.rank} accorde : du ${allocated.start.toLocaleDateString("fr-CA")} au ${allocated.end.toLocaleDateString("fr-CA")} (${allocated.days} j).`,
+        body: t("hr_vacation_windows_choix_p0_accorde_du_p1_au_p2_p3", { p0: allocated.rank, p1: allocated.start.toLocaleDateString(dateTag), p2: allocated.end.toLocaleDateString(dateTag), p3: allocated.days }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       });
@@ -698,6 +703,7 @@ export async function updateVacationPreferenceAction(
   input: z.infer<typeof updatePrefSchema>,
 ): Promise<Result> {
   const t = await getTranslations("admin.action_errors");
+  const dateTag = dateLocale(await getLocale());
   const adminId = await requireAdminWrite();
   if (!adminId) return { success: false, error: t(ERR_NO_AUTHORITY) };
   const parsed = updatePrefSchema.safeParse(input);
@@ -725,7 +731,7 @@ export async function updateVacationPreferenceAction(
       select: { id: true, rank: true },
     });
     if (otherGranted) {
-      return { success: false, error: `Le rang #${otherGranted.rank} est deja accorde pour cet employe.` };
+      return { success: false, error: t("hr_vacation_windows_le_rang_p0_est_deja_accorde_pour_cet", { p0: otherGranted.rank }) };
     }
     // Chevauchement avec un LeaveRequest existant approuve/pending ?
     const overlap = await prisma.leaveRequest.findFirst({
@@ -750,7 +756,7 @@ export async function updateVacationPreferenceAction(
         status: "approved",
         reviewerId: adminId,
         reviewedAt: new Date(),
-        reviewNotes: `Accorde manuellement par RH (fenetre "${pref.window.name}", rang ${pref.rank})`,
+        reviewNotes: t("hr_vacation_windows_accorde_manuellement_par_rh_fenetre_p0_rang_p1", { p0: pref.window.name, p1: pref.rank }),
       },
       select: { id: true },
     });
@@ -764,7 +770,7 @@ export async function updateVacationPreferenceAction(
         recipientId: pref.adminId,
         type: "success",
         title: `Vacances accordees (revue manuelle) : ${pref.window.name}`,
-        body: `Du ${pref.startDate.toLocaleDateString("fr-CA")} au ${pref.endDate.toLocaleDateString("fr-CA")} (${pref.daysCount} j) — rang ${pref.rank}.`,
+        body: t("hr_vacation_windows_du_p0_au_p1_p2_j_rang_p3", { p0: pref.startDate.toLocaleDateString(dateTag), p1: pref.endDate.toLocaleDateString(dateTag), p2: Number(pref.daysCount), p3: pref.rank }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       },
@@ -842,7 +848,7 @@ export async function unallocateVacationsAction(
 
   // Securite : refuse si l'un des leaveRequest est dans une periode payee (TimeClock payStubId)
   if (leaveIds.length > 0) {
-    const noteStubs = leaveIds.map((id) => `[CONGÉ AUTO - LeaveRequest #${id}]`);
+    const noteStubs = leaveIds.map((id) => t("hr_vacation_windows_conge_auto_leaverequest_p0", { p0: id }));
     const paid = await prisma.timeClock.findFirst({
       where: {
         payStubId: { not: null },
@@ -866,7 +872,7 @@ export async function unallocateVacationsAction(
       if (leaveIds.length > 0) {
         // Supprime les TimeClock auto-crees (non-payes) avant le delete LeaveRequest pour
         // eviter tout etat orphelin (la cascade onDelete n'est pas garantie ici).
-        const noteStubs = leaveIds.map((id) => `[CONGÉ AUTO - LeaveRequest #${id}]`);
+        const noteStubs = leaveIds.map((id) => t("hr_vacation_windows_conge_auto_leaverequest_p0", { p0: id }));
         await tx.timeClock.deleteMany({
           where: {
             payStubId: null,
@@ -921,7 +927,7 @@ export async function unallocateVacationsAction(
         recipientId: adId,
         type: "warning",
         title: `Attribution annulee : ${w.name}`,
-        body: `L'attribution de vos vacances a ete annulee. Motif : ${parsed.data.reason}`,
+        body: t("hr_vacation_windows_l_attribution_de_vos_vacances_a_ete_annulee", { p0: parsed.data.reason }),
         link: "/admin/mon-espace/conges",
         icon: "calendar",
       })),
@@ -946,7 +952,7 @@ export async function unallocateVacationsAction(
     adminId,
     type: "profile_updated",
     severity: "warning",
-    message: `Unallocation de la fenetre de vacances "${w.name}"`,
+    message: t("hr_vacation_windows_unallocation_de_la_fenetre_de_vacances_p0", { p0: w.name }),
     metadata: {
       windowId: parsed.data.windowId,
       reason: parsed.data.reason,

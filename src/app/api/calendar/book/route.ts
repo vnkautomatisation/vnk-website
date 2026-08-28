@@ -2,13 +2,14 @@
 // → Le slot passe à "booked", l'appointment à "confirmed", workflow event + notification admin
 // → L'envoi email sera ajouté quand l'infra mail sera prête
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createWorkflowEvent } from "@/lib/workflow";
 import { revalidateAdminViews } from "@/lib/revalidate";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 const bookSchema = z.object({
   slotId: z.number().int().positive(),
@@ -19,6 +20,7 @@ const bookSchema = z.object({
 
 export async function POST(req: Request) {
   const t = await getTranslations("api_errors");
+  const dateTag = dateLocale(await getLocale());
   const session = await auth();
   if (!session?.user || session.user.role !== "client") {
     return unauthorizedJson();
@@ -72,7 +74,9 @@ export async function POST(req: Request) {
   await createWorkflowEvent({
     clientId: client.id,
     eventType: "appointment_booked",
-    eventLabel: `RDV réservé par ${client.fullName} — ${slot.slotDate.toLocaleDateString("fr-CA")} ${slot.startTime}`,
+    eventLabel: t("route_rdv_reserve_par_p0_p1_p2", { p0: client.fullName, p1: slot.slotDate.toLocaleDateString(dateTag), p2: slot.startTime }),
+    labelKey: "api_errors.route_rdv_reserve_par_p0_p1_p2",
+    labelParams: { p0: client.fullName, p1: slot.slotDate.toLocaleDateString(dateTag), p2: slot.startTime },
     triggeredBy: "client",
     metadata: { appointmentId: appointment.id, slotId: slot.id },
   });
@@ -86,7 +90,7 @@ export async function POST(req: Request) {
         recipientId: a.id,
         type: "appointment_booked",
         title: t("nouveau_rendez_vous"),
-        message: `${client.fullName} a réservé un RDV le ${slot.slotDate.toLocaleDateString("fr-CA")} à ${slot.startTime}`,
+        message: t("route_p0_a_reserve_un_rdv_le_p1_a", { p0: client.fullName, p1: slot.slotDate.toLocaleDateString(dateTag), p2: slot.startTime }),
         actionUrl: `/admin/calendar`,
       })),
     });

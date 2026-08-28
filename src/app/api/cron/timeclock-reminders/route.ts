@@ -7,11 +7,12 @@
 // Appel via Railway cron :
 //   curl -fsS -X POST -H "Authorization: Bearer $CRON_SECRET" https://<APP>.up.railway.app/api/cron/timeclock-reminders
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { prisma } from "@/lib/prisma";
 import { logAudit } from "@/lib/audit";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -66,6 +67,8 @@ async function sendReminderUnsubmitted(weekStart: Date, weekEnd: Date): Promise<
 }
 
 async function autoSubmitOpenWeeks(weekStart: Date, weekEnd: Date): Promise<number> {
+  const t = await getTranslations("admin.timeclock");
+  const dateTag = dateLocale(await getLocale());
   const candidates = await prisma.admin.findMany({
     where: { isActive: true, role: "admin" },
     select: { id: true, fullName: true, email: true, managerId: true },
@@ -102,7 +105,7 @@ async function autoSubmitOpenWeeks(weekStart: Date, weekEnd: Date): Promise<numb
         recipientId: emp.id,
         type: "info",
         title: "Semaine auto-soumise",
-        body: `Votre semaine a été soumise automatiquement (${(workMin / 60).toFixed(1)}h).`,
+        body: t("route_votre_semaine_a_ete_soumise_automatiquement_p0_h", { p0: (workMin / 60).toFixed(1) }),
         link: "/admin/mon-espace/pointage",
         icon: "clock",
       },
@@ -121,7 +124,7 @@ async function autoSubmitOpenWeeks(weekStart: Date, weekEnd: Date): Promise<numb
       recipientIds.push(...supers.map((s) => s.id));
     }
     const empName = emp.fullName || emp.email;
-    const weekLabel = weekStart.toLocaleDateString("fr-CA");
+    const weekLabel = weekStart.toLocaleDateString(dateTag);
     if (recipientIds.length > 0) {
       await prisma.notification.createMany({
         data: recipientIds.map((rid) => ({
@@ -129,7 +132,7 @@ async function autoSubmitOpenWeeks(weekStart: Date, weekEnd: Date): Promise<numb
           recipientId: rid,
           type: "info",
           title: "Semaine soumise (auto)",
-          body: `${empName} : semaine du ${weekLabel} auto-soumise (${(workMin / 60).toFixed(1)}h).`,
+          body: t("route_p0_semaine_du_p1_auto_soumise_p2_h", { p0: empName, p1: weekLabel, p2: (workMin / 60).toFixed(1) }),
           link: `/admin/employes/pointage?focus=${emp.id}`,
           icon: "clock",
         })),
@@ -244,7 +247,7 @@ export async function POST(req: Request) {
               recipientId: rid,
               type: "warning",
               title: t("heures_soumises_depuis_plus_de_48_h"),
-              body: `Les heures de ${name} attendent votre approbation depuis plus de 48 h.`,
+              body: t("route_les_heures_de_p0_attendent_votre_approbation_depuis", { p0: name }),
               link: `/admin/employes/pointage?tab=to-approve&focus=${s.adminId}`,
               icon: "clock",
             },

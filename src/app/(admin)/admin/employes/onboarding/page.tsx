@@ -1,7 +1,6 @@
 // HR · Vue centralisée des onboardings (qui n'a pas signé quoi, qui manque d'éléments)
 import { prisma } from "@/lib/prisma";
 import { getLocale, getTranslations } from "next-intl/server";
-import { dateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { isHrAdmin } from "@/lib/services/hr-access";
@@ -10,6 +9,7 @@ import Link from "next/link";
 import { ScrollText, AlertCircle, CheckCircle2, ShieldCheck, FileSignature, Fingerprint } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { dateLocale } from "@/lib/i18n-format";
 
 export default async function OnboardingCentralPage() {
   const t = await getTranslations("admin.hr_nav");
@@ -83,7 +83,7 @@ export default async function OnboardingCentralPage() {
 
       <section>
         <h2 className="text-sm font-semibold mb-2 flex items-center gap-2">
-          <AlertCircle className="h-4 w-4 text-amber-600" />À compléter ({incomplete.length})
+          <AlertCircle className="h-4 w-4 text-amber-600" />{t("a_completer_count", { count: incomplete.length })}
         </h2>
         {incomplete.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground inline-flex items-center justify-center gap-2 w-full">

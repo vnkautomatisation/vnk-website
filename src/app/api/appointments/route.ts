@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const attendees = parsed.data.clientEmail
       ? [{ email: parsed.data.clientEmail, name: parsed.data.clientName }]
       : [];
-    const subject = parsed.data.subject || `Rendez-vous avec ${parsed.data.clientName}`;
+    const subject = parsed.data.subject || t("route_rendez_vous_avec_p0", { p0: parsed.data.clientName });
 
     // 1. Essayer Microsoft Teams
     try {
@@ -173,7 +173,9 @@ export async function POST(req: NextRequest) {
     await createWorkflowEvent({
       clientId: parsed.data.clientId,
       eventType: "appointment_booked",
-      eventLabel: `Rendez-vous réservé — ${parsed.data.subject || parsed.data.startTime}`,
+      eventLabel: t("route_rendez_vous_reserve_p0", { p0: parsed.data.subject || parsed.data.startTime }),
+      labelKey: "api_errors.route_rendez_vous_reserve_p0",
+      labelParams: { p0: parsed.data.subject || parsed.data.startTime },
       triggeredBy: "admin",
       metadata: { appointmentId: appointment.id, date: parsed.data.appointmentDate },
     });

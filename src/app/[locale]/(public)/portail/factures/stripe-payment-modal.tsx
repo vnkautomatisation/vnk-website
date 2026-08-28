@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { createPortal } from "react-dom";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, AddressElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { CreditCard, Lock, X, ShieldCheck, ChevronRight, ChevronLeft, MapPin, CheckCircle } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
 import { cn } from "@/lib/utils";
 
 type Invoice = {
@@ -39,6 +40,7 @@ function PaymentForm({
   onCancel: () => void;
 }) {
   const t = useTranslations("portal");
+  const formatCurrency = useCurrency();
   const stripe = useStripe();
   const elements = useElements();
   const [paying, setPaying] = useState(false);
@@ -295,7 +297,7 @@ export function StripePaymentModal({
           setClientInfo(data.client);
           setStripeInstance(loadStripe(data.publishableKey));
         } else {
-          setError(data.error ?? "Stripe non configure");
+          setError(data.error ?? t("stripe_non_configure"));
         }
       })
       .catch(() => setError(t("erreur_connexion")))

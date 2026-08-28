@@ -98,7 +98,9 @@ export async function POST(
       clientId: refund.clientId,
       invoiceId: refund.invoice.id,
       eventType: "invoice_refunded",
-      eventLabel: `Remboursement de ${Number(refund.amount).toFixed(2)} CAD émis pour ${refund.invoice.invoiceNumber} via Stripe`,
+      eventLabel: t("route_remboursement_de_p0_cad_emis_pour_p1_via", { p0: Number(refund.amount).toFixed(2), p1: refund.invoice.invoiceNumber }),
+      labelKey: "api_errors.route_remboursement_de_p0_cad_emis_pour_p1_via",
+      labelParams: { p0: Number(refund.amount).toFixed(2), p1: refund.invoice.invoiceNumber },
       triggeredBy: session.user.email ?? "admin",
       metadata: { refundId, stripeRefundId: updated.stripeRefundId },
     }).catch(() => {});
@@ -110,7 +112,7 @@ export async function POST(
         recipientId: refund.clientId,
         type: "info",
         title: t("remboursement_emis"),
-        body: `Un remboursement de ${Number(refund.amount).toFixed(2)} $ a été initié sur votre carte. Délai bancaire 5–10 jours ouvrables.`,
+        body: t("route_un_remboursement_de_p0_a_ete_initie_sur", { p0: Number(refund.amount).toFixed(2) }),
         link: `/portail/paiements`,
       },
     }).catch(() => {});

@@ -2,11 +2,12 @@
 // Vérifie : DB · variables d'environnement · intégrations · stockage · webhooks.
 // Retourne un rapport JSON pour la page /admin/settings/diagnostics.
 import { NextResponse } from "next/server";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { auth } from "@/lib/auth";
 import { adminApiForbiddenAll } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { dateLocale } from "@/lib/i18n-format";
 
 type CheckStatus = "ok" | "warn" | "error" | "skip";
 type Check = {
@@ -53,6 +54,7 @@ export async function GET() {
   }
 
   const t = await getTranslations("settings");
+  const dateTag = dateLocale(await getLocale());
   const checks: Check[] = [];
 
   // ── BASE DE DONNÉES ────────────────────────────────────
@@ -165,7 +167,7 @@ export async function GET() {
             msg = t("diag_derniere_synchro_echouee");
           } else if (i.lastSyncAt) {
             status = "ok";
-            msg = `Synchro OK le ${new Date(i.lastSyncAt).toLocaleDateString("fr-CA")}`;
+            msg = t("route_synchro_ok_le_p0", { p0: new Date(i.lastSyncAt).toLocaleDateString(dateTag) });
           } else {
             status = "warn";
             msg = t("diag_activee_jamais_synchronisee");

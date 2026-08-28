@@ -10,7 +10,7 @@
 //
 // Scope : getLeavesScope (founder = tout, HR = tous-sauf-soi, manager = subordonnés+teams)
 import { prisma } from "@/lib/prisma";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { startOfWeek, endOfWeek } from "@/lib/week";
 import { auth } from "@/lib/auth";
@@ -19,6 +19,7 @@ import { LeavesAdminView } from "./leaves-admin-view";
 import { getLeavesScope } from "@/lib/services/timesheet-scope";
 import { getLeaveBalance } from "@/lib/services/leave-balance";
 import type { Metadata } from "next";
+import { dateLocale } from "@/lib/i18n-format";
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("admin.page_titles");
@@ -42,6 +43,7 @@ export default async function CongesPage({
 }: {
   searchParams?: Promise<{ page?: string }>;
 }) {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.leaves");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
@@ -504,7 +506,7 @@ export default async function CongesPage({
       : 0;
     trailing12Months.push({
       key: `${mStart.getFullYear()}-${String(mStart.getMonth() + 1).padStart(2, "0")}`,
-      label: mStart.toLocaleDateString("fr-CA", { month: "short" }),
+      label: mStart.toLocaleDateString(dateTag, { month: "short" }),
       rate,
       days: Math.round(abs * 10) / 10,
     });

@@ -177,7 +177,7 @@ export function WebhookDialog({
                   <Label className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     {t("evenements_envoyer")}
                   </Label>
-                  <Badge variant="outline" className="text-[10px]">{selectedEvents.size} sélectionnés</Badge>
+                  <Badge variant="outline" className="text-[10px]">{tc("selected_m", { count: selectedEvents.size })}</Badge>
                 </div>
                 <div className="space-y-2 max-h-[300px] overflow-y-auto rounded-md border p-3">
                   {EVENT_GROUPS.map((group) => {

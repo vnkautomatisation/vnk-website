@@ -29,5 +29,6 @@
   "nom_requis": "Name required",
   "nouvelle_equipe": "New team",
   "role_mission_contexte": "Role, mission, context…",
+  "teams_view_voir_le_dossier_p0": "View the file — {p0}",
   "voir_dossier": "View the file"
 }

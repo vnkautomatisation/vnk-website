@@ -20,16 +20,6 @@ type Doc = {
   mandateTitle: string | null;
 };
 
-const categoryFilterOptions: FilterOption[] = [
-  { value: "Rapports", label: "Rapports" },
-  { value: "Devis", label: "Devis" },
-  { value: "Factures", label: "Factures" },
-  { value: "Contrats", label: "Contrats" },
-  { value: "Manuels", label: "Manuels" },
-  { value: "Photos", label: "Photos" },
-  { value: "Autre", label: "Autre" },
-];
-
 const CATEGORY_COLORS: Record<string, string> = {
   Rapports: "bg-blue-100 text-blue-700 border-blue-200",
   Devis: "bg-amber-100 text-amber-700 border-amber-200",
@@ -49,11 +39,41 @@ function getFileTypeBadge(title: string, url: string | null) {
   return { label: 'DOC', bg: 'bg-gray-100 text-gray-600' };
 }
 
+const DOC_CATEGORIES = ["Rapports", "Devis", "Factures", "Contrats", "Manuels", "Photos", "Autre"] as const;
+
+// La casse des categories varie selon l'origine de la ligne ("contrats" et
+// "Contrats" coexistent) : on ramene a la forme canonique avant tout usage,
+// sinon le filtre ne retrouve pas ces lignes.
+function canonicalCategory(c: string | null): string {
+  if (!c) return "Autre";
+  return DOC_CATEGORIES.find((v) => v.toLowerCase() === c.toLowerCase()) ?? c;
+}
+
 export function PortalDocumentsList({ documents: initialDocuments }: { documents: Doc[] }) {
   const t = useTranslations("portal");
   const [docs, setDocs] = useState(initialDocuments);
   const [readFilter, setReadFilter] = useState<"all" | "unread" | "read">("all");
   const [previewDoc, setPreviewDoc] = useState<Doc | null>(null);
+
+  // Categorie stockee en francais : on affiche sa traduction, en gardant la
+  // valeur brute si elle ne correspond a aucune categorie connue.
+  const categoryLabel = (c: string) => {
+    const canon = canonicalCategory(c);
+    return DOC_CATEGORIES.includes(canon as (typeof DOC_CATEGORIES)[number])
+      ? t(`doc_category.${canon.toLowerCase()}` as "doc_category.autre")
+      : c;
+  };
+
+  // La valeur reste celle stockee en base ; seul le libelle suit le lecteur.
+  const categoryFilterOptions: FilterOption[] = [
+    { value: "Rapports", label: t("doc_category.rapports") },
+    { value: "Devis", label: t("doc_category.devis") },
+    { value: "Factures", label: t("doc_category.factures") },
+    { value: "Contrats", label: t("doc_category.contrats") },
+    { value: "Manuels", label: t("doc_category.manuels") },
+    { value: "Photos", label: t("doc_category.photos") },
+    { value: "Autre", label: t("doc_category.autre") },
+  ];
 
   const handlePreview = (doc: Doc, e?: React.MouseEvent) => {
     e?.stopPropagation();
@@ -106,7 +126,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
             )}
           </div>
           {r.mandateTitle && (
-            <p className="text-xs text-muted-foreground mt-0.5">Mandat : {r.mandateTitle}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{t("mandat_prefix", { title: r.mandateTitle })}</p>
           )}
         </div>
       ),
@@ -118,10 +138,10 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
       header: t("categorie"),
       accessor: (r) => {
         if (!r.category) return <span className="text-muted-foreground">—</span>;
-        const cls = CATEGORY_COLORS[r.category] ?? CATEGORY_COLORS.Autre;
+        const cls = CATEGORY_COLORS[canonicalCategory(r.category)] ?? CATEGORY_COLORS.Autre;
         return (
           <span className={`inline-flex text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${cls}`}>
-            {r.category}
+            {categoryLabel(r.category)}
           </span>
         );
       },
@@ -189,8 +209,8 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
                     {formatDate(new Date(doc.createdAt))}
                   </span>
                   {doc.category && (
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[doc.category] ?? CATEGORY_COLORS.Autre}`}>
-                      {doc.category}
+                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${CATEGORY_COLORS[canonicalCategory(doc.category)] ?? CATEGORY_COLORS.Autre}`}>
+                      {categoryLabel(doc.category)}
                     </span>
                   )}
                 </div>
@@ -301,7 +321,7 @@ export function PortalDocumentsList({ documents: initialDocuments }: { documents
         searchPlaceholder={t("rechercher_document")}
         searchFn={(r) => `${r.title} ${r.category ?? ""}`}
         filterOptions={categoryFilterOptions}
-        filterFn={(r) => r.category ?? t("autre")}
+        filterFn={(r) => canonicalCategory(r.category)}
         filterLabel={t("toutes_categories")}
         headerActions={readFilterActions}
         emptyMessage={t("aucun_document")}

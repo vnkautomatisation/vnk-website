@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { cache } from "react";
 import { redirect } from "next/navigation";
 import { getTranslations } from "next-intl/server";
+import { workflowEventLabel } from "@/lib/workflow-label";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Card, CardContent } from "@/components/ui/card";
@@ -66,6 +67,8 @@ export default async function PortalDashboard() {
   }
   const clientId = session.user.clientId;
   const t = await getTranslations("portal.dashboard");
+  // Traducteur racine : les libelles d'evenements portent une cle complete.
+  const tRoot = await getTranslations();
 
   const { activeMandates, pendingQuotes, pendingInvoices, unreadDocs, totalMandates, totalContracts, overdueInvoices, recentEvents, client, nextAppointment } = await getDashboardData(clientId);
 
@@ -171,17 +174,17 @@ export default async function PortalDashboard() {
             <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
               <Briefcase className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
               <span className="font-semibold">{activeMandates}</span>
-              <span className="text-white/70">mandats</span>
+              <span className="text-white/70">{t("chip_mandates")}</span>
             </div>
             <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
               <FileSignature className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
               <span className="font-semibold">{totalContracts}</span>
-              <span className="text-white/70">contrats</span>
+              <span className="text-white/70">{t("chip_contracts")}</span>
             </div>
             {nextAppointment && (
               <div className="flex items-center gap-1.5 bg-white/10 rounded-md px-2 py-1 sm:px-3 sm:py-1.5">
                 <CalendarCheck className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
-                <span className="text-white/70">RDV :</span>
+                <span className="text-white/70">{t("next_appointment")}</span>
                 <span className="font-semibold">
                   {formatDate(nextAppointment.appointmentDate)}
                 </span>
@@ -218,7 +221,7 @@ export default async function PortalDashboard() {
       {/* ── Quick Actions ────────────────────────────── */}
       <div>
         <h2 className="portal-kpi-label text-muted-foreground mb-2 sm:mb-3">
-          Actions rapides
+          {t("quick_actions")}
         </h2>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
           {quickActions.map((a) => {
@@ -254,7 +257,7 @@ export default async function PortalDashboard() {
               <h2 className="font-semibold text-sm sm:text-lg">{t("recent_activity")}</h2>
             </div>
             <span className="text-[10px] sm:text-xs text-muted-foreground px-2 py-0.5 sm:px-2.5 sm:py-1 bg-muted rounded-full shrink-0">
-              {recentEvents.length} evenements
+              {t("events_count", { count: recentEvents.length })}
             </span>
           </div>
           <div className="p-3 sm:p-6 pt-3 sm:pt-4 flex-1 overflow-y-auto">
@@ -265,7 +268,7 @@ export default async function PortalDashboard() {
                 <Inbox className="h-8 w-8 text-muted-foreground/40" />
               </div>
               <p className="text-sm font-medium text-muted-foreground">
-                Aucune activite recente
+                {t("no_recent_activity")}
               </p>
               <p className="text-xs text-muted-foreground/60 mt-1">{t("page_vos_prochaines_actions_apparaitront_ici")}</p>
             </div>
@@ -290,7 +293,7 @@ export default async function PortalDashboard() {
                       </div>
                       <div className="flex-1 min-w-0 py-0.5">
                         <p className="text-xs sm:text-sm font-medium leading-snug">
-                          {ev.eventLabel}
+                          {workflowEventLabel(tRoot, ev)}
                         </p>
                         <time className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 block">
                           {formatDate(ev.createdAt)}

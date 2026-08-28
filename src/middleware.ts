@@ -7,10 +7,37 @@ const intlMiddleware = createMiddleware(routing);
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Auth cookie check
-  const sessionCookie =
-    request.cookies.get("authjs.session-token") ||
-    request.cookies.get("__Secure-authjs.session-token");
+  // Chaque espace a son cookie : on peut etre connecte a l'admin ET au
+  // portail client dans le meme navigateur sans que l'un chasse l'autre.
+  // NextAuth fragmente un jeton trop gros en `<nom>.0`, `<nom>.1`. Ne chercher
+  // que le nom exact rendait ces sessions invisibles ici alors que la page de
+  // connexion, elle, les reassemblait : /admin et /admin/login se renvoyaient
+  // la balle indefiniment.
+  const hasSession = (base: string) =>
+    !!(
+      request.cookies.get(base) ||
+      request.cookies.get(`__Secure-${base}`) ||
+      request.cookies.get(`${base}.0`) ||
+      request.cookies.get(`__Secure-${base}.0`)
+    );
+
+  const adminSession = hasSession("authjs.session-token");
+  const clientSession = hasSession("vnk.portal-session-token");
+
+  // ── /api/* : la surface appelante vient du Referer ──
+  // Une requete same-origin porte les cookies des deux espaces. Sans cette
+  // detection, une page du portail lirait la session admin et verrait donc
+  // toutes les donnees, pas seulement les siennes.
+  if (pathname.startsWith("/api")) {
+    let caller = pathname;
+    const referer = request.headers.get("referer");
+    if (referer) {
+      try { caller = new URL(referer).pathname; } catch { /* referer illisible */ }
+    }
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname.startsWith("/api/portal") ? "/portail" : caller);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
 
   // ── /admin/* : no locale prefix, sign-in required ──
   // The bypass mirrors lib/auth.ts: development only, and only when asked for
@@ -18,7 +45,7 @@ export default function middleware(request: NextRequest) {
   if (pathname.startsWith("/admin")) {
     const devBypass =
       process.env.NODE_ENV !== "production" && process.env.AUTH_DEV_BYPASS === "1";
-    if (!devBypass && !pathname.startsWith("/admin/login") && !sessionCookie) {
+    if (!devBypass && !pathname.startsWith("/admin/login") && !adminSession) {
       const url = request.nextUrl.clone();
       url.pathname = "/admin/login";
       url.searchParams.set("redirect", pathname);
@@ -30,21 +57,46 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // ── /portail/login: no locale prefix, no auth ──
-  if (pathname === "/portail/login" || pathname.startsWith("/portail/login?")) {
-    return NextResponse.next();
+  // ── /kiosque: shared device, no account, its own locale cookie ──
+  if (pathname.startsWith("/kiosque")) {
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
   }
 
-  // ── /portail/*: auth check, then the intl middleware ──
+  // ── /portail/login: no locale prefix, no auth ──
+  if (pathname === "/portail/login" || pathname.startsWith("/portail/login?")) {
+    // auth() lit cet en-tete pour savoir quelle session interroger.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
+  // ── /portail/*: auth check, then a fixed rewrite ──
   if (pathname.startsWith("/portail") || pathname.match(/^\/(fr|en)\/portail/)) {
-    if (!sessionCookie) {
+    // The portal shows no locale prefix: fold a prefixed URL back onto the
+    // plain one before anything else looks at it.
+    const prefixed = pathname.match(/^\/(fr|en)(\/portail.*)$/);
+    if (prefixed) {
+      const url = request.nextUrl.clone();
+      url.pathname = prefixed[2];
+      return NextResponse.redirect(url);
+    }
+    if (!clientSession) {
       const url = request.nextUrl.clone();
       url.pathname = "/portail/login";
       url.searchParams.set("redirect", pathname);
       return NextResponse.redirect(url);
     }
-    // Hand over to the intl middleware to resolve the locale.
-    return intlMiddleware(request);
+    // Rewrite onto the [locale] segment ourselves rather than letting the intl
+    // middleware redirect: its detection would send /portail to /en/portail and
+    // the fold above would bounce it straight back. The segment is only a
+    // routing artefact here - request.ts picks the real language.
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-pathname", pathname);
+    const url = request.nextUrl.clone();
+    url.pathname = `/${routing.defaultLocale}${pathname}`;
+    return NextResponse.rewrite(url, { request: { headers: requestHeaders } });
   }
 
   // ── Public site ──
@@ -57,6 +109,9 @@ export const config = {
     "/(fr|en)/:path*",
     "/portail/:path*",
     "/admin/:path*",
+    "/api/:path*",
+    "/kiosque/:path*",
+    "/kiosque",
     "/services",
     "/a-propos",
     "/contact",

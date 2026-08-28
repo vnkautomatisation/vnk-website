@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Award, Send, CheckCircle2, Lock } from "lucide-react";
@@ -33,6 +34,7 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
   const [employeeComments, setEmployeeComments] = useState(review.employeeComments ?? "");
   const [pending, setPending] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
+  const dateTag = useDateLocale();
 
 
   useEffect(() => {
@@ -85,10 +87,10 @@ export function EvaluationEditor({ review, isReviewer, isEmployee }: { review: R
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold flex items-center gap-2">
-            <Award className="h-5 w-5 text-[#0F2D52]" />Évaluation : {review.admin.fullName || review.admin.email}
+            <Award className="h-5 w-5 text-[#0F2D52]" />{t("evaluation_de", { name: review.admin.fullName || review.admin.email })}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {new Date(review.periodStart).toLocaleDateString("fr-CA")} → {new Date(review.periodEnd).toLocaleDateString("fr-CA")}
+            {new Date(review.periodStart).toLocaleDateString(dateTag)} → {new Date(review.periodEnd).toLocaleDateString(dateTag)}
             {" · "}évalué par {review.reviewer.fullName || review.reviewer.email}
           </p>
         </div>

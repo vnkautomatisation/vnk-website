@@ -479,7 +479,7 @@ export async function signHandbookAction(
         if (!ch.initials || ch.initials.trim().length < 2) {
           return {
             success: false,
-            error: `Initiales manquantes pour le chapitre « ${it.template.title} »`,
+            error: t("hr_document_handbooks_initiales_manquantes_pour_le_chapitre_p0", { p0: it.template.title }),
           };
         }
       }
@@ -633,7 +633,7 @@ export async function signHandbookAction(
           recipientId: adminId,
           type: "success",
           title: "Cahier signe",
-          body: `Votre signature de « ${handbook.title} » est enregistree. Le PDF final est disponible.`,
+          body: t("hr_document_handbooks_votre_signature_de_p0_est_enregistree_le_pdf", { p0: handbook.title }),
           link: "/admin/mon-espace/documents",
           icon: "book-open-check",
         },

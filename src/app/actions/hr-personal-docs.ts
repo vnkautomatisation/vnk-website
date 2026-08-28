@@ -296,8 +296,8 @@ export async function verifyPersonalDocAction(
     type: "profile_updated" as SecurityEventType,
     severity: "info",
     message: parsed.data.verified
-      ? `Document personnel vérifié : ${doc.title}`
-      : `Vérification document retirée : ${doc.title}`,
+      ? t("hr_personal_docs_document_personnel_verifie_p0", { p0: doc.title })
+      : t("hr_personal_docs_verification_document_retiree_p0", { p0: doc.title }),
     metadata: { targetAdminId: doc.adminId, docId: parsed.data.id },
   }).catch(() => null);
 

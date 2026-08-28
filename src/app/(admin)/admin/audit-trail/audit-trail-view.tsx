@@ -85,7 +85,7 @@ const ANOMALY_META: Record<AnomalyFlag, { labelKey: string; icon: typeof Activit
   new_geo: { labelKey: "nouvelle_geo", icon: Globe, descriptionKey: "premiere_connexion_depuis_pays" },
 };
 
-function fmtRelative(iso: string, justNow: string): string {
+function fmtRelative(iso: string, justNow: string, tag: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
@@ -93,7 +93,7 @@ function fmtRelative(iso: string, justNow: string): string {
   if (min < 60) return `${min} min`;
   const h = Math.floor(min / 60);
   if (h < 24) return `${h} h`;
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
 // Présets Loi 25 / forensique
@@ -308,7 +308,7 @@ export function AuditTrailView({
     a.download = `audit-trail_${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`${filtered.length} événements exportés`);
+    toast.success(t("audit_trail_view_p0_evenements_exportes", { p0: filtered.length }));
   };
 
 
@@ -520,7 +520,7 @@ export function AuditTrailView({
               <Activity className="h-4 w-4" />
               {t("journal_apos_audit")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             {stats.bySeverity.critical > 0 && <span className="text-red-700">{t("critique")} <span className="font-semibold">{stats.bySeverity.critical}</span></span>}
             {stats.bySeverity.error > 0 && <span className="text-red-600">{t("erreurs")} <span className="font-semibold">{stats.bySeverity.error}</span></span>}
             {stats.anomaliesCount > 0 && <span className="text-amber-700">{t("anomalies")} <span className="font-semibold">{stats.anomaliesCount}</span></span>}
@@ -648,7 +648,7 @@ export function AuditTrailView({
                         </ActionTooltip>
                         <p className={cn("text-sm font-medium truncate", isHighSev && "text-red-700")}>{e.label}</p>
                       </div>
-                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{fmtRelative(e.createdAt, t("instant"))}</span>
+                      <span className="text-[10px] text-muted-foreground tabular-nums shrink-0">{fmtRelative(e.createdAt, t("instant"), dateTag)}</span>
                     </div>
 
 
@@ -687,7 +687,7 @@ export function AuditTrailView({
                       {e.country && (
                         <span className="inline-flex items-center gap-1"><Globe className="h-2.5 w-2.5" />{e.country}{e.city ? `, ${e.city}` : ""}</span>
                       )}
-                      <span className="inline-flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{new Date(e.createdAt).toLocaleString("fr-CA")}</span>
+                      <span className="inline-flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{new Date(e.createdAt).toLocaleString(dateTag)}</span>
                     </div>
                   </div>
                 </button>
@@ -701,7 +701,7 @@ export function AuditTrailView({
       {filtered.length >= limit && (
         <div className="text-center">
           <Button onClick={() => setLimit((l) => l + 300)} variant="outline" size="sm" disabled={loading}>
-            Charger les {Math.min(300, 1000 - limit)} suivants ({filtered.length} sur {limit} max)
+            {t("charger_suivants", { count: Math.min(300, 1000 - limit), shown: filtered.length, max: limit })}
           </Button>
         </div>
       )}

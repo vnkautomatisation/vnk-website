@@ -61,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // Détection paySLA : pour chaque demande approuvée payée, indique si on peut encore éditer
   const noteStubs = requests
     .filter((r) => r.status === "approved")
-    .map((r) => `[CONGÉ AUTO - LeaveRequest #${r.id}]`);
+    .map((r) => t("route_conge_auto_leaverequest_p0", { p0: r.id }));
   let lockedIds = new Set<number>();
   if (noteStubs.length > 0) {
     const paidClocks = await prisma.timeClock.findMany({

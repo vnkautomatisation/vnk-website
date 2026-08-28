@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -14,7 +15,8 @@ import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { SignatureDialog } from "@/components/signature/signature-dialog";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useConfirm } from "@/hooks/use-confirm";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type ContractFull = {
   id: number;
@@ -45,6 +47,7 @@ export function ContractDetailPanel({
   const t = useTranslations("admin.contracts");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
   const [contract, setContract] = useState<ContractFull | null>(null);
@@ -208,6 +211,8 @@ export function ContractDetailPanel({
 }
 
 function SigCard({ label, icon: Icon, signed, date, meta }: { label: string; icon: React.ComponentType<{ className?: string }>; signed: boolean; date: string | null; meta?: string }) {
+  const t = useTranslations("admin.contracts");
+  const tc = useTranslations("common");
   return (
     <div className={cn("p-4 rounded-lg border-2", signed ? "border-emerald-300 bg-emerald-50" : "border-dashed bg-muted/30")}>
       <div className="flex items-center gap-3">
@@ -217,7 +222,7 @@ function SigCard({ label, icon: Icon, signed, date, meta }: { label: string; ico
         <div className="flex-1">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
           <p className={cn("text-sm font-bold", signed ? "text-emerald-700" : "text-muted-foreground")}>
-            {signed ? `Signé le ${date ? formatDate(new Date(date)) : "?"}` : "Non signé"}
+            {signed ? t("contract_detail_panel_signe_le_p0", { p0: date ? formatDate(new Date(date)) : "?" }) : "Non signé"}
           </p>
           {meta && <p className="text-[10px] text-muted-foreground mt-0.5 font-mono">{meta}</p>}
         </div>

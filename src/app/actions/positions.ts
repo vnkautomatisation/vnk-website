@@ -63,7 +63,7 @@ export async function createPositionAction(input: z.infer<typeof createSchema>):
   });
 
   await logAudit({ adminId, action: "create", entityType: "position", entityId: created.id, changes: { after: parsed.data } });
-  await logSecurityEvent({ adminId, type: "position_created", message: `Poste créé : ${parsed.data.name}` });
+  await logSecurityEvent({ adminId, type: "position_created", message: t("positions_poste_cree_p0", { p0: parsed.data.name }) });
 
   revalidatePath("/admin/settings");
   return { success: true, data: { id: created.id } };
@@ -103,7 +103,7 @@ export async function updatePositionAction(input: z.infer<typeof updateSchema>):
   });
 
   await logAudit({ adminId, action: "update", entityType: "position", entityId: id, changes: { before, after: rest } });
-  await logSecurityEvent({ adminId, type: "position_updated", message: `Poste mis à jour : ${before.name}` });
+  await logSecurityEvent({ adminId, type: "position_updated", message: t("positions_poste_mis_a_jour_p0", { p0: before.name }) });
 
   revalidatePath("/admin/settings");
   return { success: true };
@@ -126,11 +126,11 @@ export async function deletePositionAction(input: z.infer<typeof deleteSchema>):
   });
   if (!position) return { success: false, error: "Poste introuvable" };
   if (position.isSystem) return { success: false, error: t("les_postes_systeme_ne_peuvent_etre_supprimes") };
-  if (position._count.admins > 0) return { success: false, error: `Ce poste est attribué à ${position._count.admins} utilisateur(s).` };
+  if (position._count.admins > 0) return { success: false, error: t("positions_ce_poste_est_attribue_a_p0_utilisateur_s", { p0: position._count.admins }) };
 
   await prisma.position.delete({ where: { id: parsed.data.id } });
   await logAudit({ adminId, action: "delete", entityType: "position", entityId: parsed.data.id });
-  await logSecurityEvent({ adminId, type: "position_deleted", message: `Poste supprimé : ${position.name}` });
+  await logSecurityEvent({ adminId, type: "position_deleted", message: t("positions_poste_supprime_p0", { p0: position.name }) });
 
   revalidatePath("/admin/settings");
   return { success: true };

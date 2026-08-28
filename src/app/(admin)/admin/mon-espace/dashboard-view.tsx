@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -134,6 +135,7 @@ export function MonEspaceDashboard({
   const t = useTranslations("admin.my_dashboard");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const totalActions =
     unsignedDocs.length + pendingContracts.length + expiringLicenses.length +
     expiringTrainings.length + (me.twoFactorEnabled ? 0 : 1) +
@@ -159,7 +161,7 @@ export function MonEspaceDashboard({
     const r = await clockInAction(jobCodeId ? { jobCodeId } : {});
     if (r.success) {
       const code = jobCodeId ? availableJobCodes.find((c) => c.id === jobCodeId)?.code : null;
-      toast.success(code ? `Pointage démarré · ${code}` : t("pointage_demarre"));
+      toast.success(code ? t("dashboard_view_pointage_demarre_p0", { p0: code }) : t("pointage_demarre"));
       setShowJobCodeDialog(false);
       router.refresh();
     } else {
@@ -168,7 +170,7 @@ export function MonEspaceDashboard({
   };
   const handleClockOut = async () => {
     const r = await clockOutAction();
-    if (r.success) { toast.success(`Pointage fermé · ${fmtHours(r.data.durationMin)}`); router.refresh(); }
+    if (r.success) { toast.success(t("dashboard_view_pointage_ferme_p0", { p0: fmtHours(r.data.durationMin) })); router.refresh(); }
     else toast.error(r.error || "");
   };
   const handlePause = async () => {
@@ -179,7 +181,7 @@ export function MonEspaceDashboard({
   const handleResume = async () => {
     const r = await resumeClockAction();
     if (r.success) {
-      toast.success(r.data.breakAddedMin > 0 ? `Reprise · pause de ${fmtHours(r.data.breakAddedMin)}` : t("reprise"));
+      toast.success(r.data.breakAddedMin > 0 ? t("dashboard_view_reprise_pause_de_p0", { p0: fmtHours(r.data.breakAddedMin) }) : t("reprise"));
       router.refresh();
     }
     else toast.error(r.error || "");
@@ -225,7 +227,7 @@ export function MonEspaceDashboard({
               )}
             </div>
             <div className="min-w-0">
-              <h1 className="text-lg font-bold truncate">Bonjour {me.fullName?.split(" ")[0] || me.email}</h1>
+              <h1 className="text-lg font-bold truncate">{t("bonjour_prenom", { prenom: me.fullName?.split(" ")[0] || me.email })}</h1>
               <div className="text-xs text-white/80 flex items-center gap-2 flex-wrap">
                 {me.position && <span>{me.position.name}</span>}
                 {me.team && <Badge variant="outline" className="bg-white/10 text-white border-white/30 text-[10px]">{me.team.name}</Badge>}
@@ -319,14 +321,14 @@ export function MonEspaceDashboard({
           <div className="p-4 space-y-2">
             <h2 className="font-bold text-sm flex items-center gap-2 text-amber-900">
               <AlertTriangle className="h-4 w-4" />
-              Actions requises ({totalActions})
+              {t("actions_requises", { count: totalActions })}
             </h2>
             <div className="space-y-1.5">
               {pendingUploadRequests.map((u) => (
                 <ActionRow
                   key={`u-${u.id}`}
                   icon={Upload}
-                  label={`Téléverser : ${u.title}${u.requestedBy ? ` (demandé par ${u.requestedBy.fullName ?? u.requestedBy.email})` : ""}`}
+                  label={t("dashboard_view_televerser_p0_p1", { p0: u.title, p1: u.requestedBy ? ` ${t("demande_par", { nom: u.requestedBy.fullName ?? u.requestedBy.email })}` : "" })}
                   href="/admin/mon-espace/documents"
                   cta={t("televerser")}
                   urgent={u.isRequired}
@@ -336,7 +338,7 @@ export function MonEspaceDashboard({
                 <ActionRow
                   key={`sr-${s.id}`}
                   icon={FileSignature}
-                  label={`Signer : ${s.template.title} (v${s.template.version})${s.targetAll ? t("tous_employes") : ""}`}
+                  label={`${t("signer_prefixe", { titre: s.template.title, version: s.template.version })}${s.targetAll ? t("tous_employes") : ""}`}
                   href="/admin/mon-espace/documents"
                   cta={t("signer")}
                   urgent={!!s.dueDate && new Date(s.dueDate).getTime() - Date.now() < 3 * 86400000}
@@ -364,7 +366,7 @@ export function MonEspaceDashboard({
                 <ActionRow
                   key={`d-${d.id}`}
                   icon={FileSignature}
-                  label={`Signer : ${d.title} (v${d.version})`}
+                  label={t("signer_prefixe", { titre: d.title, version: d.version })}
                   href="/admin/mon-espace/documents"
                   cta={t("lire_signer")}
                 />
@@ -373,7 +375,7 @@ export function MonEspaceDashboard({
                 <ActionRow
                   key={`l-${l.id}`}
                   icon={AlertTriangle}
-                  label={`Permis "${l.type}" expire le ${new Date(l.expiresAt).toLocaleDateString("fr-CA")}`}
+                  label={t("dashboard_view_permis_p0_expire_le_p1", { p0: l.type, p1: new Date(l.expiresAt).toLocaleDateString(dateTag) })}
                   href="/admin/mon-espace/formations"
                   cta={t("voir")}
                   urgent
@@ -383,7 +385,7 @@ export function MonEspaceDashboard({
                 <ActionRow
                   key={`t-${training.id}`}
                   icon={GraduationCap}
-                  label={`Formation "${training.title}" expire le ${new Date(training.expiresAt).toLocaleDateString("fr-CA")}`}
+                  label={t("dashboard_view_formation_p0_expire_le_p1", { p0: training.title, p1: new Date(training.expiresAt).toLocaleDateString(dateTag) })}
                   href="/admin/mon-espace/formations"
                   cta={t("voir")}
                 />
@@ -462,7 +464,7 @@ export function MonEspaceDashboard({
                     </div>
                     {n.body && <p className="text-[11px] text-muted-foreground line-clamp-2 mt-0.5">{n.body}</p>}
                     <p className="text-[10px] text-muted-foreground mt-1 tabular-nums">
-                      {new Date(n.createdAt).toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(n.createdAt).toLocaleString(dateTag, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                     </p>
                   </div>
                   {n.link && (
@@ -505,7 +507,7 @@ export function MonEspaceDashboard({
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-3 mb-1">{a.body}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {a.author?.fullName || a.author?.email || "VNK"} · {new Date(a.publishedAt).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
+                    {a.author?.fullName || a.author?.email || "VNK"} · {new Date(a.publishedAt).toLocaleDateString(dateTag, { day: "numeric", month: "short" })}
                   </p>
                 </article>
               ))
@@ -561,7 +563,7 @@ export function MonEspaceDashboard({
                   <div key={m.id} className="text-xs p-2 rounded-md bg-muted/40">
                     <p className="font-semibold">{other.fullName || other.email}</p>
                     <p className="text-muted-foreground">
-                      {new Date(m.scheduledAt).toLocaleString("fr-CA", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      {new Date(m.scheduledAt).toLocaleString(dateTag, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
                       {" · "}{m.durationMin} min
                     </p>
                   </div>
@@ -592,8 +594,8 @@ export function MonEspaceDashboard({
                   <div className="min-w-0 flex-1">
                     <p className="font-medium truncate">{b.fullName || b.email}</p>
                     <p className="text-muted-foreground">
-                      Le {new Date(b.nextBirthday).toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}
-                      {b.daysUntil === 0 ? t("aujourd_hui") : ` (dans ${b.daysUntil} j)`}
+                      Le {new Date(b.nextBirthday).toLocaleDateString(dateTag, { day: "numeric", month: "long" })}
+                      {b.daysUntil === 0 ? t("aujourd_hui") : t("dashboard_view_dans_p0_j", { p0: b.daysUntil })}
                       {" · "}aura {b.turningAge} ans
                     </p>
                   </div>
@@ -623,7 +625,7 @@ export function MonEspaceDashboard({
                   <div className="min-w-0">
                     <p className="font-mono font-semibold">{Number(s.netPay).toFixed(2)} $</p>
                     <p className="text-muted-foreground truncate">
-                      {new Date(s.period.startDate).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })} → {new Date(s.period.endDate).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}
+                      {new Date(s.period.startDate).toLocaleDateString(dateTag, { day: "numeric", month: "short" })} → {new Date(s.period.endDate).toLocaleDateString(dateTag, { day: "numeric", month: "short" })}
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
@@ -631,8 +633,8 @@ export function MonEspaceDashboard({
                       type="button"
                       onClick={() => setPdfPreview({
                         url: `/api/admin/pay-stubs/${s.id}/pdf`,
-                        title: `Bulletin de paie #${s.id}`,
-                        description: `${new Date(s.period.startDate).toLocaleDateString("fr-CA")} → ${new Date(s.period.endDate).toLocaleDateString("fr-CA")} · ${Number(s.netPay).toFixed(2)} $`,
+                        title: t("dashboard_view_bulletin_de_paie_p0", { p0: s.id }),
+                        description: `${new Date(s.period.startDate).toLocaleDateString(dateTag)} → ${new Date(s.period.endDate).toLocaleDateString(dateTag)} · ${Number(s.netPay).toFixed(2)} $`,
                         filename: `bulletin-paie-${s.id}.pdf`,
                       })}
                       className="text-[11px] font-semibold text-[#0F2D52] hover:underline flex items-center gap-0.5"

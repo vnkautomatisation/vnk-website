@@ -81,6 +81,8 @@ export async function POST(req: Request) {
     clientId,
     eventType: "project_request_received",
     eventLabel: `Nouvelle demande — ${title}`,
+    labelKey: "workflow_events.demande_nouvelle",
+    labelParams: { title },
     triggeredBy: session.user.role,
     metadata: { requestId: request.id, urgency: parsed.data.urgencyLevel },
   });

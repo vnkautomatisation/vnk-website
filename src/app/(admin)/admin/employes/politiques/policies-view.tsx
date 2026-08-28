@@ -8,6 +8,7 @@
 // MarkdownEditor + ActionTooltip + ConfirmDialog.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -64,11 +65,11 @@ type Policy = {
 type TabKey = "all" | "active" | "archived";
 
 // ---------- Helpers ----------------------------------------------
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 // ================================================================
@@ -82,9 +83,11 @@ export function PoliciesAdminView({
   activeAdminCount: number;
 }) {
   const t = useTranslations("admin.hr_nav");
+  const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<TabKey>("all");
   const [search, setSearch] = useState("");
+  const dateTag = useDateLocale();
   const [editDialog, setEditDialog] = useState<{ open: boolean; existing: Policy | null }>({
     open: false,
     existing: null,
@@ -182,7 +185,7 @@ export function PoliciesAdminView({
           value={kpis.active}
           icon={ShieldCheck}
           accent="success"
-          hint={`${activeAdminCount} employes concernes`}
+          hint={tc("employees_concerned", { count: activeAdminCount })}
           onClick={() => setTab("active")}
         />
         <DocumentStatsCard
@@ -285,7 +288,7 @@ export function PoliciesAdminView({
                   ? { label: t("active"), tone: "success" }
                   : { label: t("archivee"), tone: "neutral" }
               }
-              date={`En vigueur depuis ${formatDate(p.effectiveFrom)}`}
+              date={`En vigueur depuis ${formatDate(p.effectiveFrom, dateTag)}`}
               onPreview={() => setPreviewPolicy(p)}
               onEdit={() => setEditDialog({ open: true, existing: p })}
               onDelete={p.isActive ? () => setConfirmArchive(p) : undefined}
@@ -440,6 +443,7 @@ function PolicyPreviewDialog({
 }) {
   const t = useTranslations("admin.hr_nav");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   return (
     <Dialog open={!!policy} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[92vh] p-0 overflow-hidden flex flex-col">
@@ -453,7 +457,7 @@ function PolicyPreviewDialog({
               <span>v{policy?.version}</span>
               <span className="inline-flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
-                En vigueur depuis {formatDate(policy?.effectiveFrom)}
+                En vigueur depuis {formatDate(policy?.effectiveFrom, dateTag)}
               </span>
               {policy && (
                 <Badge

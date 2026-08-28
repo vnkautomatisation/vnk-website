@@ -317,7 +317,7 @@ export function InteractiveDocumentView({
                   disabled={disabled}
                   onChange={() => toggle(idx)}
                   className="h-4 w-4 rounded border-slate-400 accent-[#0F2D52] focus:ring-2 focus:ring-[#0F2D52]/30 shrink-0"
-                  aria-label={`Case à cocher ${idx + 1}`}
+                  aria-label={t("interactive_document_view_case_a_cocher_p0", { p0: idx + 1 })}
                 />
               </label>
             );
@@ -529,7 +529,7 @@ function ChapterAckBlock({
           disabled={disabled}
           onChange={(e) => update({ read: e.target.checked, initials })}
           className="h-4 w-4 mt-0.5 rounded border-slate-400 accent-[#0F2D52] shrink-0"
-          aria-label={`Confirmer la lecture du chapitre ${chapterIndex}`}
+          aria-label={t("interactive_document_view_confirmer_la_lecture_du_chapitre_p0", { p0: chapterIndex })}
         />
         <span className="text-sm text-slate-800">
           {t("j_apos_ai_lu_compris")}

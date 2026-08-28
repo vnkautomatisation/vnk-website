@@ -69,7 +69,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
       adminId,
       type: "login_failed",
       severity: "warning",
-      message: `Tentative de révélation des secrets ${provider} — échec ${methodLabel}`,
+      message: t("route_tentative_de_revelation_des_secrets_p0_echec_p1", { p0: provider, p1: methodLabel }),
       metadata: { provider, method: parsed.data.method },
     });
     return NextResponse.json({ error: t("code_invalide_ou_expire") }, { status: 401 });
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pro
     adminId,
     type: "data_export_ready",
     severity: "warning",
-    message: `Identifiants ${provider} révélés (méthode : ${methodLabel})`,
+    message: t("route_identifiants_p0_reveles_methode_p1", { p0: provider, p1: methodLabel }),
     metadata: { provider, method: parsed.data.method },
   });
 

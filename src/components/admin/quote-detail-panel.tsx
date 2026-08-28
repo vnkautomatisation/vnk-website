@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -13,7 +14,8 @@ import { DetailPanelBase, PanelEmptyState } from "@/components/admin/detail-pane
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useConfirm } from "@/hooks/use-confirm";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type QuoteFull = {
   id: number;
@@ -43,6 +45,7 @@ export function QuoteDetailPanel({
   const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
   const [quote, setQuote] = useState<QuoteFull | null>(null);
@@ -71,7 +74,7 @@ export function QuoteDetailPanel({
     if (!quote) return;
     const ok = await confirm({
       title: t("accepter_devis"),
-      description: `Le devis ${quote.quoteNumber} sera marqué comme accepté et un contrat sera généré.`,
+      description: t("quote_detail_panel_le_devis_p0_sera_marque_comme_accepte_et", { p0: quote.quoteNumber }),
       confirmLabel: t("accepter"),
     });
     if (!ok) return;

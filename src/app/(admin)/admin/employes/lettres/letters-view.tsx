@@ -7,6 +7,7 @@
 // PdfPreviewModal + ActionTooltip + ConfirmDialog.
 // =============================================================
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -86,11 +87,11 @@ const STATUS_KEY: Record<string, string> = {
 };
 
 // ---------- Helpers ---------------------------------------------
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function daysBetween(iso: string | null | undefined): number | null {
@@ -294,7 +295,7 @@ export function LettersView({ requests }: { requests: Req[] }) {
           value={kpis.issuedThisMonth}
           icon={CheckCircle2}
           accent="success"
-          hint={`${kpis.issued} emises au total`}
+          hint={t("emises_au_total", { count: kpis.issued })}
           onClick={() => setTab("issued")}
         />
         <DocumentStatsCard
@@ -493,6 +494,7 @@ function LetterRequestCard({
   onDetails: () => void;
 }) {
   const t = useTranslations("admin.letters");
+  const dateTag = useDateLocale();
   const pending = req.status === "pending";
   const issued = req.status === "issued";
   const rejected = req.status === "rejected";
@@ -580,12 +582,12 @@ function LetterRequestCard({
           <div className="flex items-center gap-3 text-[11px] text-muted-foreground">
             <span className="inline-flex items-center gap-1">
               <Calendar className="h-3 w-3" />
-              Demande {formatDate(req.createdAt)}
+              Demande {formatDate(req.createdAt, dateTag)}
             </span>
             {issued && req.issuedAt && (
               <span className="inline-flex items-center gap-1 text-emerald-700">
                 <CheckCircle2 className="h-3 w-3" />
-                Emise {formatDate(req.issuedAt)}
+                Emise {formatDate(req.issuedAt, dateTag)}
               </span>
             )}
             {pending && ageDays !== null && (
@@ -686,6 +688,7 @@ function RequestDetailDialog({
 }) {
   const t = useTranslations("admin.letters");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   if (!req) return null;
   const issued = req.status === "issued";
   const pending = req.status === "pending";
@@ -758,14 +761,14 @@ function RequestDetailDialog({
                 <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                   {t("demande")}
                 </p>
-                <p className="font-medium mt-0.5">{formatDate(req.createdAt)}</p>
+                <p className="font-medium mt-0.5">{formatDate(req.createdAt, dateTag)}</p>
               </div>
               {req.issuedAt && (
                 <div>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
                     {rejected ? t("refusee") : t("emise")}
                   </p>
-                  <p className="font-medium mt-0.5">{formatDate(req.issuedAt)}</p>
+                  <p className="font-medium mt-0.5">{formatDate(req.issuedAt, dateTag)}</p>
                 </div>
               )}
             </div>

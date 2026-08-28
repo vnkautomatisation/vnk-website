@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -29,7 +30,8 @@ import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { FormSection } from "@/components/admin/client-form-fields";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Invoice = {
   id: number;
@@ -128,6 +130,7 @@ export function InvoicesView({
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const formatCurrency = useCurrency();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("invoices", "list");
@@ -322,7 +325,7 @@ export function InvoicesView({
         body: JSON.stringify({ paymentMethod: paidMethod, note: paidNote.trim() || undefined }),
       });
       if (res.ok) {
-        toast.success(`Facture ${paidDialog.invoiceNumber} marquée payée`);
+        toast.success(t("invoices_view_facture_p0_marquee_payee", { p0: paidDialog.invoiceNumber }));
         setPaidDialog(null);
         router.refresh();
       } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
@@ -331,7 +334,7 @@ export function InvoicesView({
 
   const handleSetStatus = async (inv: Invoice, status: string, label: string) => {
     const ok = await confirm({
-      title: `${label} cette facture ?`,
+      title: t("invoices_view_p0_cette_facture", { p0: label }),
       description: t("passera_statut", { number: inv.invoiceNumber, status: status === "cancelled" ? t("annulee") : status === "overdue" ? t("retard") : status === "unpaid" ? t("non_payee") : status }),
       confirmLabel: label,
       variant: status === "cancelled" ? "destructive" : "default",
@@ -349,14 +352,14 @@ export function InvoicesView({
   const handleSendToClient = async (inv: Invoice) => {
     const ok = await confirm({
       title: t("envoyer_facture_client"),
-      description: `La facture ${inv.invoiceNumber} sera ajoutée dans la catégorie t("factures") du portail + message chat + notification.`,
+      description: t("invoices_view_la_facture_p0_sera_ajoutee_dans_la_categorie", { p0: inv.invoiceNumber }),
       confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/invoices/${inv.id}/send`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
-      toast.success(`Facture envoyée à ${data.clientName ?? inv.clientName} (portail + chat + notification)`);
+      toast.success(t("invoices_view_facture_envoyee_a_p0_portail_chat_notification", { p0: data.clientName ?? inv.clientName }));
       router.refresh();
     } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
@@ -364,7 +367,7 @@ export function InvoicesView({
   const handleSendReminder = async (inv: Invoice) => {
     const ok = await confirm({
       title: t("envoyer_rappel_paiement"),
-      description: `Un message de relance sera envoyé à ${inv.clientName} pour la facture ${inv.invoiceNumber}.`,
+      description: t("invoices_view_un_message_de_relance_sera_envoye_a_p0", { p0: inv.clientName, p1: inv.invoiceNumber }),
       confirmLabel: t("envoyer_rappel"),
     });
     if (!ok) return;
@@ -377,7 +380,7 @@ export function InvoicesView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} facture(s) ?`,
+      title: tc("confirm_delete_invoices", { count: selectedIds.size }),
       description: t("factures_payees_liees_paiements_refusees"),
       confirmLabel: t("supprimer_tous"),
       variant: "destructive",
@@ -388,7 +391,7 @@ export function InvoicesView({
       const res = await fetch(`/api/invoices/${id}`, { method: "DELETE" });
       if (res.ok) success++; else if (res.status === 409) blocked++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimée(s)${blocked > 0 ? ` · ${blocked} bloquée(s)` : ""}`);
+    toast.success(t("invoices_view_p0_p1_supprimee_s_p2", { p0: success, p1: selectedIds.size, p2: blocked > 0 ? tc("blocked_count_f", { count: blocked }) : "" }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -477,7 +480,7 @@ export function InvoicesView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.invoiceNumber}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("invoices_view_selectionner_p0", { p0: r.invoiceNumber })} />
       ),
     },
     { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.invoiceNumber}</span>, sortable: true, sortBy: (r) => r.invoiceNumber },
@@ -501,7 +504,7 @@ export function InvoicesView({
       ),
       sortable: true, sortBy: (r) => r.title, hiddenOnMobile: true,
     },
-    { key: "ttc", header: "TTC", accessor: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
+    { key: "ttc", header: t("ttc"), accessor: (r) => <span className="font-semibold tabular-nums">{formatCurrency(r.amountTtc)}</span>, sortable: true, sortBy: (r) => r.amountTtc },
     { key: "status", header: t("statut"), accessor: (r) => <StatusBadge status={r.status} /> },
     { key: "due", header: t("echeance"), accessor: (r) => r.dueDate ? formatDate(new Date(r.dueDate)) : "—", sortable: true, sortBy: (r) => r.dueDate ?? "", hiddenOnMobile: true },
     { key: "paid", header: t("paye_le"), accessor: (r) => r.paidAt ? formatDate(new Date(r.paidAt)) : "—", hiddenOnMobile: true },
@@ -566,8 +569,8 @@ export function InvoicesView({
 
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard label={t("total_impaye")} value={formatCurrency(kpis.unpaidTotal)} icon={Clock} accent="bg-amber-500" deltaLabel={`${kpis.unpaidCount} facture${kpis.unpaidCount > 1 ? "s" : ""}`} />
-        <StatCard label={t("retard")} value={formatCurrency(kpis.overdueTotal)} icon={AlertTriangle} accent="bg-red-500" deltaLabel={`${kpis.overdueCount} facture${kpis.overdueCount > 1 ? "s" : ""}`} />
+        <StatCard label={t("total_impaye")} value={formatCurrency(kpis.unpaidTotal)} icon={Clock} accent="bg-amber-500" deltaLabel={t("n_factures", { count: kpis.unpaidCount })} />
+        <StatCard label={t("retard")} value={formatCurrency(kpis.overdueTotal)} icon={AlertTriangle} accent="bg-red-500" deltaLabel={t("n_factures", { count: kpis.overdueCount })} />
         <StatCard label={t("encaisse_mois")} value={formatCurrency(kpis.paidThisMonth)} icon={CheckCircle2} accent="bg-emerald-500" />
         <StatCard label={t("total_factures")} value={invoices.length} icon={Receipt} accent="bg-blue-500" />
       </div>
@@ -584,7 +587,7 @@ export function InvoicesView({
               <Receipt className="h-4 w-4" />
               {t("factures")}
             </span>
-            <span className="font-semibold">{filtered.length} affichées</span>
+            <span className="font-semibold">{tc("shown_f", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("impaye")} <span className="font-semibold text-amber-600">{formatCurrency(kpis.unpaidTotal)}</span></span>
             <span className="text-muted-foreground">{t("retard")} <span className="font-semibold text-red-600">{formatCurrency(kpis.overdueTotal)}</span></span>
             <span className="ml-auto text-muted-foreground">{t("encaisse_mois")} <span className="font-semibold text-emerald-600">{formatCurrency(kpis.paidThisMonth)}</span></span>
@@ -669,7 +672,7 @@ export function InvoicesView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionnée(s)</span>
+            <span className="text-sm font-medium">{tc("selected_f", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -695,13 +698,13 @@ export function InvoicesView({
               badges={[
                 { label: inv.status === "unpaid" ? t("non_payee") : inv.status === "overdue" ? t("retard") : inv.status === "paid" ? t("payee_statut") : inv.status === "cancelled" ? t("annulee") : inv.status, variant: inv.status === "paid" ? "secondary" : inv.status === "overdue" ? "destructive" : "outline" },
               ]}
-              stats={[{ label: "TTC", value: formatCurrency(inv.amountTtc) }]}
+              stats={[{ label: t("ttc"), value: formatCurrency(inv.amountTtc) }]}
               actions={getActions(inv)}
               onClick={() => setPdfInvoice(inv)}
               footer={
                 <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                   <span>{formatCurrency(inv.amountHt)} HT</span>
-                  <span>{inv.dueDate ? `Échéance ${formatDate(new Date(inv.dueDate))}` : t("pas_echeance")}</span>
+                  <span>{inv.dueDate ? t("invoices_view_echeance_p0", { p0: formatDate(new Date(inv.dueDate)) }) : t("pas_echeance")}</span>
                 </div>
               }
             />
@@ -779,7 +782,7 @@ export function InvoicesView({
         open={!!deleteInvoice}
         onOpenChange={(o) => { if (!o) setDeleteInvoice(null); }}
         title={t("supprimer_facture")}
-        description={`La facture "${deleteInvoice?.invoiceNumber}" sera supprimée définitivement.`}
+        description={t("invoices_view_la_facture_p0_sera_supprimee_definitivement", { p0: (deleteInvoice?.invoiceNumber ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -876,6 +879,7 @@ function InvoiceFormDialog({
 }) {
   const t = useTranslations("admin.invoices");
   const tc = useTranslations("common");
+  const formatCurrency = useCurrency();
   const isCreate = mode === "create";
   const amountNum = Number(values.amount) || 0;
   const tps = amountNum * 0.05;

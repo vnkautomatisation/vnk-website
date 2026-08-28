@@ -4,6 +4,7 @@
 // Plus de cards multi-couleurs, tableaux pour les listes, actions inline partout.
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale, useWeekdayNames } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -165,11 +166,11 @@ const STATUS_META: Record<string, { labelKey: string; cls: string }> = {
   cancelled: { labelKey: "status_cancelled",   cls: "bg-slate-100 text-slate-700 border border-slate-200" },
 };
 
-function fmtDate(s: string): string {
-  return new Date(s).toLocaleDateString("fr-CA", { day: "2-digit", month: "short" });
+function fmtDate(s: string, tag: string): string {
+  return new Date(s).toLocaleDateString(tag, { day: "2-digit", month: "short" });
 }
-function fmtDateLong(s: string): string {
-  return new Date(s).toLocaleDateString("fr-CA", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+function fmtDateLong(s: string, tag: string): string {
+  return new Date(s).toLocaleDateString(tag, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 }
 function isoDay(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -262,7 +263,7 @@ export function LeavesAdminView({
             <div className="min-w-0">
               <h1 className="text-lg font-bold flex items-center gap-2">{t("gestion_conges")}</h1>
               <p className="text-xs text-white/80">
-                Vue d&apos;ensemble equipe ·{" "}
+                {t("vue_ensemble_equipe")} ·{" "}
                 {scope.isFounder
                   ? t("tous_employes")
                   : scope.isHr
@@ -289,7 +290,7 @@ export function LeavesAdminView({
                   className="hidden md:inline-flex h-8 text-xs bg-white/15 hover:bg-white/25 text-white border-white/20"
                   onClick={() => setClosureOpen(true)}
                 >
-                  <Building2 className="h-3.5 w-3.5 mr-1.5" />Fermeture
+                  <Building2 className="h-3.5 w-3.5 mr-1.5" />{t("fermeture")}
                 </Button>
               </ActionTooltip>
             )}
@@ -314,7 +315,7 @@ export function LeavesAdminView({
                 </DropdownMenuItem>
                 {isReviewer && (
                   <DropdownMenuItem className="md:hidden" onClick={() => setClosureOpen(true)}>
-                    <Building2 className="h-3.5 w-3.5 mr-2" />Fermeture entreprise
+                    <Building2 className="h-3.5 w-3.5 mr-2" />{t("fermeture")} entreprise
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
@@ -405,7 +406,7 @@ export function LeavesAdminView({
                 </DropdownMenuItem>
                 {isReviewer && (
                   <DropdownMenuItem onClick={() => setClosureOpen(true)}>
-                    <Building2 className="h-3.5 w-3.5 mr-2" />Fermeture entreprise
+                    <Building2 className="h-3.5 w-3.5 mr-2" />{t("fermeture")} entreprise
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem asChild>
@@ -537,8 +538,8 @@ export function LeavesAdminView({
             });
             if (r.success) {
               toast.success(r.data.status === "approved"
-                ? `Conge cree et approuve pour ${createForEmp.fullName || createForEmp.email}`
-                : `Demande creee pour ${createForEmp.fullName || createForEmp.email} (en attente)`);
+                ? t("leaves_admin_view_conge_cree_et_approuve_pour_p0", { p0: createForEmp.fullName || createForEmp.email })
+                : t("leaves_admin_view_demande_creee_pour_p0_en_attente", { p0: createForEmp.fullName || createForEmp.email }));
               if (r.data.warning) toast.warning(r.data.warning);
               setCreateForEmp(null);
               setCreateForOpen(false);
@@ -836,6 +837,7 @@ function OverviewTab({
 }) {
   const t = useTranslations("admin.leaves");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   const absentTodayRatio = kpis.activeScopeCount > 0
     ? Math.round((kpis.absentToday / kpis.activeScopeCount) * 100)
     : 0;
@@ -859,7 +861,7 @@ function OverviewTab({
           label={t("absents_aujourd_hui")}
           value={`${kpis.absentToday}${kpis.activeScopeCount > 0 ? ` / ${kpis.activeScopeCount}` : ""}`}
           tone={absentTodayRatio > 30 ? "danger" : "neutral"}
-          sub={`${absentTodayRatio}% du scope`}
+          sub={t("leaves_admin_view_p0_du_scope", { p0: absentTodayRatio })}
         />
         <ExecKpi
           icon={CalendarDays}
@@ -957,7 +959,7 @@ function OverviewTab({
                     </div>
                     <p className="text-[11px] text-muted-foreground mt-0.5">
                       Clôture le{" "}
-                      <strong className="text-foreground tabular-nums">{new Date(w.closingDate).toLocaleDateString("fr-CA")}</strong>
+                      <strong className="text-foreground tabular-nums">{new Date(w.closingDate).toLocaleDateString(dateTag)}</strong>
                     </p>
                   </div>
                   <ActionTooltip label={t("voir_preferences_soumises_actions")}>
@@ -978,7 +980,7 @@ function OverviewTab({
       <Card className="overflow-hidden">
         <div className="px-4 py-3 border-b bg-muted/30 flex items-center justify-between">
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
-            <CalendarDays className="h-4 w-4" />Prochaines absences (30 jours)
+            <CalendarDays className="h-4 w-4" />{t("prochaines_absences_30_jours")}
           </h3>
           <button type="button" onClick={onJumpCalendar} className="text-xs text-[#0F2D52] hover:underline flex items-center gap-1">
             {t("voir_calendrier")} <ExternalLink className="h-3 w-3" />
@@ -1013,7 +1015,7 @@ function OverviewTab({
                 return (
                   <tr key={l.id} className="hover:bg-muted/20">
                     <td className="px-4 py-2 text-xs tabular-nums">
-                      {sameDay ? fmtDateLong(l.startDate) : `${fmtDate(l.startDate)} → ${fmtDate(l.endDate)}`}
+                      {sameDay ? fmtDateLong(l.startDate, dateTag) : `${fmtDate(l.startDate, dateTag)} → ${fmtDate(l.endDate, dateTag)}`}
                     </td>
                     <td className="px-4 py-2">
                       <button
@@ -1059,7 +1061,7 @@ function OverviewTab({
           <h3 className="text-sm font-semibold flex items-center gap-2 text-[#0F2D52]">
             <CalendarRange className="h-4 w-4" />{t("leaves_admin_view_densite_d_absents_4_semaines")}</h3>
           <button type="button" onClick={onJumpCalendar} className="text-xs text-[#0F2D52] hover:underline flex items-center gap-1">
-            Vue complete <ExternalLink className="h-3 w-3" />
+            {t("vue_complete")} <ExternalLink className="h-3 w-3" />
           </button>
         </div>
         <Heatmap days={heatmapDays} onClickDay={() => onJumpCalendar()} />
@@ -1125,6 +1127,7 @@ function ExecKpi({
 // ─── Heatmap mensuelle compacte ──────────────────────────────────
 function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date: string) => void }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   if (days.length === 0) {
     return <div className="p-6 text-center text-xs text-muted-foreground">{t("aucune_donnee")}</div>;
   }
@@ -1152,7 +1155,7 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
   }
 
   const maxCount = Math.max(1, ...days.map((d) => d.count));
-  const dowLabels = ["D", "L", "M", "M", "J", "V", "S"]; // dimanche-first
+  const dowLabels = useWeekdayNames("narrow"); // dimanche-first, via Intl
   const todayKey = isoDay(new Date());
 
 
@@ -1185,7 +1188,7 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
               return (
                 <ActionTooltip
                   key={`${wi}-${di}`}
-                  label={`${new Date(d.date).toLocaleDateString("fr-CA", { weekday: "long", day: "2-digit", month: "short" })} — ${d.count} absent${d.count > 1 ? "s" : ""}`}
+                  label={`${new Date(d.date).toLocaleDateString(dateTag, { weekday: "long", day: "2-digit", month: "short" })} — ${d.count} absent${d.count > 1 ? "s" : ""}`}
                 >
                   <button
                     type="button"
@@ -1216,13 +1219,13 @@ function Heatmap({ days, onClickDay }: { days: HeatmapDay[]; onClickDay?: (date:
       <div className="mt-2 flex items-center gap-2 justify-end text-[9px] text-muted-foreground">
         <span>{t("densite")}</span>
         <span className="flex items-center gap-1">
-          <span className="rounded-full bg-[#0F2D52]" style={{ width: 4, height: 3 }} />faible
+          <span className="rounded-full bg-[#0F2D52]" style={{ width: 4, height: 3 }} />{t("densite_faible")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="rounded-full bg-[#0F2D52]" style={{ width: 6, height: 3 }} />moy
+          <span className="rounded-full bg-[#0F2D52]" style={{ width: 6, height: 3 }} />{t("densite_moy")}
         </span>
         <span className="flex items-center gap-1">
-          <span className="rounded-full bg-[#0F2D52]" style={{ width: 8, height: 3 }} />haute
+          <span className="rounded-full bg-[#0F2D52]" style={{ width: 8, height: 3 }} />{t("densite_haute")}
         </span>
       </div>
     </div>
@@ -1478,6 +1481,7 @@ function PendingRow({
   onOpenDrill?: () => void;
 }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   const meta = typeMeta(request.type);
   const Icon = meta.icon;
   const halfLabel = request.halfDay === "AM" ? t("1_2_matin") : request.halfDay === "PM" ? t("1_2_apres_midi") : null;
@@ -1522,8 +1526,8 @@ function PendingRow({
           </div>
           <p className="text-xs text-muted-foreground mt-0.5">
             {sameDay
-              ? <>{t("le")} <strong className="text-foreground">{fmtDateLong(request.startDate)}</strong></>
-              : <>{t("du")} <strong className="text-foreground">{fmtDate(request.startDate)}</strong> au <strong className="text-foreground">{fmtDate(request.endDate)}</strong></>
+              ? <>{t("le")} <strong className="text-foreground">{fmtDateLong(request.startDate, dateTag)}</strong></>
+              : <>{t("du")} <strong className="text-foreground">{fmtDate(request.startDate, dateTag)}</strong> au <strong className="text-foreground">{fmtDate(request.endDate, dateTag)}</strong></>
             }
             {" · "}
             <strong className="tabular-nums text-foreground">{Number(request.daysCount)}</strong> jour{Number(request.daysCount) > 1 ? "s" : ""}
@@ -1575,6 +1579,8 @@ function CalendarTab({
   onClickEmptyCell: (empId: number, dateIso: string) => void;
 }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
+  const dowNarrow = useWeekdayNames("narrow");
   const today = useMemo(() => { const d = new Date(nowIso); d.setHours(0, 0, 0, 0); return d; }, [nowIso]);
   const [offset, setOffset] = useState(0); // jours d'offset
   const [filterType, setFilterType] = useState<string>("all");
@@ -1646,7 +1652,7 @@ function CalendarTab({
     });
   }, [days, filteredLeaves]);
 
-  const periodLabel = `${startDate.toLocaleDateString("fr-CA", { day: "2-digit", month: "short" })} → ${days[days.length - 1].toLocaleDateString("fr-CA", { day: "2-digit", month: "short", year: "numeric" })}`;
+  const periodLabel = `${startDate.toLocaleDateString(dateTag, { day: "2-digit", month: "short" })} → ${days[days.length - 1].toLocaleDateString(dateTag, { day: "2-digit", month: "short", year: "numeric" })}`;
 
   return (
     <div className="space-y-3">
@@ -1730,12 +1736,12 @@ function CalendarTab({
               const isMonday = d.getDay() === 1;
               const count = dayCounts[i];
               const highRatio = visibleEmployees.length > 0 && count / visibleEmployees.length > 0.3;
-              const dayLetter = ["D", "L", "M", "M", "J", "V", "S"][d.getDay()];
+              const dayLetter = dowNarrow[d.getDay()];
 
               let headerBg = "bg-muted/30";
               if (isWeekend) headerBg = "bg-slate-100 text-slate-500";
               return (
-                <ActionTooltip key={i} label={`${d.toLocaleDateString("fr-CA", { weekday: "long", day: "2-digit", month: "short" })} — ${count} absent${count > 1 ? "s" : ""}`}>
+                <ActionTooltip key={i} label={`${d.toLocaleDateString(dateTag, { weekday: "long", day: "2-digit", month: "short" })} — ${count} absent${count > 1 ? "s" : ""}`}>
                   <div className={`px-0.5 py-1.5 text-center border-b border-r ${headerBg} ${isToday ? "ring-1 ring-[#0F2D52] ring-inset" : ""} ${isMonday && !isToday ? "border-l-2 border-l-[#0F2D52]/30" : ""}`}>
                     <div className={`text-[10px] tabular-nums font-semibold ${isToday ? "text-[#0F2D52]" : ""}`}>{d.getDate()}</div>
                     <div className="text-[8px] uppercase tracking-wider opacity-70 leading-none">{dayLetter}</div>
@@ -1802,6 +1808,7 @@ function GanttRow({
   onClickEmptyCell: (empId: number, dateIso: string) => void;
 }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   return (
     <>
       <div className="px-3 py-2 text-xs border-r border-b bg-background sticky left-0 z-10 truncate flex items-center gap-2">
@@ -1833,8 +1840,8 @@ function GanttRow({
         const isStart = leaveOnDay && dIso === leaveOnDay.startDate.slice(0, 10);
 
         const tooltipLabel = leaveOnDay && meta
-          ? `${t(meta.labelKey)} : ${fmtDate(leaveOnDay.startDate)} → ${fmtDate(leaveOnDay.endDate)}${leaveOnDay.halfDay ? ` (½ ${leaveOnDay.halfDay})` : ""} — Cliquer pour détails`
-          : `Cliquer pour créer un congé le ${d.toLocaleDateString("fr-CA", { weekday: "long", day: "2-digit", month: "short" })}`;
+          ? t("leaves_admin_view_p0_p1_p2_p3_cliquer_pour_details", { p0: t(meta.labelKey), p1: fmtDate(leaveOnDay.startDate, dateTag), p2: fmtDate(leaveOnDay.endDate, dateTag), p3: leaveOnDay.halfDay ? ` (½ ${leaveOnDay.halfDay})` : "" })
+          : t("leaves_admin_view_cliquer_pour_creer_un_conge_le_p0", { p0: d.toLocaleDateString(dateTag, { weekday: "long", day: "2-digit", month: "short" }) });
 
 
         let cellStyle: React.CSSProperties = {};
@@ -1887,6 +1894,7 @@ function ByEmployeeTab({
   const [filterPending, setFilterPending] = useState(false);
   const [filterLowBalance, setFilterLowBalance] = useState(false);
   const [page, setPage] = useState(1);
+  const dateTag = useDateLocale();
   const pageSize = 25;
 
   const teams = useMemo(() => {
@@ -2045,7 +2053,7 @@ function ByEmployeeTab({
                           {STATUS_META[emp.lastRequest.status] ? t(STATUS_META[emp.lastRequest.status].labelKey) : emp.lastRequest.status}
                         </span>
                         <span className="text-muted-foreground ml-1">
-                          {t(typeMeta(emp.lastRequest.type).labelKey)} · {fmtDate(emp.lastRequest.startDate)}
+                          {t(typeMeta(emp.lastRequest.type).labelKey)} · {fmtDate(emp.lastRequest.startDate, dateTag)}
                         </span>
                       </div>
                     ) : (
@@ -2546,6 +2554,7 @@ function WindowAppealsDialog({
   const [appeals, setAppeals] = useState<AppealItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewTarget, setReviewTarget] = useState<AppealItem | null>(null);
+  const dateTag = useDateLocale();
 
   const load = React.useCallback(() => {
     setLoading(true);
@@ -2621,7 +2630,7 @@ function WindowAppealsDialog({
                           </span>
                         </div>
                         <p className="text-[11px] text-muted-foreground mt-0.5 tabular-nums">
-                          {new Date(a.startDate).toLocaleDateString("fr-CA")} → {new Date(a.endDate).toLocaleDateString("fr-CA")} ({a.daysCount}j)
+                          {new Date(a.startDate).toLocaleDateString(dateTag)} → {new Date(a.endDate).toLocaleDateString(dateTag)} ({a.daysCount}j)
                         </p>
                       </div>
                       {a.appealStatus === "pending" && (
@@ -2664,7 +2673,7 @@ function WindowAppealsDialog({
             preferenceId: reviewTarget.preferenceId,
             employeeName: reviewTarget.employee?.fullName || reviewTarget.employee?.email || t("employe"),
             reason: reviewTarget.appealReason || t("aucun_motif_fourni"),
-            prefDetails: `Rang #${reviewTarget.rank} (${reviewTarget.preferenceStatus}) — ${new Date(reviewTarget.startDate).toLocaleDateString("fr-CA")} → ${new Date(reviewTarget.endDate).toLocaleDateString("fr-CA")} (${reviewTarget.daysCount}j)`,
+            prefDetails: `Rang #${reviewTarget.rank} (${reviewTarget.preferenceStatus}) — ${new Date(reviewTarget.startDate).toLocaleDateString(dateTag)} → ${new Date(reviewTarget.endDate).toLocaleDateString(dateTag)} (${reviewTarget.daysCount}j)`,
           }}
           onReviewed={() => {
             setReviewTarget(null);
@@ -2712,6 +2721,7 @@ function TeamOverviewDialog({ onClose }: { onClose: () => void }) {
 // Lien direct vers la fenêtre concernée pour agir immédiatement.
 function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWindow[] }) {
   const t = useTranslations("admin.leaves");
+  const dateTag = useDateLocale();
   const windowsWithSubs = activeWindows.filter((w) => w.submittedAdmins > 0);
   if (windowsWithSubs.length === 0) return null;
   const totalSubs = windowsWithSubs.reduce((s, w) => s + w.submittedAdmins, 0);
@@ -2744,7 +2754,7 @@ function PendingPreferencesBanner({ activeWindows }: { activeWindows: ActiveWind
                 <CheckCircle2 className="h-2.5 w-2.5" />{w.submittedAdmins} soumis
               </span>
               <span className="text-muted-foreground">
-                Clôture {new Date(w.closingDate).toLocaleDateString("fr-CA")}
+                Clôture {new Date(w.closingDate).toLocaleDateString(dateTag)}
               </span>
             </div>
             <Link

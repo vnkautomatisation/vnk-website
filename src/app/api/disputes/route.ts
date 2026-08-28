@@ -95,6 +95,8 @@ export async function POST(req: Request) {
     clientId: dispute.clientId,
     eventType: "dispute_opened",
     eventLabel: `Litige ouvert : ${dispute.title}`,
+    labelKey: "workflow_events.litige_ouvert",
+    labelParams: { title: dispute.title },
     triggeredBy: "admin",
     metadata: { disputeId: dispute.id, type: dispute.type },
   });

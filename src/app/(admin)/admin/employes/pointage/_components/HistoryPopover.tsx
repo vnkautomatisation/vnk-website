@@ -1,6 +1,7 @@
 "use client";
 import { History, CheckCircle2, XCircle, Pencil, RotateCcw, Lock } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { HistoryEvent } from "../_types";
@@ -18,6 +19,7 @@ const HISTORY_EVENT_CONFIG: Record<string, { icon: typeof History; labelKey: str
 // No ActionTooltip: its asChild trigger nested in PopoverTrigger eats the click.
 export function HistoryPopover({ history }: { history: HistoryEvent[] | undefined }) {
   const t = useTranslations("admin.timeclock");
+  const dateTag = useDateLocale();
   const events = (history ?? []).slice(0, 5);
   return (
     <Popover>
@@ -41,7 +43,7 @@ export function HistoryPopover({ history }: { history: HistoryEvent[] | undefine
           <ul className="space-y-1.5">
             {events.map((ev) => {
               const date = new Date(ev.createdAt);
-              const dateStr = date.toLocaleDateString("fr-CA", { day: "numeric", month: "short" });
+              const dateStr = date.toLocaleDateString(dateTag, { day: "numeric", month: "short" });
               const actorName = ev.actor?.fullName || ev.actor?.email || `Admin#${ev.actor?.id ?? "?"}`;
               const cfg = HISTORY_EVENT_CONFIG[ev.event] ?? { icon: History, label: ev.event, color: "text-muted-foreground" };
               const Icon = cfg.icon;

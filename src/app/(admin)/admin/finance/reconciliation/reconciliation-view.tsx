@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -15,7 +16,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { DataTable, type Column } from "@/components/data-table/data-table";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 import {
   Select,
   SelectContent,
@@ -77,6 +79,7 @@ export function ReconciliationView({
   const [dateTo, setDateTo] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
+  const formatCurrency = useCurrency();
 
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -138,7 +141,7 @@ export function ReconciliationView({
         throw new Error(err.error || t("erreur"));
       }
       const data = await res.json();
-      toast.success(`${data.count} paiement(s) confirmé(s) reçu(s)`);
+      toast.success(t("reconciliation_view_p0_paiement_s_confirme_s_recu_s", { p0: data.count }));
       setSelectedIds(new Set());
       router.refresh();
     } catch (err) {
@@ -150,7 +153,7 @@ export function ReconciliationView({
 
   const reconcileAll = async () => {
     if (filtered.length === 0) return;
-    if (!confirm(`Confirmer la réception de ${filtered.length} paiement(s) ?`)) return;
+    if (!confirm(t("reconciliation_view_confirmer_la_reception_de_p0_paiement_s", { p0: filtered.length }))) return;
     setSelectedIds(new Set(filtered.map((p) => p.id)));
 
     setTimeout(reconcileSelected, 100);
@@ -305,7 +308,7 @@ export function ReconciliationView({
               <CheckCircle2 className="h-4 w-4" />
               {t("confirmation_banque")}
             </span>
-            <span className="font-semibold text-[#0F2D52]">{filtered.length} à vérifier</span>
+            <span className="font-semibold text-[#0F2D52]">{t("a_verifier", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("attente")} <span className="font-bold text-[#0F2D52]">{formatCurrency(totalPending)}</span></span>
             {selectedIds.size > 0 && (
               <span className="text-muted-foreground">{t("sel")} <span className="font-bold text-emerald-600">{selectedIds.size}</span></span>
@@ -355,7 +358,7 @@ export function ReconciliationView({
       {selectedIds.size > 0 && (
         <div className="sticky top-[64px] z-[25] bg-[#0F2D52] text-white rounded-lg p-2.5 flex items-center gap-2 flex-wrap shadow-lg">
           <span className="text-sm font-medium px-2">
-            {selectedIds.size} sélectionné(s) — {formatCurrency(filtered.filter((p) => selectedIds.has(p.id)).reduce((s, p) => s + p.amount, 0))}
+            {tc("selected_m", { count: selectedIds.size })} — {formatCurrency(filtered.filter((p) => selectedIds.has(p.id)).reduce((s, p) => s + p.amount, 0))}
           </span>
           <div className="flex-1" />
           <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 h-7 text-xs" onClick={reconcileSelected} disabled={busy}>

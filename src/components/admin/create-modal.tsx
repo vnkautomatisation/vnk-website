@@ -45,7 +45,7 @@ export function CreateModal({
     startTransition(async () => {
       const result = await onSubmit();
       if (result.success) {
-        toast.success(`${title} effectué avec succès`);
+        toast.success(t("create_modal_p0_effectue_avec_succes", { p0: title }));
         onOpenChange(false);
       } else {
         toast.error(result.error || t("erreur_survenue"));

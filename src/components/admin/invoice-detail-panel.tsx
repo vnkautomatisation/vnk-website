@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -13,7 +14,8 @@ import { DetailPanelBase } from "@/components/admin/detail-panel-base";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { useConfirm } from "@/hooks/use-confirm";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+
 
 type InvoiceFull = {
   id: number;
@@ -44,6 +46,7 @@ export function InvoiceDetailPanel({
   const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
   const router = useRouter();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const { confirm, ConfirmModal } = useConfirm();
   const [invoice, setInvoice] = useState<InvoiceFull | null>(null);
@@ -72,7 +75,7 @@ export function InvoiceDetailPanel({
     if (!invoice) return;
     const ok = await confirm({
       title: t("marquer_comme_payee"),
-      description: `La facture ${invoice.invoiceNumber} sera marquée comme payée.`,
+      description: t("invoice_detail_panel_la_facture_p0_sera_marquee_comme_payee", { p0: invoice.invoiceNumber }),
       confirmLabel: t("marquer_payee"),
     });
     if (!ok) return;
@@ -138,7 +141,7 @@ export function InvoiceDetailPanel({
                   <AlertTriangle className="h-5 w-5 text-red-600" />
                   <div>
                     <p className="text-sm font-bold text-red-900">{t("paiement_retard")}</p>
-                    <p className="text-xs text-red-700">Échéance depuis le {invoice.dueDate ? formatDate(new Date(invoice.dueDate)) : "?"}</p>
+                    <p className="text-xs text-red-700">{t("echeance_depuis", { date: invoice.dueDate ? formatDate(new Date(invoice.dueDate)) : "?" })}</p>
                   </div>
                 </div>
               )}

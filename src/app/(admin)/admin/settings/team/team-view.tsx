@@ -2,6 +2,7 @@
 // Vue Équipe — 3 sous-onglets : Utilisateurs · Rôles · Postes
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -164,6 +165,7 @@ export function TeamView({
   const router = useRouter();
   const [tab, setTab] = useState<Tab>(defaultTab);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+  const dateTag = useDateLocale();
 
   // Recherche / filtres / tri
   const [search, setSearch] = useState("");
@@ -217,8 +219,8 @@ export function TeamView({
       if (r.success && "data" in r) {
         const parts: string[] = [t("bulk_result", { count: r.data.updated, action })];
         if (r.data.reassigned) {
-          if (r.data.reassigned.timeEntries > 0) parts.push(`${r.data.reassigned.timeEntries} saisie(s) de temps transférée(s)`);
-          if (r.data.reassigned.notifications > 0) parts.push(`${r.data.reassigned.notifications} notification(s) transférée(s)`);
+          if (r.data.reassigned.timeEntries > 0) parts.push(t("team_view_p0_saisie_s_de_temps_transferee_s", { p0: r.data.reassigned.timeEntries }));
+          if (r.data.reassigned.notifications > 0) parts.push(t("team_view_p0_notification_s_transferee_s", { p0: r.data.reassigned.notifications }));
         }
         toast.success(parts.join(" · "));
         setSelectedIds(new Set());
@@ -245,7 +247,7 @@ export function TeamView({
     }).then((r) => {
       if (r.success && "data" in r) {
         const roleName = newRoleId ? roles.find((x) => x.id === newRoleId)?.name : t("aucun");
-        toast.success(`${r.data.updated} utilisateur(s) → rôle « ${roleName} »`);
+        toast.success(t("team_view_p0_utilisateur_s_role_p1", { p0: r.data.updated, p1: roleName ?? "" }));
         setSelectedIds(new Set());
         router.refresh();
       } else if (!r.success) {
@@ -283,7 +285,7 @@ export function TeamView({
     a.download = `vnk-equipe-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
-    toast.success(`${selected.length} utilisateur(s) exporté(s)`);
+    toast.success(t("team_view_p0_utilisateur_s_exporte_s", { p0: selected.length }));
   };
 
   const [bulkConfirmDelete, setBulkConfirmDelete] = useState(false);
@@ -294,7 +296,7 @@ export function TeamView({
     const r = await resendInvitationAction({ id });
     if (r.success && "data" in r) {
       if (r.data.emailSent) {
-        toast.success(`Email renvoyé à ${email}`, {
+        toast.success(t("team_view_email_renvoye_a_p0", { p0: email }), {
           action: {
             label: t("copier_lien"),
             onClick: () => {
@@ -338,13 +340,13 @@ export function TeamView({
   // Dupliquer un rôle
   const handleDuplicateRole = async (sourceRole: RoleRow) => {
     const newName = window.prompt(
-      `Code du nouveau rôle (lettres minuscules + _ uniquement) :`,
+      t("team_view_code_du_nouveau_role_lettres_minuscules_uniquement"),
       `${sourceRole.name}_copie`
     );
     if (!newName) return;
     const r = await duplicateRoleAction({ sourceId: sourceRole.id, newName });
     if (r.success) {
-      toast.success(`Rôle dupliqué : ${newName}`);
+      toast.success(t("team_view_role_duplique_p0", { p0: newName }));
       router.refresh();
     } else {
       toast.error(r.error || t("erreur"));
@@ -449,7 +451,7 @@ export function TeamView({
           router.refresh();
         }
         if (r.data.skipped.length > 0 && r.data.invited === 0) {
-          toast.error(`Aucune invitation envoyée — voir détails`);
+          toast.error(t("team_view_aucune_invitation_envoyee_voir_details"));
         }
       } else {
         toast.error(r.error || t("erreur"));
@@ -626,12 +628,12 @@ export function TeamView({
       if (type === "user" && result.data?.reassigned) {
         const r = result.data.reassigned;
         const parts: string[] = [];
-        if (r.timeEntries > 0) parts.push(`${r.timeEntries} saisie${r.timeEntries > 1 ? "s" : ""} de temps`);
+        if (r.timeEntries > 0) parts.push(t("team_view_p0_saisie_p1_de_temps", { p0: r.timeEntries, p1: r.timeEntries > 1 ? "s" : "" }));
         if (r.notifications > 0) parts.push(`${r.notifications} notification${r.notifications > 1 ? "s" : ""}`);
         toast.success(
           parts.length > 0
-            ? `${label} désactivé · transféré : ${parts.join(", ")}`
-            : `${label} désactivé`
+            ? t("team_view_p0_desactive_transfere_p1", { p0: label, p1: parts.join(", ") })
+            : t("team_view_p0_desactive", { p0: label })
         );
       } else {
         toast.success(t("item_removed", { label, kind: type }));
@@ -693,14 +695,14 @@ export function TeamView({
   };
   const stickyBadges = tab === "users"
     ? [
-        { label: `${activeCount} actif${activeCount > 1 ? "s" : ""}`, color: "text-emerald-600" },
-        { label: `${users.length - activeCount} désactivé${users.length - activeCount > 1 ? "s" : ""}`, color: "text-muted-foreground" },
+        { label: t("n_actifs", { count: activeCount }), color: "text-emerald-600" },
+        { label: t("team_view_p0_desactive_p1", { p0: users.length - activeCount, p1: users.length - activeCount > 1 ? "s" : "" }), color: "text-muted-foreground" },
         ...(dormantCount > 0 ? [{ label: `${dormantCount} dormant${dormantCount > 1 ? "s" : ""}`, color: "text-amber-600" }] : []),
       ]
     : tab === "roles"
     ? [
-        { label: `${systemRoles} système`, color: "text-muted-foreground" },
-        { label: `${customRoles} personnalisé${customRoles > 1 ? "s" : ""}`, color: "text-[#0F2D52]" },
+        { label: t("team_view_p0_systeme", { p0: systemRoles }), color: "text-muted-foreground" },
+        { label: t("team_view_p0_personnalise_p1", { p0: customRoles, p1: customRoles > 1 ? "s" : "" }), color: "text-[#0F2D52]" },
       ]
     : [
         { label: `${positions.length} poste${positions.length > 1 ? "s" : ""}`, color: "text-[#0F2D52]" },
@@ -741,7 +743,7 @@ export function TeamView({
                 setPdfPreview({
                   url: `/api/admin/team/directory-pdf?roleId=${filterRoleId}`,
                   title: `Annuaire interne · ${roleName}`,
-                  description: `Filtré par rôle : ${roleName}`,
+                  description: t("team_view_filtre_par_role_p0", { p0: roleName }),
                   filename: `annuaire-role-${filterRoleId}.pdf`,
                 });
               }}>
@@ -755,7 +757,7 @@ export function TeamView({
                 setPdfPreview({
                   url: `/api/admin/team/directory-pdf?positionId=${filterPositionId}`,
                   title: `Annuaire interne · ${posName}`,
-                  description: `Filtré par poste : ${posName}`,
+                  description: t("team_view_filtre_par_poste_p0", { p0: posName }),
                   filename: `annuaire-poste-${filterPositionId}.pdf`,
                 });
               }}>
@@ -772,7 +774,7 @@ export function TeamView({
                   setPdfPreview({
                     url: `/api/admin/team/directory-pdf?department=${encodeURIComponent(trimmed)}`,
                     title: `Annuaire interne · ${trimmed}`,
-                    description: `Filtré par département : ${trimmed}`,
+                    description: t("team_view_filtre_par_departement_p0", { p0: trimmed }),
                     filename: `annuaire-${trimmed.toLowerCase().replace(/\s+/g, "-")}.pdf`,
                   });
                 }
@@ -827,7 +829,7 @@ export function TeamView({
         <div className="space-y-4">
           {/* Stats équipe — overview en haut */}
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
-            <StatCard label={t("actifs")} value={stats.active} hint={`sur ${stats.total}`} accent="emerald" />
+            <StatCard label={t("actifs")} value={stats.active} hint={t("team_view_sur_p0", { p0: stats.total })} accent="emerald" />
             <StatCard
               label={t("2fa_activee")}
               value={`${stats.twoFactorPct}%`}
@@ -989,7 +991,7 @@ export function TeamView({
                   title={t("ajouter_critere_tri_secondaire")}
                 >
                   <Plus className="h-3 w-3" />
-                  Tri{secondarySorts.length > 0 && ` (+${secondarySorts.length})`}
+                  {t("tri")}{secondarySorts.length > 0 && ` (+${secondarySorts.length})`}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -1060,10 +1062,10 @@ export function TeamView({
           <div className="flex items-center flex-wrap gap-2 text-sm">
             <span className="inline-flex items-center gap-1.5 font-medium text-emerald-700">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              {filteredUsers.filter((u) => u.isActive).length} actif{filteredUsers.filter((u) => u.isActive).length > 1 ? "s" : ""}
+              {t("n_actifs", { count: filteredUsers.filter((u) => u.isActive).length })}
             </span>
             <span className="text-muted-foreground">
-              sur {filteredUsers.length}{filteredUsers.length !== users.length && ` (${users.length} au total)`}
+              {t("sur_n", { count: filteredUsers.length })}{filteredUsers.length !== users.length && ` ${t("n_au_total", { count: users.length })}`}
             </span>
             {filterRoleId !== "all" && (
               <Badge
@@ -1121,7 +1123,7 @@ export function TeamView({
                         <div className="flex items-center gap-3 mt-0.5 text-[11px] text-muted-foreground flex-wrap">
                           <span>{inv.email}</span>
                           {inv.department && <span>· {inv.department}</span>}
-                          <span>· Envoyée {new Date(inv.createdAt).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}</span>
+                          <span>· {tc("sent_on_f", { date: new Date(inv.createdAt).toLocaleDateString(dateTag, { day: "numeric", month: "short" }) })}</span>
                           <span className={expiringSoon ? "text-red-600 font-medium" : "text-amber-700"}>
                             · Expire dans {daysLeft} j
                           </span>
@@ -1218,7 +1220,7 @@ export function TeamView({
                       <Checkbox
                         checked={selectedIds.has(u.id)}
                         onCheckedChange={() => toggleSelect(u.id)}
-                        aria-label={`Sélectionner ${u.fullName || u.email}`}
+                        aria-label={t("team_view_selectionner_p0", { p0: u.fullName || u.email })}
                       />
                     </div>
                     {/* Avatar + dot présence */}
@@ -1332,7 +1334,7 @@ export function TeamView({
                     {/* Last login */}
                     <div className="hidden md:block text-xs text-muted-foreground shrink-0 w-28 text-right">
                       {u.lastLogin
-                        ? `Vu ${new Date(u.lastLogin).toLocaleDateString("fr-CA", { day: "numeric", month: "short" })}`
+                        ? t("vu_le", { date: new Date(u.lastLogin).toLocaleDateString(dateTag, { day: "numeric", month: "short" }) })
                         : <span className="italic">{t("jamais_connecte")}</span>}
                     </div>
 
@@ -1465,7 +1467,7 @@ export function TeamView({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{systemRoles}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{customRoles}</span> personnalisé{customRoles > 1 ? "s" : ""}
+            <span className="font-medium text-foreground">{systemRoles}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{customRoles}</span> {tc("custom_suffix")}
             {search && filteredRoles.length !== roles.length && (
               <span className="ml-2">· {t("found_count", { count: filteredRoles.length })}</span>
             )}
@@ -1606,7 +1608,7 @@ export function TeamView({
                             setSearch("");
                           }}
                           className="inline-flex items-center rounded-md border border-[#0F2D52]/30 bg-[#0F2D52]/5 hover:bg-[#0F2D52]/10 hover:border-[#0F2D52]/50 text-[9px] px-1.5 py-0.5 font-medium text-[#0F2D52] transition-colors"
-                          title={`Filtrer les utilisateurs avec le rôle ${r.name}`}
+                          title={t("team_view_filtrer_les_utilisateurs_avec_le_role_p0", { p0: r.name })}
                         >
                           {r._count.admins} utilisateur{r._count.admins > 1 ? "s" : ""}
                         </button>
@@ -1624,7 +1626,7 @@ export function TeamView({
                             setSearch(r.name);
                           }}
                           className="inline-flex items-center rounded-md border border-[#0F2D52]/30 bg-[#0F2D52]/5 hover:bg-[#0F2D52]/10 hover:border-[#0F2D52]/50 text-[9px] px-1.5 py-0.5 font-medium text-[#0F2D52] transition-colors"
-                          title={`Voir les postes qui utilisent ce rôle par défaut`}
+                          title={t("team_view_voir_les_postes_qui_utilisent_ce_role_par")}
                         >
                           {r._count.positions} poste{r._count.positions > 1 ? "s" : ""}
                         </button>
@@ -1666,9 +1668,9 @@ export function TeamView({
           </div>
 
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{positions.filter((p) => p.isSystem).length}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{positions.filter((p) => !p.isSystem).length}</span> personnalisé{positions.filter((p) => !p.isSystem).length > 1 ? "s" : ""}
+            <span className="font-medium text-foreground">{positions.filter((p) => p.isSystem).length}</span> {t("systeme")} <span className="font-medium text-[#0F2D52]">{positions.filter((p) => !p.isSystem).length}</span> {tc("custom_suffix")}
             {search && filteredPositions.length !== positions.length && (
-              <span className="ml-2">· <span className="font-medium">{filteredPositions.length}</span> trouvé{filteredPositions.length > 1 ? "s" : ""}</span>
+              <span className="ml-2">· <span className="font-medium">{filteredPositions.length}</span> {tc("found_count", { count: filteredPositions.length })}</span>
             )}
           </p>
 
@@ -1799,7 +1801,7 @@ export function TeamView({
                           color: p.defaultRole.color ?? undefined,
                           backgroundColor: p.defaultRole.color ? `${p.defaultRole.color}10` : undefined,
                         }}
-                        title={`Voir le rôle ${p.defaultRole.name}`}
+                        title={t("team_view_voir_le_role_p0", { p0: p.defaultRole.name })}
                       >
                         {p.defaultRole.name}
                       </button>
@@ -1816,7 +1818,7 @@ export function TeamView({
                           setSearch("");
                         }}
                         className="inline-flex items-center rounded-md border border-[#0F2D52]/30 bg-[#0F2D52]/5 hover:bg-[#0F2D52]/10 hover:border-[#0F2D52]/50 text-[9px] px-1.5 py-0.5 font-medium text-[#0F2D52] transition-colors"
-                        title={`Filtrer les utilisateurs avec le poste ${p.name}`}
+                        title={t("team_view_filtrer_les_utilisateurs_avec_le_poste_p0", { p0: p.name })}
                       >
                         {p._count.admins} utilisateur{p._count.admins > 1 ? "s" : ""}
                       </button>
@@ -2290,7 +2292,7 @@ export function TeamView({
               <div className="text-amber-900 space-y-0.5">
                 <p className="font-semibold">{t("impact")}</p>
                 <ul className="list-disc list-inside space-y-0.5">
-                  <li>{selectedIds.size} compte{selectedIds.size > 1 ? "s" : ""} mis en inactif</li>
+                  <li>{t("n_comptes_mis_inactif", { count: selectedIds.size })}</li>
                   <li>{t("toutes_sessions_actives_fermees")}</li>
                   <li>{t("utilisateurs_ne_pourront_plus_se")}</li>
                 </ul>
@@ -2445,7 +2447,7 @@ function InlineDepartment({
               className="w-full text-left text-xs px-2 py-1.5 rounded hover:bg-muted/60 transition flex items-center gap-2 text-[#0F2D52]"
             >
               <Plus className="h-3 w-3" />
-              Créer « {input.trim()} »
+              {t("creer_valeur", { p0: input.trim() })}
             </button>
           )}
         </div>
@@ -2472,6 +2474,7 @@ function InlinePicker({
   emptyTone?: "warning";
   onChange: (newId: number | null) => void | Promise<void>;
 }) {
+  const t = useTranslations("admin.team");
   const tc = useTranslations("common");
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -2498,7 +2501,7 @@ function InlinePicker({
           onClick={(e) => e.stopPropagation()}
           className="group/picker inline-flex items-center"
           aria-label={`Changer ${label.toLowerCase()}`}
-          title={`Cliquer pour changer le ${label.toLowerCase()}`}
+          title={t("team_view_cliquer_pour_changer_le_p0", { p0: label.toLowerCase() })}
         >
           {current ? (
             <Badge
@@ -2527,7 +2530,7 @@ function InlinePicker({
         </div>
         <Input
           autoFocus
-          placeholder={`Rechercher un ${label.toLowerCase()}…`}
+          placeholder={t("team_view_rechercher_un_p0", { p0: label.toLowerCase() })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="h-8 text-sm mb-2"

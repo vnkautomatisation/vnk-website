@@ -2,6 +2,7 @@
 // Vue Maintenance — fenêtres planifiées, incidents, bandeau d'annonce.
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -69,6 +70,7 @@ export function MaintenanceView({
   const tc = useTranslations("common");
   const router = useRouter();
   const [tab, setTab] = useState<Tab>("banner");
+  const dateTag = useDateLocale();
   const [pending, startTransition] = useTransition();
 
 
@@ -281,9 +283,9 @@ export function MaintenanceView({
                         {isPast && <Badge variant="outline" className="text-[10px]">{t("passee")}</Badge>}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {new Date(w.startsAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
+                        {new Date(w.startsAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}
                         {" → "}
-                        {new Date(w.endsAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
+                        {new Date(w.endsAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}
                       </p>
                       <div className="flex gap-1 mt-1 flex-wrap">
                         {w.affectsPortal && <Badge variant="outline" className="text-[9px]">{t("portail")}</Badge>}
@@ -337,8 +339,8 @@ export function MaintenanceView({
                         {!i.isPublic && <Badge variant="outline" className="text-[10px]">{t("prive")}</Badge>}
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Début : {new Date(i.startedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}
-                        {i.resolvedAt && ` · Résolu : ${new Date(i.resolvedAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" })}`}
+                        Début : {new Date(i.startedAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" })}
+                        {i.resolvedAt && t("maintenance_view_resolu_p0", { p0: new Date(i.resolvedAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "short" }) })}
                       </p>
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{i.description}</p>
                     </div>

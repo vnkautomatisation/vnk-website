@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   });
   if (overlap) {
     return NextResponse.json(
-      { error: `Période déjà couverte par la déclaration "${overlap.periodLabel}"` },
+      { error: t("route_periode_deja_couverte_par_la_declaration_p0", { p0: overlap.periodLabel }) },
       { status: 409 },
     );
   }

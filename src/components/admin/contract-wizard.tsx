@@ -19,6 +19,7 @@
 // DialogFooter sticky, DatePopover, ActionTooltip, texte FR.
 // =============================================================
 import { useEffect, useMemo, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -176,19 +177,19 @@ function addDaysISO(iso: string, days: number): string {
   return `${yy}-${mm}-${dd}`;
 }
 
-function fmtMoney(n: number | string | null | undefined, suffix = "$"): string {
+function fmtMoney(n: number | string | null | undefined, suffix: string, tag: string): string {
   if (n == null || n === "") return "-";
   const num = typeof n === "number" ? n : Number(n);
   if (!Number.isFinite(num)) return "-";
-  return `${num.toLocaleString("fr-CA", { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${suffix}`;
+  return `${num.toLocaleString(tag, { minimumFractionDigits: 0, maximumFractionDigits: 2 })} ${suffix}`;
 }
 
-function fmtDateFr(iso: string | null | undefined): string {
+function fmtDateFr(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   try {
     const [y, m, d] = iso.split("-").map(Number);
     const date = new Date(y, m - 1, d);
-    return date.toLocaleDateString("fr-CA", {
+    return date.toLocaleDateString(tag, {
       day: "2-digit",
       month: "long",
       year: "numeric",
@@ -333,7 +334,7 @@ export function ContractWizard({
     const positionLabel = employee.position ?? t("employe");
 
     if (!customizedFields.has("title")) {
-      setTitle(`Contrat de travail - ${positionLabel}`);
+      setTitle(t("contract_wizard_contrat_de_travail_p0", { p0: positionLabel }));
     }
     if (!customizedFields.has("contractType") && template.contractType) {
       setContractType(normalizeContractType(template.contractType));
@@ -899,7 +900,7 @@ function StepTemplate({
       {hasRecommended && (
         <FormSection
           icon={Sparkles}
-          title={`Recommandes pour ${positionLabel}`}
+          title={t("contract_wizard_recommandes_pour_p0", { p0: positionLabel })}
           description={t("templates_dont_ciblage_correspond_poste")}
         >
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1033,6 +1034,7 @@ interface StepDetailsProps {
 
 function StepDetails(props: StepDetailsProps) {
   const t = useTranslations("admin.contracts");
+  const dateTag = useDateLocale();
   const {
     employee,
     template,
@@ -1112,13 +1114,13 @@ function StepDetails(props: StepDetailsProps) {
             value={labelForContractType(contractType, t("autre"), t) || contractType}
             customized={customizedFields.has("contractType")}
           />
-          <AutoRow label={t("date_debut")} value={fmtDateFr(startDate)} customized={customizedFields.has("startDate")} />
-          <AutoRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} customized={customizedFields.has("probationEndDate")} hint={t("90_jours")} />
+          <AutoRow label={t("date_debut")} value={fmtDateFr(startDate, dateTag)} customized={customizedFields.has("startDate")} />
+          <AutoRow label={t("fin_probation")} value={fmtDateFr(probationEndDate, dateTag)} customized={customizedFields.has("probationEndDate")} hint={t("90_jours")} />
           {salaryAnnual && (
-            <AutoRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} customized={customizedFields.has("salaryAnnual")} />
+            <AutoRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual, "$", dateTag)} customized={customizedFields.has("salaryAnnual")} />
           )}
           {hourlyRate && (
-            <AutoRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} customized={customizedFields.has("hourlyRate")} />
+            <AutoRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate, "$", dateTag)}/h`} customized={customizedFields.has("hourlyRate")} />
           )}
           <AutoRow label={t("heures_semaine")} value={`${hoursPerWeek} h`} customized={customizedFields.has("hoursPerWeek")} />
           <AutoRow label={t("vacances")} value={`${vacationPct} %`} customized={customizedFields.has("vacationPct")} />
@@ -1359,6 +1361,7 @@ function StepPreview({
   onResetCustomBody: () => void;
 }) {
   const t = useTranslations("admin.contracts");
+  const dateTag = useDateLocale();
   const employeeName = employee.fullName ?? employee.email;
 
   return (
@@ -1434,19 +1437,19 @@ function StepPreview({
             label={t("type")}
             value={labelForContractType(contractType, t("autre"), t) || contractType}
           />
-          <SummaryRow label={t("debut")} value={fmtDateFr(startDate)} />
-          {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate)} />}
+          <SummaryRow label={t("debut")} value={fmtDateFr(startDate, dateTag)} />
+          {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate, dateTag)} />}
           {probationEndDate && (
-            <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} />
+            <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate, dateTag)} />
           )}
           {salaryAnnual && (
-            <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} />
+            <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual, "$", dateTag)} />
           )}
-          {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} />}
+          {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate, "$", dateTag)}/h`} />}
           {hoursPerWeek && <SummaryRow label={t("heures_sem")} value={`${hoursPerWeek} h`} />}
           {vacationPct && <SummaryRow label={t("vacances")} value={`${vacationPct} %`} />}
           {signingBonus && (
-            <SummaryRow label={t("bonus_signature_2")} value={fmtMoney(signingBonus)} />
+            <SummaryRow label={t("bonus_signature_2")} value={fmtMoney(signingBonus, "$", dateTag)} />
           )}
         </div>
       </FormSection>
@@ -1487,6 +1490,7 @@ function StepFinal({
   internalNotes: string;
 }) {
   const t = useTranslations("admin.contracts");
+  const dateTag = useDateLocale();
   return (
     <FormSection
       icon={Sparkles}
@@ -1501,16 +1505,16 @@ function StepFinal({
           label={t("type")}
           value={labelForContractType(contractType, t("autre"), t) || contractType}
         />
-        <SummaryRow label={t("debut")} value={fmtDateFr(startDate)} />
-        {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate)} />}
+        <SummaryRow label={t("debut")} value={fmtDateFr(startDate, dateTag)} />
+        {endDate && <SummaryRow label={t("fin")} value={fmtDateFr(endDate, dateTag)} />}
         {probationEndDate && (
-          <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate)} />
+          <SummaryRow label={t("fin_probation")} value={fmtDateFr(probationEndDate, dateTag)} />
         )}
-        {salaryAnnual && <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual)} />}
-        {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate)}/h`} />}
+        {salaryAnnual && <SummaryRow label={t("salaire_annuel")} value={fmtMoney(salaryAnnual, "$", dateTag)} />}
+        {hourlyRate && <SummaryRow label={t("taux_horaire")} value={`${fmtMoney(hourlyRate, "$", dateTag)}/h`} />}
         {hoursPerWeek && <SummaryRow label={t("heures_sem")} value={`${hoursPerWeek} h`} />}
         {vacationPct && <SummaryRow label={t("vacances")} value={`${vacationPct} %`} />}
-        {signingBonus && <SummaryRow label={t("bonus")} value={fmtMoney(signingBonus)} />}
+        {signingBonus && <SummaryRow label={t("bonus")} value={fmtMoney(signingBonus, "$", dateTag)} />}
       </div>
 
       {internalNotes && (

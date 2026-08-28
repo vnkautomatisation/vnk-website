@@ -197,6 +197,7 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
   const tc = useTranslations("common");
   const [exitNotes, setExitNotes] = useState(offboard?.exitInterview ?? "");
   const [pending, setPending] = useState(false);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (offboard) {
@@ -278,7 +279,7 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
                   />
                   <span className={`text-sm flex-1 ${item.done ? "line-through text-muted-foreground" : ""}`}>{stepLabel(item, t)}</span>
                   {item.done && item.doneAt && (
-                    <span className="text-[10px] text-muted-foreground">{new Date(item.doneAt).toLocaleDateString("fr-CA")}</span>
+                    <span className="text-[10px] text-muted-foreground">{new Date(item.doneAt).toLocaleDateString(dateTag)}</span>
                   )}
                 </label>
               ))}
@@ -297,7 +298,7 @@ function DetailDialog({ offboard, onClose, onChanged }: { offboard: Offboard | n
             <h3 className="text-sm font-semibold mb-2 flex items-center gap-2"><Calendar className="h-4 w-4" />{t("releve_apos_emploi_re")}</h3>
             {offboard.recordOfEmploymentSentAt ? (
               <Badge variant="outline" className="text-emerald-700 border-emerald-300 bg-emerald-50">
-                <CheckCircle2 className="h-3 w-3 mr-1" />Envoyé le {new Date(offboard.recordOfEmploymentSentAt).toLocaleDateString("fr-CA")}
+                <CheckCircle2 className="h-3 w-3 mr-1" />{tc("sent_on", { date: new Date(offboard.recordOfEmploymentSentAt).toLocaleDateString(dateTag) })}
               </Badge>
             ) : (
               <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs">

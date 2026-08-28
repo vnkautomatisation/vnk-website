@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -14,7 +15,8 @@ import { DataTable, type Column } from "@/components/data-table/data-table";
 import { PdfViewerModal } from "@/components/ui/pdf-viewer-modal";
 import { ActionTooltip } from "@/components/ui/action-tooltip";
 import { useEntityPanels } from "@/hooks/use-entity-panels";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type ReceiptRow = {
   id: number;
@@ -98,8 +100,10 @@ export function ReceiptsView({
   methodFilter: "all" | "card" | "manual";
 }) {
   const t = useTranslations("admin.receipts");
+  const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const formatCurrency = useCurrency();
   const { open: openEntity } = useEntityPanels();
   const [searchQuery, setSearchQuery] = useState("");
   const [resending, setResending] = useState<number | null>(null);
@@ -113,7 +117,7 @@ export function ReceiptsView({
   const openReceiptPdf = (r: ReceiptRow) => {
     setPdfPreview({
       url: r.internalReceiptUrl,
-      title: `Reçu ${r.receiptNumber ?? `#${r.id}`} — ${r.clientName}`,
+      title: t("receipts_view_recu_p0_p1", { p0: r.receiptNumber ?? `#${r.id}`, p1: r.clientName }),
       downloadName: r.receiptNumber ?? `recu-${r.id}`,
     });
   };
@@ -177,7 +181,7 @@ export function ReceiptsView({
       const res = await fetch(`/api/payments/${r.id}/resend-receipt`, { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        toast.success(`Reçu renvoyé à ${data.email ?? "client"}`);
+        toast.success(t("receipts_view_recu_renvoye_a_p0", { p0: data.email ?? "client" }));
       } else {
         const d = await res.json().catch(() => ({}));
         toast.error(d.error ?? t("echec_envoi"));
@@ -314,7 +318,7 @@ export function ReceiptsView({
               {t("recus")}
             </h1>
             <p className="text-white/70 text-xs mt-0.5">
-              Reçus émis aux clients · PDF VNK officiel pour tous + reçu de la plateforme (cartes uniquement)
+              {t("recus_emis_sous_titre")}
               {dateRange.from && ` · ${dateRange.from} → ${dateRange.to}`}
             </p>
           </div>
@@ -331,7 +335,7 @@ export function ReceiptsView({
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("envoyes_courriel")}</p>
           <p className="text-lg font-bold text-emerald-600 tabular-nums">{kpis.sentByEmail}</p>
-          <p className="text-[10px] text-muted-foreground">{kpis.total > 0 ? Math.round((kpis.sentByEmail / kpis.total) * 100) : 0}% confirmés</p>
+          <p className="text-[10px] text-muted-foreground">{t("pourcent_confirmes", { pct: kpis.total > 0 ? Math.round((kpis.sentByEmail / kpis.total) * 100) : 0 })}</p>
         </div>
         <div className="rounded-lg border bg-card p-3">
           <p className="text-[10px] uppercase tracking-wider text-muted-foreground">{t("recu_plateforme")}</p>
@@ -355,8 +359,8 @@ export function ReceiptsView({
               <Receipt className="h-4 w-4" />
               {t("recus")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
-            <span className="text-muted-foreground">{kpis.sentByEmail}/{kpis.total} envoyés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
+            <span className="text-muted-foreground">{t("envoyes_ratio", { count: kpis.sentByEmail, total: kpis.total })}</span>
             <span className="text-muted-foreground">{t("total")} <span className="font-semibold">{formatCurrency(kpis.totalAmount)}</span></span>
           </div>
         </div>

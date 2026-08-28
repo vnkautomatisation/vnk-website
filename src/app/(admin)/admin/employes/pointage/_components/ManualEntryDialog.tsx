@@ -1,7 +1,7 @@
 "use client";
 // Manual time entry dialog. `targetAdmin` fills in for another employee.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMonthNames, useWeekdayNames } from "@/lib/i18n-format";
+import { useMonthNames, useWeekdayNames, useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -77,6 +77,7 @@ export function ManualEntryDialog({
 
 
   const [calOpen, setCalOpen] = useState(false);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (open) {
@@ -162,7 +163,7 @@ export function ManualEntryDialog({
     setPending(false);
     if (r.success) {
       toast.success(targetAdmin
-        ? `Entrée ajoutée pour ${targetAdmin.name} — il devra soumettre sa semaine`
+        ? t("manualentrydialog_entree_ajoutee_pour_p0_il_devra_soumettre_sa", { p0: targetAdmin.name })
         : t("entree_ajoutee_pensez_cliquer_soumettre"));
       onSaved();
       onClose();
@@ -178,7 +179,7 @@ export function ManualEntryDialog({
           <DialogHeader className="space-y-1">
             <DialogTitle className="text-base text-white flex items-center gap-2">
               <History className="h-4 w-4" />
-              {targetAdmin ? `Saisir pour ${targetAdmin.name}` : t("saisie_manuelle")}
+              {targetAdmin ? t("manualentrydialog_saisir_pour_p0", { p0: targetAdmin.name }) : t("saisie_manuelle")}
             </DialogTitle>
             <DialogDescription className="text-white/80 text-xs">
               {targetAdmin
@@ -215,7 +216,7 @@ export function ManualEntryDialog({
               >
                 <CalendarIcon className="h-3 w-3 mr-1.5" />
                 <span className="tabular-nums">
-                  {parseISO(entry.date).toLocaleDateString("fr-CA", { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
+                  {parseISO(entry.date).toLocaleDateString(dateTag, { weekday: "short", day: "numeric", month: "long", year: "numeric" })}
                 </span>
                 <ChevronDown className={`h-3 w-3 ml-1.5 transition-transform ${calOpen ? "rotate-180" : ""}`} />
               </Button>
@@ -297,7 +298,7 @@ export function ManualEntryDialog({
               <span>
                 Chevauche un pointage du{" "}
                 {overlap.with
-                  ? `${new Date(overlap.with.clockIn).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })} à ${pad(new Date(overlap.with.clockIn).getHours())}:${pad(new Date(overlap.with.clockIn).getMinutes())}`
+                  ? t("manualentrydialog_p0_a_p1_p2", { p0: new Date(overlap.with.clockIn).toLocaleDateString(dateTag, { day: "numeric", month: "long", year: "numeric" }), p1: pad(new Date(overlap.with.clockIn).getHours()), p2: pad(new Date(overlap.with.clockIn).getMinutes()) })
                   : ""}
               </span>
             </div>

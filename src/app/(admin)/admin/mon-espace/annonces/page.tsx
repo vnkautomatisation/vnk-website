@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -7,8 +7,10 @@ import { Megaphone, Pin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { AnnouncementReadTracker } from "./announcement-read-tracker";
+import { dateLocale } from "@/lib/i18n-format";
 
 export default async function AnnouncementsPage() {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.announcements");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
@@ -60,7 +62,7 @@ export default async function AnnouncementsPage() {
                     {a.title}
                   </h2>
                   <p className="text-[11px] text-muted-foreground">
-                    Par {a.author?.fullName || a.author?.email || "VNK"} · {new Date(a.publishedAt!).toLocaleDateString("fr-CA", { day: "numeric", month: "long", year: "numeric" })}
+                    Par {a.author?.fullName || a.author?.email || "VNK"} · {new Date(a.publishedAt!).toLocaleDateString(dateTag, { day: "numeric", month: "long", year: "numeric" })}
                   </p>
                 </div>
                 <Badge variant="outline" className="text-[10px] capitalize">{a.category}</Badge>

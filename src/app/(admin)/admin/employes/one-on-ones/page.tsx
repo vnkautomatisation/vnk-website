@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { getTranslations } from "next-intl/server";
+import { getTranslations, getLocale } from "next-intl/server";
 import { useTranslations } from "next-intl";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
@@ -8,8 +8,10 @@ import Link from "next/link";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { dateLocale } from "@/lib/i18n-format";
 
 export default async function OneOnOnesPage() {
+  const dateTag = dateLocale(await getLocale());
   const t = await getTranslations("admin.hr_nav");
   const session = await auth();
   if (!session?.user || session.user.role !== "admin") redirect("/admin/login");
@@ -47,7 +49,7 @@ export default async function OneOnOnesPage() {
       </div>
 
       <section>
-        <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider">À venir ({upcoming.length})</h2>
+        <h2 className="text-sm font-semibold mb-2 uppercase tracking-wider">{t("a_venir_count", { count: upcoming.length })}</h2>
         {upcoming.length === 0 ? (
           <Card className="p-6 text-center text-sm text-muted-foreground">{t("aucune_reunion_planifiee")}</Card>
         ) : (
@@ -61,7 +63,7 @@ export default async function OneOnOnesPage() {
                       {m.admin.fullName || m.admin.email} <span className="text-muted-foreground">↔</span> {m.manager.fullName || m.manager.email}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(m.scheduledAt).toLocaleString("fr-CA", { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} · {m.durationMin} min
+                      {new Date(m.scheduledAt).toLocaleString(dateTag, { weekday: "short", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" })} · {m.durationMin} min
                     </p>
                   </div>
                   <Badge variant="outline" className="text-[10px]">{m.status}</Badge>
@@ -79,7 +81,7 @@ export default async function OneOnOnesPage() {
             {past.map((m) => (
               <Link key={m.id} href={`/admin/employes/one-on-ones/${m.id}`}>
                 <Card className="p-3 hover:bg-muted/30 transition flex items-center gap-3 text-sm">
-                  <span className="text-muted-foreground">{new Date(m.scheduledAt).toLocaleDateString("fr-CA")}</span>
+                  <span className="text-muted-foreground">{new Date(m.scheduledAt).toLocaleDateString(dateTag)}</span>
                   <span className="flex-1">
                     {m.admin.fullName || m.admin.email} ↔ {m.manager.fullName || m.manager.email}
                   </span>

@@ -20,6 +20,7 @@
 // distincte pour rester dans le contexte de documents-admin-view.
 // ─────────────────────────────────────────────────────────
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import {
@@ -83,6 +84,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
   const [savedAt, setSavedAt] = useState<Date | null>(null);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [pdfStamp, setPdfStamp] = useState<number>(() => Date.now());
+  const dateTag = useDateLocale();
 
 
   useEffect(() => {
@@ -251,7 +253,7 @@ export function DocumentDraftEditor({ open, draftId, onClose, onSent }: Document
                     <>
                       <span>·</span>
                       <span className="opacity-80">
-                        {saving ? t("sauvegarde") : `Sauvegarde a ${formatTime(savedAt)}`}
+                        {saving ? t("sauvegarde") : `Sauvegarde a ${formatTime(savedAt, dateTag)}`}
                       </span>
                     </>
                   )}
@@ -471,6 +473,6 @@ function SendDraftDialog({
 
 // ─── Helpers ─────────────────────────────────────────────────
 
-function formatTime(d: Date): string {
-  return d.toLocaleTimeString("fr-CA", { hour: "2-digit", minute: "2-digit" });
+function formatTime(d: Date, tag: string): string {
+  return d.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit" });
 }

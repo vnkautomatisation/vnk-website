@@ -9,6 +9,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { unauthorizedJson, forbiddenJson } from "@/lib/refusals";
+import { getLocale } from "next-intl/server";
+import { dateLocale } from "@/lib/i18n-format";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +22,7 @@ function authorize(req: Request): boolean {
 }
 
 export async function POST(req: Request) {
+  const dateTag = dateLocale(await getLocale());
   if (!authorize(req)) {
     return unauthorizedJson();
   }
@@ -51,7 +54,7 @@ export async function POST(req: Request) {
             recipientId: a.id,
             type: "info",
             title: `Fenetre de vacances ouverte : ${w.name}`,
-            body: `Soumettez vos preferences avant le ${w.closingDate.toLocaleDateString("fr-CA")}.`,
+            body: `Soumettez vos preferences avant le ${w.closingDate.toLocaleDateString(dateTag)}.`,
             link: "/admin/mon-espace/conges",
             icon: "calendar",
           })),

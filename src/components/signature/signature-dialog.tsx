@@ -2,6 +2,7 @@
 // Modal de signature de contrat — design pro VNK
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import {
@@ -13,7 +14,7 @@ import {
 import { SignatureCanvas } from "./signature-canvas";
 import { Button } from "@/components/ui/button";
 import { FileSignature, X, ShieldCheck } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+
 
 export function SignatureDialog({
   contractId,
@@ -33,6 +34,7 @@ export function SignatureDialog({
   const t = useTranslations("common");
   const router = useRouter();
   const [sending, setSending] = useState(false);
+  const formatCurrency = useCurrency();
 
   const handleSave = async (signatureDataUrl: string) => {
     setSending(true);

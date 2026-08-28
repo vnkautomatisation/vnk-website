@@ -1,13 +1,12 @@
-// Helpers centralisés pour formater les dates dans tout le portail.
-// Évite la dérive entre fmtDate/fmtShort/toLocaleDateString éparpillés.
+// Helpers centralises pour formater les dates dans tout le portail.
+// Evite la derive entre fmtDate/fmtShort/toLocaleDateString eparpilles.
 //
-// Locale "fr-CA" partout, fuseau "America/Montreal" implicite via Date locale du navigateur.
-// Pour les chaînes ISO "YYYY-MM-DD" (sans heure), on parse en local pour éviter
-// le décalage UTC qui fait reculer la date d'un jour.
+// La locale est toujours passee par l'appelant (voir lib/i18n-format) : ces
+// fonctions ne decident jamais de la langue du lecteur. Pour les chaines ISO
+// "YYYY-MM-DD" on parse en local, sinon UTC recule la date d'un jour.
 
 function toLocalDate(d: string | Date): Date {
   if (d instanceof Date) return d;
-  // Cas "YYYY-MM-DD" pur : parse en local pour éviter UTC shift.
   if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
     const [y, m, day] = d.split("-").map(Number);
     return new Date(y, m - 1, day);
@@ -16,37 +15,27 @@ function toLocalDate(d: string | Date): Date {
 }
 
 /**
- * Formate une date pour l'affichage usuel d'un congé.
- * - short: false (défaut) → "lun. 19 mai"
- * - short: false, withWeekday: true → "lundi 19 mai 2026"
- * - short: true → "19 mai"
- *
- * @example
- *   formatLeaveDate("2026-05-19")
- *   // → "mar. 19 mai"
- *   formatLeaveDate("2026-05-19", { withWeekday: true })
- *   // → "mardi 19 mai 2026"
- *   formatLeaveDate("2026-05-19", { short: true })
- *   // → "19 mai"
+ * Date d'un conge : "mar. 19 mai", "mardi 19 mai 2026" ou "19 mai".
  */
 export function formatLeaveDate(
   d: string | Date,
+  tag: string,
   options?: { short?: boolean; withWeekday?: boolean }
 ): string {
   const date = toLocalDate(d);
   if (isNaN(date.getTime())) return "—";
   if (options?.short) {
-    return date.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
+    return date.toLocaleDateString(tag, { day: "numeric", month: "long" });
   }
   if (options?.withWeekday) {
-    return date.toLocaleDateString("fr-CA", {
+    return date.toLocaleDateString(tag, {
       weekday: "long",
       day: "numeric",
       month: "long",
       year: "numeric",
     });
   }
-  return date.toLocaleDateString("fr-CA", {
+  return date.toLocaleDateString(tag, {
     weekday: "short",
     day: "numeric",
     month: "long",
@@ -54,55 +43,39 @@ export function formatLeaveDate(
 }
 
 /**
- * Formate une plage de dates : "Du 19 mai au 28 mai" ou "Le 19 mai" si même jour.
- *
- * @example
- *   formatLeaveRange("2026-05-19", "2026-05-28")
- *   // → "Du 19 mai au 28 mai"
- *   formatLeaveRange("2026-05-19", "2026-05-19")
- *   // → "Le 19 mai"
+ * Plage de dates. Intl produit "19–28 mai" ou "19 May – 28 May" selon la
+ * langue, ce qui evite d'ecrire "Du ... au ..." a la main.
  */
-export function formatLeaveRange(start: string | Date, end: string | Date): string {
+export function formatLeaveRange(
+  start: string | Date,
+  end: string | Date,
+  tag: string
+): string {
   const s = toLocalDate(start);
   const e = toLocalDate(end);
   if (isNaN(s.getTime()) || isNaN(e.getTime())) return "—";
-  const sameDay =
-    s.getFullYear() === e.getFullYear() &&
-    s.getMonth() === e.getMonth() &&
-    s.getDate() === e.getDate();
-  if (sameDay) {
-    return `Le ${s.toLocaleDateString("fr-CA", { day: "numeric", month: "long" })}`;
-  }
   const sameYear = s.getFullYear() === e.getFullYear();
-  const sStr = s.toLocaleDateString("fr-CA", { day: "numeric", month: "long" });
-  const eStr = e.toLocaleDateString(
-    "fr-CA",
-    sameYear ? { day: "numeric", month: "long" } : { day: "numeric", month: "long", year: "numeric" }
-  );
-  return `Du ${sStr} au ${eStr}`;
+  const opts: Intl.DateTimeFormatOptions = sameYear
+    ? { day: "numeric", month: "long" }
+    : { day: "numeric", month: "long", year: "numeric" };
+  const fmt = new Intl.DateTimeFormat(tag, opts);
+  const sameDay =
+    sameYear && s.getMonth() === e.getMonth() && s.getDate() === e.getDate();
+  return sameDay ? fmt.format(s) : fmt.formatRange(s, e);
 }
 
 /**
- * Formate un mois pour un titre : "Mai 2026".
- *
- * @example
- *   formatLeaveMonth("2026-05-19")
- *   // → "Mai 2026"
+ * Mois d'un titre : "Mai 2026".
  */
-export function formatLeaveMonth(d: string | Date): string {
+export function formatLeaveMonth(d: string | Date, tag: string): string {
   const date = toLocalDate(d);
   if (isNaN(date.getTime())) return "—";
-  const s = date.toLocaleDateString("fr-CA", { month: "long", year: "numeric" });
-  // Capitalise la première lettre ("mai 2026" → "Mai 2026")
+  const s = date.toLocaleDateString(tag, { month: "long", year: "numeric" });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
 /**
- * Format compact numérique : "19/05/2026".
- *
- * @example
- *   formatLeaveCompact("2026-05-19")
- *   // → "2026-05-19" (fr-CA par défaut), or use the helper for explicit dd/mm/yyyy
+ * Format compact numerique : "19/05/2026". Independant de la langue.
  */
 export function formatLeaveCompact(d: string | Date): string {
   const date = toLocalDate(d);

@@ -396,8 +396,8 @@ export function HandbooksAdminView({
       <PdfPreviewModal
         open={!!previewHandbook}
         url={previewHandbook ? `/api/admin/document-handbooks/${previewHandbook.id}/preview-pdf` : null}
-        title={previewHandbook ? `Apercu : ${previewHandbook.title}` : ""}
-        description={previewHandbook ? `v${previewHandbook.version} - Manuel de l'employe VNK` : undefined}
+        title={previewHandbook ? t("apercu_titre", { title: previewHandbook.title }) : ""}
+        description={previewHandbook ? t("handbooks_admin_view_v_p0_manuel_de_l_employe_vnk", { p0: previewHandbook.version }) : undefined}
         downloadFilename={previewHandbook ? `${previewHandbook.key}-v${previewHandbook.version}.pdf` : undefined}
         onClose={() => setPreviewHandbook(null)}
       />
@@ -753,7 +753,7 @@ function HandbookEditorDialog({
                           [key]: e.target.value,
                         }))
                       }
-                      placeholder={`Valeur pour [${key}]`}
+                      placeholder={t("handbooks_admin_view_valeur_pour_p0", { p0: key })}
                     />
                   </Field>
                 ))}

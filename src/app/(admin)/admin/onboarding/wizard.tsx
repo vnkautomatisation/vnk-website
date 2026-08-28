@@ -65,7 +65,7 @@ export function OnboardingWizard({
             </div>
             <div>
               <h1 className="font-bold text-lg">{t("activation_compte")}</h1>
-              <p className="text-xs text-white/80">Bonjour {admin.fullName || admin.email} · 5 étapes rapides</p>
+              <p className="text-xs text-white/80">{t("bonjour_etapes", { name: admin.fullName || admin.email })}</p>
             </div>
           </div>
 

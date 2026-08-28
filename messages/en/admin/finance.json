@@ -32,6 +32,12 @@
   "mois_2": "This month:",
   "montants_cad_figes_taux_jour": "CAD amounts are fixed at the rate of the transaction day (IFRS / CRA audit).",
   "moyens_paiement": "Payment methods",
+  "n_derniers_jours_vs_precedente": "Last {count} days · vs previous period",
+  "n_devises_actives": "{count, plural, one {# active currency} other {# active currencies}}",
+  "n_factures": "{count, plural, one {# invoice} other {# invoices}}",
+  "n_factures_payees_total": "{count, plural, one {# invoice paid in total} other {# invoices paid in total}}",
+  "n_juridictions": "{count, plural, one {# jurisdiction} other {# jurisdictions}}",
+  "n_villes": "{count, plural, one {# city} other {# cities}}",
   "non_categorise": "Not categorized",
   "nouveaux": "New",
   "nouveaux_vs_clients_reguliers": "New vs returning clients",
@@ -57,5 +63,6 @@
   "ventes_ville": "Sales by city",
   "versements": "Payouts",
   "virement_bancaire": "Bank transfer",
-  "voir_tous": "See all"
+  "voir_tous": "See all",
+  "vue_90_derniers_jours": "Last 90 days"
 }

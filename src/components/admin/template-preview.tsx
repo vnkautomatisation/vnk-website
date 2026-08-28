@@ -456,7 +456,7 @@ export function TemplatePreview({
       <PdfPreviewModal
         open={fullscreenOpen}
         url={pdfDataUrl}
-        title={`Apercu : ${title ?? t("document")}`}
+        title={t("apercu_titre", { title: title ?? t("document") })}
         description={
           selected?.fullName
             ? `Destinataire : ${selected.fullName}`

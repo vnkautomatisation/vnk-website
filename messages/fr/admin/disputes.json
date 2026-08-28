@@ -38,6 +38,8 @@
   "devise": "Devise",
   "discover": "Discover",
   "disputes_view_effacer_les_filtres": "Effacer les filtres",
+  "disputes_view_le_litige_p0_sera_supprime_definitivement": "Le litige \"{p0}\" sera supprimé définitivement.",
+  "disputes_view_p0_p1_supprime_s": "{p0}/{p1} supprimé(s)",
   "duplicate": "Duplicate",
   "echeance": "Échéance",
   "echeance_preuves": "Échéance preuves",

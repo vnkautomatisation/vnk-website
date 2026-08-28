@@ -1,12 +1,14 @@
 "use client";
 import { cn } from "@/lib/utils";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 
 const ONLINE_THRESHOLD_MS = 5 * 60 * 1000; // < 5 min = en ligne
 const RECENT_THRESHOLD_MS = 15 * 60 * 1000; // < 15 min = recent
 
 export function OnlineIndicator({ lastSeenAt, className }: { lastSeenAt: string | null; className?: string }) {
   const t = useTranslations("admin.messages");
+  const dateTag = useDateLocale();
   if (!lastSeenAt) return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted", className)} title={t("jamais_connecte")} />;
   const diff = Date.now() - new Date(lastSeenAt).getTime();
   if (diff < ONLINE_THRESHOLD_MS) {
@@ -15,10 +17,10 @@ export function OnlineIndicator({ lastSeenAt, className }: { lastSeenAt: string 
   if (diff < RECENT_THRESHOLD_MS) {
     return <span className={cn("inline-block h-2 w-2 rounded-full bg-amber-400", className)} title={t("recent")} />;
   }
-  return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted-foreground/40", className)} title={`Vu ${formatLastSeen(lastSeenAt)}`} />;
+  return <span className={cn("inline-block h-2 w-2 rounded-full bg-muted-foreground/40", className)} title={`Vu ${formatLastSeen(lastSeenAt, dateTag)}`} />;
 }
 
-function formatLastSeen(iso: string): string {
+function formatLastSeen(iso: string, tag: string): string {
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
   const min = Math.floor(diff / 60000);
@@ -27,5 +29,5 @@ function formatLastSeen(iso: string): string {
   if (h < 24) return `il y a ${h}h`;
   const days = Math.floor(h / 24);
   if (days < 30) return `il y a ${days}j`;
-  return d.toLocaleDateString("fr-CA");
+  return d.toLocaleDateString(tag);
 }

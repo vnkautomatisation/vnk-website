@@ -2,6 +2,7 @@
 // Vue Diagnostics — affichage temps réel des health checks.
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -42,6 +43,7 @@ export function DiagnosticsView() {
   const [report, setReport] = useState<Report | null>(null);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const dateTag = useDateLocale();
 
   const run = useCallback(async () => {
     setLoading(true);
@@ -115,7 +117,7 @@ export function DiagnosticsView() {
 
       {report && (
         <p className="text-[11px] text-muted-foreground">
-          Dernière exécution : {new Date(report.runAt).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "medium" })}
+          Dernière exécution : {new Date(report.runAt).toLocaleString(dateTag, { dateStyle: "medium", timeStyle: "medium" })}
         </p>
       )}
 

@@ -79,6 +79,7 @@ export default async function WorkflowPage() {
     id: e.id,
     eventType: e.eventType,
     eventLabel: e.eventLabel,
+    metadata: e.metadata,
     triggeredBy: e.triggeredBy,
     createdAt: e.createdAt.toISOString(),
     clientId: e.clientId,

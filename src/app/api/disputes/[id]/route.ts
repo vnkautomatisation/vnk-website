@@ -115,7 +115,9 @@ export async function PATCH(
       await createWorkflowEvent({
         clientId: updated.clientId,
         eventType: "dispute_resolved",
-        eventLabel: `Litige résolu (${parsed.data.status}) : ${updated.title}`,
+        eventLabel: t("route_litige_resolu_p0_p1", { p0: parsed.data.status, p1: updated.title }),
+        labelKey: "api_errors.route_litige_resolu_p0_p1",
+        labelParams: { p0: parsed.data.status, p1: updated.title },
         triggeredBy: "admin",
         metadata: { disputeId: updated.id, outcome: parsed.data.outcome ?? null },
       });

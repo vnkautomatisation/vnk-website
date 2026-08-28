@@ -251,7 +251,7 @@ export async function sendDocumentDraftForSignatureAction(
         recipientId: draft.targetAdminId,
         type: "info",
         title: "Document a signer",
-        body: `« ${draft.template.title} » vous a ete envoye pour signature.`,
+        body: t("hr_document_drafts_p0_vous_a_ete_envoye_pour_signature", { p0: draft.template.title }),
         link: "/admin/mon-espace/documents",
         icon: "file-pen",
       },

@@ -2,6 +2,7 @@
 // Vue Notifications Push — abonnement navigateur + liste des appareils.
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -46,6 +47,7 @@ export function PushView({
   const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
   const [subscribing, setSubscribing] = useState(false);
   const [vapidKey, setVapidKey] = useState<string | null>(null);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -234,8 +236,8 @@ export function PushView({
                         <Badge variant="outline" className="text-[10px]">{t(dev.labelKey)}</Badge>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Abonné {new Date(s.createdAt).toLocaleDateString("fr-CA", { dateStyle: "medium" })}
-                        {s.lastUsedAt && ` · Dernière notif ${new Date(s.lastUsedAt).toLocaleDateString("fr-CA")}`}
+                        Abonné {new Date(s.createdAt).toLocaleDateString(dateTag, { dateStyle: "medium" })}
+                        {s.lastUsedAt && t("push_view_derniere_notif_p0", { p0: new Date(s.lastUsedAt).toLocaleDateString(dateTag) })}
                       </p>
                     </div>
                     <Button size="sm" variant="ghost" onClick={() => unsubscribe(s.endpoint)} className="text-red-600">

@@ -80,6 +80,15 @@ const PDF_LABELS: Record<DocLang, Record<string, string>> = {
     hb_lu_accepte: "Lu et accepté",
     hb_confirmation_lecture: "J'ai lu et compris l'ensemble du présent Manuel de l'employé.",
     hb_acceptation_finale_court: "Acceptation finale",
+    sig_manuscrite: "Signature manuscrite",
+    sig_nom_moules: "Nom en lettres moulees",
+    sig_date_iso: "Date (AAAA-MM-JJ)",
+    sig_simple: "Signature",
+    sig_alt: "Signature",
+    doc_officiel: "Document officiel",
+    version: "Version",
+    date_emission: "Date d'emission",
+    date: "Date",
   },
   en: {
     preamble_parties: "Between the undersigned parties:",
@@ -96,6 +105,15 @@ const PDF_LABELS: Record<DocLang, Record<string, string>> = {
     hb_lu_accepte: "Read and accepted",
     hb_confirmation_lecture: "I have read and understood the whole of this employee Handbook.",
     hb_acceptation_finale_court: "Final acceptance",
+    sig_manuscrite: "Handwritten signature",
+    sig_nom_moules: "Name in block letters",
+    sig_date_iso: "Date (YYYY-MM-DD)",
+    sig_simple: "Signature",
+    sig_alt: "Signature",
+    doc_officiel: "Official document",
+    version: "Version",
+    date_emission: "Date of issue",
+    date: "Date",
   },
 };
 const lbl = (lang: DocLang | undefined, key: string) => PDF_LABELS[lang ?? "fr"][key];
@@ -297,6 +315,7 @@ function preprocessSignatures(
   md: string,
   signatures?: HtmlPdfOptions["signatures"],
   scope: SignatureScope = "both",
+  lang?: DocLang,
 ): string {
   if (!md) return md;
 
@@ -344,17 +363,17 @@ function preprocessSignatures(
   <div class="role-badge">${escapeHtml(label).toUpperCase()}</div>
   <div class="signature-area">
     <div class="sig-image-wrap">
-      <img class="sig-image" src="${escapeHtml(sig.dataUrl)}" alt="Signature ${escapeHtml(label)}" />
+      <img class="sig-image" src="${escapeHtml(sig.dataUrl)}" alt="${lbl(lang, "sig_alt")} ${escapeHtml(label)}" />
     </div>
-    <div class="label">Signature manuscrite</div>
+    <div class="label">${lbl(lang, "sig_manuscrite")}</div>
     <div class="sig-row">
       <div class="sig-cell">
         <div class="sig-value">${escapeHtml(name)}</div>
-        <div class="label">Nom en lettres moulees</div>
+        <div class="label">${lbl(lang, "sig_nom_moules")}</div>
       </div>
       <div class="sig-cell">
         <div class="sig-value">${escapeHtml(iso)}</div>
-        <div class="label">Date (AAAA-MM-JJ)</div>
+        <div class="label">${lbl(lang, "sig_date_iso")}</div>
       </div>
     </div>
   </div>
@@ -366,15 +385,15 @@ function preprocessSignatures(
   <div class="role-badge">${escapeHtml(label).toUpperCase()}</div>
   <div class="signature-area">
     <div class="sig-line"></div>
-    <div class="label">Signature</div>
+    <div class="label">${lbl(lang, "sig_simple")}</div>
     <div class="sig-row">
       <div class="sig-cell">
         <div class="sig-line-short"></div>
-        <div class="label">Nom en lettres moulees</div>
+        <div class="label">${lbl(lang, "sig_nom_moules")}</div>
       </div>
       <div class="sig-cell">
         <div class="sig-line-short"></div>
-        <div class="label">Date (AAAA-MM-JJ)</div>
+        <div class="label">${lbl(lang, "sig_date_iso")}</div>
       </div>
     </div>
   </div>
@@ -751,7 +770,7 @@ function processMarkdownToHtml(
   // Si `signatures` fourni, les ancres `[Signature ...]` sont remplacees
   // par un bloc avec image base64 + nom + date (PDF final post-signature).
   // Le scope filtre quels roles (employe / employeur) sont effectivement rendus.
-  s = preprocessSignatures(s, signatures, signatureScope);
+  s = preprocessSignatures(s, signatures, signatureScope, lang);
   s = stripDuplicateSignatureHeading(s);
   // Si le scope est "none" ou si toutes les ancres ont ete filtrees, on
   // supprime egalement le titre `## Signatures` orphelin.
@@ -853,7 +872,7 @@ function buildHtmlDocument(htmlBody: string, opts: HtmlPdfOptions): string {
     metaLine.push(`Version : ${escapeHtml(opts.metadata.version)}`);
 
   return `<!DOCTYPE html>
-<html lang="fr-CA">
+<html lang="${(opts.lang ?? "fr") === "en" ? "en-CA" : "fr-CA"}">
 <head>
 <meta charset="UTF-8">
 <title>${title}</title>
@@ -1915,6 +1934,7 @@ export async function renderTemplateHtmlToPdf(
       "[pdf-html-renderer] Fallback PDFKit (Chromium indisponible).",
     );
     return renderViaPdfKit({
+      lang: opts.lang,
       bodyMarkdown: opts.bodyMarkdown,
       context: opts.context,
       title: opts.title,
@@ -1964,6 +1984,7 @@ export async function renderTemplateHtmlToPdf(
       (e as Error)?.message ?? e,
     );
     return renderViaPdfKit({
+      lang: opts.lang,
       bodyMarkdown: opts.bodyMarkdown,
       context: opts.context,
       title: opts.title,
@@ -2394,17 +2415,17 @@ export function buildHandbookCoverHtml(args: {
     </div>
   </div>
   <div class="hb-cover-body">
-    <div class="hb-cover-eyebrow">Document officiel</div>
+    <div class="hb-cover-eyebrow">${lbl(args.lang, "doc_officiel")}</div>
     <h1 class="hb-cover-title">${escapeHtmlSafe(args.title)}</h1>
     ${args.subtitle ? `<p class="hb-cover-subtitle">${escapeHtmlSafe(args.subtitle)}</p>` : ""}
     <div class="hb-cover-meta">
       <div class="hb-cover-meta-item">
-        <div class="hb-cover-meta-label">Version</div>
+        <div class="hb-cover-meta-label">${lbl(args.lang, "version")}</div>
         <div class="hb-cover-meta-value">${escapeHtmlSafe(args.version)}</div>
       </div>
       <div class="hb-cover-meta-sep"></div>
       <div class="hb-cover-meta-item">
-        <div class="hb-cover-meta-label">Date d'emission</div>
+        <div class="hb-cover-meta-label">${lbl(args.lang, "date_emission")}</div>
         <div class="hb-cover-meta-value">${escapeHtmlSafe(args.date)}</div>
       </div>
     </div>
@@ -2705,7 +2726,7 @@ function buildHandbookHtml(
     <div class="hb-final-ack-meta">
       <div class="hb-final-ack-meta-cell">
         <div class="hb-final-ack-meta-value">${escapeHtmlSafe(signedDateFr)}</div>
-        <div class="hb-final-ack-meta-label">Date</div>
+        <div class="hb-final-ack-meta-label">${lbl(opts.lang, "date")}</div>
       </div>
       <div class="hb-final-ack-meta-cell">
         <div class="hb-final-ack-meta-value hb-final-ack-initials-value">${escapeHtmlSafe(finalInitials || "______")}</div>
@@ -3874,7 +3895,7 @@ function buildHandbookHtml(
   // sections. Chaque section sera rendue dans son propre PDF via Puppeteer,
   // puis l'ensemble sera concatene avec pdf-lib (cf. renderHandbookHtmlToPdf).
   const htmlWrap = (innerHtml: string) => `<!DOCTYPE html>
-<html lang="fr-CA">
+<html lang="${(opts.lang ?? "fr") === "en" ? "en-CA" : "fr-CA"}">
 <head>
 <meta charset="UTF-8">
 <title>${escapeHtmlSafe(opts.handbook.title)}</title>
@@ -4021,6 +4042,7 @@ export async function renderHandbookHtmlToPdf(
       "[renderHandbookHtmlToPdf] Chromium indispo — fallback PDFKit basique.",
     );
     return renderViaPdfKit({
+      lang: opts.lang,
       bodyMarkdown: opts.chapters
         .map((c) => `# ${c.title}\n\n${c.bodyMarkdown}`)
         .join("\n\n---\n\n"),
@@ -4136,6 +4158,7 @@ export async function renderHandbookHtmlToPdf(
       (e as Error)?.message ?? e,
     );
     return renderViaPdfKit({
+      lang: opts.lang,
       bodyMarkdown: opts.chapters
         .map((c) => `# ${c.title}\n\n${c.bodyMarkdown}`)
         .join("\n\n---\n\n"),

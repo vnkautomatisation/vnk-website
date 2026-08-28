@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Users, Plus, Edit, Trash2, Heart, Baby } from "lucide-react";
@@ -28,6 +29,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
   const router = useRouter();
   const [dialog, setDialog] = useState<{ open: boolean; existing: Dep | null }>({ open: false, existing: null });
   const [confirmDel, setConfirmDel] = useState<Dep | null>(null);
+  const dateTag = useDateLocale();
 
   return (
     <div className="space-y-4">
@@ -58,7 +60,7 @@ export function FamilyView({ adminId, dependents }: { adminId: number; dependent
                     <Icon className="h-5 w-5 text-[#0F2D52] mt-0.5 shrink-0" />
                     <div>
                       <h3 className="font-bold text-sm">{d.fullName}</h3>
-                      <p className="text-xs text-muted-foreground">{meta.label}{d.birthdate && ` · ${new Date(d.birthdate).toLocaleDateString("fr-CA")}`}</p>
+                      <p className="text-xs text-muted-foreground">{meta.label}{d.birthdate && ` · ${new Date(d.birthdate).toLocaleDateString(dateTag)}`}</p>
                       <div className="flex gap-1 mt-1.5 flex-wrap">
                         {d.isInsured && <Badge variant="outline" className="text-[10px]">{t("assure")}</Badge>}
                         {d.isTaxDependent && <Badge variant="outline" className="text-[10px]">{t("dependant_fiscal")}</Badge>}
@@ -139,7 +141,7 @@ function DepDialog({ open, existing, adminId, onClose, onSaved }: { open: boolea
         <div className="bg-gradient-to-br from-[#0F2D52] to-[#15406d] text-white px-5 py-4">
           <DialogHeader>
             <DialogTitle className="text-base text-white flex items-center gap-2">
-              <Users className="h-4 w-4" />{existing ? t("modifier") : t("nouveau")} dépendant
+              <Users className="h-4 w-4" />{existing ? t("modifier_dependant") : t("nouveau_dependant")}
             </DialogTitle>
           </DialogHeader>
         </div>

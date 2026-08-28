@@ -44,7 +44,9 @@ export async function GET(req: Request) {
       clientId: ct.clientId,
       contractId: ct.id,
       eventType: "contract_cancelled",
-      eventLabel: `Contrat ${ct.contractNumber} expiré automatiquement`,
+      eventLabel: t("route_contrat_p0_expire_automatiquement", { p0: ct.contractNumber }),
+      labelKey: "api_errors.route_contrat_p0_expire_automatiquement",
+      labelParams: { p0: ct.contractNumber },
       triggeredBy: "system",
     });
 

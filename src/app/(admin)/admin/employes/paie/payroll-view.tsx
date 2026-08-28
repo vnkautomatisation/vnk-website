@@ -11,6 +11,7 @@
 //  - ActionTooltip (jamais title="...")
 // =============================================================
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
@@ -79,26 +80,26 @@ const STATUS_META: Record<string, { label: string; color: string }> = {
 
 type TabKey = "overview" | "periods" | "stubs" | "my";
 
-function formatMoney(v: number | string): string {
+function formatMoney(v: number | string, tag: string): string {
   const n = typeof v === "number" ? v : Number(v);
   if (Number.isNaN(n)) return "-";
-  return new Intl.NumberFormat("fr-CA", { style: "currency", currency: "CAD" }).format(n);
+  return new Intl.NumberFormat(tag, { style: "currency", currency: "CAD" }).format(n);
 }
 
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 // A @db.Date column serializes at UTC midnight, so reading it locally shows the
 // day before anywhere west of Greenwich. Pay period bounds are date-only.
-function formatDateOnly(iso: string | null | undefined): string {
+function formatDateOnly(iso: string | null | undefined, tag: string): string {
   if (!iso) return "-";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "-";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 function isThisMonth(iso: string | null | undefined): boolean {
@@ -132,6 +133,7 @@ export function PayrollView({
   const [tab, setTab] = useState<TabKey>(isPayrollAdmin ? "overview" : "my");
   const [createOpen, setCreateOpen] = useState(false);
   const [pdfPreview, setPdfPreview] = useState<{ url: string; title: string; description?: string; filename?: string } | null>(null);
+  const dateTag = useDateLocale();
 
 
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -155,10 +157,10 @@ export function PayrollView({
 
   const openStubPdf = useCallback((s: Stub) => {
     const employeeName = s.admin?.fullName || s.admin?.email || t("employe");
-    const periodLabel = `${formatDateOnly(s.period.startDate)} - ${formatDateOnly(s.period.endDate)}`;
+    const periodLabel = `${formatDateOnly(s.period.startDate, dateTag)} - ${formatDateOnly(s.period.endDate, dateTag)}`;
     setPdfPreview({
       url: `/api/admin/pay-stubs/${s.id}/pdf`,
-      title: `Bulletin de paie #${s.id}`,
+      title: t("payroll_view_bulletin_de_paie_p0", { p0: s.id }),
       description: `${employeeName} - ${periodLabel}`,
       filename: `bulletin-paie-${s.id}.pdf`,
     });
@@ -253,7 +255,7 @@ export function PayrollView({
             icon={Calendar}
             accent={kpis.currentPeriod?.status === "paid" ? "success" : kpis.currentPeriod ? "info" : "navy"}
             hint={kpis.currentPeriod
-              ? `${formatDateOnly(kpis.currentPeriod.startDate)} - ${formatDateOnly(kpis.currentPeriod.endDate)}`
+              ? `${formatDateOnly(kpis.currentPeriod.startDate, dateTag)} - ${formatDateOnly(kpis.currentPeriod.endDate, dateTag)}`
               : t("creez_nouvelle_periode")}
             onClick={() => setTab("periods")}
           />
@@ -275,7 +277,7 @@ export function PayrollView({
           />
           <DocumentStatsCard
             label={t("total_verse_ytd")}
-            value={formatMoney(kpis.totalYtd)}
+            value={formatMoney(kpis.totalYtd, dateTag)}
             icon={TrendingUp}
             accent="navy"
             hint={t("net_cumule_depuis_1er_janvier")}
@@ -289,19 +291,19 @@ export function PayrollView({
             icon={Receipt}
             accent="info"
             hint={myKpis.last
-              ? `Dernier : ${formatDateOnly(myKpis.last.period.startDate)}`
+              ? `Dernier : ${formatDateOnly(myKpis.last.period.startDate, dateTag)}`
               : t("aucun_bulletin_moment")}
           />
           <DocumentStatsCard
             label={t("net_cumule_ytd")}
-            value={formatMoney(myKpis.ytd)}
+            value={formatMoney(myKpis.ytd, dateTag)}
             icon={Wallet}
             accent="success"
             hint={`Annee ${new Date().getFullYear()}`}
           />
           <DocumentStatsCard
             label={t("brut_cumule_ytd")}
-            value={formatMoney(myKpis.grossYtd)}
+            value={formatMoney(myKpis.grossYtd, dateTag)}
             icon={DollarSign}
             accent="navy"
             hint={t("avant_deductions_source")}
@@ -351,7 +353,7 @@ export function PayrollView({
                       <span className="min-[480px]:hidden">{t("ytd")}</span>
                       <span className="hidden min-[480px]:inline">{t("net_ytd")}</span>
                     </span>
-                    <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd)}</span>
+                    <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd, dateTag)}</span>
                   </span>
                 </>
               )}
@@ -390,7 +392,7 @@ export function PayrollView({
               </span>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
                 <span className="text-muted-foreground">{t("ytd")}</span>
-                <span className="font-semibold text-[#0F2D52]">{formatMoney(kpis.totalYtd)}</span>
+                <span className="font-semibold text-[#0F2D52]">{formatMoney(kpis.totalYtd, dateTag)}</span>
               </span>
               <Button
                 size="sm"
@@ -409,7 +411,7 @@ export function PayrollView({
               </span>
               <span className="flex items-baseline gap-1.5 whitespace-nowrap">
                 <span className="text-muted-foreground">{t("net_ytd")}</span>
-                <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd)}</span>
+                <span className="font-semibold text-emerald-700">{formatMoney(myKpis.ytd, dateTag)}</span>
               </span>
             </>
           )}
@@ -481,6 +483,7 @@ function OverviewTab({
   onNewPeriod: () => void;
 }) {
   const t = useTranslations("admin.payroll");
+  const dateTag = useDateLocale();
   const recentPeriods = periods.slice(0, 5);
   const recentStubs = stubs.slice(0, 6);
 
@@ -501,7 +504,7 @@ function OverviewTab({
           <div className="rounded-md border bg-muted/20 p-3 space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-foreground">
-                {formatDateOnly(kpis.currentPeriod.startDate)} - {formatDateOnly(kpis.currentPeriod.endDate)}
+                {formatDateOnly(kpis.currentPeriod.startDate, dateTag)} - {formatDateOnly(kpis.currentPeriod.endDate, dateTag)}
               </span>
               <Badge className={`text-[10px] border ${STATUS_META[kpis.currentPeriod.status]?.color ?? "bg-gray-100 text-gray-700"}`}>
                 {STATUS_META[kpis.currentPeriod.status]?.label ?? kpis.currentPeriod.status}
@@ -509,7 +512,7 @@ function OverviewTab({
             </div>
             <div className="flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">{t("date_paie")}</span>
-              <span className="font-medium">{formatDateOnly(kpis.currentPeriod.payDate)}</span>
+              <span className="font-medium">{formatDateOnly(kpis.currentPeriod.payDate, dateTag)}</span>
             </div>
             <div className="flex items-baseline justify-between text-xs">
               <span className="text-muted-foreground">{t("bulletins_generes")}</span>
@@ -545,7 +548,7 @@ function OverviewTab({
             {recentPeriods.map((p) => (
               <div key={p.id} className="flex items-center justify-between text-xs gap-2 border-b last:border-0 pb-1.5 last:pb-0">
                 <span className="truncate flex-1">
-                  {formatDateOnly(p.startDate)} - {formatDateOnly(p.endDate)}
+                  {formatDateOnly(p.startDate, dateTag)} - {formatDateOnly(p.endDate, dateTag)}
                 </span>
                 <Badge variant="outline" className={`text-[10px] ${STATUS_META[p.status]?.color ?? "bg-gray-100"}`}>
                   {STATUS_META[p.status]?.label ?? p.status}
@@ -577,7 +580,7 @@ function OverviewTab({
                   {s.admin?.fullName || s.admin?.email}
                 </span>
                 <span className="font-mono font-semibold tabular-nums text-[#0F2D52]">
-                  {formatMoney(s.netPay)}
+                  {formatMoney(s.netPay, dateTag)}
                 </span>
               </div>
             ))}
@@ -628,6 +631,7 @@ function PeriodsTab({
 
 function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => void }) {
   const t = useTranslations("admin.payroll");
+  const dateTag = useDateLocale();
   const s = STATUS_META[period.status] ?? { label: period.status, color: "bg-gray-100 text-gray-700" };
   const [busy, setBusy] = useState<"gen" | "lock" | "pay" | null>(null);
 
@@ -640,10 +644,10 @@ function PeriodCard({ period, onChanged }: { period: Period; onChanged: () => vo
           </div>
           <div className="min-w-0">
             <h3 className="font-semibold text-sm truncate">
-              {formatDateOnly(period.startDate)} - {formatDateOnly(period.endDate)}
+              {formatDateOnly(period.startDate, dateTag)} - {formatDateOnly(period.endDate, dateTag)}
             </h3>
             <p className="text-xs text-muted-foreground">
-              Date de paie : {formatDateOnly(period.payDate)} - {period._count.stubs} bulletin{period._count.stubs > 1 ? "s" : ""}
+              Date de paie : {formatDateOnly(period.payDate, dateTag)} - {period._count.stubs} bulletin{period._count.stubs > 1 ? "s" : ""}
             </p>
           </div>
         </div>
@@ -728,6 +732,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
   const [periodFilter, setPeriodFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all"); // all | released | draft
   const [page, setPage] = useState(0);
+  const dateTag = useDateLocale();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -776,7 +781,7 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
               <SelectItem value="all">{t("toutes_periodes")}</SelectItem>
               {periods.map((p) => (
                 <SelectItem key={p.id} value={String(p.id)}>
-                  {formatDateOnly(p.startDate)} - {formatDateOnly(p.endDate)}
+                  {formatDateOnly(p.startDate, dateTag)} - {formatDateOnly(p.endDate, dateTag)}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -806,11 +811,11 @@ function StubsList({ stubs, periods, onOpenPdf }: { stubs: Stub[]; periods: Peri
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{s.admin?.fullName || s.admin?.email}</p>
                 <p className="text-xs text-muted-foreground truncate">
-                  {formatDateOnly(s.period.startDate)} - {formatDateOnly(s.period.endDate)}
+                  {formatDateOnly(s.period.startDate, dateTag)} - {formatDateOnly(s.period.endDate, dateTag)}
                 </p>
               </div>
               <div className="text-right shrink-0">
-                <p className="font-mono text-sm font-bold tabular-nums">{formatMoney(s.netPay)}</p>
+                <p className="font-mono text-sm font-bold tabular-nums">{formatMoney(s.netPay, dateTag)}</p>
                 <p className="text-[10px] text-muted-foreground">net</p>
               </div>
               {s.releasedAt ? (
@@ -893,6 +898,7 @@ function MyStubsTab({ stubs, onOpenPdf }: { stubs: Stub[]; onOpenPdf: (s: Stub) 
 
 function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) {
   const t = useTranslations("admin.payroll");
+  const dateTag = useDateLocale();
   const totalDeductions =
     Number(stub.deductionFederal) + Number(stub.deductionProvincial) +
     Number(stub.deductionRrq) + Number(stub.deductionAe) +
@@ -908,14 +914,14 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-wider opacity-80">{t("periode")}</p>
             <h3 className="font-bold text-sm truncate">
-              {formatDateOnly(stub.period.startDate)} - {formatDateOnly(stub.period.endDate)}
+              {formatDateOnly(stub.period.startDate, dateTag)} - {formatDateOnly(stub.period.endDate, dateTag)}
             </h3>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
             <p className="text-[10px] uppercase tracking-wider opacity-80">{t("net_payer")}</p>
-            <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay)}</p>
+            <p className="text-2xl font-bold tabular-nums">{formatMoney(stub.netPay, dateTag)}</p>
           </div>
           <Button
             size="sm"
@@ -934,7 +940,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             {t("heures_regulieres")}
           </p>
           <p className="font-mono">
-            {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate)}
+            {Number(stub.hoursRegular).toFixed(2)} h x {formatMoney(stub.rate, dateTag)}
           </p>
         </div>
         {Number(stub.hoursOvertime) > 0 && (
@@ -958,7 +964,7 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
             <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
               {t("indemnite_ferie")}
             </p>
-            <p className="font-mono">{formatMoney(stub.holidayIndemnity)}</p>
+            <p className="font-mono">{formatMoney(stub.holidayIndemnity, dateTag)}</p>
           </div>
         )}
         {Number(stub.hoursVacation) > 0 && (
@@ -972,31 +978,31 @@ function MyStubCard({ stub, onOpenPdf }: { stub: Stub; onOpenPdf: () => void }) 
         <div className="col-span-full border-t pt-3 grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
           <div>
             <span className="text-muted-foreground">{t("brut")} </span>
-            <strong className="tabular-nums">{formatMoney(stub.grossPay)}</strong>
+            <strong className="tabular-nums">{formatMoney(stub.grossPay, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("federal")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionFederal)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionFederal, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("provincial")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionProvincial, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("rrq")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionRrq)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRrq, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("ae")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionAe)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionAe, dateTag)}</strong>
           </div>
           <div>
             <span className="text-muted-foreground">{t("rqap")} </span>
-            <strong className="tabular-nums">-{formatMoney(stub.deductionRqap)}</strong>
+            <strong className="tabular-nums">-{formatMoney(stub.deductionRqap, dateTag)}</strong>
           </div>
           <div className="md:col-span-2">
             <span className="text-muted-foreground">{t("total_deductions")} </span>
-            <strong className="tabular-nums">-{formatMoney(totalDeductions)}</strong>
+            <strong className="tabular-nums">-{formatMoney(totalDeductions, dateTag)}</strong>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -58,7 +59,7 @@ const CATEGORIES = [
   { value: "other", labelKey: "autre", color: "bg-gray-100 text-gray-700" },
 ];
 
-function formatRelativeDate(iso: string | null, t: (k: string) => string): string {
+function formatRelativeDate(iso: string | null, t: (k: string) => string, tag: string): string {
   if (!iso) return t("jamais");
   const d = new Date(iso);
   const diff = Date.now() - d.getTime();
@@ -67,13 +68,14 @@ function formatRelativeDate(iso: string | null, t: (k: string) => string): strin
   if (days === 1) return t("hier");
   if (days < 7) return `Il y a ${days}j`;
   if (days < 30) return `Il y a ${Math.floor(days / 7)}sem`;
-  return d.toLocaleDateString("fr-CA");
+  return d.toLocaleDateString(tag);
 }
 
 export function TemplatesView({ templates }: { templates: Template[] }) {
   const t = useTranslations("admin.message_templates");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const { confirm, ConfirmModal } = useConfirm();
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState<string>("all");
@@ -194,7 +196,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-    if (res.ok) { const d = await res.json(); toast.success(`Test envoyé à ${d.sentTo}`); }
+    if (res.ok) { const d = await res.json(); toast.success(t("templates_view_test_envoye_a_p0", { p0: d.sentTo })); }
     else { const d = await res.json(); toast.error(d.error || t("erreur_smtp")); }
   };
 
@@ -212,7 +214,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       const r = await fetch(`/api/message-templates/${id}`, { method: "DELETE" });
       if (r.ok) success++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimé(s)`);
+    toast.success(t("templates_view_p0_p1_supprime_s", { p0: success, p1: selectedIds.size }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -229,14 +231,14 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
       const res = await fetch("/api/message-templates/seed-defaults", { method: "POST" });
       if (res.ok) {
         const d = await res.json();
-        toast.success(`${d.created} ajouté(s) · ${d.skipped} ignoré(s) (déjà existant)`);
+        toast.success(t("templates_view_p0_ajoute_s_p1_ignore_s_deja_existant", { p0: d.created, p1: d.skipped }));
         router.refresh();
       } else { toast.error(t("erreur")); }
     } finally { setSeedingDefaults(false); }
   };
 
   const copyShortcut = (sc: string) => {
-    navigator.clipboard.writeText(`/${sc}`).then(() => toast.success(`/${sc} copié`));
+    navigator.clipboard.writeText(`/${sc}`).then(() => toast.success(t("raccourci_copie", { shortcut: `/${sc}` })));
   };
 
 
@@ -336,7 +338,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
               <Zap className="h-4 w-4" />
               {t("templates")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("total")} <span className="font-semibold text-indigo-600">{templates.length}</span></span>
             <span className="text-muted-foreground">{t("utilisations")} <span className="font-semibold text-blue-600">{totalUses}</span></span>
             <span className="ml-auto text-muted-foreground">{t("7_derniers_jours")} <span className="font-semibold text-emerald-600">{recentlyUsed}</span></span>
@@ -391,7 +393,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -506,7 +508,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
                     {attCount > 0 && <span title={t("pieces_jointes")} className="text-muted-foreground flex items-center gap-0.5"><Paperclip className="h-3 w-3" />{attCount}</span>}
                     {tpl.locale === "en" && <span className="text-[8px] px-1 py-0 rounded bg-muted font-mono">EN</span>}
                   </div>
-                  <span className="text-muted-foreground whitespace-nowrap">{tpl.usageCount}× · {formatRelativeDate(tpl.lastUsedAt, t)}</span>
+                  <span className="text-muted-foreground whitespace-nowrap">{tpl.usageCount}× · {formatRelativeDate(tpl.lastUsedAt, t, dateTag)}</span>
                 </div>
               </Card>
             );
@@ -537,7 +539,7 @@ export function TemplatesView({ templates }: { templates: Template[] }) {
         open={!!deleting}
         onOpenChange={(o) => { if (!o) setDeleting(null); }}
         title={t("supprimer_template")}
-        description={`Le template /${deleting?.shortcut} sera supprimé définitivement.`}
+        description={t("templates_view_le_template_p0_sera_supprime_definitivement", { p0: (deleting?.shortcut ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
@@ -795,6 +797,7 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
   const tc = useTranslations("common");
   const [versions, setVersions] = useState<{ id: number; body: string; emailSubject: string | null; editedBy: string | null; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const dateTag = useDateLocale();
 
   useEffect(() => {
     fetch(`/api/message-templates/${template.id}/versions`)
@@ -832,7 +835,7 @@ function VersionsDialog({ template, onClose, onRestored }: { template: Template;
               <div key={v.id} className="rounded-lg border p-3 bg-muted/20">
                 <div className="flex items-center justify-between gap-2 mb-2">
                   <div className="text-[11px] text-muted-foreground">
-                    {new Date(v.createdAt).toLocaleString("fr-CA")} · par {v.editedBy ?? t("systeme")}
+                    {new Date(v.createdAt).toLocaleString(dateTag)} · par {v.editedBy ?? t("systeme")}
                   </div>
                   <Button size="sm" variant="outline" onClick={() => restore(v.id)} className="h-7 text-xs">
                     <Download className="h-3 w-3 mr-1" />Restaurer

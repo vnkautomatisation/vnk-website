@@ -141,7 +141,7 @@ export function TeamsView({ teams, admins }: { teams: TeamRow[]; admins: AdminLi
                           key={m.id}
                           href={`/admin/employes/${m.id}/dossier`}
                           className="h-7 w-7 rounded-full bg-gradient-to-br from-[#0F2D52] to-[#15406d] flex items-center justify-center text-white text-[10px] font-semibold ring-2 ring-white hover:ring-amber-400 transition"
-                          title={`Voir le dossier — ${m.fullName || m.email}`}
+                          title={t("teams_view_voir_le_dossier_p0", { p0: m.fullName || m.email })}
                           style={m.avatarUrl ? { backgroundImage: `url(${m.avatarUrl})`, backgroundSize: "cover" } : undefined}
                         >
                           {!m.avatarUrl && (m.fullName || m.email).split(/\s+/).map((p) => p[0]).join("").slice(0, 2).toUpperCase()}

@@ -2,6 +2,7 @@
 // Vue dossier employe : tabs identite/notes/evaluations/contrats/documents/conges/equipement/permis/paie/cnesst.
 // Inclus le dialog VNK navy pour creer/editer une EmployeeNote.
 import { useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -221,19 +222,19 @@ const SEVERITY_COLOR: Record<string, string> = {
 };
 
 // ─── Helpers ───────────────────────────────────────────────────────
-function fmtDate(d: string | null | undefined): string {
+function fmtDate(d: string | null | undefined, tag: string): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-CA", { year: "numeric", month: "short", day: "numeric" });
+  return new Date(d).toLocaleDateString(tag, { year: "numeric", month: "short", day: "numeric" });
 }
 
-function fmtDateShort(d: string | null | undefined): string {
+function fmtDateShort(d: string | null | undefined, tag: string): string {
   if (!d) return "—";
-  return new Date(d).toLocaleDateString("fr-CA");
+  return new Date(d).toLocaleDateString(tag);
 }
 
-function fmtMoney(n: number | null | undefined): string {
+function fmtMoney(n: number | null | undefined, tag: string): string {
   if (n == null) return "—";
-  return `${Number(n).toLocaleString("fr-CA", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
+  return `${Number(n).toLocaleString(tag, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} $`;
 }
 
 function seniorityLabel(start: string | null, t: (k: string, v?: Record<string, string | number | Date>) => string): string {
@@ -280,6 +281,7 @@ export function DossierView(props: {
   const t = useTranslations("admin.employee_file");
   const tc = useTranslations("common");
   const router = useRouter();
+  const dateTag = useDateLocale();
   const {
     actorId, isSuper, admin, notes, files, contracts, reviews, payAgg,
     leaves, equipment, licenses, trainings, cnesst, emergencyContacts, family, bank,
@@ -373,7 +375,7 @@ export function DossierView(props: {
               className="bg-white/10 border-white/30 text-white hover:bg-white/20 hover:text-white"
               onClick={() => setPdfPreview({
                 url: `/api/admin/employees/${admin.id}/dossier/pdf`,
-                title: `Dossier employé · ${employeeLabel}`,
+                title: t("dossier_view_dossier_employe_p0", { p0: employeeLabel }),
                 description: admin.position?.name || admin.title || undefined,
                 filename: `dossier-${admin.id}.pdf`,
               })}
@@ -426,10 +428,10 @@ export function DossierView(props: {
                 <InfoRow icon={Crown} label={t("role")} value={admin.customRole?.name || "—"} />
                 <InfoRow icon={Building2} label={t("equipe")} value={admin.team?.name || "—"} />
                 <InfoRow icon={User} label={t("manager")} value={admin.manager ? (admin.manager.fullName || admin.manager.email) : "—"} />
-                <InfoRow icon={Calendar} label="Date d'embauche" value={fmtDate(admin.startDate)} />
+                <InfoRow icon={Calendar} label="Date d'embauche" value={fmtDate(admin.startDate, dateTag)} />
                 <InfoRow icon={Calendar} label={t("anciennete")} value={seniorityLabel(admin.startDate, t)} />
-                <InfoRow icon={Calendar} label={t("date_fin")} value={fmtDate(admin.endDate)} />
-                <InfoRow icon={Calendar} label={t("naissance")} value={fmtDate(admin.birthdate)} />
+                <InfoRow icon={Calendar} label={t("date_fin")} value={fmtDate(admin.endDate, dateTag)} />
+                <InfoRow icon={Calendar} label={t("naissance")} value={fmtDate(admin.birthdate, dateTag)} />
                 <InfoRow icon={User} label={t("civilite")} value={admin.civility || "—"} />
                 <InfoRow icon={User} label={t("genre")} value={genderKey(admin.gender) ? t(genderKey(admin.gender)!) : "—"} />
                 {admin.preferredPronouns && (
@@ -532,7 +534,7 @@ export function DossierView(props: {
                         )}
                         {n.acknowledgedAt && (
                           <Badge variant="outline" className="text-[10px] text-emerald-700 border-emerald-300 bg-emerald-50">
-                            Lu le {fmtDateShort(n.acknowledgedAt)}
+                            Lu le {fmtDateShort(n.acknowledgedAt, dateTag)}
                           </Badge>
                         )}
                       </div>
@@ -554,8 +556,8 @@ export function DossierView(props: {
                     <div className="mt-2 pt-2 border-t flex items-center justify-between text-[11px] text-muted-foreground gap-2 flex-wrap">
                       <span>{t("par")} <span className="font-medium">{n.author.fullName || n.author.email}</span></span>
                       <span>
-                        {n.occurredAt ? `Evenement : ${fmtDateShort(n.occurredAt)} · ` : ""}
-                        Cree : {fmtDateShort(n.createdAt)}
+                        {n.occurredAt ? `Evenement : ${fmtDateShort(n.occurredAt, dateTag)} · ` : ""}
+                        Cree : {fmtDateShort(n.createdAt, dateTag)}
                       </span>
                       {n.attachmentUrl && (
                         <a href={n.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-[#0F2D52] hover:underline inline-flex items-center gap-1">
@@ -582,7 +584,7 @@ export function DossierView(props: {
                     <li key={r.id} className="py-2 flex items-center justify-between gap-2 flex-wrap">
                       <div>
                         <p className="text-sm font-medium">
-                          {fmtDateShort(r.periodStart)} → {fmtDateShort(r.periodEnd)}
+                          {fmtDateShort(r.periodStart, dateTag)} → {fmtDateShort(r.periodEnd, dateTag)}
                         </p>
                         <p className="text-xs text-muted-foreground">
                           Reviewer : {r.reviewer.fullName || r.reviewer.email}
@@ -620,9 +622,9 @@ export function DossierView(props: {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{c.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {c.contractType.toUpperCase()} · Debut {fmtDateShort(c.startDate)}
-                          {c.endDate ? ` → ${fmtDateShort(c.endDate)}` : ""}
-                          {c.salaryAnnual ? ` · ${fmtMoney(c.salaryAnnual)} / an` : c.hourlyRate ? ` · ${fmtMoney(c.hourlyRate)} / h` : ""}
+                          {c.contractType.toUpperCase()} · Debut {fmtDateShort(c.startDate, dateTag)}
+                          {c.endDate ? ` → ${fmtDateShort(c.endDate, dateTag)}` : ""}
+                          {c.salaryAnnual ? ` · ${fmtMoney(c.salaryAnnual, dateTag)} / an` : c.hourlyRate ? ` · ${fmtMoney(c.hourlyRate, dateTag)} / h` : ""}
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
@@ -658,7 +660,7 @@ export function DossierView(props: {
                       <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium truncate">{f.title}</p>
                         <p className="text-xs text-muted-foreground">
-                          {f.category} · {fmtDateShort(f.createdAt)}
+                          {f.category} · {fmtDateShort(f.createdAt, dateTag)}
                         </p>
                       </div>
                       <Button variant="ghost" size="sm" asChild>
@@ -690,7 +692,7 @@ export function DossierView(props: {
                           {l.type} · {Number(l.daysCount).toFixed(1)} j
                         </p>
                         <p className="text-xs text-muted-foreground">
-                          {fmtDateShort(l.startDate)} → {fmtDateShort(l.endDate)}
+                          {fmtDateShort(l.startDate, dateTag)} → {fmtDateShort(l.endDate, dateTag)}
                           {l.reason ? ` · ${l.reason}` : ""}
                         </p>
                       </div>
@@ -721,7 +723,7 @@ export function DossierView(props: {
                           {e.serialNumber ? ` · S/N ${e.serialNumber}` : ""}
                         </p>
                       </div>
-                      <span className="text-xs text-muted-foreground">Depuis {fmtDateShort(e.assignedAt)}</span>
+                      <span className="text-xs text-muted-foreground">Depuis {fmtDateShort(e.assignedAt, dateTag)}</span>
                     </li>
                   ))}
                 </ul>
@@ -744,7 +746,7 @@ export function DossierView(props: {
                         <p className="text-sm font-medium">{l.type}</p>
                         <p className="text-xs text-muted-foreground">
                           {l.issuer || "—"}{l.number ? ` · #${l.number}` : ""}
-                          {l.expiresAt ? ` · Expire ${fmtDateShort(l.expiresAt)}` : ""}
+                          {l.expiresAt ? ` · Expire ${fmtDateShort(l.expiresAt, dateTag)}` : ""}
                         </p>
                       </div>
                       {l.fileUrl && (
@@ -773,8 +775,8 @@ export function DossierView(props: {
                         </p>
                         <p className="text-xs text-muted-foreground">
                           {t.category} · {t.provider || "—"}
-                          {t.completedAt ? ` · Termine ${fmtDateShort(t.completedAt)}` : ""}
-                          {t.expiresAt ? ` · Expire ${fmtDateShort(t.expiresAt)}` : ""}
+                          {t.completedAt ? ` · Termine ${fmtDateShort(t.completedAt, dateTag)}` : ""}
+                          {t.expiresAt ? ` · Expire ${fmtDateShort(t.expiresAt, dateTag)}` : ""}
                         </p>
                       </div>
                     </li>
@@ -794,11 +796,11 @@ export function DossierView(props: {
             </Card>
             <Card className="p-4">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("total_brut")}</p>
-              <p className="text-2xl font-bold mt-1 text-[#0F2D52]">{fmtMoney(payAgg.grossPay)}</p>
+              <p className="text-2xl font-bold mt-1 text-[#0F2D52]">{fmtMoney(payAgg.grossPay, dateTag)}</p>
             </Card>
             <Card className="p-4">
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">{t("total_net")}</p>
-              <p className="text-2xl font-bold mt-1 text-emerald-700">{fmtMoney(payAgg.netPay)}</p>
+              <p className="text-2xl font-bold mt-1 text-emerald-700">{fmtMoney(payAgg.netPay, dateTag)}</p>
             </Card>
           </div>
         </TabsContent>
@@ -814,7 +816,7 @@ export function DossierView(props: {
                   {cnesst.map((c) => (
                     <li key={c.id} className="py-2">
                       <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <p className="text-sm font-medium">{fmtDate(c.incidentDate)} · {c.location}</p>
+                        <p className="text-sm font-medium">{fmtDate(c.incidentDate, dateTag)} · {c.location}</p>
                         <div className="flex items-center gap-2">
                           {c.daysAbsent != null && (
                             <Badge variant="outline" className="text-[10px]">{c.daysAbsent} j absent</Badge>
@@ -845,7 +847,7 @@ export function DossierView(props: {
       <ConfirmDialog
         open={!!confirmDel}
         onOpenChange={(o) => !o && setConfirmDel(null)}
-        title={`Supprimer la note "${confirmDel?.title}" ?`}
+        title={t("dossier_view_supprimer_la_note_p0", { p0: (confirmDel?.title ?? "") })}
         description={t("action_irreversible_reservee_super_admin")}
         confirmLabel={tc("delete")}
         variant="destructive"

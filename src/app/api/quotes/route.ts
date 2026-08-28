@@ -108,7 +108,9 @@ export async function POST(req: Request) {
     clientId: quote.clientId,
     quoteId: quote.id,
     eventType: "quote_created",
-    eventLabel: `Devis ${quoteNumber} créé — ${taxes.ttc.toFixed(2)} $ TTC`,
+    eventLabel: t("route_devis_p0_cree_p1_ttc", { p0: quoteNumber, p1: taxes.ttc.toFixed(2) }),
+    labelKey: "api_errors.route_devis_p0_cree_p1_ttc",
+    labelParams: { p0: quoteNumber, p1: taxes.ttc.toFixed(2) },
     triggeredBy: "admin",
   });
 

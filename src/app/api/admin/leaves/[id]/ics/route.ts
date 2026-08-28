@@ -61,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   // DTEND est exclusif en ICS DATE-only -> +1 jour
   const endPlus = new Date(leave.endDate); endPlus.setDate(endPlus.getDate() + 1);
   const dtEnd = toIcsDate(endPlus);
-  const summary = `Congé : ${TYPE_KEY[leave.type] ? t(TYPE_KEY[leave.type]) : leave.type}`;
+  const summary = t("route_conge_p0", { p0: TYPE_KEY[leave.type] ? t(TYPE_KEY[leave.type]) : leave.type });
   const description = leave.reason ? leave.reason.replace(/\n/g, "\\n") : "";
   const uid = `leave-${leave.id}@vnk.local`;
 

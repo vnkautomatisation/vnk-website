@@ -87,7 +87,7 @@ export async function POST(req: Request) {
     adminId,
     type: "passkey_added",
     severity: "success",
-    message: `Passkey ajoutée${deviceLabel ? ` : ${deviceLabel}` : ""}`,
+    message: t("route_passkey_ajoutee_p0", { p0: deviceLabel ? ` : ${deviceLabel}` : "" }),
     metadata: { credentialId: verified.credentialId.slice(0, 8) + "…", aaguid: verified.aaguid },
   });
 

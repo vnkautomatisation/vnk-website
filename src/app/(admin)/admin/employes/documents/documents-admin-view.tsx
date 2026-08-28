@@ -10,6 +10,7 @@
 //   PersonalDocCard.
 // =============================================================
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -213,13 +214,13 @@ type TabKey =
   | "employees";
 
 // ---------- Helpers ---------------------------------------------
-function formatDate(iso: string | null | undefined): string {
+function formatDate(iso: string | null | undefined, tag: string): string {
   // Retour "—" (em dash) au lieu de "-" pour distinguer date manquante du
   // tiret-separateur. Plus lisible quand affiche seul dans une cellule.
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("fr-CA", { day: "numeric", month: "short", year: "numeric" });
+  return d.toLocaleDateString(tag, { day: "numeric", month: "short", year: "numeric" });
 }
 
 function daysUntil(iso: string | null | undefined): number | null {
@@ -629,7 +630,7 @@ export function DocumentsAdminView({
           value={kpis.templates}
           icon={FileText}
           accent="info"
-          hint={`${employees.length} employes concernes`}
+          hint={tc("employees_concerned", { count: employees.length })}
         />
         <DocumentStatsCard
           label={t("conformite_globale")}
@@ -879,7 +880,7 @@ export function DocumentsAdminView({
           onRemind={async (r) => {
             const res = await remindUploadRequestAction(r.id);
             if (res.success) {
-              toast.success(`Rappel envoyé`);
+              toast.success(t("documents_admin_view_rappel_envoye"));
               router.refresh();
             } else {
               toast.error(res.error || "");
@@ -1565,6 +1566,7 @@ function RequestsTab({
   const t = useTranslations("admin.hr_documents");
   const tc = useTranslations("common");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const dateTag = useDateLocale();
   // Mission 6 : toggle visibilite "En cours / Completees / Tout" (defaut "En cours").
   const [viewFilter, setViewFilter] = useState<"pending" | "completed" | "all">("pending");
   const teamMap = useMemo(() => new Map(teams.map((t) => [t.id, t.name])), [teams]);
@@ -1736,7 +1738,7 @@ function RequestsTab({
                     </td>
                     <td className="hidden md:table-cell px-3 py-2 text-xs">
                       <p className="truncate">{r.requestedBy.fullName ?? r.requestedBy.email}</p>
-                      <p className="text-[10px] text-muted-foreground">{formatDate(r.requestedAt)}</p>
+                      <p className="text-[10px] text-muted-foreground">{formatDate(r.requestedAt, dateTag)}</p>
                     </td>
                     <td className="hidden lg:table-cell px-3 py-2 text-xs">
                       {r.dueDate ? (
@@ -1753,7 +1755,7 @@ function RequestsTab({
                           }`}
                         >
                           <CalendarClock className="h-2.5 w-2.5 mr-1" />
-                          {formatDate(r.dueDate)}
+                          {formatDate(r.dueDate, dateTag)}
                           {!isCompleted && !isCancelled && days !== null && (
                             <span className="ml-1">
                               ({overdue ? `expiree` : `J-${days}`})
@@ -1995,6 +1997,7 @@ function UploadRequestsTab({
   const [statusFilter, setStatusFilter] = useState<string>("open");
   const [search, setSearch] = useState("");
   const [busyId, setBusyId] = useState<number | null>(null);
+  const dateTag = useDateLocale();
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -2139,8 +2142,8 @@ function UploadRequestsTab({
                         }
                       >
                         {overdue
-                          ? `Expirée le ${formatDate(r.dueDate)}`
-                          : `Avant le ${formatDate(r.dueDate)}`}
+                          ? t("documents_admin_view_expiree_le_p0", { p0: formatDate(r.dueDate, dateTag) })
+                          : t("documents_admin_view_avant_le_p0", { p0: formatDate(r.dueDate, dateTag) })}
                       </span>
                     ) : (
                       t("sans_echeance")
@@ -2148,7 +2151,7 @@ function UploadRequestsTab({
                   </span>
                   {r.status === "uploaded" && r.uploadedAt && (
                     <span className="text-blue-700">
-                      Téléversé {formatDate(r.uploadedAt)}
+                      Téléversé {formatDate(r.uploadedAt, dateTag)}
                     </span>
                   )}
                 </div>
@@ -2460,6 +2463,7 @@ function SignaturesTab({
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [templateFilter, setTemplateFilter] = useState<string>("all");
+  const dateTag = useDateLocale();
   const [pdfPreview, setPdfPreview] = useState<{
     url: string;
     title: string;
@@ -2639,7 +2643,7 @@ function SignaturesTab({
                         )}
                         {/* Sur mobile : recap inline (version + date) */}
                         <p className="md:hidden text-[10px] text-muted-foreground mt-0.5">
-                          v{sig.version} · {formatDate(sig.signedAt)}
+                          v{sig.version} · {formatDate(sig.signedAt, dateTag)}
                         </p>
                       </td>
                       <td className="hidden lg:table-cell px-3 py-2 text-xs">
@@ -2650,7 +2654,7 @@ function SignaturesTab({
                           v{sig.version}
                         </Badge>
                       </td>
-                      <td className="hidden md:table-cell px-3 py-2 text-xs">{formatDate(sig.signedAt)}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs">{formatDate(sig.signedAt, dateTag)}</td>
                       <td className="hidden sm:table-cell px-3 py-2 text-center">
                         {hasPdf ? (
                           <Badge
@@ -2867,12 +2871,12 @@ function SignaturesTab({
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={sigPreview.dataUrl}
-                    alt={`Signature de ${sigPreview.employeeName}`}
+                    alt={t("documents_admin_view_signature_de_p0", { p0: sigPreview.employeeName })}
                     className="max-h-40 max-w-full object-contain"
                   />
                 </div>
                 <p className="text-[11px] text-muted-foreground text-center">
-                  Signé le {formatDate(sigPreview.signedAt)}
+                  Signé le {formatDate(sigPreview.signedAt, dateTag)}
                 </p>
               </>
             )}

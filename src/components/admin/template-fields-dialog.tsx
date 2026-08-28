@@ -13,6 +13,7 @@
 //     ligne entiere supprimee du PDF final (cf. applyPlaceholderValues)
 // ─────────────────────────────────────────────────────────
 import { useEffect, useMemo, useState } from "react";
+import { useDateLocale } from "@/lib/i18n-format";
 import { useTranslations } from "next-intl";
 import {
   CalendarDays,
@@ -67,14 +68,14 @@ function iconFor(type: PlaceholderInfo["type"]) {
 }
 
 // Convertit la valeur d'un input date YYYY-MM-DD en format FR pour le PDF
-function isoToFr(iso: string): string {
+function isoToFr(iso: string, tag: string): string {
   if (!iso) return "";
 
   const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return iso;
   const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString("fr-CA", {
+  return d.toLocaleDateString(tag, {
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -139,6 +140,7 @@ function TemplatePlaceholderFieldsDialog({
 }: TemplateFieldsDialogProps) {
   const t = useTranslations("admin.ui");
   const tc = useTranslations("common");
+  const dateTag = useDateLocale();
   void _templateId;
 
   const allPlaceholders = useMemo(
@@ -194,7 +196,7 @@ function TemplatePlaceholderFieldsDialog({
       const trimmed = typeof raw === "string" ? raw.trim() : "";
 
       cleaned[p.key] = p.type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
-        ? isoToFr(trimmed)
+        ? isoToFr(trimmed, dateTag)
         : trimmed;
     }
 
@@ -203,7 +205,7 @@ function TemplatePlaceholderFieldsDialog({
       const raw = values[p.key];
       const trimmed = typeof raw === "string" ? raw.trim() : "";
       cleaned[p.key] = p.type === "date" && /^\d{4}-\d{2}-\d{2}$/.test(trimmed)
-        ? isoToFr(trimmed)
+        ? isoToFr(trimmed, dateTag)
         : trimmed; // "" pour les non remplis
     }
     setPending(true);

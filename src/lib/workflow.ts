@@ -63,6 +63,10 @@ export async function createWorkflowEvent(params: {
   invoiceId?: number;
   eventType: WorkflowEventType;
   eventLabel: string;
+  // Cle complete du catalogue + ses parametres. `eventLabel` reste ecrit pour
+  // les lecteurs anciens et pour les lignes que personne ne pourra retraduire.
+  labelKey?: string;
+  labelParams?: Record<string, string | number>;
   triggeredBy?: string;
   metadata?: Record<string, unknown>;
 }) {
@@ -77,7 +81,9 @@ export async function createWorkflowEvent(params: {
       eventLabel: params.eventLabel,
       triggeredBy: params.triggeredBy ?? "system",
       wsBroadcast: true,
-      metadata: (params.metadata as object) ?? null,
+      metadata: ((params.labelKey
+        ? { ...(params.metadata ?? {}), labelKey: params.labelKey, labelParams: params.labelParams ?? {} }
+        : params.metadata) as object) ?? null,
     },
   });
 
@@ -149,6 +155,8 @@ export async function acceptQuote(quoteId: number, triggeredBy = "client") {
     quoteId: quote.id,
     eventType: "quote_accepted",
     eventLabel: `Devis ${quote.quoteNumber} accepté par ${acceptedBy}`,
+    labelKey: "workflow_events.devis_accepte_par",
+    labelParams: { number: quote.quoteNumber, by: acceptedBy },
     triggeredBy,
   });
   await createWorkflowEvent({
@@ -157,6 +165,8 @@ export async function acceptQuote(quoteId: number, triggeredBy = "client") {
     contractId: contract.id,
     eventType: "contract_created",
     eventLabel: `Contrat ${contractNumber} généré automatiquement`,
+    labelKey: "workflow_events.contrat_genere_auto",
+    labelParams: { number: contractNumber },
     triggeredBy: "system",
   });
 
@@ -234,6 +244,8 @@ export async function onContractFullySigned(
     invoiceId: invoice.id,
     eventType: "invoice_created",
     eventLabel: `Facture ${invoiceNumber} générée — ${firstAmount.toFixed(2)} $`,
+    labelKey: "workflow_events.facture_generee",
+    labelParams: { number: invoiceNumber, amount: firstAmount.toFixed(2) },
     triggeredBy,
   });
 
@@ -318,6 +330,8 @@ export async function createBalanceInvoice(contractId: number, triggeredBy = "ad
     invoiceId: invoice.id,
     eventType: "invoice_created",
     eventLabel: `Facture de solde ${invoiceNumber} générée — ${balanceAmount.toFixed(2)} $`,
+    labelKey: "workflow_events.facture_solde_generee",
+    labelParams: { number: invoiceNumber, amount: balanceAmount.toFixed(2) },
     triggeredBy,
   });
 
@@ -383,6 +397,8 @@ export async function markInvoicePaid(
     invoiceId: invoice.id,
     eventType: "invoice_paid",
     eventLabel: `Paiement reçu — ${invoice.invoiceNumber}`,
+    labelKey: "workflow_events.paiement_recu",
+    labelParams: { number: invoice.invoiceNumber },
     triggeredBy: stripePaymentIntentId ? "stripe" : "admin",
   });
 

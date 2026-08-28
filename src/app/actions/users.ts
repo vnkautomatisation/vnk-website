@@ -34,6 +34,7 @@ const INVITE_TTL_DAYS = 7;
 
 export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Promise<Result<{ invitationId: number; expiresAt: string; inviteUrl: string; emailSent: boolean; emailError?: string }>> {
   const t = await getTranslations("admin.action_errors");
+  const te = await getTranslations("admin.team");
   const adminId = await requireUsersWrite();
   if (!adminId) return unauthorized();
   const parsed = inviteSchema.safeParse(input);
@@ -45,7 +46,7 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
   // Whitelist de domaine (P2)
   const allowedDomain = process.env.INVITE_EMAIL_DOMAIN;
   if (allowedDomain && !email.endsWith(`@${allowedDomain.toLowerCase()}`)) {
-    return { success: false, error: `Email doit se terminer par @${allowedDomain}` };
+    return { success: false, error: te("users_email_doit_se_terminer_par_p0", { p0: allowedDomain }) };
   }
 
   // Rate-limit par admin : max 20 invitations/heure
@@ -155,33 +156,7 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
     // L'invite n'a pas encore de compte : on suit la langue de l'inviteur.
     const inviteLocale = invitedBy?.locale?.split("-")[0] ?? "fr";
     const te = await getTranslations({ locale: inviteLocale, namespace: "admin.emails" });
-    const html = `
-<!DOCTYPE html>
-<html lang="${inviteLocale}">
-<head>
-<meta charset="UTF-8" />
-</head>
-<body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px">
-  <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)">
-    <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center">
-      <h1 style="margin:0;font-size:20px;font-weight:700">${te("bienvenue_chez_vnk")}</h1>
-      <p style="margin:6px 0 0;opacity:0.85;font-size:14px">${te("compte_pret_active")}</p>
-    </div>
-    <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6">
-      <p>${te("bonjour_nom", { nom: `<strong>${escapeHtml(parsed.data.fullName)}</strong>` })}</p>
-      <p>${te("x_vous_invite", { inviteur: `<strong>${escapeHtml(inviterName)}</strong>` })}</p>
-      <p>${te("cliquez_bouton_creer_mdp")}</p>
-      <p style="text-align:center;margin:24px 0">
-        <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a>
-      </p>
-      <p style="color:#6b7280;font-size:12px">Ce lien expire dans ${INVITE_TTL_DAYS} jours. Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</p>
-      <p style="word-break:break-all;font-family:monospace;font-size:11px;background:#f3f4f6;padding:8px;border-radius:4px;color:#374151">${escapeHtml(inviteUrl)}</p>
-      <p style="margin-top:24px;color:#6b7280;font-size:12px">${te("si_vous_ne_vous_attendiez_pas")}</p>
-    </div>
-    <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">{te("users_vnk_automatisation_inc_securite_geree_par_le")}</div>
-  </div>
-</body>
-</html>`.trim();
+    const html = `<!DOCTYPE html> <html lang="${inviteLocale}"> <head> <meta charset="UTF-8" /> </head> <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px"> <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)"> <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center"> <h1 style="margin:0;font-size:20px;font-weight:700">${te("bienvenue_chez_vnk")}</h1> <p style="margin:6px 0 0;opacity:0.85;font-size:14px">${te("compte_pret_active")}</p> </div> <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6"> <p>${te("bonjour_nom", { nom: `<strong>${escapeHtml(parsed.data.fullName)}</strong>` })}</p> <p>${te("x_vous_invite", { inviteur: `<strong>${escapeHtml(inviterName)}</strong>` })}</p> <p>${te("cliquez_bouton_creer_mdp")}</p> <p style="text-align:center;margin:24px 0"> <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a> </p> <p style="color:#6b7280;font-size:12px">Ce lien expire dans ${INVITE_TTL_DAYS} jours. Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :</p> <p style="word-break:break-all;font-family:monospace;font-size:11px;background:#f3f4f6;padding:8px;border-radius:4px;color:#374151">${escapeHtml(inviteUrl)}</p> <p style="margin-top:24px;color:#6b7280;font-size:12px">${te("si_vous_ne_vous_attendiez_pas")}</p> </div> <div style="background:#f9fafb;padding:16px;text-align:center;color:#9ca3af;font-size:11px;border-top:1px solid #e5e7eb">${te("users_vnk_automatisation_inc_securite_geree_par_le")}</div> </div> </body> </html>`.trim();
 
     await sendEmail({
       to: email,
@@ -205,7 +180,7 @@ export async function inviteUserAction(input: z.infer<typeof inviteSchema>): Pro
   await logSecurityEvent({
     adminId,
     type: "user_created",
-    message: `Invitation envoyée à ${email}`,
+    message: te("users_invitation_envoyee_a_p0", { p0: email }),
     metadata: { invitationId: invitation.id },
   });
 
@@ -429,7 +404,7 @@ export async function anonymizeUserAction(input: { id: number }): Promise<Result
         emailSignature: null,
         recoveryEmail: null,
         presenceMessage: null,
-        internalNotes: `Anonymisé le ${new Date().toISOString()} par admin#${adminId}`,
+        internalNotes: t("users_anonymise_le_p0_par_admin_p1", { p0: new Date().toISOString(), p1: adminId }),
         isActive: false,
         sessionsInvalidatedAt: new Date(),
       },
@@ -451,7 +426,7 @@ export async function anonymizeUserAction(input: { id: number }): Promise<Result
     adminId,
     type: "account_deletion_requested",
     severity: "critical",
-    message: `Compte anonymisé (Loi 25 / Droit à l'oubli) : ${target.email}`,
+    message: t("users_compte_anonymise_loi_25_droit_a_l_oubli", { p0: target.email }),
     metadata: { targetId: input.id, anonymousId },
   });
 
@@ -491,7 +466,7 @@ export async function sendPasswordResetEmailAction(input: { id: number }): Promi
     adminId: target.id,
     type: "password_changed",
     severity: "warning",
-    message: `Lien de réinitialisation de mot de passe envoyé par un administrateur`,
+    message: t("users_lien_de_reinitialisation_de_mot_de_passe_envoye"),
     metadata: { byAdminId: adminId },
   });
 
@@ -637,7 +612,7 @@ export async function bulkUpdateUsersAction(input: z.infer<typeof bulkSchema>): 
     if (conflicts.length > 0) {
       return {
         success: false,
-        error: `${conflicts.length} compte(s) ont été modifié(s) par quelqu'un d'autre depuis votre sélection. Rechargez la page.`,
+        error: t("users_p0_compte_s_ont_ete_modifie_s_par", { p0: conflicts.length }),
       };
     }
   }
@@ -745,24 +720,8 @@ export async function resendInvitationAction(input: { id: number }): Promise<Res
   try {
     await sendEmail({
       to: invite.email,
-      subject: `Rappel : invitation à rejoindre VNK Automatisation`,
-      html: `
-<!DOCTYPE html>
-<html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px">
-  <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)">
-    <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center">
-      <h1 style="margin:0;font-size:18px;font-weight:700">Rappel d'invitation</h1>
-    </div>
-    <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6">
-      <p>Bonjour <strong>${escapeHtml(invite.fullName ?? "")}</strong>,</p>
-      <p>${tr("invitation_toujours_active")}</p>
-      <p style="text-align:center;margin:24px 0">
-        <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a>
-      </p>
-      <p style="color:#6b7280;font-size:12px">Ce lien expire dans ${INVITE_TTL_DAYS} jours.</p>
-    </div>
-  </div>
-</body></html>`.trim(),
+      subject: t("users_rappel_invitation_a_rejoindre_vnk_automatisation"),
+      html: `<!DOCTYPE html> <html><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f3f4f6;padding:20px"> <div style="max-width:540px;margin:0 auto;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,0.06)"> <div style="background:linear-gradient(135deg,#0F2D52,#15406d);color:#fff;padding:24px;text-align:center"> <h1 style="margin:0;font-size:18px;font-weight:700">Rappel d'invitation</h1> </div> <div style="padding:24px;color:#1f2937;font-size:14px;line-height:1.6"> <p>Bonjour <strong>${escapeHtml(invite.fullName ?? "")}</strong>,</p> <p>${tr("invitation_toujours_active")}</p> <p style="text-align:center;margin:24px 0"> <a href="${escapeUrlForEmail(inviteUrl)}" style="display:inline-block;background:#0F2D52;color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:14px">Activer mon compte</a> </p> <p style="color:#6b7280;font-size:12px">Ce lien expire dans ${INVITE_TTL_DAYS} jours.</p> </div> </div> </body></html>`.trim(),
     });
     emailSent = true;
   } catch (e) {
@@ -864,7 +823,7 @@ export async function createUserAction(input: z.infer<typeof createSchema>): Pro
   await logSecurityEvent({
     adminId,
     type: "user_created",
-    message: `Compte créé pour ${parsed.data.email}`,
+    message: t("users_compte_cree_pour_p0", { p0: parsed.data.email }),
     metadata: { newAdminId: created.id },
   });
 
@@ -996,7 +955,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
       managerId ? prisma.admin.findUnique({ where: { id: managerId }, select: { fullName: true, isActive: true } }) : Promise.resolve(null),
       before.managerId ? prisma.admin.findUnique({ where: { id: before.managerId }, select: { fullName: true } }) : Promise.resolve(null),
     ]);
-    const employeeLabel = employee?.fullName || employee?.email || `Employé #${id}`;
+    const employeeLabel = employee?.fullName || employee?.email || t("users_employe_p0", { p0: id });
 
     // Nouveau manager : "Nouvel employé à votre charge"
     if (managerId && newManager?.isActive) {
@@ -1007,7 +966,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
             recipientId: managerId,
             type: "info",
             title: t("nouvel_employe_a_votre_charge"),
-            body: `${employeeLabel} vous est désormais rattaché.`,
+            body: t("users_p0_vous_est_desormais_rattache", { p0: employeeLabel }),
             link: "/admin/employes/organigramme",
             icon: "users",
           },
@@ -1025,8 +984,8 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
           type: "info",
           title: managerId ? t("nouveau_manager", { name: newMgrLabel }) : t("manager_retire"),
           body: managerId
-            ? `Votre supérieur hiérarchique a été mis à jour.`
-            : `Vous n'avez plus de supérieur hiérarchique attitré pour l'instant.`,
+            ? t("users_votre_superieur_hierarchique_a_ete_mis_a_jour")
+            : t("users_vous_n_avez_plus_de_superieur_hierarchique_attitre"),
           link: "/admin/mon-espace",
           icon: "user-check",
         },
@@ -1042,7 +1001,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
             recipientId: before.managerId,
             type: "info",
             title: t("employe_retire_de_votre_equipe"),
-            body: `${employeeLabel} n'est plus sous votre supervision.`,
+            body: t("users_p0_n_est_plus_sous_votre_supervision", { p0: employeeLabel }),
             link: "/admin/employes/organigramme",
             icon: "users",
           },
@@ -1089,7 +1048,7 @@ export async function updateUserAction(input: z.infer<typeof updateSchema>): Pro
         adminId,
         type: "user_deleted",
         severity: "info",
-        message: `Portefeuille transféré de admin#${id} vers admin#${reassignToAdminId}`,
+        message: t("users_portefeuille_transfere_de_admin_p0_vers_admin_p1", { p0: id, p1: reassignToAdminId }),
         metadata: { fromAdminId: id, toAdminId: reassignToAdminId, ...reassigned },
       });
     }

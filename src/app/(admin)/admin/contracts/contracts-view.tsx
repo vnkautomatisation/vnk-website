@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { useCurrency } from "@/lib/i18n-format";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -31,7 +32,8 @@ import { useEntityPanels } from "@/hooks/use-entity-panels";
 import { DataTable, type Column } from "@/components/data-table/data-table";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { FormSection } from "@/components/admin/client-form-fields";
-import { cn, formatCurrency, formatDate } from "@/lib/utils";
+import { cn, formatDate } from "@/lib/utils";
+
 
 type Contract = {
   id: number;
@@ -84,6 +86,7 @@ export function ContractsView({
   const tc = useTranslations("common");
   const router = useRouter();
   const searchParams = useSearchParams();
+  const formatCurrency = useCurrency();
   const { confirm, ConfirmModal } = useConfirm();
   const { open: openEntity } = useEntityPanels();
   const [view, setView] = useViewMode("contracts", "list");
@@ -240,14 +243,14 @@ export function ContractsView({
   const handleSendToClient = async (c: Contract) => {
     const ok = await confirm({
       title: t("envoyer_contrat_client"),
-      description: `Le contrat ${c.contractNumber} sera ajouté dans la catégorie t("contrats") du portail + message chat + notification.`,
+      description: t("contracts_view_le_contrat_p0_sera_ajoute_dans_la_categorie", { p0: c.contractNumber }),
       confirmLabel: t("envoyer"),
     });
     if (!ok) return;
     const res = await fetch(`/api/contracts/${c.id}/send`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
-      toast.success(`Contrat envoyé à ${data.clientName ?? c.clientName} (portail + chat + notification)`);
+      toast.success(t("contracts_view_contrat_envoye_a_p0_portail_chat_notification", { p0: data.clientName ?? c.clientName }));
       router.refresh();
     } else { const d = await res.json(); toast.error(d.error || t("erreur")); }
   };
@@ -256,13 +259,13 @@ export function ContractsView({
   const handleSendForEsign = async (c: Contract) => {
     const ok = await confirm({
       title: t("envoyer_signature_legale"),
-      description: `Le client recevra un courriel de Dropbox Sign avec un lien de signature électronique. Une fois signé, le PDF final sera automatiquement enregistré dans le portail.`,
+      description: t("contracts_view_le_client_recevra_un_courriel_de_dropbox_sign"),
       confirmLabel: t("envoyer_signature"),
     });
     if (!ok) return;
     const res = await fetch(`/api/contracts/${c.id}/send-for-esign`, { method: "POST" });
     if (res.ok) {
-      toast.success(`Demande de signature envoyée à ${c.clientName}`);
+      toast.success(t("contracts_view_demande_de_signature_envoyee_a_p0", { p0: c.clientName }));
       router.refresh();
     } else {
       const d = await res.json();
@@ -274,7 +277,7 @@ export function ContractsView({
   const handleBulkDelete = async () => {
     if (selectedIds.size === 0) return;
     const ok = await confirm({
-      title: `Supprimer ${selectedIds.size} contrat(s) ?`,
+      title: tc("confirm_delete_contracts", { count: selectedIds.size }),
       description: t("contrats_signes_lies_factures_refuses"),
       confirmLabel: t("supprimer_tous"),
       variant: "destructive",
@@ -285,7 +288,7 @@ export function ContractsView({
       const res = await fetch(`/api/contracts/${id}`, { method: "DELETE" });
       if (res.ok) success++; else if (res.status === 409) blocked++;
     }
-    toast.success(`${success}/${selectedIds.size} supprimé(s)${blocked > 0 ? ` · ${blocked} bloqué(s)` : ""}`);
+    toast.success(t("contracts_view_p0_p1_supprime_s_p2", { p0: success, p1: selectedIds.size, p2: blocked > 0 ? tc("blocked_count", { count: blocked }) : "" }));
     setSelectedIds(new Set());
     router.refresh();
   };
@@ -384,7 +387,7 @@ export function ContractsView({
       key: "select",
       header: <Checkbox checked={allSelected} onCheckedChange={() => toggleSelectAll(allFilteredIds)} aria-label={t("tout_selectionner")} />,
       accessor: (r) => (
-        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={`Sélectionner ${r.contractNumber}`} />
+        <Checkbox checked={selectedIds.has(r.id)} onCheckedChange={() => toggleSelectId(r.id)} onClick={(e) => e.stopPropagation()} aria-label={t("contracts_view_selectionner_p0", { p0: r.contractNumber })} />
       ),
     },
     { key: "number", header: t("numero"), accessor: (r) => <span className="font-mono text-xs">{r.contractNumber}</span>, sortable: true, sortBy: (r) => r.contractNumber },
@@ -486,7 +489,7 @@ export function ContractsView({
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <StatCard label={t("total_contrats")} value={kpis.total} icon={FileSignature} accent="bg-indigo-500" />
         <StatCard label={t("attente")} value={kpis.pendingCount} icon={Clock} accent="bg-amber-500" />
-        <StatCard label={t("signes")} value={kpis.signedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={`${kpis.signedThisMonth} ce mois`} />
+        <StatCard label={t("signes")} value={kpis.signedCount} icon={CheckCircle2} accent="bg-emerald-500" deltaLabel={tc("this_month_count", { count: kpis.signedThisMonth })} />
         <StatCard label={t("valeur_signee")} value={formatCurrency(kpis.totalValue)} icon={DollarSign} accent="bg-blue-500" />
       </div>
 
@@ -499,7 +502,7 @@ export function ContractsView({
               <FileSignature className="h-4 w-4" />
               {t("contrats")}
             </span>
-            <span className="font-semibold">{filtered.length} affichés</span>
+            <span className="font-semibold">{tc("shown_m", { count: filtered.length })}</span>
             <span className="text-muted-foreground">{t("attente")} <span className="font-semibold text-amber-600">{kpis.pendingCount}</span></span>
             <span className="text-muted-foreground">{t("signes")} <span className="font-semibold text-emerald-600">{kpis.signedCount}</span></span>
             <span className="ml-auto text-muted-foreground">{t("valeur")} <span className="font-semibold text-blue-600">{formatCurrency(kpis.totalValue)}</span></span>
@@ -582,7 +585,7 @@ export function ContractsView({
         <div className="rounded-lg border-2 border-[#0F2D52] bg-[#0F2D52]/5 px-3 py-2 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
             <CheckSquare className="h-4 w-4 text-[#0F2D52]" />
-            <span className="text-sm font-medium">{selectedIds.size} sélectionné(s)</span>
+            <span className="text-sm font-medium">{tc("selected_m", { count: selectedIds.size })}</span>
           </div>
           <div className="flex gap-2">
             <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())}>
@@ -681,7 +684,7 @@ export function ContractsView({
         open={!!deleteContract}
         onOpenChange={(o) => { if (!o) setDeleteContract(null); }}
         title={t("supprimer_contrat")}
-        description={`Le contrat "${deleteContract?.contractNumber}" sera supprimé définitivement.`}
+        description={t("contracts_view_le_contrat_p0_sera_supprime_definitivement", { p0: (deleteContract?.contractNumber ?? "") })}
         confirmLabel={tc("delete")}
         onConfirm={handleDelete}
       />
