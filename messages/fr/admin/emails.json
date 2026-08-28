@@ -30,7 +30,7 @@
   "chat_pour_repondre": "Pour répondre, utilisez le portail ou répondez directement à ce courriel.",
   "chat_sujet_nouveau_message": "VNK Automatisation — nouveau message",
   "cliquez_bouton_creer_mdp": "Cliquez sur le bouton ci-dessous pour créer votre mot de passe et activer votre compte :",
-  "code_expire_dans": "Ce code expire dans {minutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
+  "code_expire_dans": "Ce code expiré dans {minutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.",
   "compte_pret_active": "Votre compte employé est prêt à être activé",
   "demande_depuis_ip": "Demande effectuée depuis l'adresse IP {ip}",
   "email_message_template_npieces_jointes_n_p0_nconnectez_vous_au_portail": "\\nPièces jointes :\\n{p0}\\nConnectez-vous au portail pour les télécharger.",

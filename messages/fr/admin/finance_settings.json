@@ -89,7 +89,7 @@
   "soumis_obligations_legales_conservation": "Soumis aux obligations légales de conservation",
   "stripe_account_id_acct": "Stripe Account ID (acct_...)",
   "stripe_paiements_ligne": "Stripe (paiements en ligne)",
-  "taux_affiches_vigueur_2026_personnalisez": "Les taux affichés sont en vigueur en 2026. Personnalisez si nécessaire (le portail utilise la province du client).",
+  "taux_affiches_vigueur_2026_personnalisez": "Les taux affichés sont en vigueur en 2026. Personnalisez si nécessaire (le portail utilisé la province du client).",
   "taux_province_etat": "Taux par province / état",
   "taux_taxes": "Taux de taxes",
   "telephone": "Téléphone",
